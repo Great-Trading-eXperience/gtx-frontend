@@ -1,4 +1,4 @@
-import ERC20ABI from "@/abis/tokens/IDRTABI";
+import TokenABI from "@/abis/tokens/TokenABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { HexAddress } from "@/types/web3/general/address";
 import { readContract } from "@wagmi/core";
@@ -48,7 +48,7 @@ export const useBalance = (
         try {
             const result = await readContract(wagmiConfig, {
                 address: tokenAddress,
-                abi: ERC20ABI,
+                abi: TokenABI,
                 functionName: 'balanceOf',
                 args: [userAddress],
             });

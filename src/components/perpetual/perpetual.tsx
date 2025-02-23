@@ -1,8 +1,5 @@
 'use client'
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Settings, Maximize2, Camera, Sun, Moon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { useTheme } from "next-themes"
 import useCurrentTheme from "@/hooks/styles/theme"
@@ -10,14 +7,13 @@ import Market from "./market/market"
 import TradingView from "./trading-view/trading-view"
 import RecentTradesPrep from "./recent-trades-prep/recent-trades-prep"
 import OrderBookPrep from "./order-book-prep/order-book-prep"
-import BuyAndSell from "./buy-and-sell/buy-and-sell"
 import TradingPosition from "./trading-position/trading-position"
 import TradingTabs from "./buy-and-sell/buy-and-sell"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName } from "wagmi"
 import { QueryClient } from "@tanstack/react-query"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
+import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -94,7 +90,7 @@ export default function Perpetual() {
                         {/* Right side - Theme toggle and Connect button */}
                         <div className="flex items-center gap-4">
                             <div className="">
-                                <ConnectButton />
+                                <ButtonConnectWallet />
                             </div>
                         </div>
                     </div>

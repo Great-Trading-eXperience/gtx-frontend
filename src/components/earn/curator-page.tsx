@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExternalLink } from "lucide-react"
 import Link from "next/link"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
+import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
 
 interface Pool {
   collateral: string
@@ -65,7 +65,7 @@ export default function CuratorPage({ params }: { params: { wallet: string } }) 
             </div>
 
             <div className="flex items-center gap-4">
-              <ConnectButton />
+              <ButtonConnectWallet />
             </div>
           </div>
         </div>

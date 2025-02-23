@@ -12,28 +12,12 @@ import LiquidbookEarn from "@/components/earn/earn";
 const queryClient = new QueryClient();
 
 const Earn = () => {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            disableTransitionOnChange
-          >
-            <div className="">
-              <LiquidbookEarn />
-            </div>
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
-  );
-};
+    return (
 
-// Tanpa Layout
-Earn.getLayout = function getLayout(page: ReactNode) {
-  return page;
+        <div>
+            <LiquidbookEarn />
+        </div>
+    );
 };
 
 export default Earn;

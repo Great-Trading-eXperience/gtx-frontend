@@ -37,14 +37,16 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
           })}
         >
           <Head>
-            <link rel="icon" type="image/webp" href="/logo/gtx-gradient.png" />
+            <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
+            <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
+            <link rel="icon" type="image/png" href="/logo/gtx-gradient.png" />
           </Head>
           <ThemeProvider
             disableTransitionOnChange
             attribute="class"
             defaultTheme="dark"
             value={{ light: "light", dark: "dark" }}
-            // defaultTheme="system"
+          // defaultTheme="system"
           >
             <Header />
             <div className="">

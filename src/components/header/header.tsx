@@ -3,9 +3,9 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
 
 const Header = () => {
   const { theme, setTheme } = useTheme();
@@ -16,51 +16,75 @@ const Header = () => {
     { destination: "/spot", label: "Spot" },
     { destination: "/perpetual", label: "Perpetual" },
     { destination: "/earn", label: "Earn" },
-    { destination: "https://liquidbook.gitbook.io/liquidbook-perpetual/", label: "Docs"}
+    { destination: "/faucet", label: "Faucet" },
+    { destination: "https://github.com/Great-Trading-eXperience", label: "Docs" }
   ];
 
   return (
-    <header className="backdrop-blur-sm lg:px-[12vw] mx-auto w-full fixed z-50">
-      <nav className="flex flex-row justify-between items-center py-3">
-        <div className="w-64">
+    <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20 max-w-7xl mx-auto">
+      <nav className={cn(
+        "flex flex-row py-3",
+        pathname === "/" ? "md:flex-row md:justify-between md:items-center" : ""
+      )}>
+        <div className={cn(
+          "flex flex-row gap-4",
+          pathname === "/" ? "w-64" : "w-full"
+        )}>
           <Link href="/" className="flex flex-row gap-2">
             <img
               src={"/logo/gtx-white.png"}
               className="h-9"
               alt="GTX Logo"
             />
-            <p className="text-2xl lg:text-3xl font-bold  text-white">
+            <p className="text-2xl lg:text-3xl font-bold text-white">
               GTX
             </p>
           </Link>
+
+          {pathname !== "/" && (
+            <div className="hidden md:flex items-center gap-4 ml-20">
+              {links.map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.destination}
+                  className={cn(
+                    "text-sm lg:text-lg px-4 py-1 rounded-lg transition-all",
+                    "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
+                    "dark:hover:bg-white/10 dark:hover:text-white",
+                    "text-white"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="hidden md:flex items-center justify-center flex-1 gap-4">
-          {links.map((link) => (
-            <Link
-              key={link.label}
-              href={link.destination}
-              className={cn(
-                "text-sm lg:text-lg px-4 py-1 rounded-lg transition-all",
-                "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
-                "dark:hover:bg-white/10 dark:hover:text-white",
-                "text-white"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
+        {pathname === "/" && (
+          <div className="hidden md:flex items-center justify-center flex-1 gap-4">
+            {links.map((link) => (
+              <Link
+                key={link.label}
+                href={link.destination}
+                className={cn(
+                  "text-sm lg:text-lg px-4 py-1 rounded-lg transition-all",
+                  "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
+                  "dark:hover:bg-white/10 dark:hover:text-white",
+                  "text-white"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        )}
 
-        <div className="w-64 flex justify-end">
-          {/* <Button
-            variant="ghost"
-            size="lg"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="hidden sm:flex text-[#0064A7] dark:text-gray-200"
-          >
-            {theme === "dark" ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
-          </Button> */}
+        <div className={cn(
+          "flex justify-end",
+          pathname === "/" ? "w-64" : "w-full"
+        )}>
+          {pathname !== "/" && <ButtonConnectWallet />}
         </div>
 
         <div className="flex gap-2 lg:hidden">

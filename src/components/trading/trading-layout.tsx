@@ -1,6 +1,5 @@
 'use client'
 
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
@@ -13,6 +12,7 @@ import { Button } from "../ui/button"
 import { Moon, Sun } from 'lucide-react'
 import Link from "next/link"
 import MarketDataTabs from "./market-data-tabs/market-data-tabs"
+import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -91,7 +91,7 @@ export default function TradingLayout() {
                                     {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                                 </Button>
                                 <div className="">
-                                    <ConnectButton />
+                                    <ButtonConnectWallet />
                                 </div>
                             </div>
                         </div>

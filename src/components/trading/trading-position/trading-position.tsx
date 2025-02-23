@@ -1,11 +1,11 @@
 'use client'
-import { Button } from "@/components/ui/button"
+
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useAccount } from 'wagmi'
 import OrderHistoryTable from "./order-history"
 import TradeHistoryTable from "./trade-history"
+import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
 
 export default function TradingInterface() {
   const { isConnected } = useAccount()
@@ -40,7 +40,7 @@ export default function TradingInterface() {
                       Connect your wallet to see your open orders.
                     </p>
                     <div className="flex gap-4">
-                      <ConnectButton />
+                      <ButtonConnectWallet />
                     </div>
                   </>
                 )}
@@ -56,7 +56,7 @@ export default function TradingInterface() {
                       Connect your wallet to see your trades.
                     </p>
                     <div className="flex gap-4">
-                      <ConnectButton />
+                      <ButtonConnectWallet />
                     </div>
                   </>
                 )}
@@ -68,7 +68,7 @@ export default function TradingInterface() {
                   Connect your wallet to see your balances.
                 </p>
                 <div className="flex gap-4">
-                  <ConnectButton />
+                  <ButtonConnectWallet />
                 </div>
               </div>
             </TabsContent>

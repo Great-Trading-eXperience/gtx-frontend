@@ -2,8 +2,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { useRouter } from "next/navigation"
+import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
 
 interface Pair {
   icon: string
@@ -58,30 +58,6 @@ export default function LiquidbookEarn() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-black to-blue-900 text-white">
-      <header className="px-4 py-4 bg-black/50 backdrop-blur-md shadow-2xl border-b border-blue-500/20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo/gtx-white.png" className="h-10" alt="GTX Logo" />
-            <span className="text-3xl font-bold bg-clip-text text-white bg-gradient-to-r from-blue-400 to-cyan-300">
-              GTX
-            </span>
-          </Link>
-
-          <nav className="hidden md:flex space-x-1">
-            {["Spot", "Perpetual", "Earn"].map((item) => (
-              <Link
-                key={item}
-                href={`/${item.toLowerCase()}`}
-                className="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-blue-500/10 transition-colors duration-200"
-              >
-                {item}
-              </Link>
-            ))}
-          </nav>
-
-          <ConnectButton />
-        </div>
-      </header>
 
       <main className="flex-1 flex items-center justify-start p-8">
         <div className="space-y-6 w-full max-w-7xl mx-auto">

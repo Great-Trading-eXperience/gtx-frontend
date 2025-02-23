@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { toast } from 'sonner';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Info } from 'lucide-react';
 import { usePlaceOrder } from '@/hooks/web3/liquidbook/usePlaceOrderbook';
 import Image from 'next/image';
+import { ButtonConnectWallet } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 
 const TICK_SPACING = 1.0001;
 
@@ -217,7 +217,7 @@ const BuyAndSellComponent = () => {
                     </button>
                 ) : (
                     <div className="flex items-center justify-center">
-                        <ConnectButton />
+                        <ButtonConnectWallet />
                     </div>
                 )}
 

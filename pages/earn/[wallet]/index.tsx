@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, Database } from "lucide-react"
 import Link from "next/link"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { ThemeProvider } from "next-themes"
 import { WagmiProvider } from "wagmi"
 import { wagmiConfig } from "@/configs/wagmi"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit"
+import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
 
 interface Pool {
   collateral: string
@@ -37,34 +37,9 @@ const queryClient = new QueryClient()
 function CuratorContent({ params }: { params: { wallet: string } }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-blue-900 text-white">
-      {/* Header */}
-      <header className="px-4 py-4 bg-black/50 backdrop-blur-md shadow-2xl border-b border-blue-500/20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo/gtx-white.png" className="h-10" alt="GTX Logo" />
-            <span className="text-3xl font-bold bg-clip-text text-white bg-gradient-to-r from-blue-400 to-cyan-300">
-              GTX
-            </span>
-          </Link>
-
-          <nav className="hidden md:flex space-x-1">
-            {["Spot", "Perpetual", "Earn"].map((item) => (
-              <Link
-                key={item}
-                href={`/${item.toLowerCase()}`}
-                className="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-blue-500/10 transition-colors duration-200"
-              >
-                {item}
-              </Link>
-            ))}
-          </nav>
-
-          <ConnectButton />
-        </div>
-      </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto py-8">
         <div className="grid md:grid-cols-[2fr,1fr] gap-8">
           {/* Left Column */}
           <div className="space-y-8">
@@ -208,21 +183,8 @@ function CuratorContent({ params }: { params: { wallet: string } }) {
 
 const CuratorPage = ({ params }: { params: { wallet: string } }) => {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
-            <CuratorContent params={params} />
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <CuratorContent params={params} />
   )
-}
-
-// Without Layout
-CuratorPage.getLayout = function getLayout(page: ReactNode) {
-  return page
 }
 
 export default CuratorPage

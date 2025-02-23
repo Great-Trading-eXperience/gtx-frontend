@@ -13,28 +13,12 @@ import GTXFaucet from "@/components/faucet/faucet";
 const queryClient = new QueryClient();
 
 const Faucet = () => {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            disableTransitionOnChange
-          >
-            <div className="">
-              <GTXFaucet />
-            </div>
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
-  );
-};
+    return (
 
-// Tanpa Layout
-Faucet.getLayout = function getLayout(page: ReactNode) {
-  return page;
+        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/40 to-slate-950 relative overflow-hidden">
+            <GTXFaucet />
+        </div>
+    );
 };
 
 export default Faucet;
