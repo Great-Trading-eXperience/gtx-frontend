@@ -1,8 +1,6 @@
-"use client"
-
-import Image from "next/image"
 import { type AvatarComponent, ConnectButton } from "@rainbow-me/rainbowkit"
 import { Button } from "../ui/button"
+import Image from "next/image"
 import Jazzicon, { jsNumberForAddress } from "react-jazzicon"
 import { Wallet } from "lucide-react"
 
@@ -53,11 +51,63 @@ export const CustomAvatar: AvatarComponent = ({ address, ensImage, size }) => {
   )
 }
 
-export const ButtonConnectWallet = () => {
-  return <ConnectButtonWalletComponents />
+type BaseColorConfig = {
+  shadowColor?: string
+  textColor?: string
 }
 
-export const ConnectButtonWalletComponents = () => {
+type GradientColorConfig = BaseColorConfig & {
+  fromColor: string
+  toColor: string
+  hoverFromColor: string
+  hoverToColor: string
+  mode: 'gradient'
+}
+
+type SolidColorConfig = BaseColorConfig & {
+  backgroundColor: string
+  hoverBackgroundColor: string
+  mode: 'solid'
+}
+
+type ColorConfig = GradientColorConfig | SolidColorConfig
+
+const defaultGradientColors: GradientColorConfig = {
+  fromColor: "from-cyan-500",
+  toColor: "to-blue-500",
+  hoverFromColor: "hover:from-cyan-600",
+  hoverToColor: "hover:to-blue-600",
+  shadowColor: "shadow-[0_0_15px_rgba(56,189,248,0.15)]",
+  textColor: "text-white",
+  mode: 'gradient'
+}
+
+const defaultSolidColors: SolidColorConfig = {
+  backgroundColor: "bg-blue-500",
+  hoverBackgroundColor: "hover:bg-blue-600",
+  shadowColor: "shadow-[0_0_15px_rgba(56,189,248,0.15)]",
+  textColor: "text-white",
+  mode: 'solid'
+}
+
+export const ButtonConnectWallet = ({ colors = defaultGradientColors }: { colors?: ColorConfig }) => {
+  return <ConnectButtonWalletComponents colors={colors} />
+}
+
+export const ConnectButtonWalletComponents = ({ colors = defaultGradientColors }: { colors?: ColorConfig }) => {
+  const getButtonClassName = (colorConfig: ColorConfig) => {
+    const { shadowColor, textColor } = colorConfig
+    const commonClasses = `${textColor} ${shadowColor} hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] transition-all rounded-lg text-sm sm:text-xs font-bold`
+
+    if (colorConfig.mode === 'gradient') {
+      const { fromColor, toColor, hoverFromColor, hoverToColor } = colorConfig
+      return `bg-gradient-to-r ${fromColor} ${toColor} ${hoverFromColor} ${hoverToColor} ${commonClasses}`
+    } else {
+      const { backgroundColor, hoverBackgroundColor } = colorConfig
+      return `${backgroundColor} ${hoverBackgroundColor} ${commonClasses}`
+    }
+  }
+
   return (
     <ConnectButton.Custom>
       {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
@@ -80,7 +130,7 @@ export const ConnectButtonWalletComponents = () => {
           return (
             <Button
               onClick={openConnectModal}
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-[0_0_15px_rgba(56,189,248,0.15)] hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] transition-all rounded-lg text-sm sm:text-xs font-bold"
+              className={getButtonClassName(colors)}
             >
               <Wallet className="mr-2 h-4 w-4" />
               Connect Wallet
@@ -125,3 +175,4 @@ export const ConnectButtonWalletComponents = () => {
   )
 }
 
+export default ButtonConnectWallet

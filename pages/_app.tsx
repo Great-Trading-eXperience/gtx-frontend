@@ -12,6 +12,8 @@ import "../styles/globals.css";
 import Head from "next/head";
 import { ReactNode } from "react";
 import { NextPage } from "next/types";
+import { ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "@/components/ui/toaster";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
             accentColorForeground: "black",
           })}
         >
+
           <Head>
             <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
             <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
@@ -48,11 +51,14 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
             value={{ light: "light", dark: "dark" }}
           // defaultTheme="system"
           >
-            <Header />
-            <div className="">
-              {page}
-            </div>
-            <Footer />
+            <ToastProvider>
+              <Header />
+              <div className="">
+                {page}
+              </div>
+              <Footer />
+              <Toaster />
+            </ToastProvider>
           </ThemeProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

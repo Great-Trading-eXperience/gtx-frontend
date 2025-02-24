@@ -1,7 +1,10 @@
-export const IDRT_ADDRESS = "0x078cC2Af3Cdd9Bd242f336c3d20Ee2F29C891106";
-export const USDT_ADDRESS = "0x4361e5c43A1c432736F1d32F35057C5B4817CA6D";
+// export const IDRT_ADDRESS = "0x078cC2Af3Cdd9Bd242f336c3d20Ee2F29C891106";
+// export const USDT_ADDRESS = "0x4361e5c43A1c432736F1d32F35057C5B4817CA6D";
 
-export const BALANCE_MANAGER_ADDRESS = "0x474c48cc0c29504c627ddb77189edbabe063176d"
+import { HexAddress } from "@/types/web3/general/address";
+import { requireEnvAddress } from "../../helper";
+
+// export const BALANCE_MANAGER_ADDRESS = "0x474c48cc0c29504c627ddb77189edbabe063176d"
 export const BALANCE_MANAGER_TX = "0x30429d62916f337d480df8746e9ecb4c3a9fb79f7b3b4028696319a257164e0b"
 export const BALANCE_MANAGER_BLOCK = "115276516"
 
@@ -29,7 +32,7 @@ export const TICK_ADDRESS = "0x5546140fb8bc99f7003882baf24779b44e8dffe8"
 export const TICK_TX = "0xbb7042e55005a247485ea4e5f510b234a80fbe2cb655a4a83dac480af34aafad"
 export const TICK_BLOCK = "115276374"
 
-export const POOL_MANAGER_ADDRESS = "0x70ace7bb86ad7f9bbb73e4857bb67a1bc2e16164"
+// export const POOL_MANAGER_ADDRESS = "0x70ace7bb86ad7f9bbb73e4857bb67a1bc2e16164"
 export const POOL_MANAGER_TX = "0xf85416cbd1445389aadc4466a4e0f4d9c7526ca5376f88a4caf01c0fc51e124c"
 export const POOL_MANAGER_BLOCK = "115276531"
 
@@ -42,8 +45,28 @@ export const ORDER_TX = "0x599d8c7c65c32584c96a9d135eb6ff48a3f0beb7cb4869dc3ae8c
 export const ORDER_BLOCK = "115276393"
 
 
-// Faucet
+// Address for GTX Project Update Below
+
+// Faucet Address
 export const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS;
 export const WETH_ADDRESS = process.env.NEXT_PUBLIC_WETH_ADDRESS;
-
 export const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_FAUCET_ADDRESS;
+
+
+// CLOB DEX Contracts
+export const ORDERBOOK_ADDRESS = requireEnvAddress(
+    process.env.NEXT_PUBLIC_ORDERBOOK_ADDRESS,
+    'NEXT_PUBLIC_ORDERBOOK_ADDRESS'
+);
+export const BALANCE_MANAGER_ADDRESS = requireEnvAddress(
+    process.env.NEXT_PUBLIC_BALANCE_MANAGER_ADDRESS,
+    'NEXT_PUBLIC_BALANCE_MANAGER_ADDRESS'
+);
+export const POOL_MANAGER_ADDRESS = requireEnvAddress(
+    process.env.NEXT_PUBLIC_POOL_MANAGER_ADDRESS,
+    'NEXT_PUBLIC_POOL_MANAGER_ADDRESS'
+);
+export const GTX_ROUTER_ADDRESS = requireEnvAddress(
+    process.env.NEXT_PUBLIC_GTX_ROUTER_ADDRESS,
+    'NEXT_PUBLIC_GTX_ROUTER_ADDRESS'
+);

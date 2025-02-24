@@ -19,7 +19,7 @@ const resources = [
 
 const support = [
   {
-    label: "Liquid Docs",
+    label: "GTX Docs",
     destination: "/docs",
   },
   {
@@ -55,7 +55,7 @@ const Footer = () => {
               </span>
             </Link>
             <div className="flex flex-col md:flex-row justify-between items-center py-5">
-              <p className="text-gray-400 text-sm">© 2025 LiquidBook</p>
+              <p className="text-gray-400 text-sm">© 2025 Great Trading eXperience</p>
             </div>
           </div>
 
