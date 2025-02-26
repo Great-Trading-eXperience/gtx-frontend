@@ -80,22 +80,14 @@ const riseSepolia: Chain = {
   },
   testnet: true,
 };
-
+// Configure chains with Rise Sepolia as the ONLY initial option
 export const wagmiConfig = getDefaultConfig({
   appName: 'RainbowKit',
   projectId: 'c8d08053460bfe0752116d730dc6393b',
   chains: [
-    localChain,
-    conduitChain,
     riseSepolia,
-    arbitrumSepolia,
-    {
-      ...sepolia,
-      rpcUrls: {
-        default: {
-          http: ["https://sepolia.infura.io/v3/jBG4sMyhez7V13jNTeQKfVfgNa54nCmF"],
-        },
-      },
-    },
+    localChain,
+    conduitChain, // Only include Rise Sepolia initially to force direct connection
   ],
+  // After connection, we can programmatically add the other chains
 });
