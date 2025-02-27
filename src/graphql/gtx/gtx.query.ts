@@ -88,3 +88,47 @@ export const ordersQuery = gql`
     }
   }
 `;
+
+export const orderHistorysQuery = gql`
+  query GetOrderHistory {
+    orderHistorys {
+      items {
+        filled
+        id
+        orderId
+        poolId
+        status
+        timestamp
+      }
+      totalCount
+      pageInfo {
+        endCursor
+        hasNextPage
+        hasPreviousPage
+        startCursor
+      }
+    }
+  }
+`;
+
+export const balancesQuery = gql`
+  query GetBalances {
+    balancess {
+      items {
+        amount
+        currency
+        lockedAmount
+        name
+        symbol
+        user
+      }
+      pageInfo {
+        startCursor
+        hasPreviousPage
+        endCursor
+        hasNextPage
+      }
+      totalCount
+    }
+  }
+`;

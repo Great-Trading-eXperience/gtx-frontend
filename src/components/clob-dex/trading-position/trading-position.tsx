@@ -6,6 +6,7 @@ import { useAccount } from 'wagmi'
 import OrderHistoryTable from "./order-history"
 import TradeHistoryTable from "./trade-history"
 import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import BalancesHistoryTable from "./balances-history"
 
 export default function TradingInterface() {
   const { isConnected } = useAccount()
@@ -28,6 +29,13 @@ export default function TradingInterface() {
                 className="text-2xl font-normal data-[state=active]:border-b-2 border-[#0064A7] data-[state=active]:text-[#0064A7] text-gray-700 dark:text-zinc-100 hover:text-gray-900 dark:hover:text-white rounded-none px-0 pb-2"
               >
                 My Trades
+              </TabsTrigger>
+              <div className="text-2xl text-gray-400 dark:text-zinc-600 px-4">|</div>
+              <TabsTrigger
+                value="balances"
+                className="text-2xl font-normal data-[state=active]:border-b-2 border-[#0064A7] data-[state=active]:text-[#0064A7] text-gray-700 dark:text-zinc-100 hover:text-gray-900 dark:hover:text-white rounded-none px-0 pb-2"
+              >
+                My Balances
               </TabsTrigger>
             </TabsList>
             <TabsContent value="open-orders" className="pt-6">
@@ -64,14 +72,21 @@ export default function TradingInterface() {
             </TabsContent>
             <TabsContent value="balances" className="pt-6">
               <div className="space-y-8">
-                <p className="text-xl text-gray-600 dark:text-zinc-400">
-                  Connect your wallet to see your balances.
-                </p>
-                <div className="flex gap-4">
-                  <ButtonConnectWallet />
-                </div>
+                {isConnected ? (
+                  <BalancesHistoryTable />
+                ) : (
+                  <>
+                    <p className="text-xl text-gray-600 dark:text-zinc-400">
+                      Connect your wallet to see your trades.
+                    </p>
+                    <div className="flex gap-4">
+                      <ButtonConnectWallet />
+                    </div>
+                  </>
+                )}
               </div>
             </TabsContent>
+            
           </div>
         </Tabs>
       </Card>

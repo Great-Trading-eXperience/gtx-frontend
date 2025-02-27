@@ -21,10 +21,11 @@ const Header = () => {
   ];
 
   return (
-    <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20 max-w-7xl mx-auto">
+    <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20 ">
       <nav className={cn(
         "flex flex-row py-3",
-        pathname === "/" ? "md:flex-row md:justify-between md:items-center" : ""
+        pathname === "/" ? "md:flex-row md:justify-between md:items-center" : "",
+        pathname === "/spot" || pathname === "/perpetual" ? "px-5" : "max-w-7xl mx-auto"
       )}>
         <div className={cn(
           "flex flex-row gap-4",

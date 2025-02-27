@@ -4,72 +4,118 @@ import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 import request from 'graphql-request';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { placeOrderEvents } from '@/graphql/liquidbook/liquidbook.query';
-import { calculatePrice, formatAddress, formatDate } from '../../../../helper';
+// import { orderHistorysQuery, poolsQuery } from '@/graphql/liquidbook/liquidbook.query'; // Updated import
+import { formatAddress, formatDate } from '../../../../helper';
 import { formatUnits } from 'viem';
+import { orderHistorysQuery, poolsQuery } from '@/graphql/gtx/gtx.query';
 
-interface OrderEvent {
+// Interface for order history items from the orderHistorysQuery
+interface OrderHistoryItem {
   id: string;
-  is_buy: boolean;
-  is_market: boolean;
-  order_index: string;
-  tick: string;
-  timestamp: string;
-  user: string;
-  volume: string;
-  remaining_volume: string;
+  orderId: string;
+  poolId: string;
+  filled: string;
+  status: string;
+  timestamp: number;
+  user?: string; // Add user field (assuming it exists or will be added to the query)
 }
 
+// Interface for pool items to get coin names
+interface Pool {
+  id: string;
+  coin: string;
+}
+
+// Updated response interfaces
 interface OrderHistoryResponse {
-  placeOrderEvents: {
-    items: OrderEvent[];
+  orderHistorys?: {
+    items?: OrderHistoryItem[];
+    pageInfo?: {
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+    totalCount?: number;
+  };
+}
+
+interface PoolsResponse {
+  poolss?: {
+    items?: Pool[];
   };
 }
 
 const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(price);
 };
 
 const OrderHistoryTable = () => {
   const { address } = useAccount();
   type SortDirection = 'asc' | 'desc';
-  type SortableKey = 'timestamp' | 'volume' | 'price';
+  type SortableKey = 'timestamp' | 'filled' | 'orderId';
   
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: SortDirection }>({
     key: 'timestamp',
     direction: 'desc'
   });
 
+  // Fetch pools data to get coin names
+  const { data: poolsData } = useQuery<PoolsResponse>({
+    queryKey: ['pools'],
+    queryFn: async () => {
+      return await request<PoolsResponse>(
+        GTX_GRAPHQL_URL, 
+        poolsQuery
+      );
+    },
+    staleTime: 60000 // Cache for 1 minute
+  });
+
+  // Fetch order history data
   const { data, isLoading, error } = useQuery<OrderHistoryResponse>({
     queryKey: ['orderHistory', address],
     queryFn: async () => {
+      // Option 1: Filter on the server side if possible by modifying the query with variables
+      // This would be the most efficient approach
+      
+      // Option 2: Get all data and filter client-side
       const response = await request<OrderHistoryResponse>(
         GTX_GRAPHQL_URL, 
-        placeOrderEvents
+        orderHistorysQuery
       );
-      
-      if (!response || !response.placeOrderEvents) {
+
+      if (!response || !response.orderHistorys) {
         throw new Error('Invalid response format');
       }
 
-      return {
-        placeOrderEvents: {
-          ...response.placeOrderEvents,
-          items: response.placeOrderEvents.items.filter(order => 
-            address && order.user.toLowerCase() === address.toLowerCase()
-          )
-        }
-      };
+      // Filter by transaction origin if user field exists
+      if (address && response.orderHistorys.items) {
+        // If your API supports filtering by user's address, modify this to use actual user field
+        // For now, assuming we're using transaction data to filter
+        
+        // Mock implementation for filtering by user - replace with actual implementation
+        // that uses the appropriate field for user identification
+        response.orderHistorys.items = response.orderHistorys.items.filter(order => {
+          // If the order has a user field, check if it matches the address
+          if (order.user) {
+            return order.user.toLowerCase() === address.toLowerCase();
+          }
+          
+          // If no user field, use order ID or another field as a proxy
+          // This is a placeholder - modify based on your actual data structure
+          return order.id.toLowerCase().includes(address.toLowerCase().substring(2));
+        });
+      }
+
+      return response;
     },
-    enabled: !!address,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    retry: false,
+    enabled: !!address, // Only run query when address is available
+    staleTime: 30000,
+    refetchInterval: 30000,
   });
 
   const handleSort = (key: SortableKey) => {
@@ -78,6 +124,14 @@ const OrderHistoryTable = () => {
       direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
+
+  if (!address) {
+    return (
+      <div className="px-4 py-8 text-gray-500 dark:text-gray-400 text-sm text-center">
+        Please connect your wallet to view order history
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -95,19 +149,29 @@ const OrderHistoryTable = () => {
     );
   }
 
-  const orders = data?.placeOrderEvents.items || [];
+  const orders = data?.orderHistorys?.items || [];
+
+  // Helper function to get pool name by poolId
+  const getPoolName = (poolId: string): string => {
+    if (!poolsData?.poolss?.items) return 'Unknown';
+    const pool = poolsData.poolss.items.find(p => p.id === poolId);
+    return pool ? pool.coin : 'Unknown';
+  };
 
   const sortedOrders = [...orders].sort((a, b) => {
     const key = sortConfig.key;
     
-    if (key === 'timestamp' || key === 'volume') {
-      const aValue = parseFloat(a[key]);
-      const bValue = parseFloat(b[key]);
+    if (key === 'timestamp') {
+      return sortConfig.direction === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
+    }
+    if (key === 'filled') {
+      const aValue = parseInt(a.filled || '0');
+      const bValue = parseInt(b.filled || '0');
       return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
     }
-    if (key === 'price') {
-      const aValue = calculatePrice(a.tick);
-      const bValue = calculatePrice(b.tick);
+    if (key === 'orderId') {
+      const aValue = parseInt(a.orderId || '0');
+      const bValue = parseInt(b.orderId || '0');
       return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
     }
     return 0;
@@ -115,43 +179,41 @@ const OrderHistoryTable = () => {
 
   return (
     <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow-md">
-      <div className="grid grid-cols-8 gap-4 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-t-lg">
+      
+      
+      <div className="grid grid-cols-5 gap-4 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800">
         <div className="cursor-pointer flex items-center" onClick={() => handleSort('timestamp')}>
           Time
           <ChevronDown className="h-4 w-4 ml-1" />
         </div>
-        <div>Type</div>
-        <div>Side</div>
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('price')}>
-          Price
+        <div>Trading Pair</div>
+        <div className="cursor-pointer flex items-center" onClick={() => handleSort('orderId')}>
+          Order ID
           <ChevronDown className="h-4 w-4 ml-1" />
         </div>
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('volume')}>
-          Amount
+        <div className="cursor-pointer flex items-center" onClick={() => handleSort('filled')}>
+          Filled
           <ChevronDown className="h-4 w-4 ml-1" />
         </div>
-        <div>Filled</div>
         <div>Status</div>
-        <div>User</div>
       </div>
 
       {sortedOrders.length > 0 ? (
         sortedOrders.map((order) => (
-          <div key={order.id} className="grid grid-cols-8 gap-4 px-4 py-3 text-sm border-t border-gray-200 dark:border-gray-700">
-            <div className="text-gray-600 dark:text-gray-400">{formatDate(order.timestamp)}</div>
-            <div className="text-gray-600 dark:text-gray-400">{order.is_market ? 'Market' : 'Limit'}</div>
-            <div className={order.is_buy ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}>
-              {order.is_buy ? 'Buy' : 'Sell'}
-            </div>
-            <div className="text-gray-900 dark:text-white">${calculatePrice(order.tick).toFixed(2)}</div>
-            <div className="text-gray-900 dark:text-white">{formatPrice(Number(formatUnits(BigInt(order.volume), 6)))}</div>
+          <div key={order.id} className="grid grid-cols-5 gap-4 px-4 py-3 text-sm border-t border-gray-200 dark:border-gray-700">
+            <div className="text-gray-600 dark:text-gray-400">{formatDate(order.timestamp.toString())}</div>
+            <div className="text-gray-600 dark:text-gray-400">{getPoolName(order.poolId)}</div>
+            <div className="text-gray-900 dark:text-white">{order.orderId}</div>
             <div className="text-gray-900 dark:text-white">
-              {((Number(order.volume) - Number(order.remaining_volume)) / Number(order.volume) * 100).toFixed(1)}%
+              {order.filled === '0' ? '0%' : `${formatPrice(parseInt(order.filled) / 100)}%`}
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
-              {Number(order.remaining_volume) === 0 ? 'Filled' : 'Open'}
+            <div className={
+              order.status === 'FILLED' ? 'text-green-600 dark:text-green-500' : 
+              order.status === 'CANCELLED' ? 'text-red-600 dark:text-red-500' : 
+              'text-yellow-600 dark:text-yellow-500'
+            }>
+              {order.status}
             </div>
-            <div className="text-gray-600 dark:text-gray-400">{formatAddress(order.user)}</div>
           </div>
         ))
       ) : (
@@ -164,4 +226,3 @@ const OrderHistoryTable = () => {
 };
 
 export default OrderHistoryTable;
-

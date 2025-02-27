@@ -31,8 +31,9 @@ interface TradeItem {
   };
 }
 
+// Update the interface to match your actual GraphQL response structure
 interface TradesResponse {
-  tradess: {
+  tradess?: {
     items: TradeItem[];
     pageInfo: {
       endCursor: string;
@@ -42,6 +43,17 @@ interface TradesResponse {
     };
     totalCount: number;
   };
+  // Alternative field name - uncomment if your GraphQL response uses this instead
+  // trades?: {
+  //   items: TradeItem[];
+  //   pageInfo: {
+  //     endCursor: string;
+  //     hasNextPage: boolean;
+  //     hasPreviousPage: boolean;
+  //     startCursor: string;
+  //   };
+  //   totalCount: number;
+  // };
 }
 
 const formatVolume = (value: bigint, decimals = 6) => {
@@ -73,12 +85,31 @@ interface VolumeData {
   color: string
 }
 
-function processTradeData(data: TradeItem[]): {
+function processTradeData(data: TradeItem[], selectedPoolId: string | null): {
   candlesticks: CandlestickData<Time>[]
   volumes: VolumeData[]
 } {
   const candlesticks: CandlestickData<Time>[] = []
   const volumes: VolumeData[] = []
+
+  // Filter trades for the selected pool
+  const filteredTrades = selectedPoolId 
+    ? data.filter(trade => trade.poolId === selectedPoolId)
+    : data;
+    
+  console.log(`Filtering trades for poolId: ${selectedPoolId || 'all'}`);
+  console.log(`Filtered ${filteredTrades.length} out of ${data.length} trades`);
+  
+  if (selectedPoolId) {
+    // Debug which pool IDs are actually in the data
+    const uniquePoolIds = [...new Set(data.map(trade => trade.poolId))];
+    console.log(`Available pool IDs in data: ${uniquePoolIds.join(', ')}`);
+  }
+  
+  if (filteredTrades.length === 0) {
+    console.log("No trades found for the selected pool");
+    return { candlesticks, volumes };
+  }
 
   // Create 1-minute OHLC candles
   const ohlcMap = new Map<number, {
@@ -91,7 +122,7 @@ function processTradeData(data: TradeItem[]): {
   }>();
 
   // Sort trades by timestamp (oldest first)
-  const sortedTrades = [...data].sort((a, b) => a.timestamp - b.timestamp);
+  const sortedTrades = [...filteredTrades].sort((a, b) => a.timestamp - b.timestamp);
 
   // Group trades into 1-minute candles
   sortedTrades.forEach(trade => {
@@ -151,27 +182,57 @@ function processTradeData(data: TradeItem[]): {
   return { candlesticks, volumes };
 }
 
-interface ChartComponentProps {
-  height?: number
+interface TradingSpotChartProps {
+  height?: number;
+  selectedPoolId?: string | null;
 }
 
-function ChartComponent({ height = 500 }: ChartComponentProps) {
+function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotChartProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null)
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null)
   const timeDisplayRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   const [currentTime, setCurrentTime] = useState("")
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
 
-  const { data, isLoading, error } = useQuery<TradesResponse>({
-    queryKey: ["trades"],
+  const { data, isLoading, error } = useQuery<any>({
+    queryKey: ["trades", selectedPoolId],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, tradesQuery)
+      console.log(`Fetching trade data for poolId: ${selectedPoolId || 'all'}`);
+      
+      // Check if we need to pass a parameter to the GraphQL query
+      // If your tradesQuery accepts a poolId parameter, you would use:
+      // return await request(GTX_GRAPHQL_URL, tradesQuery, { poolId: selectedPoolId })
+      
+      // For now, we'll just fetch all trades and filter client-side
+      const response = await request(GTX_GRAPHQL_URL, tradesQuery);
+      
+      // Safely handle the response as unknown type
+      if (response && typeof response === 'object') {
+        // Now TypeScript knows response is an object
+        console.log("GraphQL response keys:", Object.keys(response));
+        
+        // Type assertion for accessing properties
+        const typedResponse = response as Record<string, any>;
+        
+        // Check how many trades we got (handle different response structures)
+        const tradesData = typedResponse.tradess || typedResponse.trades || {};
+        const itemsCount = tradesData.items?.length || 0;
+        console.log(`Fetched ${itemsCount} trades from API`);
+      } else {
+        console.log("Received non-object response from API");
+      }
+      
+      return response;
     },
     refetchInterval: 5000,
     staleTime: 0,
     refetchOnWindowFocus: true,
+    // Ensure query reruns when selectedPoolId changes
+    refetchOnMount: true,
   })
 
   // Update UTC time every second
@@ -189,19 +250,32 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
 
   // Update current price from latest trade
   useEffect(() => {
-    if (data?.tradess?.items && data.tradess.items.length > 0) {
-      // Find the trade with the latest timestamp
-      const latestTrade = [...data.tradess.items].sort((a, b) => b.timestamp - a.timestamp)[0];
-      const formattedPrice = Number(formatUnits(BigInt(latestTrade.price), 12)).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      setCurrentPrice(formattedPrice);
-    }
-  }, [data]);
+    if (!data) return;
+    
+    // Check both possible field names
+    const tradesData = data.tradess || (data as any).trades;
+    
+    if (tradesData?.items && tradesData.items.length > 0) {
+      // Filter for selected pool
+      const relevantTrades = selectedPoolId
+        ? tradesData.items.filter((trade: { poolId: string }) => trade.poolId === selectedPoolId)
+        : tradesData.items;
 
+      if (relevantTrades.length > 0) {
+        // Find the trade with the latest timestamp
+        const latestTrade = [...relevantTrades].sort((a, b) => b.timestamp - a.timestamp)[0];
+        const formattedPrice = Number(formatUnits(BigInt(latestTrade.price), 12)).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        setCurrentPrice(formattedPrice);
+      }
+    }
+  }, [data, selectedPoolId]);
+
+  // Initialize chart
   useEffect(() => {
-    if (!chartContainerRef.current || isLoading || !data) return
+    if (!chartContainerRef.current) return;
 
     const isDarkMode = theme === "dark"
     const mainHeight = height
@@ -255,6 +329,8 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
     })
+    
+    candlestickSeriesRef.current = candlestickSeries
 
     const volumeSeries = chart.addHistogramSeries({
       color: "#26a69a",
@@ -263,6 +339,8 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
       },
       priceScaleId: "volume",
     })
+    
+    volumeSeriesRef.current = volumeSeries
 
     const volumePriceScale = chart.priceScale("volume")
     if (volumePriceScale) {
@@ -274,15 +352,6 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
         borderVisible: false,
         visible: true,
       })
-    }
-
-    if (data?.tradess?.items) {
-      const { candlesticks, volumes } = processTradeData(data.tradess.items)
-
-      candlestickSeries.setData(candlesticks)
-      volumeSeries.setData(volumes)
-
-      chart.timeScale().fitContent()
     }
 
     const handleResize = () => {
@@ -298,9 +367,55 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
     return () => {
       window.removeEventListener("resize", handleResize)
       chart.remove()
+      chartRef.current = null
+      candlestickSeriesRef.current = null
+      volumeSeriesRef.current = null
     }
-  }, [data, isLoading, theme, height])
+  }, [theme, height]) // Only re-initialize on theme or height change
 
+  // Update data when trades data or selected pool changes
+  useEffect(() => {
+    // First check if the data object is available
+    if (!data) {
+      console.log("No data returned from query");
+      return;
+    }
+    
+    // Determine which field contains the trades data
+    const tradesData = data.tradess || (data as any).trades;
+    
+    if (!tradesData?.items || !chartRef.current || !candlestickSeriesRef.current || !volumeSeriesRef.current) {
+      console.log("Missing required refs or data:", {
+        hasTradesData: !!tradesData?.items,
+        hasChart: !!chartRef.current,
+        hasCandlestickSeries: !!candlestickSeriesRef.current,
+        hasVolumeSeries: !!volumeSeriesRef.current
+      });
+      return;
+    }
+    
+    console.log(`Updating chart for poolId: ${selectedPoolId || 'all'}`);
+    console.log(`Total trades before filtering: ${tradesData.items.length}`);
+    
+    // Make sure we're processing the correct data for the selected pool
+    const { candlesticks, volumes } = processTradeData(tradesData.items, selectedPoolId);
+    
+    console.log(`Generated ${candlesticks.length} candlesticks and ${volumes.length} volume bars`);
+    
+    // Always update the chart data, even if empty
+    candlestickSeriesRef.current.setData(candlesticks);
+    volumeSeriesRef.current.setData(volumes);
+    
+    if (candlesticks.length > 0) {
+      // Fit content if we have data
+      chartRef.current.timeScale().fitContent();
+      console.log("Chart updated with data and fitted to content");
+    } else {
+      console.log("No data available for selected pool, chart cleared");
+    }
+  }, [data, selectedPoolId]);
+
+  // Update theme
   useEffect(() => {
     if (chartRef.current) {
       const isDarkMode = theme === "dark"
@@ -350,4 +465,4 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
   )
 }
 
-export default ChartComponent
+export default TradingSpotChart
