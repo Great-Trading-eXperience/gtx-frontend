@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Menu, ChevronDown, ArrowUpDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import request from 'graphql-request';
-import { LIQUIDBOOK_GRAPHQL_URL } from '@/constants/subgraph-url';
+import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import { QueryResponse, TickData } from '@/types/web3/liquidbook/ticks';
 import { askTicks, bidTicks, ticks } from '@/graphql/liquidbook/liquidbook.query';
 import { formatUnits } from 'viem';
@@ -79,7 +79,7 @@ const OrderBookComponent = () => {
   } = useQuery<QueryResponse>({
     queryKey: ['ticks'],
     queryFn: async () => {
-      return await request(LIQUIDBOOK_GRAPHQL_URL, bidTicks);
+      return await request(GTX_GRAPHQL_URL, bidTicks);
     },
     refetchInterval: 500,
     staleTime: 0,
@@ -92,7 +92,7 @@ const OrderBookComponent = () => {
   } = useQuery<QueryResponse>({
     queryKey: ['ticks-2'],
     queryFn: async () => {
-      return await request(LIQUIDBOOK_GRAPHQL_URL, askTicks);
+      return await request(GTX_GRAPHQL_URL, askTicks);
     },
     refetchInterval: 500,
     staleTime: 0,

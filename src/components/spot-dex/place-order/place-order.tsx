@@ -1,34 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { toast } from 'sonner';
-import { Info, ChevronDown } from 'lucide-react';
+import { Info } from 'lucide-react';
 import Image from 'next/image';
-import { useQuery } from '@apollo/client';
-import { gql } from '@apollo/client';
 import { ButtonConnectWallet } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 // Import the needed hooks from the first file
 import { usePlaceOrder, usePlaceMarketOrder, useGetBestPrice } from '@/hooks/web3/gtx/clob-dex/order-book/useOrderBook';
-
 import { Side } from '@/types/web3/gtx/gtx';
-import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-
-// GraphQL query for pools
-const poolsQuery = gql`
-  query GetPools {
-    poolss {
-      items {
-        baseCurrency
-        coin
-        id
-        lotSize
-        maxOrderAmount
-        orderBook
-        quoteCurrency
-        timestamp
-      }
-    }
-  }
-`;
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -36,10 +14,10 @@ const useIsClient = () => {
     return isClient;
 };
 
-const CurrencyIcon = ({ type }: { type: string }) => (
+const CurrencyIcon = ({ type }: { type: 'eth' | 'usdc' }) => (
     <div className="relative">
         <Image
-            src={`/${type.toLowerCase()}.png`}
+            src={`/${type}.png`}
             alt={type.toUpperCase()}
             width={28}
             height={28}
@@ -48,20 +26,13 @@ const CurrencyIcon = ({ type }: { type: string }) => (
     </div>
 );
 
-const BuyAndSellComponent = () => {
+const PlaceOrder = () => {
     const [orderType, setOrderType] = useState('limit');
     const [side, setSide] = useState('buy');
     const [price, setPrice] = useState('');
     const [size, setSize] = useState('');
-    const [selectedPool, setSelectedPool] = useState<any>(null);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
     const { address } = useAccount();
     const isClient = useIsClient();
-    
-    // Fetch pools from GraphQL
-    const { loading: loadingPools, error: poolsError, data: poolsData } = useQuery(poolsQuery, {
-        context: { uri: GTX_GRAPHQL_URL }
-    });
 
     // Use hooks for placing limit and market orders
     const { placeOrder, isPlacingOrder: isPlacingLimitOrder, error: limitOrderError } = usePlaceOrder({
@@ -96,16 +67,9 @@ const BuyAndSellComponent = () => {
     // Use the best price hook to get the current market price
     const { getBestPrice, isLoading: isLoadingPrice, error: priceError } = useGetBestPrice();
 
-    // Select the first pool when data loads
+    // Fetch best price when side changes
     useEffect(() => {
-        if (poolsData?.poolss?.items?.length > 0 && !selectedPool) {
-            setSelectedPool(poolsData.poolss.items[0]);
-        }
-    }, [poolsData, selectedPool]);
-
-    // Fetch best price when side changes or when pool changes
-    useEffect(() => {
-        if (orderType === 'market' && selectedPool) {
+        if (orderType === 'market') {
             const fetchBestPrice = async () => {
                 try {
                     // Get the opposite side's best price for market orders
@@ -125,7 +89,7 @@ const BuyAndSellComponent = () => {
             
             fetchBestPrice();
         }
-    }, [side, orderType, getBestPrice, selectedPool]);
+    }, [side, orderType, getBestPrice]);
 
     // Combined loading state
     const isPlacing = isPlacingLimitOrder || isPlacingMarketOrder;
@@ -135,11 +99,6 @@ const BuyAndSellComponent = () => {
     const handleSubmit = async () => {
         if (!address) {
             toast.error('Please connect your wallet');
-            return;
-        }
-
-        if (!selectedPool) {
-            toast.error('Please select a trading pair');
             return;
         }
 
@@ -153,66 +112,27 @@ const BuyAndSellComponent = () => {
             return;
         }
 
-        // Validate order against maxOrderAmount from the contract
-        if (selectedPool.maxOrderAmount && parseFloat(size) > parseFloat(selectedPool.maxOrderAmount)) {
-            toast.error(`Order size exceeds maximum allowed (${selectedPool.maxOrderAmount})`);
-            return;
-        }
-
         try {
-            // Convert inputs to appropriate formats based on the contract's expected inputs
-            // Price is stored as a uint64 in the contract
+            // Convert inputs to appropriate formats
             const priceValue = BigInt(Math.floor(parseFloat(price) * 1e6)); // Convert to uint64 (assuming 6 decimals)
-            
-            // Use the lot size from the selected pool for proper size conversion as defined in the contract
-            const lotSizeDecimals = selectedPool.lotSize ? Number(selectedPool.lotSize) : 18;
-            const sizeMultiplier = 10n ** BigInt(lotSizeDecimals);
-            const sizeValue = BigInt(Math.floor(parseFloat(size) * Number(sizeMultiplier))); 
-            
-            // Convert side to the Side enum used in the contract
+            const sizeValue = BigInt(Math.floor(parseFloat(size) * 1e18)); // Convert to uint128 (assuming 18 decimals)
             const orderSide = side === 'buy' ? Side.Buy : Side.Sell;
             const formattedAddress = address as `0x${string}`;
 
-            // Use the orderBook address from the selected pool if available
-            const orderBookAddress = selectedPool.orderBook;
-            
             if (orderType === 'limit') {
-                // Place a limit order
-                // The contract function is:
-                // placeOrder(Price price, Quantity quantity, Side side, address user)
                 await placeOrder({
                     price: priceValue,
                     quantity: sizeValue,
                     side: orderSide,
                     user: formattedAddress
                 });
-                
-                // When this succeeds, the contract will:
-                // 1. Create an order with status OPEN
-                // 2. Add it to the order queue for the given price and side
-                // 3. Lock the user's balance via the balanceManager
-                // 4. Try to match the order with existing orders on the opposite side
             } else {
-                // Place a market order
-                // The contract function is:
-                // placeMarketOrder(Quantity quantity, Side side, address user)
                 await placeMarketOrder({
                     quantity: sizeValue,
                     side: orderSide,
                     user: formattedAddress
                 });
-                
-                // When this succeeds, the contract will:
-                // 1. Create a market order
-                // 2. Immediately try to match it with existing orders at the best prices
-                // 3. The order will be either fully filled or partially filled
             }
-
-            // Reset form after successful submission
-            if (orderType === 'limit') {
-                setPrice('');
-            }
-            setSize('');
         } catch (error) {
             console.error('Order placement error:', error);
             toast.error('Failed to place order', {
@@ -221,79 +141,14 @@ const BuyAndSellComponent = () => {
         }
     };
 
-    // Function to get the correct currency display for the selected pool
-    const getBaseCurrency = () => {
-        return selectedPool?.baseCurrency || 'ETH';
-    };
-
-    const getQuoteCurrency = () => {
-        return selectedPool?.quoteCurrency || 'USDC';
-    };
-
-    // Get currency for price and size based on side
-    const getPriceCurrency = () => {
-        return side === 'buy' ? getQuoteCurrency() : getBaseCurrency();
-    };
-
-    const getSizeCurrency = () => {
-        return side === 'buy' ? getBaseCurrency() : getQuoteCurrency();
-    };
-
-    // Loading message if pools are still loading
-    if (!isClient || loadingPools) {
-        return (
-            <div className="w-full bg-white dark:bg-gray-900 rounded-lg text-gray-900 dark:text-white shadow-lg p-8 text-center">
-                <p>Loading trading pairs...</p>
-            </div>
-        );
-    }
-
-    // Error message if pools failed to load
-    if (poolsError) {
-        return (
-            <div className="w-full bg-white dark:bg-gray-900 rounded-lg text-gray-900 dark:text-white shadow-lg p-8 text-center">
-                <p className="text-red-500">Error loading trading pairs. Please refresh the page.</p>
-            </div>
-        );
-    }
-
     return (
         <div className="w-full bg-white dark:bg-gray-900 rounded-lg text-gray-900 dark:text-white shadow-lg">
-            <div className="flex items-center justify-between mb-[0.9px] bg-gray-100 dark:bg-[#151924] rounded-t-lg px-3 py-[17px]">
-                <h2 className="text-md font-semibold bg-clip-text text-gray-800 dark:text-gray-300 uppercase">
+            <div className="flex items-center mb-[0.9px] bg-gray-100 dark:bg-[#151924] rounded-t-lg">
+                <h2 className="text-md font-semibold px-3 py-[17px] bg-clip-text text-gray-800 dark:text-gray-300 uppercase">
                     Place Order
                 </h2>
-                <div className="relative">
-                    <button 
-                        onClick={() => setDropdownOpen(!dropdownOpen)}
-                        className="flex items-center gap-2 text-sm font-medium bg-white dark:bg-gray-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700"
-                    >
-                        {selectedPool ? `${selectedPool.baseCurrency}/${selectedPool.quoteCurrency}` : 'Select Pair'}
-                        <ChevronDown size={16} />
-                    </button>
-                    
-                    {dropdownOpen && (
-                        <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
-                            <ul className="py-1 max-h-60 overflow-auto">
-                                {poolsData.poolss.items.map((pool: any) => (
-                                    <li key={pool.id}>
-                                        <button
-                                            onClick={() => {
-                                                setSelectedPool(pool);
-                                                setDropdownOpen(false);
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                            {pool.baseCurrency}/{pool.quoteCurrency}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
             </div>
-            <div className='p-3'>
+            <div className=' p-3'>
                 <div className="flex flex-col gap-2 mb-4">
                     <div className="flex rounded-lg border border-gray-200 dark:border-gray-700/50 p-0.5 bg-gray-100 dark:bg-gray-800/30 backdrop-blur-sm">
                         <button
@@ -345,7 +200,7 @@ const BuyAndSellComponent = () => {
                                 LIMIT PRICE
                             </label>
                             <div className="flex items-center bg-gray-100 dark:bg-gray-800/50 rounded-lg p-2 border border-gray-300 dark:border-gray-700/50 backdrop-blur-sm focus-within:border-blue-500/50 transition-colors">
-                                <CurrencyIcon type={getPriceCurrency()} />
+                                <CurrencyIcon type={side === 'buy' ? 'usdc' : 'eth'} />
                                 <input
                                     type="number"
                                     value={price}
@@ -361,9 +216,9 @@ const BuyAndSellComponent = () => {
                                 MARKET PRICE {isLoadingPrice && "(Loading...)"}
                             </label>
                             <div className="flex items-center bg-gray-100 dark:bg-gray-800/50 rounded-lg p-2 border border-gray-300 dark:border-gray-700/50">
-                                <CurrencyIcon type={getPriceCurrency()} />
+                                <CurrencyIcon type={side === 'buy' ? 'usdc' : 'eth'} />
                                 <div className="w-full pl-2 text-base truncate">
-                                    {price ? `${price} ${getPriceCurrency()}` : "Fetching best price..."}
+                                    {price ? `${price} ${side === 'buy' ? 'USDC' : 'ETH'}` : "Fetching best price..."}
                                 </div>
                             </div>
                         </>
@@ -375,7 +230,7 @@ const BuyAndSellComponent = () => {
                         SIZE
                     </label>
                     <div className="flex items-center bg-gray-100 dark:bg-gray-800/50 rounded-lg p-2 border border-gray-300 dark:border-gray-700/50 backdrop-blur-sm focus-within:border-blue-500/50 transition-colors">
-                        <CurrencyIcon type={getSizeCurrency()} />
+                        <CurrencyIcon type={side === 'buy' ? 'eth' : 'usdc'} />
                         <input
                             type="number"
                             value={size}
@@ -383,7 +238,6 @@ const BuyAndSellComponent = () => {
                             placeholder="0.00"
                             className="w-full pl-2 bg-transparent outline-none text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-gray-400 dark:placeholder:text-gray-600"
                         />
-                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">{getSizeCurrency()}</span>
                     </div>
                 </div>
 
@@ -397,7 +251,7 @@ const BuyAndSellComponent = () => {
                                 : 'bg-red-600/60 hover:bg-red-600/40 text-white'
                             } ${isPlacing ? 'opacity-50 cursor-not-allowed' : ''} shadow-md`}
                     >
-                        {isPlacing ? 'Placing Order...' : `${side === 'buy' ? 'BUY' : 'SELL'} ${getSizeCurrency()} ${orderType.toUpperCase()}`}
+                        {isPlacing ? 'Placing Order...' : `${side === 'buy' ? 'BUY' : 'SELL'} ${orderType.toUpperCase()}`}
                     </button>
                 ) : (
                     <div className="flex items-center justify-center">
@@ -409,4 +263,4 @@ const BuyAndSellComponent = () => {
     );
 };
 
-export default BuyAndSellComponent;
+export default PlaceOrder;

@@ -1,10 +1,9 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { http } from 'viem';
-import {
-  arbitrumSepolia,
-  Chain,
-  sepolia
-} from 'wagmi/chains';
+import { http, createConfig } from "wagmi"
+import { arbitrumSepolia, sepolia, Chain } from "wagmi/chains"
+import { bitgetWallet, coinbaseWallet, metaMaskWallet, okxWallet, rabbyWallet, rainbowWallet, walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
+import { connectorsForWallets } from "@rainbow-me/rainbowkit";
+
+export const projectId = "c8d08053460bfe0752116d730dc6393b"
 
 const localChain: Chain = {
   id: 31337,
@@ -80,14 +79,38 @@ const riseSepolia: Chain = {
   },
   testnet: true,
 };
-// Configure chains with Rise Sepolia as the ONLY initial option
-export const wagmiConfig = getDefaultConfig({
-  appName: 'RainbowKit',
-  projectId: 'c8d08053460bfe0752116d730dc6393b',
-  chains: [
-    riseSepolia,
-    localChain,
-    conduitChain, // Only include Rise Sepolia initially to force direct connection
+
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: "Recommended",
+      wallets: [
+        okxWallet,
+        rabbyWallet,
+      ]
+    },
+    {
+      groupName: "Others",
+      wallets: [
+        walletConnectWallet,
+        metaMaskWallet,
+        coinbaseWallet,
+        rainbowWallet,
+        bitgetWallet,
+      ],
+    },
   ],
-  // After connection, we can programmatically add the other chains
-});
+  { appName: "RainbowKit App", projectId: projectId },
+);
+
+export const wagmiConfig = createConfig({
+  chains: [riseSepolia, localChain, conduitChain, arbitrumSepolia],
+  connectors: connectors,
+  transports: {
+    [riseSepolia.id]: http("https://testnet.riselabs.xyz"),
+    [localChain.id]: http("http://127.0.0.1:8545"),
+    [conduitChain.id]: http("https://odyssey.ithaca.xyz"),
+    [arbitrumSepolia.id]: http("https://sepolia-rollup.arbitrum.io/rpc"),
+    [sepolia.id]: http("https://sepolia.infura.io/v3/jBG4sMyhez7V13jNTeQKfVfgNa54nCmF")
+  }
+})

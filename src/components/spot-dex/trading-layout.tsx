@@ -7,7 +7,7 @@ import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName } from 
 import ChartComponent from "./chart/chart"
 import MarketDataWidget from "./market-widget/market-widget"
 import TradingPosition from "./trading-position/trading-position"
-import BuyAndSellComponent from "./market/buy-and-sell"
+import PlaceOrder from "./place-order/place-order"
 import { Button } from "../ui/button"
 import { Moon, Sun } from 'lucide-react'
 import Link from "next/link"
@@ -45,15 +45,14 @@ export default function TradingLayout() {
     return (
         <QueryClientProvider client={queryClient}>
             <div className="min-h-screen bg-white dark:bg-[#303030] text-gray-900 dark:text-white">
-                
 
                 <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] py-[4px]">
                     <div className="">
                         <div className="shadow-lg rounded-lg">
-                            <MarketDataWidget />
-                            <ChartComponent />
+                            {/* <MarketDataWidget /> */}
+                            {/* <ChartComponent /> */}
                         </div>
-                        <TradingPosition />
+                        {/* <TradingPosition /> */}
                     </div>
 
                     <div className="space-y-[6px]">
@@ -63,7 +62,7 @@ export default function TradingLayout() {
                     </div>
 
                     <div className="space-y-2">
-                        <BuyAndSellComponent />
+                        <PlaceOrder />
                     </div>
                 </div>
 

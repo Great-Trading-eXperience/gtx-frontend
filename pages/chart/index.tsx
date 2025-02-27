@@ -16,7 +16,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import request from 'graphql-request';
 import { matchOrderEvents } from '@/graphql/liquidbook/liquidbook.query';
 import { calculatePrice } from '../../helper';
-import { LIQUIDBOOK_GRAPHQL_URL } from '@/constants/subgraph-url';
+import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 
 interface MatchOrderEvent {
   timestamp: number;
@@ -69,7 +69,7 @@ const SplitVolumeIndicator = ({ height = 300 }: { height?: number }) => {
   const { data, isLoading, error } = useQuery<MatchOrderEventResponse>({
     queryKey: ['tickEvents'],
     queryFn: async () => {
-      return await request(LIQUIDBOOK_GRAPHQL_URL, matchOrderEvents);
+      return await request(GTX_GRAPHQL_URL, matchOrderEvents);
     },
     refetchInterval: 500,
     staleTime: 0,
