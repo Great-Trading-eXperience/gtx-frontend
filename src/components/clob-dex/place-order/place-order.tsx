@@ -9,6 +9,8 @@ import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import { useOrderBookAPI } from '@/hooks/web3/gtx/clob-dex/orderbook/useOrderBookAPI';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/write/usePlaceOrder';
+import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
+// import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 // Order side type
 type Side = 0 | 1; // 0 = BUY, 1 = SELL
@@ -47,6 +49,12 @@ const PlaceOrder = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [depositMode, setDepositMode] = useState(false);
   const [depositAmount, setDepositAmount] = useState<string>('');
+
+  // Notification dialog states
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationSuccess, setNotificationSuccess] = useState(true);
+  const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>();
 
   // Fetch pools data with react-query
   const { data: poolsData, isLoading: poolsLoading, error: poolsError } = useQuery<PoolsData>({
@@ -166,6 +174,28 @@ const PlaceOrder = () => {
     }
   }, [orderBookAddress, refreshOrderBook]);
 
+  // Show error notification when there's an error
+  useEffect(() => {
+    if (limitSimulateError || marketSimulateError) {
+      const error = limitSimulateError || marketSimulateError;
+      setNotificationMessage("There was an error processing your transaction. Please try again.");
+      setNotificationSuccess(false);
+      setNotificationTxHash(undefined);
+      setShowNotification(true);
+    }
+  }, [limitSimulateError, marketSimulateError]);
+
+  // Show success notification when order is confirmed
+  useEffect(() => {
+    if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
+      setNotificationMessage(`Your ${side === 0 ? 'buy' : 'sell'} order has been placed.`);
+      setNotificationSuccess(true);
+      // Assuming you have the transaction hash saved somewhere in your hooks
+      // setNotificationTxHash(txHash);
+      setShowNotification(true);
+    }
+  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side]);
+
   const handlePoolChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const poolId = e.target.value;
     const pool = poolsData?.poolss.items.find((p: any) => p.id === poolId);
@@ -175,21 +205,21 @@ const PlaceOrder = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Enhanced parameter validation
       const quantityBigInt = parseUnits(quantity, 18);
       const priceBigInt = parseUnits(price, 0);
-  
+
       // Additional checks before contract call
       if (quantityBigInt <= 0n) {
         throw new Error('Quantity must be positive');
       }
-      
+
       if (priceBigInt <= 0n) {
         throw new Error('Price must be positive');
       }
-  
+
       // Log detailed transaction parameters for debugging
       console.log('Order Parameters:', {
         baseCurrency: selectedPool.baseCurrency,
@@ -198,23 +228,26 @@ const PlaceOrder = () => {
         quantity: quantityBigInt.toString(),
         side
       });
-  
+
       // Existing order placement logic
       await handlePlaceLimitOrder(
         {
           baseCurrency: selectedPool.baseCurrency as HexAddress,
           quoteCurrency: selectedPool.quoteCurrency as HexAddress
-        }, 
+        },
         priceBigInt,
         quantityBigInt,
         side,
       );
     } catch (error) {
       console.error('Detailed Order Placement Error:', error);
-      
+
       // More informative error handling
       if (error instanceof Error) {
-        alert(`Order Error: ${error.message}`);
+        setNotificationMessage("There was an error processing your transaction. Please try again.");
+        setNotificationSuccess(false);
+        setNotificationTxHash(undefined);
+        setShowNotification(true);
       }
     }
   };
@@ -223,7 +256,10 @@ const PlaceOrder = () => {
     e.preventDefault();
 
     if (!isConnected || !selectedPool || !address) {
-      alert('Please connect your wallet first');
+      setNotificationMessage("Please connect your wallet first.");
+      setNotificationSuccess(false);
+      setNotificationTxHash(undefined);
+      setShowNotification(true);
       return;
     }
 
@@ -243,11 +279,23 @@ const PlaceOrder = () => {
       try {
         const total = await getTotalAvailableBalance(relevantCurrency);
         setAvailableBalance(formatUnits(total, 18));
+
+        // Show success message
+        setNotificationMessage("Successfully deposited funds.");
+        setNotificationSuccess(true);
+        // You can set transaction hash here if available
+        // setNotificationTxHash(depositTxHash);
+        setShowNotification(true);
       } catch (error) {
         console.error('Failed to refresh balance after deposit:', error);
       }
     } catch (error) {
       console.error('Deposit error:', error);
+
+      setNotificationMessage("There was an error processing your deposit.");
+      setNotificationSuccess(false);
+      setNotificationTxHash(undefined);
+      setShowNotification(true);
     }
   };
 
@@ -256,71 +304,25 @@ const PlaceOrder = () => {
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
-  if (poolsLoading) return <div>Loading trading pairs...</div>;
-  if (poolsError) return <div>Error loading trading pairs: {(poolsError as Error).message}</div>;
+  if (poolsLoading) return <div className="text-sm text-gray-300">Loading trading pairs...</div>;
+  if (poolsError) return <div className="text-sm text-red-400">Error loading trading pairs: {(poolsError as Error).message}</div>;
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6">Place Order</h2>
-
-      {/* Balance Display */}
-      {isConnected && selectedPool && (
-        <div className="mb-4 p-3 bg-gray-700 rounded">
-          <div className="flex justify-between items-center">
-            <div>
-              <span className="text-gray-300">Available: </span>
-              <span className="text-white font-medium">
-                {isLoadingBalance || balanceLoading ? 'Loading...' :
-                  availableBalance === 'Error' ? 'Error loading balance' :
-                    `${parseFloat(availableBalance).toFixed(6)}`}
-              </span>
-              <span className="ml-1 text-gray-400">
-                {side === 0
-                  ? 'USDC'
-                  : selectedPool.coin.split('/')[0]}
-              </span>
-            </div>
-            <button
-              type="button"
-              className="text-blue-400 text-sm underline"
-              onClick={() => setDepositMode(!depositMode)}
-            >
-              {depositMode ? 'Cancel' : 'Deposit'}
-            </button>
+    <div className="bg-gray-900 rounded-lg p-5 max-w-md mx-auto border border-gray-800 shadow-lg">
+      <h2 className="text-xl font-medium text-white mb-4 flex items-center justify-between">
+        <span>Place Order</span>
+        {isConnected && (
+          <div className="text-sm text-gray-400">
+            {selectedPool?.coin}
           </div>
+        )}
+      </h2>
 
-          {depositMode && (
-            <form onSubmit={handleDeposit} className="mt-3">
-              <div className="flex">
-                <input
-                  type="number"
-                  className="flex-1 bg-gray-600 text-white rounded-l p-2"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder={`Deposit amount in ${side === 0 ? 'USDC' : selectedPool.coin.split('/')[0]}`}
-                  step="0.000001"
-                  min="0"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-3 rounded-r"
-                  disabled={balanceLoading}
-                >
-                  {balanceLoading ? 'Processing...' : 'Deposit'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        {/* Trading Pair Selection */}
-        <div className="mb-4">
-          <label className="block text-gray-300 mb-2">Trading Pair</label>
+      {/* Trading Pair and Balance Row */}
+      <div className="flex flex-col w-full gap-3 mb-4">
+        <div className="w-full">
           <select
-            className="w-full bg-gray-700 text-white rounded p-2"
+            className="w-full bg-gray-800 text-white text-sm rounded py-2 px-3 border border-gray-700"
             value={selectedPool?.id || ''}
             onChange={handlePoolChange}
           >
@@ -332,154 +334,204 @@ const PlaceOrder = () => {
           </select>
         </div>
 
-        {/* Order Type Selection */}
-        <div className="mb-4">
-          <label className="block text-gray-300 mb-2">Order Type</label>
-          <div className="flex">
-            <button
-              type="button"
-              className={`flex-1 p-2 rounded-l ${orderType === 'limit' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-              onClick={() => setOrderType('limit')}
-            >
-              Limit
-            </button>
-            <button
-              type="button"
-              className={`flex-1 p-2 rounded-r ${orderType === 'market' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-              onClick={() => setOrderType('market')}
-            >
-              Market
-            </button>
-          </div>
-        </div>
+        {isConnected && selectedPool && (
+          <div>
+            <h2 className="text-gray-400">Balance Available: </h2>
+            <div className="w-full bg-gray-800 rounded py-2 px-3 text-sm border border-gray-700 flex justify-between items-center">
 
-        {/* Buy/Sell Selection */}
-        <div className="mb-4">
-          <label className="block text-gray-300 mb-2">Side</label>
-          <div className="flex">
-            <button
-              type="button"
-              className={`flex-1 p-2 rounded-l ${side === 0 ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-              onClick={() => setSide(0)}
-            >
-              Buy
-            </button>
-            <button
-              type="button"
-              className={`flex-1 p-2 rounded-r ${side === 1 ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-              onClick={() => setSide(1)}
-            >
-              Sell
-            </button>
+              <div>
+                <span className="text-white">
+                  {isLoadingBalance || balanceLoading ? '...' :
+                    availableBalance === 'Error' ? 'Error' :
+                      `${parseFloat(availableBalance).toFixed(4)}`}
+                </span>
+
+              </div>
+              <span className="ml-1 text-gray-400">
+                {side === 0 ? 'USDC' : selectedPool.coin.split('/')[0]}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Deposit Form */}
+      <form onSubmit={handleDeposit} className="mb-4">
+        <div className="flex gap-2">
+          <input
+            type="number"
+            className="flex-1 bg-gray-800 text-white text-sm rounded-l py-2 px-3 border border-gray-700"
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
+            placeholder={`Deposit ${side === 0 ? 'USDC' : selectedPool.coin.split('/')[0]}`}
+            step="0.000001"
+            min="0"
+            required
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-2 rounded-r"
+            disabled={balanceLoading}
+          >
+            {balanceLoading ? '...' : 'Deposit'}
+          </button>
+        </div>
+      </form>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Order Type and Side Row */}
+        <div className="flex gap-3">
+          {/* Order Type Selection */}
+          <div className="w-1/2">
+            <div className="flex h-9 text-sm rounded overflow-hidden border border-gray-700">
+              <button
+                type="button"
+                className={`flex-1 ${orderType === 'limit' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                onClick={() => setOrderType('limit')}
+              >
+                Limit
+              </button>
+              <button
+                type="button"
+                className={`flex-1 ${orderType === 'market' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                onClick={() => setOrderType('market')}
+              >
+                Market
+              </button>
+            </div>
+          </div>
+
+          {/* Buy/Sell Selection */}
+          <div className="w-1/2">
+            <div className="flex h-9 text-sm rounded overflow-hidden border border-gray-700">
+              <button
+                type="button"
+                className={`flex-1 ${side === 0 ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                onClick={() => setSide(0)}
+              >
+                Buy
+              </button>
+              <button
+                type="button"
+                className={`flex-1 ${side === 1 ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                onClick={() => setSide(1)}
+              >
+                Sell
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Price - Only for Limit Orders */}
         {orderType === 'limit' && (
-          <div className="mb-4">
-            <label className="block text-gray-300 mb-2">
-              Price {isLoadingBestPrices && <span className="text-xs">(loading best price...)</span>}
-            </label>
+          <div className="relative">
             <div className="flex items-center">
               <input
                 type="number"
-                className="w-full bg-gray-700 text-white rounded p-2"
+                className="w-full bg-gray-800 text-white text-sm rounded py-2 px-3 border border-gray-700"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder="Enter price"
+                placeholder="Price"
                 step="0.000001"
                 min="0"
                 required
               />
-              <span className="ml-2 text-gray-400">
-                {selectedPool?.quoteCurrency ? 'USDC' : ''}
+              <span className="absolute right-3 text-sm text-gray-400">
+                USDC
               </span>
             </div>
 
             {/* Best price indicators */}
-            <div className="mt-1 flex justify-between text-xs">
+            <div className="mt-1 flex justify-between text-sm">
               <span className="text-green-400">
-                Best Buy: {bestPriceBuy ? formatUnits(bestPriceBuy.price, 0) : 'N/A'}
+                Buy: {bestPriceBuy ? formatUnits(bestPriceBuy.price, 0) : 'N/A'}
               </span>
               <span className="text-red-400">
-                Best Sell: {bestPriceSell ? formatUnits(bestPriceSell.price, 0) : 'N/A'}
+                Sell: {bestPriceSell ? formatUnits(bestPriceSell.price, 0) : 'N/A'}
               </span>
             </div>
           </div>
         )}
 
         {/* Quantity */}
-        <div className="mb-4">
-          <label className="block text-gray-300 mb-2">Amount</label>
-          <div className="flex items-center">
-            <input
-              type="number"
-              className="w-full bg-gray-700 text-white rounded p-2"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="Enter amount"
-              step="0.000001"
-              min="0"
-              required
-            />
-            <span className="ml-2 text-gray-400">
-              {selectedPool?.baseCurrency ? selectedPool.coin.split('/')[0] : ''}
-            </span>
-          </div>
+        <div className="relative">
+          <input
+            type="number"
+            className="w-full bg-gray-800 text-white text-sm rounded py-2 px-3 border border-gray-700"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="Amount"
+            step="0.000001"
+            min="0"
+            required
+          />
+          <span className="absolute right-3 top-2 text-sm text-gray-400">
+            {selectedPool?.baseCurrency ? selectedPool.coin.split('/')[0] : ''}
+          </span>
         </div>
 
         {/* Total - Calculated Field */}
-        <div className="mb-6">
-          <label className="block text-gray-300 mb-2">Total</label>
-          <div className="flex items-center">
-            <input
-              type="text"
-              className="w-full bg-gray-700 text-white rounded p-2"
-              value={total}
-              readOnly
-            />
-            <span className="ml-2 text-gray-400">
-              {selectedPool?.quoteCurrency ? 'USDC' : ''}
-            </span>
-          </div>
+        <div className="relative">
+          <input
+            type="text"
+            className="w-full bg-gray-800 text-white text-sm rounded py-2 px-3 border border-gray-700"
+            value={total}
+            placeholder="Total"
+            readOnly
+          />
+          <span className="absolute right-3 top-2 text-sm text-gray-400">
+            USDC
+          </span>
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          className={`w-full p-3 rounded font-semibold ${side === 0
-              ? 'bg-green-600 hover:bg-green-700 text-white'
-              : 'bg-red-600 hover:bg-red-700 text-white'
+          className={`w-full py-2.5 px-4 rounded text-sm font-medium transition-colors ${side === 0
+            ? 'bg-green-600 hover:bg-green-700 text-white'
+            : 'bg-red-600 hover:bg-red-700 text-white'
             } ${(isPending || isConfirming) ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={isPending || isConfirming || !isConnected}
         >
-          {isPending ? 'Processing Order...' :
-            isConfirming ? 'Confirming Transaction...' :
+          {isPending ? 'Processing...' :
+            isConfirming ? 'Confirming...' :
               isConfirmed ? 'Order Placed!' :
-                `${side === 0 ? 'Buy' : 'Sell'} ${orderType === 'limit' ? 'Limit' : 'Market'}`}
+                `${side === 0 ? 'Buy' : 'Sell'} ${selectedPool?.coin.split('/')[0]}`}
         </button>
       </form>
 
-      {/* Status Message */}
-      {isConfirmed && (
-        <div className="mt-4 p-3 bg-green-900 text-green-200 rounded">
-          Your order has been successfully placed!
+      {/* Success confirmation alert - temporary visual confirmation */}
+      {/* {isConfirmed && (
+        <div className="mt-3 p-2.5 bg-green-900/50 text-green-200 rounded text-sm border border-green-800">
+          Order successfully placed!
         </div>
-      )}
+      )} */}
 
+      {/* Error message block - COMMENTED OUT as requested
       {orderError && (
-        <div className="mt-4 p-3 bg-red-900 text-red-200 rounded">
-          <div className="font-semibold">Error placing order:</div>
-          <div className="text-sm mt-1">{orderError.message}</div>
+        <div className="mt-3 p-2.5 bg-red-900/50 text-red-200 rounded text-sm border border-red-800">
+          Error: {orderError.message}
         </div>
       )}
+      */}
 
       {!isConnected && (
-        <div className="mt-4 p-3 bg-yellow-900 text-yellow-200 rounded text-center">
-          Please connect your wallet to place orders
+        <div className="mt-3 p-2.5 bg-yellow-900/50 text-yellow-200 rounded text-sm border border-yellow-800 text-center">
+          Please connect wallet to trade
         </div>
       )}
+
+      {/* Notification Dialog */}
+      <NotificationDialog
+        isOpen={showNotification}
+        onClose={() => setShowNotification(false)}
+        message={notificationMessage}
+        isSuccess={notificationSuccess}
+        txHash={notificationTxHash}
+      />
     </div>
+
+
   );
 };
 

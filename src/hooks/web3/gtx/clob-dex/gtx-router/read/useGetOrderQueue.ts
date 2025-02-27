@@ -1,11 +1,9 @@
-import { writeContract, readContract, waitForTransaction } from '@wagmi/core';
+import { readContract } from '@wagmi/core';
 import { useCallback, useState } from 'react';
 import { wagmiConfig } from '@/configs/wagmi';
-import { TransactionReceipt } from 'viem';
 import { GTX_ROUTER_ADDRESS } from '@/constants/contract-address';
 import GTXRouterABI from '@/abis/gtx/clob-dex/GTXRouterABI';
-import { HexAddress } from '@/types/web3/general/address';
-import { PoolKey, PriceVolume, Side } from './useGTXRouter';
+import { PoolKey, Side } from '../useGTXRouter';
 
 // Hook for getting order queue details
 interface GetOrderQueueParams {

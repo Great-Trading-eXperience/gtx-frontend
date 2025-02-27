@@ -6,9 +6,9 @@ import { useAccount } from 'wagmi';
 import { HexAddress } from '@/types/web3/general/address';
 import { poolsQuery } from '@/graphql/gtx/gtx.query';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { useOrderBookAPI } from '@/hooks/web3/gtx/clob-dex/orderbook/useOrderbook';
-import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/unifiedOrderPlacement/useTradingBalances';
-import { useGTXRouter } from '@/hooks/web3/gtx/clob-dex/GTXRouter/useGTXRouter';
+import { useOrderBookAPI } from '@/hooks/web3/gtx/clob-dex/orderbook/useOrderBookAPI';
+import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
+import { useGTXRouter } from '@/hooks/web3/gtx/clob-dex/gtx-router/useGTXRouter';
 import { toast } from 'sonner';
 
 // Order side type

@@ -14,9 +14,9 @@ import PoolManagerABI from '@/abis/gtx/clob-dex/PoolManagerABI';
 
 // Types
 import { HexAddress } from '@/types/web3/general/address';
-import { useOrderBookAPI } from '../orderbook/useOrderbook';
+import { useOrderBookAPI } from '../orderbook/useOrderBookAPI';
 import { useCancelOrder } from '../orderbook/useCencelOrder';
-import { useTradingBalances } from './useTradingBalances';
+import { useTradingBalances } from '../balance-manager/useTradingBalances';
 
 // Define order types
 export type Side = 0 | 1; // 0 = BUY (BID), 1 = SELL (ASK)

@@ -6,7 +6,7 @@ import { BALANCE_MANAGER_ADDRESS } from '@/constants/contract-address';
 import BalanceManagerABI from '@/abis/gtx/clob-dex/BalanceManagerABI';
 import { waitForTransaction } from '@wagmi/core';
 import { HexAddress } from '@/types/web3/general/address';
-import { BaseOptions } from '../useBalanceManager';
+import { BaseOptions } from '../read/useBalanceManager';
 
 // Deposit hook
 export interface BalanceOperationParams {

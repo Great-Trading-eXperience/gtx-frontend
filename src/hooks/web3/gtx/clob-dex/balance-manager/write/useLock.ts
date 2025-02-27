@@ -4,8 +4,8 @@ import { wagmiConfig } from '@/configs/wagmi';
 import { BALANCE_MANAGER_ADDRESS } from '@/constants/contract-address';
 import BalanceManagerABI from '@/abis/gtx/clob-dex/BalanceManagerABI';
 import { HexAddress } from '@/types/web3/general/address';
-import { BalanceOperationParams } from './write/useDeposit';
-import { BaseOptions } from './useBalanceManager';
+import { BalanceOperationParams } from './useDeposit';
+import { BaseOptions } from '../read/useBalanceManager';
 
 // Lock tokens hook
 interface LockParams extends BalanceOperationParams {

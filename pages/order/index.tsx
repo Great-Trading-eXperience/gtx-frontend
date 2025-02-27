@@ -1,7 +1,7 @@
 'use client';
 
 
-import TradingLayout from "@/components/spot-dex/trading-layout";
+import TradingLayout from "@/components/spot-dex/clob-dex";
 import PlaceOrder from "@/components/test/placeorder";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 

@@ -1,623 +1,332 @@
-import { writeContract, readContract, waitForTransaction } from '@wagmi/core';
-import { useCallback, useState } from 'react';
-import { wagmiConfig } from '@/configs/wagmi';
-import { TransactionReceipt } from 'viem';
-import { GTX_ROUTER_ADDRESS } from '@/constants/contract-address';
-import GTXRouterABI from '@/abis/gtx/clob-dex/GTXRouterABI';
-import { HexAddress } from '@/types/web3/general/address';
+import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
+import { writeContract, waitForTransactionReceipt } from "wagmi/actions";
+import { useState } from "react";
+import { useAccount } from "wagmi";
+import gtxRouterABI from "@/abis/gtx/clob-dex/GTXRouterABI";
+import { wagmiConfig } from "@/configs/wagmi";
 
-// Common types
-export interface BaseOptions {
-    onSuccess?: (receipt: TransactionReceipt) => void;
-    onError?: (error: Error) => void;
-}
+// Type definitions for clarity
+export type HexAddress = `0x${string}`;
+export type PoolKey = {
+  baseCurrency: HexAddress;
+  quoteCurrency: HexAddress;
+};
+export type Side = 0 | 1; // 0 = BID, 1 = ASK
 
-// Pool Key type (used in many functions)
-export interface PoolKey {
-    baseCurrency: HexAddress;
-    quoteCurrency: HexAddress;
-}
+export const useGTXRouter = (routerAddress: HexAddress) => {
+  const { address } = useAccount();
+  
+  // Track transaction steps
+  const [steps, setSteps] = useState<
+    Array<{
+      step: number;
+      status: "idle" | "loading" | "success" | "error";
+      error?: string;
+    }>
+  >([
+    { step: 1, status: "idle" }, // Place order
+  ]);
 
-// Side type (0 = Buy, 1 = Sell)
-export type Side = 0 | 1;
+  // Store the transaction hash for reference
+  const [txHash, setTxHash] = useState<string | null>(null);
 
-// PriceVolume type
-export interface PriceVolume {
-    price: bigint; // uint64
-    volume: bigint; // uint256
-}
+  // Mutation for regular limit order
+  const placeOrderMutation = useMutation({
+    mutationFn: async ({ 
+      key, 
+      price, 
+      quantity, 
+      side 
+    }: { 
+      key: PoolKey; 
+      price: bigint; 
+      quantity: bigint; 
+      side: Side;
+    }) => {
+      try {
+        // Reset steps
+        setSteps([{ step: 1, status: "idle" }]);
 
-// Order type
-export interface Order {
-    id: number; // uint48 returns as number
-    user: HexAddress;
-    next: number; // uint48 returns as number
-    prev: number; // uint48 returns as number
-    timestamp: number; // uint48 returns as number
-    expiry: number; // uint48 returns as number
-    price: bigint; // uint64
-    status: number; // uint8
-    quantity: bigint; // uint128
-    filled: bigint; // uint128
-}
+        // Set step to loading
+        setSteps((prev) => 
+          prev.map((item) => 
+            item.step === 1 ? { ...item, status: "loading" } : item
+          )
+        );
 
-// Hook for getting balance manager and pool manager addresses
-interface UseGTXAddressesReturn {
-    getBalanceManager: () => Promise<HexAddress>;
-    getPoolManager: () => Promise<HexAddress>;
-    isLoading: boolean;
-    error: Error | null;
-}
+        // Execute the transaction
+        const hash = await writeContract(wagmiConfig, {
+          abi: gtxRouterABI,
+          address: routerAddress,
+          functionName: "placeOrder",
+          args: [key, price, quantity, side],
+        });
 
-export const useGTXAddresses = (): UseGTXAddressesReturn => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+        // Set the transaction hash
+        setTxHash(hash);
 
-    const getBalanceManager = useCallback(async (): Promise<HexAddress> => {
-        setIsLoading(true);
-        setError(null);
+        // Wait for receipt
+        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
 
-        try {
-            const address = await readContract(wagmiConfig, {
-                address: GTX_ROUTER_ADDRESS,
-                abi: GTXRouterABI,
-                functionName: 'balanceManager',
-            });
-
-            return address;
-        } catch (err: unknown) {
-            const error = err instanceof Error ? err : new Error('Failed to get balance manager address');
-            setError(error);
-            throw error;
-        } finally {
-            setIsLoading(false);
+        if (receipt.status === "success") {
+          setSteps((prev) =>
+            prev.map((item) =>
+              item.step === 1 ? { ...item, status: "success" } : item
+            )
+          );
+          toast.success("Order placed successfully!");
+        } else {
+          throw new Error("Transaction failed");
         }
-    }, []);
 
-    const getPoolManager = useCallback(async (): Promise<HexAddress> => {
-        setIsLoading(true);
-        setError(null);
+        return receipt;
+      } catch (error) {
+        console.error("Transaction error:", error);
 
-        try {
-            const address = await readContract(wagmiConfig, {
-                address: GTX_ROUTER_ADDRESS,
-                abi: GTXRouterABI,
-                functionName: 'poolManager',
-            });
+        // Update steps with error
+        setSteps((prev) =>
+          prev.map((step) => {
+            if (step.status === "loading") {
+              return {
+                ...step,
+                status: "error",
+                error: error instanceof Error ? error.message : "An error occurred",
+              };
+            }
+            return step;
+          })
+        );
 
-            return address;
-        } catch (err: unknown) {
-            const error = err instanceof Error ? err : new Error('Failed to get pool manager address');
-            setError(error);
-            throw error;
-        } finally {
-            setIsLoading(false);
+        toast.error(error instanceof Error ? error.message : "Failed to place order. Please try again.");
+        throw error;
+      }
+    },
+  });
+
+  // Mutation for order with deposit
+  const placeOrderWithDepositMutation = useMutation({
+    mutationFn: async ({ 
+      key, 
+      price, 
+      quantity, 
+      side 
+    }: { 
+      key: PoolKey; 
+      price: bigint; 
+      quantity: bigint; 
+      side: Side;
+    }) => {
+      try {
+        // Reset steps
+        setSteps([{ step: 1, status: "idle" }]);
+
+        // Set step to loading
+        setSteps((prev) => 
+          prev.map((item) => 
+            item.step === 1 ? { ...item, status: "loading" } : item
+          )
+        );
+
+        // Execute the transaction
+        const hash = await writeContract(wagmiConfig, {
+          abi: gtxRouterABI,
+          address: routerAddress,
+          functionName: "placeOrderWithDeposit",
+          args: [key, price, quantity, side],
+        });
+
+        // Set the transaction hash
+        setTxHash(hash);
+
+        // Wait for receipt
+        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
+
+        if (receipt.status === "success") {
+          setSteps((prev) =>
+            prev.map((item) =>
+              item.step === 1 ? { ...item, status: "success" } : item
+            )
+          );
+          toast.success("Order with deposit placed successfully!");
+        } else {
+          throw new Error("Transaction failed");
         }
-    }, []);
 
-    return {
-        getBalanceManager,
-        getPoolManager,
-        isLoading,
-        error,
-    };
-};
+        return receipt;
+      } catch (error) {
+        console.error("Transaction error:", error);
 
-// Hook for placing a limit order
-interface PlaceOrderParams {
-    key: PoolKey;
-    price: bigint; // uint64
-    quantity: bigint; // uint128
-    side: Side;
-}
-
-interface UsePlaceOrderReturn {
-    placeOrder: (params: PlaceOrderParams) => Promise<bigint>;
-    isPlacingOrder: boolean;
-    error: Error | null;
-}
-
-export const usePlaceOrder = (options: BaseOptions = {}): UsePlaceOrderReturn => {
-    const { onSuccess, onError } = options;
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const placeOrder = useCallback(
-        async ({ key, price, quantity, side }: PlaceOrderParams): Promise<bigint> => {
-            setIsPlacingOrder(true);
-            setError(null);
-
-            try {
-                const hash = await writeContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'placeOrder',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, price, quantity, side] as const,
-                });
-
-                const receipt = await waitForTransaction(wagmiConfig, {
-                    hash,
-                });
-
-                // Extract orderId from receipt logs (this would require decoding logs)
-                // For simplicity, we'll return a placeholder value
-                const orderId = BigInt(0); // In real implementation, extract from logs
-
-                onSuccess?.(receipt);
-                return orderId;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to place limit order');
-                setError(error);
-                onError?.(error);
-                throw error;
-            } finally {
-                setIsPlacingOrder(false);
+        // Update steps with error
+        setSteps((prev) =>
+          prev.map((step) => {
+            if (step.status === "loading") {
+              return {
+                ...step,
+                status: "error",
+                error: error instanceof Error ? error.message : "An error occurred",
+              };
             }
-        },
-        [onSuccess, onError]
-    );
+            return step;
+          })
+        );
 
-    return {
-        placeOrder,
-        isPlacingOrder,
-        error,
-    };
-};
+        toast.error(error instanceof Error ? error.message : "Failed to place order with deposit. Please try again.");
+        throw error;
+      }
+    },
+  });
 
-// Hook for placing a limit order with deposit
-interface UsePlaceOrderWithDepositReturn {
-    placeOrderWithDeposit: (params: PlaceOrderParams) => Promise<bigint>;
-    isPlacingOrder: boolean;
-    error: Error | null;
-}
+  // Mutation for market order
+  const placeMarketOrderMutation = useMutation({
+    mutationFn: async ({ 
+      key, 
+      quantity, 
+      side 
+    }: { 
+      key: PoolKey; 
+      quantity: bigint; 
+      side: Side;
+    }) => {
+      try {
+        // Reset steps
+        setSteps([{ step: 1, status: "idle" }]);
 
-export const usePlaceOrderWithDeposit = (options: BaseOptions = {}): UsePlaceOrderWithDepositReturn => {
-    const { onSuccess, onError } = options;
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+        // Set step to loading
+        setSteps((prev) => 
+          prev.map((item) => 
+            item.step === 1 ? { ...item, status: "loading" } : item
+          )
+        );
 
-    const placeOrderWithDeposit = useCallback(
-        async ({ key, price, quantity, side }: PlaceOrderParams): Promise<bigint> => {
-            setIsPlacingOrder(true);
-            setError(null);
+        // Execute the transaction
+        const hash = await writeContract(wagmiConfig, {
+          abi: gtxRouterABI,
+          address: routerAddress,
+          functionName: "placeMarketOrder",
+          args: [key, quantity, side],
+        });
 
-            try {
-                const hash = await writeContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'placeOrderWithDeposit',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, price, quantity, side] as const,
-                });
+        // Set the transaction hash
+        setTxHash(hash);
 
-                const receipt = await waitForTransaction(wagmiConfig, {
-                    hash,
-                });
+        // Wait for receipt
+        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
 
-                // Extract orderId from receipt logs (this would require decoding logs)
-                // For simplicity, we'll return a placeholder value
-                const orderId = BigInt(0); // In real implementation, extract from logs
-
-                onSuccess?.(receipt);
-                return orderId;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to place limit order with deposit');
-                setError(error);
-                onError?.(error);
-                throw error;
-            } finally {
-                setIsPlacingOrder(false);
-            }
-        },
-        [onSuccess, onError]
-    );
-
-    return {
-        placeOrderWithDeposit,
-        isPlacingOrder,
-        error,
-    };
-};
-
-// Hook for placing a market order
-interface PlaceMarketOrderParams {
-    key: PoolKey;
-    quantity: bigint; // uint128
-    side: Side;
-}
-
-interface UsePlaceMarketOrderReturn {
-    placeMarketOrder: (params: PlaceMarketOrderParams) => Promise<bigint>;
-    isPlacingOrder: boolean;
-    error: Error | null;
-}
-
-export const usePlaceMarketOrder = (options: BaseOptions = {}): UsePlaceMarketOrderReturn => {
-    const { onSuccess, onError } = options;
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const placeMarketOrder = useCallback(
-        async ({ key, quantity, side }: PlaceMarketOrderParams): Promise<bigint> => {
-            setIsPlacingOrder(true);
-            setError(null);
-
-            try {
-                const hash = await writeContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'placeMarketOrder',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, quantity, side] as const,
-                });
-
-                const receipt = await waitForTransaction(wagmiConfig, {
-                    hash,
-                });
-
-                // Extract orderId from receipt logs (this would require decoding logs)
-                // For simplicity, we'll return a placeholder value
-                const orderId = BigInt(0); // In real implementation, extract from logs
-
-                onSuccess?.(receipt);
-                return orderId;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to place market order');
-                setError(error);
-                onError?.(error);
-                throw error;
-            } finally {
-                setIsPlacingOrder(false);
-            }
-        },
-        [onSuccess, onError]
-    );
-
-    return {
-        placeMarketOrder,
-        isPlacingOrder,
-        error,
-    };
-};
-
-// Hook for placing a market order with deposit
-interface PlaceMarketOrderWithDepositParams {
-    key: PoolKey;
-    price: bigint; // uint64
-    quantity: bigint; // uint128
-    side: Side;
-}
-
-interface UsePlaceMarketOrderWithDepositReturn {
-    placeMarketOrderWithDeposit: (params: PlaceMarketOrderWithDepositParams) => Promise<bigint>;
-    isPlacingOrder: boolean;
-    error: Error | null;
-}
-
-export const usePlaceMarketOrderWithDeposit = (
-    options: BaseOptions = {}
-): UsePlaceMarketOrderWithDepositReturn => {
-    const { onSuccess, onError } = options;
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const placeMarketOrderWithDeposit = useCallback(
-        async ({ key, price, quantity, side }: PlaceMarketOrderWithDepositParams): Promise<bigint> => {
-            setIsPlacingOrder(true);
-            setError(null);
-
-            try {
-                const hash = await writeContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'placeMarketOrderWithDeposit',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, price, quantity, side] as const,
-                });
-
-                const receipt = await waitForTransaction(wagmiConfig, {
-                    hash,
-                });
-
-                // Extract orderId from receipt logs (this would require decoding logs)
-                // For simplicity, we'll return a placeholder value
-                const orderId = BigInt(0); // In real implementation, extract from logs
-
-                onSuccess?.(receipt);
-                return orderId;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to place market order with deposit');
-                setError(error);
-                onError?.(error);
-                throw error;
-            } finally {
-                setIsPlacingOrder(false);
-            }
-        },
-        [onSuccess, onError]
-    );
-
-    return {
-        placeMarketOrderWithDeposit,
-        isPlacingOrder,
-        error,
-    };
-};
-
-// Hook for cancelling an order
-interface CancelOrderParams {
-    key: PoolKey;
-    side: Side;
-    price: bigint; // uint64
-    orderId: number; // uint48
-}
-
-interface UseCancelOrderReturn {
-    cancelOrder: (params: CancelOrderParams) => Promise<TransactionReceipt>;
-    isCancelling: boolean;
-    error: Error | null;
-}
-
-export const useCancelOrder = (options: BaseOptions = {}): UseCancelOrderReturn => {
-    const { onSuccess, onError } = options;
-    const [isCancelling, setIsCancelling] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const cancelOrder = useCallback(
-        async ({ key, side, price, orderId }: CancelOrderParams): Promise<TransactionReceipt> => {
-            setIsCancelling(true);
-            setError(null);
-
-            try {
-                const hash = await writeContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'cancelOrder',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, side, price, orderId] as const,
-                });
-
-                const receipt = await waitForTransaction(wagmiConfig, {
-                    hash,
-                });
-
-                onSuccess?.(receipt);
-                return receipt;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to cancel order');
-                setError(error);
-                onError?.(error);
-                throw error;
-            } finally {
-                setIsCancelling(false);
-            }
-        },
-        [onSuccess, onError]
-    );
-
-    return {
-        cancelOrder,
-        isCancelling,
-        error,
-    };
-};
-
-// Hook for getting the best price for a trading pair
-interface GetBestPriceParams {
-    key: PoolKey;
-    side: Side;
-}
-
-interface UseGetBestPriceReturn {
-    getBestPrice: (params: GetBestPriceParams) => Promise<PriceVolume>;
-    isLoading: boolean;
-    error: Error | null;
-}
-
-export const useGetBestPrice = (): UseGetBestPriceReturn => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const getBestPrice = useCallback(async ({ key, side }: GetBestPriceParams): Promise<PriceVolume> => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const bestPrice = await readContract(wagmiConfig, {
-                address: GTX_ROUTER_ADDRESS,
-                abi: GTXRouterABI,
-                functionName: 'getBestPrice',
-                args: [{
-                    baseCurrency: key.baseCurrency,
-                    quoteCurrency: key.quoteCurrency
-                }, side] as const,
-            });
-
-            return bestPrice;
-        } catch (err: unknown) {
-            const error = err instanceof Error ? err : new Error('Failed to get best price');
-            setError(error);
-            throw error;
-        } finally {
-            setIsLoading(false);
+        if (receipt.status === "success") {
+          setSteps((prev) =>
+            prev.map((item) =>
+              item.step === 1 ? { ...item, status: "success" } : item
+            )
+          );
+          toast.success("Market order placed successfully!");
+        } else {
+          throw new Error("Transaction failed");
         }
-    }, []);
 
-    return {
-        getBestPrice,
-        isLoading,
-        error,
-    };
-};
+        return receipt;
+      } catch (error) {
+        console.error("Transaction error:", error);
 
-// Hook for getting next best prices
-interface GetNextBestPricesParams {
-    key: PoolKey;
-    side: Side;
-    price: bigint; // uint64
-    count: number; // uint8
-}
-
-interface UseGetNextBestPricesReturn {
-    getNextBestPrices: (params: GetNextBestPricesParams) => Promise<readonly PriceVolume[]>;
-    isLoading: boolean;
-    error: Error | null;
-}
-
-export const useGetNextBestPrices = (): UseGetNextBestPricesReturn => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const getNextBestPrices = useCallback(
-        async ({ key, side, price, count }: GetNextBestPricesParams): Promise<readonly PriceVolume[]> => {
-            setIsLoading(true);
-            setError(null);
-
-            try {
-                const prices = await readContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'getNextBestPrices',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, side, price, count] as const,
-                });
-
-                return prices;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to get next best prices');
-                setError(error);
-                throw error;
-            } finally {
-                setIsLoading(false);
+        // Update steps with error
+        setSteps((prev) =>
+          prev.map((step) => {
+            if (step.status === "loading") {
+              return {
+                ...step,
+                status: "error",
+                error: error instanceof Error ? error.message : "An error occurred",
+              };
             }
-        },
-        []
-    );
+            return step;
+          })
+        );
 
-    return {
-        getNextBestPrices,
-        isLoading,
-        error,
-    };
-};
+        toast.error(error instanceof Error ? error.message : "Failed to place market order. Please try again.");
+        throw error;
+      }
+    },
+  });
 
-// Hook for getting order queue details
-interface GetOrderQueueParams {
-    key: PoolKey;
-    side: Side;
-    price: bigint; // uint64
-}
+  // Mutation for market order with deposit
+  const placeMarketOrderWithDepositMutation = useMutation({
+    mutationFn: async ({ 
+      key, 
+      price, // Note: The contract oddly requires price for market orders with deposit
+      quantity, 
+      side 
+    }: { 
+      key: PoolKey; 
+      price: bigint; 
+      quantity: bigint; 
+      side: Side;
+    }) => {
+      try {
+        // Reset steps
+        setSteps([{ step: 1, status: "idle" }]);
 
-interface OrderQueueDetails {
-    orderCount: number; // uint48
-    totalVolume: bigint; // uint256
-}
+        // Set step to loading
+        setSteps((prev) => 
+          prev.map((item) => 
+            item.step === 1 ? { ...item, status: "loading" } : item
+          )
+        );
 
-interface UseGetOrderQueueReturn {
-    getOrderQueue: (params: GetOrderQueueParams) => Promise<OrderQueueDetails>;
-    isLoading: boolean;
-    error: Error | null;
-}
+        // Execute the transaction
+        const hash = await writeContract(wagmiConfig, {
+          abi: gtxRouterABI,
+          address: routerAddress,
+          functionName: "placeMarketOrderWithDeposit",
+          args: [key, price, quantity, side],
+        });
 
-export const useGetOrderQueue = (): UseGetOrderQueueReturn => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+        // Set the transaction hash
+        setTxHash(hash);
 
-    const getOrderQueue = useCallback(
-        async ({ key, side, price }: GetOrderQueueParams): Promise<OrderQueueDetails> => {
-            setIsLoading(true);
-            setError(null);
+        // Wait for receipt
+        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
 
-            try {
-                const [orderCount, totalVolume] = await readContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'getOrderQueue',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, side, price] as const,
-                });
+        if (receipt.status === "success") {
+          setSteps((prev) =>
+            prev.map((item) =>
+              item.step === 1 ? { ...item, status: "success" } : item
+            )
+          );
+          toast.success("Market order with deposit placed successfully!");
+        } else {
+          throw new Error("Transaction failed");
+        }
 
-                return { orderCount, totalVolume };
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to get order queue details');
-                setError(error);
-                throw error;
-            } finally {
-                setIsLoading(false);
+        return receipt;
+      } catch (error) {
+        console.error("Transaction error:", error);
+
+        // Update steps with error
+        setSteps((prev) =>
+          prev.map((step) => {
+            if (step.status === "loading") {
+              return {
+                ...step,
+                status: "error",
+                error: error instanceof Error ? error.message : "An error occurred",
+              };
             }
-        },
-        []
-    );
+            return step;
+          })
+        );
 
-    return {
-        getOrderQueue,
-        isLoading,
-        error,
-    };
-};
+        toast.error(error instanceof Error ? error.message : "Failed to place market order with deposit. Please try again.");
+        throw error;
+      }
+    },
+  });
 
-// Hook for getting user's active orders
-interface GetUserActiveOrdersParams {
-    key: PoolKey;
-    user: HexAddress;
-}
-
-interface UseGetUserActiveOrdersReturn {
-    getUserActiveOrders: (params: GetUserActiveOrdersParams) => Promise<readonly Order[]>;
-    isLoading: boolean;
-    error: Error | null;
-}
-
-export const useGetUserActiveOrders = (): UseGetUserActiveOrdersReturn => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const getUserActiveOrders = useCallback(
-        async ({ key, user }: GetUserActiveOrdersParams): Promise<readonly Order[]> => {
-            setIsLoading(true);
-            setError(null);
-
-            try {
-                const orders = await readContract(wagmiConfig, {
-                    address: GTX_ROUTER_ADDRESS,
-                    abi: GTXRouterABI,
-                    functionName: 'getUserActiveOrders',
-                    args: [{
-                        baseCurrency: key.baseCurrency,
-                        quoteCurrency: key.quoteCurrency
-                    }, user] as const,
-                });
-
-                return orders;
-            } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error('Failed to get user active orders');
-                setError(error);
-                throw error;
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        []
-    );
-
-    return {
-        getUserActiveOrders,
-        isLoading,
-        error,
-    };
+  return { 
+    steps, 
+    txHash,
+    placeOrderMutation,
+    placeOrderWithDepositMutation,
+    placeMarketOrderMutation,
+    placeMarketOrderWithDepositMutation
+  };
 };

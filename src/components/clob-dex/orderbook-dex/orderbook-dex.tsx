@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Menu, ChevronDown } from 'lucide-react';
-import { useGetBestPrice, useGetNextBestPrices } from '@/hooks/web3/gtx/clob-dex/order-book/useOrderBook';
+import { useGetBestPrice } from '@/hooks/web3/gtx/clob-dex/orderbook/useGetBestPrice';
+import { useGetNextBestPrices } from '@/hooks/web3/gtx/clob-dex/orderbook/useGetNextBestPrices';
 import { formatUnits } from 'viem';
 import { Side } from '@/types/web3/gtx/gtx';
 

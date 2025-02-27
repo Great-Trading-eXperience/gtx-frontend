@@ -24,7 +24,7 @@ const useIsClient = () => {
     return isClient;
 };
 
-export default function TradingLayout() {
+export default function ClobDex() {
     const { theme, setTheme } = useTheme();
 
     const { connectors, connect } = useConnect();
@@ -44,7 +44,7 @@ export default function TradingLayout() {
     }
     return (
         <QueryClientProvider client={queryClient}>
-            <div className="min-h-screen bg-white dark:bg-[#303030] text-gray-900 dark:text-white">
+            {/* <div className="min-h-screen bg-white dark:bg-[#303030] text-gray-900 dark:text-white"> */}
 
                 <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] py-[4px]">
                     <div className="">
@@ -56,8 +56,6 @@ export default function TradingLayout() {
                     </div>
 
                     <div className="space-y-[6px]">
-                        {/* <OrderBookComponent />
-                        <RecentTradesComponent /> */}
                         <MarketDataTabs />
                     </div>
 
@@ -67,7 +65,7 @@ export default function TradingLayout() {
                 </div>
 
                 {/* <OrderManagement /> */}
-            </div>
+            {/* </div> */}
         </QueryClientProvider>
     )
 }

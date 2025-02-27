@@ -5,7 +5,7 @@ import { TransactionReceipt } from 'viem';
 import { BALANCE_MANAGER_ADDRESS } from '@/constants/contract-address';
 import BalanceManagerABI from '@/abis/gtx/clob-dex/BalanceManagerABI';
 import { waitForTransaction } from '@wagmi/core';
-import { BaseOptions } from '../useBalanceManager';
+import { BaseOptions } from '../read/useBalanceManager';
 
 // Set fees hook
 interface SetFeesParams {
