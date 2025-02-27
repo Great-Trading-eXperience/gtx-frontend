@@ -2,9 +2,6 @@
 
 
 import ClobDex from "@/components/clob-dex/clob-dex";
-import { QueryClient } from "@tanstack/react-query";
-
-const queryClient = new QueryClient();
 
 const Spot = () => {
   return (

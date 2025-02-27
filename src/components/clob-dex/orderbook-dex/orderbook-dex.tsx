@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Menu, ChevronDown } from 'lucide-react';
-import { useGetBestPrice } from '@/hooks/web3/gtx/clob-dex/orderbook/useGetBestPrice';
-import { useGetNextBestPrices } from '@/hooks/web3/gtx/clob-dex/orderbook/useGetNextBestPrices';
+// import { useGetBestPrice, useGetNextBestPrices } from '@/hooks/web3/gtx/clob-dex/order-book/useOrderBook';
 import { formatUnits } from 'viem';
 import { Side } from '@/types/web3/gtx/gtx';
+import { useGetBestPrice } from '@/hooks/web3/gtx/clob-dex/orderbook/useGetBestPrice';
+import { useGetNextBestPrices } from '@/hooks/web3/gtx/clob-dex/orderbook/useGetNextBestPrices';
 
 interface Order {
   price: number;
@@ -22,7 +23,7 @@ interface OrderBook {
 type ViewType = 'both' | 'bids' | 'asks';
 type DecimalPrecision = '0.01' | '0.1' | '1';
 
-const STANDARD_ORDER_COUNT = 5;
+const STANDARD_ORDER_COUNT = 8;
 
 const OrderBookDex = () => {
   const [mounted, setMounted] = useState(false);

@@ -1,15 +1,48 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { matchOrderEvents } from "@/graphql/liquidbook/liquidbook.query"
-import type { MatchOrderEvent, MatchOrderEventResponse } from "@/types/web3/liquidbook/matchOrderEvents"
+import { tradesQuery } from "@/graphql/gtx/gtx.query"
+// import { tradesQuery } from "@/graphql/liquidbook/liquidbook.query" // Updated import
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
 import { type CandlestickData, ColorType, createChart, type IChartApi, ISeriesApi, type Time } from "lightweight-charts"
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
-import { calculatePrice } from "../../../../helper"
 import { formatUnits } from "viem"
+
+// Define interfaces for the trades query response
+interface TradeItem {
+  id: string;
+  orderId: string;
+  poolId: string;
+  price: string;
+  quantity: string;
+  timestamp: number;
+  transactionId: string;
+  pool: {
+    baseCurrency: string;
+    coin: string;
+    id: string;
+    lotSize: string;
+    maxOrderAmount: string;
+    orderBook: string;
+    quoteCurrency: string;
+    timestamp: number;
+  };
+}
+
+interface TradesResponse {
+  tradess: {
+    items: TradeItem[];
+    pageInfo: {
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+    totalCount: number;
+  };
+}
 
 const formatVolume = (value: bigint, decimals = 6) => {
   const formatted = formatUnits(value, decimals)
@@ -40,61 +73,82 @@ interface VolumeData {
   color: string
 }
 
-function processTickData(data: MatchOrderEvent[]): {
+function processTradeData(data: TradeItem[]): {
   candlesticks: CandlestickData<Time>[]
   volumes: VolumeData[]
 } {
   const candlesticks: CandlestickData<Time>[] = []
   const volumes: VolumeData[] = []
 
-  for (let i = 0; i < data.length; i++) {
-    const currentPrice = calculatePrice(data[i].tick)
-    let open, high, low, close
+  // Create 1-minute OHLC candles
+  const ohlcMap = new Map<number, {
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    count: number;
+  }>();
 
-    if (i === 0) {
-      open = currentPrice
-      high = currentPrice
-      low = currentPrice
-      close = currentPrice
+  // Sort trades by timestamp (oldest first)
+  const sortedTrades = [...data].sort((a, b) => a.timestamp - b.timestamp);
+
+  // Group trades into 1-minute candles
+  sortedTrades.forEach(trade => {
+    // Convert price from string to number
+    const priceValue = Number(formatUnits(BigInt(trade.price), 12)); // Adjust decimals as needed
+    const volumeValue = Number(formatUnits(BigInt(trade.quantity), 18)); // Adjust decimals as needed
+    
+    // Round timestamp to the nearest minute (60 seconds)
+    const minuteTimestamp = Math.floor(trade.timestamp / 60) * 60;
+    
+    if (ohlcMap.has(minuteTimestamp)) {
+      const candle = ohlcMap.get(minuteTimestamp)!;
+      // Update high/low
+      candle.high = Math.max(candle.high, priceValue);
+      candle.low = Math.min(candle.low, priceValue);
+      // Update close with the latest price
+      candle.close = priceValue;
+      // Add to volume
+      candle.volume += volumeValue;
+      candle.count += 1;
     } else {
-      const previousPrice = calculatePrice(data[i - 1].tick)
-      open = previousPrice
-      close = currentPrice
-      // Add extended wicks by applying a multiplier to the price range
-      const priceRange = Math.abs(close - open)
-      const wickExtension = priceRange * 0.3 // Adjust this multiplier to control wick length
-      high = Math.max(open, close) + wickExtension
-      low = Math.min(open, close) - wickExtension
+      // Create new candle
+      ohlcMap.set(minuteTimestamp, {
+        open: priceValue,
+        high: priceValue,
+        low: priceValue,
+        close: priceValue,
+        volume: volumeValue,
+        count: 1
+      });
     }
+  });
 
-    const candlestick = {
-      time: data[i].timestamp as Time,
-      open,
-      high,
-      low,
-      close,
-    }
-    candlesticks.push(candlestick)
+  // Convert map to array of candlesticks and volumes
+  ohlcMap.forEach((candle, timestamp) => {
+    candlesticks.push({
+      time: timestamp as Time,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+    });
 
-    const volumeValue = Number.parseFloat(formatUnits(BigInt(data[i].volume), 6))
     volumes.push({
-      time: data[i].timestamp as Time,
-      value: volumeValue,
-      color: close >= open ? "rgba(38, 166, 154, 0.5)" : "rgba(239, 83, 80, 0.5)",
-    })
-  }
+      time: timestamp as Time,
+      value: candle.volume,
+      color: candle.close >= candle.open 
+        ? "rgba(38, 166, 154, 0.5)" // green for up candles
+        : "rgba(239, 83, 80, 0.5)" // red for down candles
+    });
+  });
 
-  return { candlesticks, volumes }
-}
+  // Sort by timestamp
+  candlesticks.sort((a, b) => Number(a.time) - Number(b.time));
+  volumes.sort((a, b) => Number(a.time) - Number(b.time));
 
-function filterUniqueTimestamps(data: MatchOrderEvent[]) {
-  const uniqueMap = new Map()
-  data.forEach((item) => {
-    if (!uniqueMap.has(item.timestamp)) {
-      uniqueMap.set(item.timestamp, item)
-    }
-  })
-  return Array.from(uniqueMap.values())
+  return { candlesticks, volumes };
 }
 
 interface ChartComponentProps {
@@ -108,13 +162,14 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
   const timeDisplayRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   const [currentTime, setCurrentTime] = useState("")
+  const [currentPrice, setCurrentPrice] = useState<string | null>(null)
 
-  const { data, isLoading, error } = useQuery<MatchOrderEventResponse>({
-    queryKey: ["tickEvents"],
+  const { data, isLoading, error } = useQuery<TradesResponse>({
+    queryKey: ["trades"],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, matchOrderEvents)
+      return await request(GTX_GRAPHQL_URL, tradesQuery)
     },
-    refetchInterval: 500,
+    refetchInterval: 5000,
     staleTime: 0,
     refetchOnWindowFocus: true,
   })
@@ -131,6 +186,19 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
 
     return () => clearInterval(timer)
   }, [])
+
+  // Update current price from latest trade
+  useEffect(() => {
+    if (data?.tradess?.items && data.tradess.items.length > 0) {
+      // Find the trade with the latest timestamp
+      const latestTrade = [...data.tradess.items].sort((a, b) => b.timestamp - a.timestamp)[0];
+      const formattedPrice = Number(formatUnits(BigInt(latestTrade.price), 12)).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      setCurrentPrice(formattedPrice);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!chartContainerRef.current || isLoading || !data) return
@@ -208,18 +276,14 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
       })
     }
 
-    if (data?.matchOrderEvents?.items) {
-      const sortedItems = [...data.matchOrderEvents.items].sort((a, b) => a.timestamp - b.timestamp)
-      const uniqueItems = filterUniqueTimestamps(sortedItems)
-      const { candlesticks, volumes } = processTickData(uniqueItems)
+    if (data?.tradess?.items) {
+      const { candlesticks, volumes } = processTradeData(data.tradess.items)
 
       candlestickSeries.setData(candlesticks)
       volumeSeries.setData(volumes)
 
       chart.timeScale().fitContent()
-      chart.timeScale().scrollToPosition(5, false)
     }
-// update chart
 
     const handleResize = () => {
       chart.applyOptions({
@@ -271,9 +335,18 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="w-full p-2 bg-white dark:bg-[#151924] text-gray-900 dark:text-white ">
-        <div ref={chartContainerRef} className="w-full" style={{ height }} />
-
+      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
+        {/* Current price display */}
+        {/* {currentPrice && (
+          <div className="px-4 py-2 text-lg font-medium">
+            <span className="text-gray-500 dark:text-gray-400 mr-2">Price:</span>
+            <span>{currentPrice}</span>
+          </div>
+        )} */}
+        
+        <div className="p-2">
+          <div ref={chartContainerRef} className="w-full" style={{ height }} />
+        </div>
       </div>
       <div
         ref={timeDisplayRef}

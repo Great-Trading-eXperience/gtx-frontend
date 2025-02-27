@@ -1,26 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import request from 'graphql-request';
+import { request } from 'graphql-request';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { matchOrderEvents } from '@/graphql/liquidbook/liquidbook.query';
-import { MatchOrderEvent, MatchOrderEventResponse } from '@/types/web3/liquidbook/matchOrderEvents';
 import { formatUnits } from 'viem';
+import { tradesQuery } from '@/graphql/gtx/gtx.query';
+
+// Define interface for the trades response based on the example data
+interface TradeItem {
+  id: string;
+  orderId: string;
+  poolId: string;
+  price: string;
+  quantity: string;
+  timestamp: number;
+  transactionId: string;
+  pool: {
+    baseCurrency: string;
+    coin: string;
+    id: string;
+    lotSize: string;
+    maxOrderAmount: string;
+    orderBook: string;
+    quoteCurrency: string;
+    timestamp: number;
+  };
+}
+
+interface TradesResponse {
+  tradess: {
+    items: TradeItem[];
+    pageInfo: {
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+    totalCount: number;
+  };
+}
 
 interface Trade {
   price: number;
   time: string;
   size: number;
-  side: 'Buy' | 'Sell';
+  side: 'Buy' | 'Sell'; // We'll use heuristics to determine side
   total?: number;
 }
 
-// Helper function to calculate price from tick
-const calculatePrice = (tick: string): number => {
-  return Math.pow(1.0001, parseInt(tick));
-};
-
-const formatTime = (timestamp: string): string => {
-  const date = new Date(parseInt(timestamp) * 1000);
+const formatTime = (timestamp: number): string => {
+  const date = new Date(timestamp * 1000);
   return date.toTimeString().split(' ')[0];
 };
 
@@ -34,20 +62,20 @@ const formatPrice = (price: number): string => {
 const RecentTradesComponent = () => {
   const [mounted, setMounted] = useState(false);
 
-  // Query for match order events
+  // Query for trade events
   const {
     data,
     isLoading,
     error
-  } = useQuery<MatchOrderEventResponse>({
-    queryKey: ['matchOrders'],
+  } = useQuery<TradesResponse>({
+    queryKey: ['trades'],
     queryFn: async () => {
       return await request(
         GTX_GRAPHQL_URL,
-        matchOrderEvents
+        tradesQuery
       );
     },
-    refetchInterval: 1000,
+    refetchInterval: 5000, // Refresh every 5 seconds
     staleTime: 0,
   });
 
@@ -55,19 +83,31 @@ const RecentTradesComponent = () => {
     setMounted(true);
   }, []);
 
-  const processTrades = (events: MatchOrderEvent[]): Trade[] => {
-    return events
-      .map(event => {
-        const trade: Trade = {
-          price: calculatePrice(event.tick),
-          size: Number(event.volume),
-          side: event.is_buy ? 'Buy' : 'Sell' as const,
-          time: formatTime(String(event.timestamp)),
-        };
-        return trade;
-      })
-      .sort((a, b) => b.time.localeCompare(a.time))
-      .slice(0, 25);
+  const processTrades = (items: TradeItem[]): Trade[] => {
+    // Sort trades by timestamp (newest first)
+    const sortedTrades = [...items].sort((a, b) => b.timestamp - a.timestamp);
+
+    // Process each trade
+    return sortedTrades.slice(0, 25).map((trade, index, array) => {
+      // Convert price from string to number (assuming price is in wei)
+      const priceNum = Number(formatUnits(BigInt(trade.price), 12)); // Adjust decimal places as needed
+
+      // Determine the side of the trade using a simple heuristic:
+      // If the price is higher than the previous trade, it's a buy, otherwise it's a sell
+      // For the first trade, we'll default to 'Buy'
+      let side: 'Buy' | 'Sell' = 'Buy';
+      if (index > 0) {
+        const prevPrice = Number(formatUnits(BigInt(array[index - 1].price), 12));
+        side = priceNum >= prevPrice ? 'Buy' : 'Sell';
+      }
+
+      return {
+        price: priceNum,
+        size: Number(formatUnits(BigInt(trade.quantity), 18)), // Assuming quantity is in wei (18 decimals)
+        side: side,
+        time: formatTime(trade.timestamp),
+      };
+    });
   };
 
   const calculateTotal = (trades: Trade[]): Trade[] => {
@@ -90,11 +130,11 @@ const RecentTradesComponent = () => {
     );
   }
 
-  const trades = calculateTotal(processTrades(data?.matchOrderEvents.items || []));
+  const trades = calculateTotal(processTrades(data?.tradess.items || []));
 
   return (
     <div className="w-full bg-white dark:bg-gray-900 rounded-lg text-gray-900 dark:text-white shadow-lg">
-      <div className="flex flex-col h-[360px] rounded-lg overflow-hidden">
+      <div className="flex flex-col h-[520px] rounded-lg overflow-hidden">
         <div className="sticky top-0 z-10 bg-white dark:bg-gray-900">
           <div className="grid grid-cols-3 mb-2 text-gray-500 dark:text-gray-400 text-sm px-4 mt-2">
             <div>Price</div>
@@ -108,8 +148,8 @@ const RecentTradesComponent = () => {
               <div key={i} className="relative group">
                 <div
                   className={`absolute left-0 top-0 bottom-0 ${trade.side === 'Buy'
-                      ? 'bg-green-100 dark:bg-green-900/20'
-                      : 'bg-red-100 dark:bg-[#FF6978] dark:bg-opacity-20'
+                    ? 'bg-green-100 dark:bg-green-900/20'
+                    : 'bg-red-100 dark:bg-[#FF6978] dark:bg-opacity-20'
                     }`}
                   style={{
                     width: `${(trade.total || 0) / Math.max(...trades.map(t => t.total || 0)) * 100}%`
@@ -117,14 +157,14 @@ const RecentTradesComponent = () => {
                 />
                 <div className="relative grid grid-cols-3 py-1 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 text-xs font-light px-4">
                   <div className={`${trade.side === 'Buy'
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-[#FF6978]'
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-[#FF6978]'
                     }`}>
                     {formatPrice(trade.price)}
                   </div>
                   <div className="text-center text-gray-600 dark:text-gray-300">{trade.time}</div>
                   <div className="text-right text-gray-600 dark:text-gray-300">
-                    {formatPrice(Number(formatUnits(BigInt(trade.size), 6)))}
+                    {formatPrice(trade.size)}
                   </div>
                 </div>
               </div>
@@ -159,4 +199,3 @@ const RecentTradesSkeleton = () => {
 };
 
 export default RecentTradesComponent;
-

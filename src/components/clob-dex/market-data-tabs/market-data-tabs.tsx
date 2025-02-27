@@ -1,39 +1,45 @@
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import OrderBookDex from '../orderbook-dex/orderbook-dex';
-import RecentTradesComponent from '../recent-trade/recent-trade';
+"use client"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+import RecentTradesComponent from "../recent-trade/recent-trade"
+import OrderBookDex from "../orderbook-dex/orderbook-dex"
 
 const MarketDataTabs = () => {
-    return (
-        <div className="w-full bg-gray-100 dark:bg-[#151924] rounded-lg">
-            <Tabs defaultValue="orderbook" className="w-full">
-                <div className="mb-[0.6px] py-2">
-                    <TabsList className="w-full grid grid-cols-2 rounded-lg border border-gray-200 dark:border-gray-700/50 p-0.5 bg-gray-100 dark:bg-[#151924] backdrop-blur-sm h-auto">
-                        <TabsTrigger
-                            value="orderbook"
-                            className="px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700/30 data-[state=active]:bg-[#0064A7] data-[state=active]:text-white data-[state=active]:shadow-md border-0"
-                        >
-                            ORDERBOOK
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="trades"
-                            className="px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-600 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700/30 data-[state=active]:bg-[#0064A7] data-[state=active]:text-white data-[state=active]:shadow-md border-0"
-                        >
-                            RECENT TRADES
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-
-                <TabsContent value="orderbook" className="mt-0">
-                    {/* <OrderBookDex /> */}
-                </TabsContent>
-
-                <TabsContent value="trades" className="mt-0">
-                    <RecentTradesComponent />
-                </TabsContent>
-            </Tabs>
+  return (
+    <div className="w-full overflow-hidden rounded-xl bg-gradient-to-b from-gray-900 to-[#151924] shadow-lg">
+      <Tabs defaultValue="orderbook" className="w-full">
+        <div className="border-b border-gray-800/60 backdrop-blur-sm">
+          <TabsList className="flex w-full justify-start space-x-8 bg-transparent px-6 py-2">
+            <TabsTrigger
+              value="orderbook"
+              className="group w-1/2 relative px-3 py-2 text-sm font-medium text-gray-300 transition-all duration-300 ease-in-out hover:text-white data-[state=active]:text-white"
+            >
+              Order Book
+              <span className="absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 transform rounded-t-full bg-gradient-to-r from-[#89DDF7] to-[#66c4e0] transition-transform duration-300 ease-out group-hover:scale-x-50 group-data-[state=active]:scale-x-100"></span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="trades"
+              className="group w-1/2 relative px-3 py-2 text-sm font-medium text-gray-400 transition-all duration-300 ease-in-out hover:text-white data-[state=active]:text-white"
+            >
+              Trades
+              <span className="absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 transform rounded-t-full bg-gradient-to-r from-[#89DDF7] to-[#66c4e0] transition-transform duration-300 ease-out group-hover:scale-x-50 group-data-[state=active]:scale-x-100"></span>
+            </TabsTrigger>
+          </TabsList>
         </div>
-    );
-};
 
-export default MarketDataTabs;
+        <div className="p-1">
+          <TabsContent value="orderbook" className="mt-0 transition-opacity duration-200 ease-in-out">
+            <OrderBookDex />
+          </TabsContent>
+
+          <TabsContent value="trades" className="mt-0 transition-opacity duration-200 ease-in-out">
+            <RecentTradesComponent />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  )
+}
+
+export default MarketDataTabs
+

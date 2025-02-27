@@ -1,17 +1,10 @@
 "use client"
 
-import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, Database } from "lucide-react"
-import Link from "next/link"
-import { ThemeProvider } from "next-themes"
-import { WagmiProvider } from "wagmi"
-import { wagmiConfig } from "@/configs/wagmi"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit"
-import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { QueryClient } from "@tanstack/react-query"
 
 interface Pool {
   collateral: string

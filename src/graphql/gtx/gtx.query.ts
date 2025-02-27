@@ -13,9 +13,17 @@ export const poolsQuery = gql`
         quoteCurrency
         timestamp
       }
+      totalCount
+      pageInfo {
+        endCursor
+        hasNextPage
+        hasPreviousPage
+        startCursor
+      }
     }
   }
 `;
+
 
 export const tradesQuery = gql`
   query GetTrades {
@@ -38,19 +46,12 @@ export const tradesQuery = gql`
           quoteCurrency
           timestamp
         }
-        order {
-          expiry
-          filled
-          id
-          orderId
-          poolId
-          price
-          type
-          timestamp
-          status
-          side
-          quantity
-        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+        hasPreviousPage
+        startCursor
       }
       totalCount
     }
