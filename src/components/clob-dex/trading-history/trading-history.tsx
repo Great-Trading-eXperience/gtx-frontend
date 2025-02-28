@@ -69,7 +69,7 @@ export default function TradingHistory() {
 
             <TabsContent
               value="trades"
-              className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 transition-all duration-500 animate-in fade-in-0"
+              className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
                 <TradeHistoryTable />
@@ -86,7 +86,7 @@ export default function TradingHistory() {
 
             <TabsContent
               value="balances"
-              className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 transition-all duration-500 animate-in fade-in-0"
+              className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
                 <BalancesHistoryTable />

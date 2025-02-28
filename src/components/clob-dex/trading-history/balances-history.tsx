@@ -147,13 +147,6 @@ const BalancesHistoryTable = () => {
 
   return (
     <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Balances</h2>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {formatAddress(address)}
-        </div>
-      </div>
-
       <div className="grid grid-cols-5 gap-4 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800">
         <div className="cursor-pointer flex items-center" onClick={() => handleSort('symbol')}>
           Asset
