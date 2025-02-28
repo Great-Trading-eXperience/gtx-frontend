@@ -1,70 +1,42 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { tradesQuery } from "@/graphql/gtx/gtx.query"
-// import { tradesQuery } from "@/graphql/liquidbook/liquidbook.query" // Updated import
+import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery, minuteCandleStickQuery } from "@/graphql/gtx/gtx.query"
+// import { minuteCandleStickQuery, fiveMinuteCandleStickQuery } from "@/graphql/gtx/gtx.query"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
-import { type CandlestickData, ColorType, createChart, type IChartApi, ISeriesApi, type Time } from "lightweight-charts"
+import { type CandlestickData, ColorType, createChart, type IChartApi, type Time } from "lightweight-charts"
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
+// import gql from "graphql-tag"
 
-// Define interfaces for the trades query response
-interface TradeItem {
-  id: string;
-  orderId: string;
-  poolId: string;
-  price: string;
-  quantity: string;
+
+
+// Define interfaces for the candlestick data response
+interface CandleStickItem {
+  open: number;
+  close: number;
+  low: number;
+  high: number;
+  average: number;
+  count: number;
   timestamp: number;
-  transactionId: string;
-  pool: {
-    baseCurrency: string;
-    coin: string;
-    id: string;
-    lotSize: string;
-    maxOrderAmount: string;
-    orderBook: string;
-    quoteCurrency: string;
-    timestamp: number;
-  };
 }
 
-interface TradesResponse {
-  tradess: {
-    items: TradeItem[];
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-    totalCount: number;
+interface CandleStickResponse {
+  minuteBucketss?: {
+    items: CandleStickItem[];
   };
-}
-
-const formatVolume = (value: bigint, decimals = 6) => {
-  const formatted = formatUnits(value, decimals)
-  const num = Number.parseFloat(formatted)
-
-  const config = {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }
-
-  if (num >= 1e9) {
-    return (num / 1e9).toLocaleString("en-US", config) + "B"
-  } else if (num >= 1e6) {
-    return (num / 1e6).toLocaleString("en-US", config) + "M"
-  } else if (num >= 1e3) {
-    return (num / 1e3).toLocaleString("en-US", config) + "K"
-  } else {
-    return num.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    })
-  }
+  fiveMinuteBucketss?: {
+    items: CandleStickItem[];
+  };
+  hourBucketss?: {
+    items: CandleStickItem[];
+  };
+  dailyBucketss?: {
+    items: CandleStickItem[];
+  };
 }
 
 interface VolumeData {
@@ -73,83 +45,50 @@ interface VolumeData {
   color: string
 }
 
-function processTradeData(data: TradeItem[]): {
+const formatPrice = (price: number): string => {
+  return Number(formatUnits(BigInt(price), 12)).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function processCandleStickData(data: CandleStickItem[]): {
   candlesticks: CandlestickData<Time>[]
   volumes: VolumeData[]
 } {
-  const candlesticks: CandlestickData<Time>[] = []
-  const volumes: VolumeData[] = []
+  const candlesticks: CandlestickData<Time>[] = [];
+  const volumes: VolumeData[] = [];
 
-  // Create 1-minute OHLC candles
-  const ohlcMap = new Map<number, {
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    count: number;
-  }>();
+  data.forEach(candle => {
+    // Convert pricing data from raw to formatted values with proper decimal places
+    const openPrice = Number(formatUnits(BigInt(candle.open), 12));
+    const closePrice = Number(formatUnits(BigInt(candle.close), 12));
+    const lowPrice = Number(formatUnits(BigInt(candle.low), 12));
+    const highPrice = Number(formatUnits(BigInt(candle.high), 12));
 
-  // Sort trades by timestamp (oldest first)
-  const sortedTrades = [...data].sort((a, b) => a.timestamp - b.timestamp);
-
-  // Group trades into 1-minute candles
-  sortedTrades.forEach(trade => {
-    // Convert price from string to number
-    const priceValue = Number(formatUnits(BigInt(trade.price), 12)); // Adjust decimals as needed
-    const volumeValue = Number(formatUnits(BigInt(trade.quantity), 18)); // Adjust decimals as needed
-    
-    // Round timestamp to the nearest minute (60 seconds)
-    const minuteTimestamp = Math.floor(trade.timestamp / 60) * 60;
-    
-    if (ohlcMap.has(minuteTimestamp)) {
-      const candle = ohlcMap.get(minuteTimestamp)!;
-      // Update high/low
-      candle.high = Math.max(candle.high, priceValue);
-      candle.low = Math.min(candle.low, priceValue);
-      // Update close with the latest price
-      candle.close = priceValue;
-      // Add to volume
-      candle.volume += volumeValue;
-      candle.count += 1;
-    } else {
-      // Create new candle
-      ohlcMap.set(minuteTimestamp, {
-        open: priceValue,
-        high: priceValue,
-        low: priceValue,
-        close: priceValue,
-        volume: volumeValue,
-        count: 1
-      });
-    }
-  });
-
-  // Convert map to array of candlesticks and volumes
-  ohlcMap.forEach((candle, timestamp) => {
+    // Create candlestick data point
     candlesticks.push({
-      time: timestamp as Time,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
+      time: candle.timestamp as Time,
+      open: openPrice,
+      high: highPrice,
+      low: lowPrice,
+      close: closePrice,
     });
 
+    // Volume can be represented by the count
     volumes.push({
-      time: timestamp as Time,
-      value: candle.volume,
-      color: candle.close >= candle.open 
+      time: candle.timestamp as Time,
+      value: candle.count,
+      color: closePrice >= openPrice 
         ? "rgba(38, 166, 154, 0.5)" // green for up candles
         : "rgba(239, 83, 80, 0.5)" // red for down candles
     });
   });
 
-  // Sort by timestamp
-  candlesticks.sort((a, b) => Number(a.time) - Number(b.time));
-  volumes.sort((a, b) => Number(a.time) - Number(b.time));
-
   return { candlesticks, volumes };
 }
+
+type TimeframeOption = "1m" | "5m" | "1h" | "1d";
 
 interface ChartComponentProps {
   height?: number
@@ -163,11 +102,28 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
   const { theme } = useTheme()
   const [currentTime, setCurrentTime] = useState("")
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("5m")
 
-  const { data, isLoading, error } = useQuery<TradesResponse>({
-    queryKey: ["trades"],
+  // Get the right query based on selected timeframe
+  const getQueryForTimeframe = () => {
+    switch (timeframe) {
+      case "1m":
+        return minuteCandleStickQuery;
+      case "5m":
+        return fiveMinuteCandleStickQuery;
+      case "1h":
+        return hourCandleStickQuery;
+      case "1d":
+        return dailyCandleStickQuery;
+      default:
+        return fiveMinuteCandleStickQuery;
+    }
+  }
+
+  const { data, isLoading, error } = useQuery<CandleStickResponse>({
+    queryKey: ["candlesticks", timeframe],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, tradesQuery)
+      return await request(GTX_GRAPHQL_URL, getQueryForTimeframe())
     },
     refetchInterval: 5000,
     staleTime: 0,
@@ -187,25 +143,39 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
     return () => clearInterval(timer)
   }, [])
 
-  // Update current price from latest trade
+  // Update current price from latest candle
   useEffect(() => {
-    if (data?.tradess?.items && data.tradess.items.length > 0) {
-      // Find the trade with the latest timestamp
-      const latestTrade = [...data.tradess.items].sort((a, b) => b.timestamp - a.timestamp)[0];
-      const formattedPrice = Number(formatUnits(BigInt(latestTrade.price), 12)).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      setCurrentPrice(formattedPrice);
+    if (!data) return;
+    
+    const items = data.minuteBucketss?.items || 
+                  data.fiveMinuteBucketss?.items || 
+                  data.hourBucketss?.items || 
+                  data.dailyBucketss?.items;
+    
+    if (items && items.length > 0) {
+      // Find the candle with the latest timestamp
+      const latestCandle = [...items].sort((a, b) => b.timestamp - a.timestamp)[0];
+      setCurrentPrice(formatPrice(latestCandle.close));
     }
   }, [data]);
 
   useEffect(() => {
     if (!chartContainerRef.current || isLoading || !data) return
 
+    // Clean up any existing chart - but safely
+    try {
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
+    } catch (e) {
+      console.error("Error removing chart:", e);
+      // Chart was already disposed, just null the reference
+      chartRef.current = null;
+    }
+
     const isDarkMode = theme === "dark"
     const mainHeight = height
-    const volumeHeight = Math.floor(height * 0.2)
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -276,8 +246,14 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
       })
     }
 
-    if (data?.tradess?.items) {
-      const { candlesticks, volumes } = processTradeData(data.tradess.items)
+    // Get the correct data items based on the timeframe
+    const items = data.minuteBucketss?.items || 
+                  data.fiveMinuteBucketss?.items || 
+                  data.hourBucketss?.items || 
+                  data.dailyBucketss?.items;
+
+    if (items) {
+      const { candlesticks, volumes } = processCandleStickData(items)
 
       candlestickSeries.setData(candlesticks)
       volumeSeries.setData(volumes)
@@ -297,10 +273,19 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
 
     return () => {
       window.removeEventListener("resize", handleResize)
-      chart.remove()
+      try {
+        if (chartRef.current) {
+          chartRef.current.remove()
+          chartRef.current = null
+        }
+      } catch (e) {
+        console.error("Error cleaning up chart:", e)
+        chartRef.current = null
+      }
     }
-  }, [data, isLoading, theme, height])
+  }, [data, isLoading, theme, height, timeframe])
 
+  // Apply theme changes to existing chart
   useEffect(() => {
     if (chartRef.current) {
       const isDarkMode = theme === "dark"
@@ -316,6 +301,11 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
       })
     }
   }, [theme])
+
+  // Handle timeframe change
+  const handleTimeframeChange = (newTimeframe: TimeframeOption) => {
+    setTimeframe(newTimeframe);
+  }
 
   if (isLoading) {
     return (
@@ -335,7 +325,45 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">        
+      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center space-x-2">
+            <div className="text-lg font-semibold">
+              GTX Chart
+              {currentPrice && (
+                <span className="ml-2 text-base font-normal">
+                  ${currentPrice}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              className={`px-2 py-1 text-xs rounded ${timeframe === "1m" ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => handleTimeframeChange("1m")}
+            >
+              1m
+            </button>
+            <button
+              className={`px-2 py-1 text-xs rounded ${timeframe === "5m" ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => handleTimeframeChange("5m")}
+            >
+              5m
+            </button>
+            <button
+              className={`px-2 py-1 text-xs rounded ${timeframe === "1h" ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => handleTimeframeChange("1h")}
+            >
+              1h
+            </button>
+            <button
+              className={`px-2 py-1 text-xs rounded ${timeframe === "1d" ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+              onClick={() => handleTimeframeChange("1d")}
+            >
+              1d
+            </button>
+          </div>
+        </div>
         <div className="p-2">
           <div ref={chartContainerRef} className="w-full" style={{ height }} />
         </div>

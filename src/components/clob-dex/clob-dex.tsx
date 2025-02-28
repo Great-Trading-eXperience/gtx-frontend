@@ -6,8 +6,7 @@ import ChartComponent from "./chart/chart"
 import MarketDataWidget from "./market-widget/market-widget"
 import PlaceOrder from "./place-order/place-order"
 import MarketDataTabs from "./market-data-tabs/market-data-tabs"
-import TradingSpotChart from "./chart/trading-spot-chart"
-import TradingInterface from "./trading-position/trading-position"
+import TradingHistory from "./trading-history/trading-history"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -65,7 +64,7 @@ export default function ClobDex() {
                         /> */}
                         <ChartComponent />
                     </div>
-                    <TradingInterface />
+                    <TradingHistory />
                 </div>
 
                 <div className="space-y-[6px]">

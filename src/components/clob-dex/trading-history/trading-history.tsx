@@ -8,7 +8,7 @@ import TradeHistoryTable from "./trade-history"
 import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
 import BalancesHistoryTable from "./balances-history"
 
-export default function TradingInterface() {
+export default function TradingHistory() {
   const { isConnected } = useAccount()
 
   return (

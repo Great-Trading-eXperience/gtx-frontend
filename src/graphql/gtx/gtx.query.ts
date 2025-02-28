@@ -90,30 +90,44 @@ export const ordersQuery = gql`
 `;
 
 export const orderHistorysQuery = gql`
-  query GetOrderHistory {
-    orderHistorys {
+  query GetOrderHistory($userAddress: String!) {
+    orderss(where: { user: $userAddress }) {
       items {
+        expiry
         filled
         id
         orderId
         poolId
+        price
+        quantity
+        side
         status
         timestamp
+        type
+        user {
+          amount
+          currency
+          lockedAmount
+          name
+          symbol
+          user
+        }
       }
       totalCount
       pageInfo {
-        endCursor
-        hasNextPage
-        hasPreviousPage
         startCursor
+        hasPreviousPage
+        hasNextPage
+        endCursor
       }
     }
   }
 `;
 
+
 export const balancesQuery = gql`
-  query GetBalances {
-    balancess {
+  query GetBalances($userAddress: String!) {
+    balancess(where: { user: $userAddress }) {
       items {
         amount
         currency
@@ -129,6 +143,87 @@ export const balancesQuery = gql`
         hasNextPage
       }
       totalCount
+    }
+  }
+`;
+
+// Export the GraphQL queries
+export const minuteCandleStickQuery = gql`
+  query GetMinuteCandleStick {
+    minuteBucketss(
+      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+    ) {
+      items {
+        open
+        close
+        low
+        high
+        average
+        count
+        timestamp
+      }
+    }
+  }
+`;
+
+export const fiveMinuteCandleStickQuery = gql`
+  query GetFiveMinuteCandleStick {
+    fiveMinuteBucketss(
+      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+    ) {
+      items {
+        open
+        close
+        low
+        high
+        average
+        count
+        timestamp
+      }
+    }
+  }
+`;
+
+export const hourCandleStickQuery = gql`
+  query GetHourCandleStick {
+    hourBucketss(
+      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+    ) {
+      items {
+        open
+        close
+        low
+        high
+        average
+        count
+        timestamp
+      }
+    }
+  }
+`;
+
+export const dailyCandleStickQuery = gql`
+  query GetDailyCandleStick {
+    dailyBucketss(
+      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+    ) {
+      items {
+        open
+        close
+        low
+        high
+        average
+        count
+        timestamp
+      }
     }
   }
 `;

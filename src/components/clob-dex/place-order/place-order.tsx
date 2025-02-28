@@ -203,8 +203,13 @@ const PlaceOrder = () => {
     setOrderBookAddress(pool?.orderBook as HexAddress);
   };
 
+  // This shows the modified handleSubmit function with wallet address logging
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Log wallet address being used for this order
+    console.log('Placing order using wallet address:', address);
 
     try {
       // Enhanced parameter validation
@@ -222,6 +227,7 @@ const PlaceOrder = () => {
 
       // Log detailed transaction parameters for debugging
       console.log('Order Parameters:', {
+        walletAddress: address, // Added wallet address to the parameters log
         baseCurrency: selectedPool.baseCurrency,
         quoteCurrency: selectedPool.quoteCurrency,
         price: priceBigInt.toString(),
