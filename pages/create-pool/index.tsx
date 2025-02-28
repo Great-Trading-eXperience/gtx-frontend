@@ -5,8 +5,7 @@ import CreatePoolComponent from "@/components/clob-dex/create-pool/create-pool";
 
 const PoolManagementPage = () => {
     return (
-        <div className="container h-screen mx-auto py-8">
-            <h1 className="text-2xl font-bold mb-6">Pool Management</h1>
+        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/40 to-slate-950 relative overflow-hidden">
             <CreatePoolComponent />
         </div>
     );

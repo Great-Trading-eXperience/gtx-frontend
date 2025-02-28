@@ -17,6 +17,7 @@ const Header = () => {
     { destination: "/perpetual", label: "Perpetual" },
     { destination: "/earn", label: "Earn" },
     { destination: "/faucet", label: "Faucet" },
+    { destination: "/create-pool", label: "Create Pool" },
     { destination: "https://github.com/Great-Trading-eXperience", label: "Docs" }
   ];
 
@@ -25,31 +26,31 @@ const Header = () => {
       <nav className={cn(
         "flex flex-row py-3",
         pathname === "/" ? "md:flex-row md:justify-between md:items-center" : "",
-        pathname === "/spot" || pathname === "/perpetual" ? "px-5" : "max-w-7xl mx-auto"
+        pathname === "/spot" || pathname === "/perpetual" ? "px-5 md:flex-row md:justify-between md:items-center" : "max-w-7xl mx-auto"
       )}>
         <div className={cn(
           "flex flex-row gap-4",
           pathname === "/" ? "w-64" : "w-full"
         )}>
-          <Link href="/" className="flex flex-row gap-2">
+          <Link href="/" className="flex flex-row items-center gap-2">
             <img
               src={"/logo/gtx-white.png"}
               className="h-9"
               alt="GTX Logo"
             />
-            <p className="text-2xl lg:text-3xl font-bold text-white">
+            <p className="text-xl lg:text-2xl font-bold text-white text-center">
               GTX
             </p>
           </Link>
 
           {pathname !== "/" && (
-            <div className="hidden md:flex items-center gap-4 ml-20">
+            <div className="hidden md:flex items-center gap-4 ml-14">
               {links.map((link) => (
                 <Link
                   key={link.label}
                   href={link.destination}
                   className={cn(
-                    "text-sm lg:text-lg px-4 py-1 rounded-lg transition-all",
+                    "text-sm lg:text-md px-4 py-1 rounded-lg transition-all whitespace-nowrap",
                     "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
                     "dark:hover:bg-white/10 dark:hover:text-white",
                     "text-white"
@@ -69,7 +70,7 @@ const Header = () => {
                 key={link.label}
                 href={link.destination}
                 className={cn(
-                  "text-sm lg:text-lg px-4 py-1 rounded-lg transition-all",
+                  "text-sm lg:text-md px-4 py-1 rounded-lg transition-all whitespace-nowrap",
                   "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
                   "dark:hover:bg-white/10 dark:hover:text-white",
                   "text-white"
@@ -105,7 +106,7 @@ const Header = () => {
                     <Link key={link.label} href={link.destination}>
                       <Button
                         variant="ghost"
-                        className="w-full justify-start font-medium"
+                        className="w-full justify-start font-medium whitespace-nowrap"
                       >
                         {link.label}
                       </Button>

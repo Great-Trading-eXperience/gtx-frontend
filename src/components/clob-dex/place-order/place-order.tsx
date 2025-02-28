@@ -398,32 +398,8 @@ const PlaceOrder = () => {
         </h2>
       </div>
 
-      {/* Trading Pair and Balance Row */}
+      {/* Balance Row */}
       <div className="flex flex-col w-full gap-4 mb-5">
-        <div className="w-full relative">
-          <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center z-10">
-            <img
-              src={getCoinIcon(selectedPool?.coin)}
-              alt={selectedPool?.coin || "Trading pair"}
-              className="w-8 h-5 rounded-full"
-            />
-          </div>
-          <select
-            className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-3 pl-12 pr-3 border border-gray-700/50 appearance-none focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all backdrop-blur-sm"
-            value={selectedPool?.id || ""}
-            onChange={handlePoolChange}
-          >
-            {poolsData?.poolss.items.map((pool: any) => (
-              <option key={pool.id} value={pool.id}>
-                {pool.coin}
-              </option>
-            ))}
-          </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <ChevronDown className="w-4 h-4" />
-          </div>
-        </div>
-
         {isConnected && selectedPool && (
           <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-4">
             <div className="flex items-center justify-between mb-2">
@@ -504,7 +480,7 @@ const PlaceOrder = () => {
         <div className="grid grid-cols-2 gap-3">
           {/* Order Type Selection */}
           <div className="relative">
-            <div className="flex h-11 text-sm rounded-lg overflow-hidden border border-blue-700/50 bg-blue-900/20">
+            <div className="flex h-11 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
               <button
                 type="button"
                 className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "limit" ? "bg-blue-600 text-white" : "bg-transparent text-blue-300 hover:bg-blue-800/50"

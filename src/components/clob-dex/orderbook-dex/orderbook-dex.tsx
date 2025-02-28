@@ -274,58 +274,7 @@ const EnhancedOrderBookDex = () => {
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
-      {/* Trading pair selector */}
-      <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
-        <div className="relative">
-          <button
-            onClick={() => setIsPairDropdownOpen(!isPairDropdownOpen)}
-            className="flex items-center gap-2 rounded border border-gray-700/50 bg-gray-900/40 px-3 py-2 transition-all duration-200 hover:bg-gray-800/50"
-          >
-            <ArrowDownUp className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-100">{selectedPool ? selectedPool.coin : "Select Pair"}</span>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button>
-
-          {isPairDropdownOpen && poolsData && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-40 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">
-              {poolsData.poolss.items.map((pool) => (
-                <button
-                  key={pool.id}
-                  className={`w-full px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-gray-800 
-                    ${selectedPool?.id === pool.id ? "bg-gray-800 text-white" : "text-gray-200"}`}
-                  onClick={() => {
-                    setSelectedPool(pool)
-                    setIsPairDropdownOpen(false)
-                    setOrderBook({
-                      asks: [],
-                      bids: [],
-                      lastPrice: BigInt(0),
-                      spread: BigInt(0),
-                      lastUpdate: Date.now(),
-                    })
-                  }}
-                >
-                  {pool.coin}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* <div className="flex items-center gap-3">
-          <div className="text-sm font-medium text-gray-200">
-            Last:{" "}
-            <span className="text-white">{selectedPool && formatPrice(orderBook.lastPrice / BigInt(10 ** 8))}</span>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="rounded-full bg-gray-900/40 p-1.5 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div> */}
-      </div>
-
+      
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="flex items-center gap-2">
           <button

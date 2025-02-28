@@ -1,15 +1,17 @@
+"use client"
+
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, Clock, ExternalLink, Loader2, Wallet2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 import request from 'graphql-request';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-// import { tradesQuery } from '@/graphql/liquidbook/liquidbook.query'; // Updated import
-import { formatAddress, formatDate } from '../../../../helper';
-import { formatUnits } from 'viem';
 import { tradesQuery } from '@/graphql/gtx/gtx.query';
+import { formatDate } from '../../../../helper';
+import { formatUnits } from 'viem';
+import type { HexAddress } from '@/types/web3/general/address';
 
-// Updated interface for trade items from tradesQuery
+// Updated interface for trade items based on the new query structure
 interface TradeItem {
   id: string;
   orderId: string;
@@ -18,38 +20,65 @@ interface TradeItem {
   quantity: string;
   timestamp: number;
   transactionId: string;
-  user?: string; // Add user field (assuming it exists or needs to be added)
-  pool: {
-    baseCurrency: string;
-    coin: string;
+  order: {
+    expiry: number;
+    filled: string;
     id: string;
-    lotSize: string;
-    maxOrderAmount: string;
-    orderBook: string;
-    quoteCurrency: string;
+    orderId: string;
+    poolId: string;
+    price: string;
+    type: string;
     timestamp: number;
+    status: string;
+    side: 'Buy' | 'Sell';
+    quantity: string;
+    user: {
+      amount: string;
+      currency: string;
+      lockedAmount: string;
+      name: string;
+      symbol: string;
+      user: HexAddress;
+    };
+    pool: {
+      baseCurrency: string;
+      coin: string;
+      id: string;
+      lotSize: string;
+      maxOrderAmount: string;
+      orderBook: string;
+      quoteCurrency: string;
+      timestamp: number;
+    };
   };
 }
 
 // Updated response interface for tradesQuery
 interface TradeHistoryResponse {
-  tradess?: {
-    items?: TradeItem[];
-    pageInfo?: {
+  tradess: {
+    items: TradeItem[];
+    pageInfo: {
       endCursor: string;
       hasNextPage: boolean;
       hasPreviousPage: boolean;
       startCursor: string;
     };
-    totalCount?: number;
+    totalCount: number;
   };
 }
 
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-US', {
+const formatPrice = (price: string): string => {
+  return Number(formatUnits(BigInt(price), 12)).toLocaleString('en-US', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(price);
+    maximumFractionDigits: 2,
+  });
+};
+
+const formatQuantity = (quantity: string): string => {
+  return Number(formatUnits(BigInt(quantity), 18)).toLocaleString('en-US', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  });
 };
 
 const TradeHistoryTable = () => {
@@ -65,6 +94,10 @@ const TradeHistoryTable = () => {
   const { data, isLoading, error } = useQuery<TradeHistoryResponse>({
     queryKey: ['tradeHistory', address],
     queryFn: async () => {
+      if (!address) {
+        throw new Error('Wallet address not available');
+      }
+
       const response = await request<TradeHistoryResponse>(
         GTX_GRAPHQL_URL, 
         tradesQuery
@@ -76,28 +109,21 @@ const TradeHistoryTable = () => {
 
       // Filter trades by the connected wallet address
       if (address && response.tradess.items) {
-        // If your API has a user field, use that for filtering
-        // Otherwise, use transaction data to identify user's trades
-        
-        // Mock implementation for filtering - replace with actual implementation
-        // that uses the appropriate field for user identification
         response.tradess.items = response.tradess.items.filter(trade => {
-          // If the trade has a user field, check if it matches the address
-          if (trade.user) {
-            return trade.user.toLowerCase() === address.toLowerCase();
+          // If the trade has a user field in the order object, check if it matches the address
+          if (trade.order?.user?.user) {
+            return trade.order.user.user.toLowerCase() === address.toLowerCase();
           }
           
-          // If no user field, use transaction ID or another field as a proxy
-          // This is a placeholder - modify based on your actual data structure
-          return trade.transactionId.toLowerCase().includes(address.toLowerCase().substring(2));
+          return false;
         });
       }
 
       return response;
     },
     enabled: !!address, // Only run query when address is available
-    staleTime: 60000,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchInterval: 30000,
   });
 
   const handleSort = (key: SortableKey) => {
@@ -109,38 +135,38 @@ const TradeHistoryTable = () => {
 
   if (!address) {
     return (
-      <div className="px-4 py-8 text-gray-600 dark:text-gray-400 text-sm text-center">
-        Please connect your wallet to view trade history
+      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Wallet2 className="h-12 w-12 text-gray-400" />
+          <p className="text-lg text-gray-200">Connect your wallet to view trade history</p>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="px-4 py-8 text-gray-600 dark:text-gray-400 text-sm text-center">
-        Loading your trade history...
+      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <p className="text-lg text-gray-200">Loading your trade history...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="px-4 py-8 text-red-600 dark:text-red-400 text-sm text-center">
-        Error loading your trade history: {error instanceof Error ? error.message : 'Unknown error'}
+      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-rose-800/30 bg-rose-900/20 p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
+          <p className="text-lg text-rose-200">{error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
       </div>
     );
   }
 
   const trades = data?.tradess?.items || [];
-
-  // Determine trade direction (buy/sell) based on transaction analysis
-  // This is a placeholder - implement actual logic based on your system
-  const determineTradeSide = (trade: TradeItem): boolean => {
-    // Placeholder: in a real app, you'd determine this from transaction data
-    // or by comparing user's address with buyer/seller addresses
-    // For now, using a simple but arbitrary approach for demonstration
-    return parseInt(trade.id, 16) % 2 === 0; // Even ID = buy, odd ID = sell
-  };
 
   const sortedTrades = [...trades].sort((a, b) => {
     const key = sortConfig.key;
@@ -166,58 +192,89 @@ const TradeHistoryTable = () => {
   });
 
   return (
-    <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow-md">
-      
-      <div className="grid grid-cols-6 gap-4 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800">
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('timestamp')}>
-          Time
-          <ChevronDown className="h-4 w-4 ml-1" />
-        </div>
-        <div>Pair</div>
-        <div>Side</div>
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('price')}>
-          Price
-          <ChevronDown className="h-4 w-4 ml-1" />
-        </div>
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('quantity')}>
-          Amount
-          <ChevronDown className="h-4 w-4 ml-1" />
-        </div>
-        <div>Transaction</div>
+    <div className="w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gray-900/20 shadow-lg">
+      {/* Header */}
+      <div className="grid grid-cols-6 gap-4 border-b border-gray-800/30 bg-gray-900/40 px-4 py-3 backdrop-blur-sm">
+        <button
+          onClick={() => handleSort('timestamp')}
+          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+        >
+          <Clock className="h-4 w-4" />
+          <span>Time</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${
+              sortConfig.key === 'timestamp' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        <div className="text-sm font-medium text-gray-200">Pair</div>
+        <button
+          onClick={() => handleSort('price')}
+          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+        >
+          <span>Price</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${
+              sortConfig.key === 'price' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        <div className="text-sm font-medium text-gray-200">Side</div>
+        <button
+          onClick={() => handleSort('quantity')}
+          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+        >
+          <span>Amount</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${
+              sortConfig.key === 'quantity' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        <div className="text-sm font-medium text-gray-200">Transaction</div>
       </div>
 
-      {sortedTrades.length > 0 ? (
-        sortedTrades.map((trade) => {
-          const isBuy = determineTradeSide(trade);
-          const priceValue = Number(formatUnits(BigInt(trade.price), 12)); // Adjust decimals as needed
-          const quantityValue = Number(formatUnits(BigInt(trade.quantity), 18)); // Adjust decimals as needed
-          
-          return (
-            <div key={trade.id} className="grid grid-cols-6 gap-4 px-4 py-3 text-sm border-t border-gray-200 dark:border-gray-700">
-              <div className="text-gray-600 dark:text-gray-400">{formatDate(trade.timestamp.toString())}</div>
-              <div className="text-gray-600 dark:text-gray-400">{trade.pool?.coin || 'Unknown'}</div>
-              <div className={isBuy ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}>
-                {isBuy ? 'Buy' : 'Sell'}
+      {/* Table Body */}
+      <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
+        {sortedTrades.length > 0 ? (
+          sortedTrades.map((trade) => {
+            const isBuy = trade.order?.side === 'Buy';
+            const pair = trade.order?.pool?.coin || 'Unknown';
+            
+            return (
+              <div
+                key={trade.id}
+                className="grid grid-cols-6 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
+              >
+                <div className="text-gray-200">{formatDate(trade.timestamp.toString())}</div>
+                <div className="text-gray-200">{pair}</div>
+                <div className="font-medium text-white">${formatPrice(trade.price)}</div>
+                <div className={isBuy ? "text-emerald-400" : "text-rose-400"}>
+                  {isBuy ? 'Buy' : 'Sell'}
+                </div>
+                <div className="font-medium text-white">{formatQuantity(trade.quantity)}</div>
+                <div className="text-blue-400 hover:text-blue-300 transition-colors truncate">
+                  <a 
+                    href={`https://testnet-explorer.riselabs.xyz/tx/${trade.transactionId}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {`${trade.transactionId.slice(0, 6)}...${trade.transactionId.slice(-4)}`} <ExternalLink className="w-4 h-4 inline" />
+                  </a>
+                </div>
               </div>
-              <div className="text-gray-900 dark:text-gray-100">${formatPrice(priceValue)}</div>
-              <div className="text-gray-900 dark:text-gray-100">{formatPrice(quantityValue)}</div>
-              <div className="text-blue-600 dark:text-blue-400 underline">
-                <a 
-                  href={`https://etherscan.io/tx/${trade.transactionId}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  {formatAddress(trade.transactionId)}
-                </a>
-              </div>
+            );
+          })
+        ) : (
+          <div className="flex min-h-[200px] items-center justify-center p-8">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <ArrowDownUp className="h-8 w-8 text-gray-400" />
+              <p className="text-gray-200">No trades found for your wallet</p>
             </div>
-          );
-        })
-      ) : (
-        <div className="px-4 py-8 text-gray-600 dark:text-gray-400 text-sm text-center border-t border-gray-200 dark:border-gray-700">
-          No trades found for your wallet
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

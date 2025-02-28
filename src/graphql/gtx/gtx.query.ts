@@ -30,30 +30,51 @@ export const tradesQuery = gql`
     tradess {
       items {
         id
+        order {
+          expiry
+          filled
+          id
+          orderId
+          poolId
+          price
+          type
+          timestamp
+          status
+          side
+          quantity
+          user {
+            amount
+            currency
+            lockedAmount
+            name
+            symbol
+            user
+          }
+          pool {
+            baseCurrency
+            coin
+            id
+            lotSize
+            maxOrderAmount
+            orderBook
+            quoteCurrency
+            timestamp
+          }
+        }
         orderId
         poolId
         price
         quantity
         timestamp
         transactionId
-        pool {
-          baseCurrency
-          coin
-          id
-          lotSize
-          maxOrderAmount
-          orderBook
-          quoteCurrency
-          timestamp
-        }
-      }
-      pageInfo {
-        endCursor
-        hasNextPage
-        hasPreviousPage
-        startCursor
       }
       totalCount
+      pageInfo {
+        startCursor
+        hasPreviousPage
+        hasNextPage
+        endCursor
+      }
     }
   }
 `;

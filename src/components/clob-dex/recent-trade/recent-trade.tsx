@@ -140,9 +140,6 @@ const RecentTradesComponent = () => {
           <BarChart2 className="h-5 w-5 text-gray-400" />
           <h2 className="text-lg font-medium text-white">Recent Trades</h2>
         </div>
-        <button className="rounded-full bg-gray-900/40 p-1.5 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300">
-          <RefreshCw className="h-4 w-4" />
-        </button>
       </div>
 
       <div className="flex h-[520px] flex-col rounded-lg">

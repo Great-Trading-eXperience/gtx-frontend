@@ -1,5 +1,7 @@
+"use client"
+
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, Loader2, Wallet2, CreditCard, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 import request from 'graphql-request';
@@ -66,9 +68,6 @@ const BalancesHistoryTable = () => {
         { userAddress }
       );
 
-      // Log the response for debugging
-      console.log('Balances Query Response:', response);
-
       if (!response || !response.balancess) {
         throw new Error('Invalid response format');
       }
@@ -89,24 +88,33 @@ const BalancesHistoryTable = () => {
 
   if (!address) {
     return (
-      <div className="px-4 py-8 text-gray-600 dark:text-gray-400 text-sm text-center">
-        Please connect your wallet to view balances
+      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Wallet2 className="h-12 w-12 text-gray-400" />
+          <p className="text-lg text-gray-200">Connect your wallet to view balances</p>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="px-4 py-8 text-gray-600 dark:text-gray-400 text-sm text-center">
-        Loading your balances...
+      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <p className="text-lg text-gray-200">Loading your balances...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="px-4 py-8 text-red-600 dark:text-red-400 text-sm text-center">
-        Error loading your balances: {error instanceof Error ? error.message : 'Unknown error'}
+      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-rose-800/30 bg-rose-900/20 p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
+          <p className="text-lg text-rose-200">{error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
       </div>
     );
   }
@@ -146,22 +154,36 @@ const BalancesHistoryTable = () => {
   };
 
   return (
-    <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
-      <div className="grid grid-cols-5 gap-4 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800">
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('symbol')}>
-          Asset
-          <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortConfig.key === 'symbol' && sortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
-        </div>
-        <div className="cursor-pointer flex items-center" onClick={() => handleSort('amount')}>
-          Available
-          <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortConfig.key === 'amount' && sortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
-        </div>
-        <div>Locked</div>
-        <div>Total</div>
-        <div>Currency Address</div>
+    <div className="w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gray-900/20 shadow-lg">
+      {/* Header */}
+      <div className="grid grid-cols-5 gap-4 border-b border-gray-800/30 bg-gray-900/40 px-4 py-3 backdrop-blur-sm">
+        <button
+          onClick={() => handleSort('symbol')}
+          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+        >
+          <span>Asset</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${sortConfig.key === 'symbol' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+              }`}
+          />
+        </button>
+        <button
+          onClick={() => handleSort('amount')}
+          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+        >
+          <span>Available</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${sortConfig.key === 'amount' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+              }`}
+          />
+        </button>
+        <div className="text-sm font-medium text-gray-200">Locked</div>
+        <div className="text-sm font-medium text-gray-200">Total</div>
+        <div className="text-sm font-medium text-gray-200">Currency Address</div>
       </div>
 
-      <div className="max-h-[500px] overflow-y-auto">
+      {/* Table Body */}
+      <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
         {sortedBalances.length > 0 ? (
           sortedBalances.map((balance) => {
             const decimals = getTokenDecimals(balance.symbol);
@@ -173,35 +195,42 @@ const BalancesHistoryTable = () => {
             );
 
             return (
-              <div key={balance.currency} className="grid grid-cols-5 gap-4 px-4 py-3 text-sm border-t border-gray-200 dark:border-gray-700">
+              <div
+                key={balance.currency}
+                className="grid grid-cols-5 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
+              >
                 <div className="flex items-center">
-                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 mr-2 flex items-center justify-center text-xs">
+                  <div className="w-8 h-8 rounded-full bg-gray-800 mr-3 flex items-center justify-center text-xs text-gray-200">
                     {balance.symbol.charAt(0)}
                   </div>
                   <div>
-                    <div className="text-gray-900 dark:text-white font-medium">{balance.symbol}</div>
-                    <div className="text-gray-500 dark:text-gray-400 text-xs">{balance.name}</div>
+                    <div className="text-gray-100 font-medium">{balance.symbol}</div>
+                    <div className="text-gray-400 text-xs">{balance.name}</div>
                   </div>
                 </div>
-                <div className="text-gray-900 dark:text-white">{available}</div>
-                <div className="text-gray-900 dark:text-white">{locked}</div>
-                <div className="text-gray-900 dark:text-white">{total}</div>
-                <div className="text-blue-600 dark:text-blue-400 underline text-xs truncate">
+                <div className="font-medium text-white self-center">{available}</div>
+                <div className="text-amber-400 self-center">{locked}</div>
+                <div className="text-white font-medium self-center">{total}</div>
+                <div className="text-blue-400 hover:text-blue-300 transition-colors truncate self-center">
                   <a
                     href={`https://testnet-explorer.riselabs.xyz/address/${balance.currency}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={balance.currency}
+                    className="underline"
                   >
-                    {formatAddress(balance.currency)}
+                    {formatAddress(balance.currency)} <ExternalLink className="w-4 h-4 inline" />
                   </a>
                 </div>
               </div>
             );
           })
         ) : (
-          <div className="px-4 py-8 text-gray-600 dark:text-gray-400 text-sm text-center border-t border-gray-200 dark:border-gray-700">
-            No balances found for your wallet
+          <div className="flex min-h-[200px] items-center justify-center p-8">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <CreditCard className="h-8 w-8 text-gray-400" />
+              <p className="text-gray-200">No balances found for your wallet</p>
+            </div>
           </div>
         )}
       </div>

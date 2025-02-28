@@ -250,7 +250,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
   if (poolsLoading || tradesLoading) return <SkeletonLoader />
 
   return (
-    <div className="w-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white rounded-t-lg shadow-md">
+    <div className="w-full bg-gradient-to-br from-gray-950 to-gray-900 border border-gray-700/30 text-white rounded-t-lg shadow-md">
       {/* Market data display with integrated selector */}
       <div className="flex items-center h-16 px-4">
         <div className="flex items-center space-x-2 w-72">
