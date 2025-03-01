@@ -48,9 +48,12 @@ export const ORDER_BLOCK = "115276393"
 // Address for GTX Project Update Below
 
 // Faucet Address
-export const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS;
-export const WETH_ADDRESS = process.env.NEXT_PUBLIC_WETH_ADDRESS;
-export const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_FAUCET_ADDRESS;
+// export const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS;
+// export const WETH_ADDRESS = process.env.NEXT_PUBLIC_WETH_ADDRESS;
+// export const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_FAUCET_ADDRESS;
+export const USDC_ADDRESS = "0x213a52377f0a320fb8623f7FFf7B2990719c0f23";
+export const WETH_ADDRESS = "0x213a52377f0a320fb8623f7FFf7B2990719c0f23";
+export const FAUCET_ADDRESS = "0x213a52377f0a320fb8623f7FFf7B2990719c0f23";
 
 
 // CLOB DEX Contracts
