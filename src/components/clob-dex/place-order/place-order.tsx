@@ -64,11 +64,11 @@ const PlaceOrder = () => {
     if (typeof value === 'string') {
       value = parseFloat(value);
     }
-    
+
     if (isNaN(value)) {
       return "0.0000";
     }
-    
+
     // Format with commas and 4 decimal places
     return value.toLocaleString('en-US', {
       minimumFractionDigits: 4,
@@ -122,10 +122,31 @@ const PlaceOrder = () => {
   // Set the first pool as default when data is loaded
   useEffect(() => {
     if (poolsData && poolsData.poolss.items.length > 0 && !selectedPool) {
-      setSelectedPool(poolsData.poolss.items[0])
-      setOrderBookAddress(poolsData.poolss.items[0].orderBook as HexAddress)
+      // Find WETH/USDC pair with exact match
+      const wethPool = poolsData.poolss.items.find(
+        pool =>
+          pool.coin?.toLowerCase() === 'weth/usdc' ||
+          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
+      );
+
+      // Fallback: look for any pool with WETH in it
+      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
+        pool => pool.coin?.toLowerCase().includes('weth')
+      ) : null;
+
+      // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
+      if (wethPool) {
+        setSelectedPool(wethPool);
+        setOrderBookAddress(wethPool.orderBook as HexAddress);
+      } else if (wethFallbackPool) {
+        setSelectedPool(wethFallbackPool);
+        setOrderBookAddress(wethFallbackPool.orderBook as HexAddress);
+      } else {
+        setSelectedPool(poolsData.poolss.items[0]);
+        setOrderBookAddress(poolsData.poolss.items[0].orderBook as HexAddress);
+      }
     }
-  }, [poolsData, selectedPool])
+  }, [poolsData])
 
   // Update total when price or quantity changes
   useEffect(() => {
@@ -492,8 +513,8 @@ const PlaceOrder = () => {
               <button
                 type="button"
                 className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "market"
-                    ? "bg-blue-600 text-white"
-                    : "bg-transparent text-blue-300 hover:bg-blue-800/50"
+                  ? "bg-blue-600 text-white"
+                  : "bg-transparent text-blue-300 hover:bg-blue-800/50"
                   }`}
                 onClick={() => setOrderType("market")}
               >
@@ -601,8 +622,8 @@ const PlaceOrder = () => {
           <button
             type="submit"
             className={`relative w-full py-3.5 px-4 rounded-lg text-sm font-medium transition-all ${side === 0
-                ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+              ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+              : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
               } ${isPending || isConfirming || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={isPending || isConfirming || !isConnected}
           >

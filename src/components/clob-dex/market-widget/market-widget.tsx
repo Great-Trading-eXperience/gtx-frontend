@@ -135,10 +135,29 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
 
   // Set default selected pool when pools data is loaded
   useEffect(() => {
-    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0 && !selectedPoolId) {
-      setSelectedPoolId(poolsData.poolss.items[0].id)
+    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
+      // Find WETH/USDC pair (ensuring exact match for WETH/USDC)
+      const wethPool = poolsData.poolss.items.find(
+        pool => 
+          pool.coin?.toLowerCase() === 'weth/usdc' || 
+          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
+      );
+      
+      // As a backup, look for anything with WETH in it
+      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
+        pool => pool.coin?.toLowerCase().includes('weth')
+      ) : null;
+      
+      // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
+      if (wethPool) {
+        setSelectedPoolId(wethPool.id);
+      } else if (wethFallbackPool) {
+        setSelectedPoolId(wethFallbackPool.id);
+      } else {
+        setSelectedPoolId(poolsData.poolss.items[0].id);
+      }
     }
-  }, [poolsData, selectedPoolId])
+  }, [poolsData])
 
   // Fetch trades data
   const { data: tradesData, isLoading: tradesLoading, error: tradesError } = useQuery<TradesResponse>({

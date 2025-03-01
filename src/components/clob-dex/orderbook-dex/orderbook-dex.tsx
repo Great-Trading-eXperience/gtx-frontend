@@ -89,12 +89,31 @@ const EnhancedOrderBookDex = () => {
     staleTime: 60000, // 1 minute
   })
 
-  // Set the first pool as selected by default when data loads
+  // Set WETH/USDC as the default selected pool when data loads
   useEffect(() => {
     if (poolsData && poolsData.poolss.items.length > 0 && !selectedPool) {
-      setSelectedPool(poolsData.poolss.items[0])
+      // Find WETH/USDC pair with exact match
+      const wethPool = poolsData.poolss.items.find(
+        pool =>
+          pool.coin?.toLowerCase() === 'weth/usdc' ||
+          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
+      );
+
+      // Fallback: look for any pool with WETH in it
+      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
+        pool => pool.coin?.toLowerCase().includes('weth')
+      ) : null;
+
+      // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
+      if (wethPool) {
+        setSelectedPool(wethPool);
+      } else if (wethFallbackPool) {
+        setSelectedPool(wethFallbackPool);
+      } else {
+        setSelectedPool(poolsData.poolss.items[0]);
+      }
     }
-  }, [poolsData, selectedPool])
+  }, [poolsData])
 
   // Use the custom hooks
   const { getBestPrice: getDefaultBestPrice, isLoading: isLoadingBestPrice, error: bestPriceError } = useGetBestPrice()
@@ -274,7 +293,7 @@ const EnhancedOrderBookDex = () => {
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
-      
+
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="flex items-center gap-2">
           <button
