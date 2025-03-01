@@ -54,7 +54,7 @@ const assets: Asset[] = [
   },
 ]
 
-export default function LiquidbookEarn() {
+export default function GTXEarn() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [showConnectionLoader, setShowConnectionLoader] = useState(false)

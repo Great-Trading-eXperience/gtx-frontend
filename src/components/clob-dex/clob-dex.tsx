@@ -88,12 +88,6 @@ export default function ClobDex() {
             <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] py-[4px]">
                 <div className="shadow-lg rounded-lg">
                     <MarketDataWidget onPoolChange={handlePoolChange} />
-                    {/* Pass key to force full remount when pool changes */}
-                    {/* <TradingSpotChart 
-                            height={500} 
-                            selectedPoolId={selectedPoolId} 
-                            key={`chart-${selectedPoolId || 'default'}`}
-                        /> */}
                     <ChartComponent />
                 </div>
 
@@ -107,8 +101,6 @@ export default function ClobDex() {
             </div>
 
             <TradingHistory />
-
-            {/* <OrderManagement /> */}
         </QueryClientProvider>
     )
 }

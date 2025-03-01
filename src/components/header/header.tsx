@@ -21,6 +21,13 @@ const Header = () => {
     { destination: "https://github.com/Great-Trading-eXperience", label: "Docs" }
   ];
 
+  const solidColorConfig = {
+    backgroundColor: "bg-transparent",
+    hoverBackgroundColor: "hover:bg-slate-800/50",
+    textColor: "text-white",
+    mode: 'solid' as const
+  };
+
   return (
     <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20 ">
       <nav className={cn(
@@ -86,7 +93,12 @@ const Header = () => {
           "flex justify-end",
           pathname === "/" ? "w-64" : "w-full"
         )}>
-          {pathname !== "/" && <ButtonConnectWallet />}
+          {pathname !== "/" &&
+            <ButtonConnectWallet
+              colors={solidColorConfig}
+              className="border border-slate-500"
+            />
+          }
         </div>
 
         <div className="flex gap-2 lg:hidden">

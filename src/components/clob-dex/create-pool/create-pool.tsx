@@ -11,20 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { Button } from "@/components/ui/button"
-// import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
 import { useAccount } from "wagmi"
 import GradientLoader from "@/components/gradient-loader/gradient-loader"
 import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
-// import GradientLoader from "../gradient-loader/gradient-loader"
+import { MOCK_ADA_ADDRESS, MOCK_DOGE_ADDRESS, MOCK_SHIB_ADDRESS, MOCK_SOL_ADDRESS, MOCK_USDC_ADDRESS, MOCK_XRP_ADDRESS } from "@/constants/contract-address"
 
 // Mock token addresses
 const MOCK_TOKENS = {
-  SHIB: "0xF3812D5af4D74895ab957d26E33D89B0B4363820",
-  SOL: "0x45deaF475edC2092Af1F3b46A8Bd4D96c40b1573",
-  DOGE: "0x2e6937d2084E42dc3413152fa4d37452750EdECB",
-  XRP: "0x68FbeBD1678225f8b3cAFd04e371c76e1E669a2F",
-  ADA: "0x2BEcD7E727AF1449615e448E0D8d83B2fE2DFb51",
-  USDC: "0x02950119C4CCD1993f7938A55B8Ab8384C3CcE4F",
+  SHIB: MOCK_SHIB_ADDRESS,
+  SOL: MOCK_SOL_ADDRESS,
+  DOGE: MOCK_DOGE_ADDRESS,
+  XRP: MOCK_XRP_ADDRESS,
+  ADA: MOCK_ADA_ADDRESS,
+  USDC: MOCK_USDC_ADDRESS,
 }
 
 // Default values
@@ -274,9 +273,8 @@ const CreatePoolComponent: React.FC = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="quoteCurrency" className="text-gray-300">
-                        Quote Currency
+                        Quote Currency - USDC (Default)
                       </Label>
-                      <p className="text-sm text-cyan-100/80">USDC (Default)</p>
                       <Input
                         id="quoteCurrency"
                         value={quoteCurrency}

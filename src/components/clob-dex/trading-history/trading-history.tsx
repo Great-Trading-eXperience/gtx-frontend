@@ -12,6 +12,13 @@ import { BookOpen, History, Wallet } from "lucide-react"
 export default function TradingHistory() {
   const { isConnected } = useAccount()
 
+  const solidColorConfig = {
+    backgroundColor: "bg-transparent",
+    hoverBackgroundColor: "hover:bg-slate-800/50",
+    textColor: "text-white",
+    mode: 'solid' as const
+  };
+
   return (
     <div className="relative mt-4">
       {/* Decorative Elements */}
@@ -61,7 +68,10 @@ export default function TradingHistory() {
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
                     <BookOpen className="h-12 w-12 text-gray-400" />
                     <p className="text-lg text-gray-200">Connect your wallet to see your open orders</p>
-                    <ButtonConnectWallet />
+                    <ButtonConnectWallet
+                      colors={solidColorConfig}
+                      className="border border-slate-500"
+                    />
                   </div>
                 </div>
               )}
@@ -78,7 +88,10 @@ export default function TradingHistory() {
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
                     <History className="h-12 w-12 text-gray-400" />
                     <p className="text-lg text-gray-200">Connect your wallet to see your trade history</p>
-                    <ButtonConnectWallet />
+                    <ButtonConnectWallet
+                      colors={solidColorConfig}
+                      className="border border-slate-500"
+                    />
                   </div>
                 </div>
               )}
@@ -95,7 +108,10 @@ export default function TradingHistory() {
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
                     <Wallet className="h-12 w-12 text-gray-400" />
                     <p className="text-lg text-gray-200">Connect your wallet to see your balances</p>
-                    <ButtonConnectWallet />
+                    <ButtonConnectWallet
+                      colors={solidColorConfig}
+                      className="border border-slate-500"
+                    />
                   </div>
                 </div>
               )}
