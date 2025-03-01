@@ -1,13 +1,12 @@
 import Footer from "@/components/footer/footer";
 import Header from "@/components/header/header";
-import { wagmiConfig } from "@/configs/wagmi";
 import { Chain, darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import type { AppProps } from "next/app";
 import { WagmiProvider } from "wagmi";
-import { arbitrumSepolia } from "wagmi/chains";
+import { wagmiConfig } from "@/configs/wagmi";
 import "../styles/globals.css";
 import Head from "next/head";
 import { ReactNode } from "react";
@@ -32,7 +31,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={arbitrumSepolia}
+          initialChain={11155931}
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",

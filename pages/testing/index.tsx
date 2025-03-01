@@ -6,7 +6,7 @@ import request from 'graphql-request';
 
 import { formatUnits } from 'viem';
 import { calculatePrice } from '../../helper';
-import { LIQUIDBOOK_GRAPHQL_URL } from '@/constants/subgraph-url';
+import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import { matchOrderEvents } from '@/graphql/liquidbook/liquidbook.query';
 
 const formatVolume = (value: bigint, decimals: number = 6) => {
@@ -112,7 +112,7 @@ const TradingChart: React.FC = () => {
     const { data, isLoading, error } = useQuery<MatchOrderEventResponse>({
         queryKey: ['tickEvents'],
         queryFn: async () => {
-            return await request(LIQUIDBOOK_GRAPHQL_URL, matchOrderEvents);
+            return await request(GTX_GRAPHQL_URL, matchOrderEvents);
         },
         refetchInterval: 500,
         staleTime: 0,

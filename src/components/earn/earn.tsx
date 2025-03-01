@@ -1,9 +1,14 @@
+'use client'
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
+import GradientLoader from "../gradient-loader/gradient-loader"
+import { useAccount } from "wagmi"
+import { useEffect, useState } from "react"
 
 interface Pair {
   icon: string
@@ -49,16 +54,45 @@ const assets: Asset[] = [
   },
 ]
 
-export default function LiquidbookEarn() {
+export default function GTXEarn() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const [showConnectionLoader, setShowConnectionLoader] = useState(false)
+  const { isConnected } = useAccount()
+  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
+
+  // Handle component mounting
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
+
+  // Handle wallet connection state changes
+  useEffect(() => {
+    if (mounted) {
+      // Only handle connection changes after mounting
+      if (isConnected && !previousConnectionState) {
+        setShowConnectionLoader(true)
+        const timer = setTimeout(() => {
+          setShowConnectionLoader(false)
+        }, 3000) // Show for 3 seconds
+        return () => clearTimeout(timer)
+      }
+      setPreviousConnectionState(isConnected)
+    }
+  }, [isConnected, previousConnectionState, mounted])
 
   const handleRowClick = (asset: Asset) => {
     router.push(`/earn/0xe9c1de5ea494219b965652`)
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-black to-blue-900 text-white">
+  // Show connection loading state when transitioning from disconnected to connected
+  if (showConnectionLoader) {
+    return <GradientLoader />
+  }
 
+  return (
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-black to-blue-900 text-white">
       <main className="flex-1 flex items-center justify-start p-8">
         <div className="space-y-6 w-full max-w-7xl mx-auto">
           <div className="text-start space-y-4">

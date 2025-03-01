@@ -1,38 +1,14 @@
 'use client';
 
-import { ReactNode } from "react";
-import TradingLayout from "@/components/trading/trading-layout";
-import { ThemeProvider } from "next-themes";
-import { WagmiProvider } from "wagmi";
-import { wagmiConfig } from "@/configs/wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 
-const queryClient = new QueryClient();
+import ClobDex from "@/components/clob-dex/clob-dex";
 
 const Spot = () => {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            disableTransitionOnChange
-          >
-            <div className="">
-              <TradingLayout />
-            </div>
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/40 to-slate-950 relative overflow-hidden">
+      <ClobDex />
+    </div>
   );
-};
-
-// Tanpa Layout
-Spot.getLayout = function getLayout(page: ReactNode) {
-  return page;
 };
 
 export default Spot;

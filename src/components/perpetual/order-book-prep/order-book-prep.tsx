@@ -20,6 +20,54 @@ type DecimalPrecision = '0.01' | '0.1' | '1';
 
 const STANDARD_ORDER_COUNT = 10;
 
+// Mock data for the order book
+const MOCK_DATA = {
+    asks: [
+        ["1845.12", "1.23456"],
+        ["1845.65", "0.89732"],
+        ["1846.23", "2.34521"],
+        ["1847.01", "1.56789"],
+        ["1847.84", "3.21548"],
+        ["1848.32", "0.76521"],
+        ["1848.95", "1.98752"],
+        ["1849.43", "2.45632"],
+        ["1850.11", "1.12354"],
+        ["1850.87", "0.95623"],
+        ["1851.34", "1.78952"],
+        ["1851.92", "2.56321"],
+        ["1852.45", "1.34569"],
+        ["1853.21", "0.87542"],
+        ["1853.78", "1.56231"],
+        ["1854.32", "2.12365"],
+        ["1854.91", "1.78952"],
+        ["1855.45", "0.92365"],
+        ["1856.12", "1.45632"],
+        ["1856.78", "2.31456"]
+    ],
+    bids: [
+        ["1844.52", "1.45678"],
+        ["1843.98", "2.36541"],
+        ["1843.45", "1.12358"],
+        ["1842.87", "0.78952"],
+        ["1842.23", "2.45632"],
+        ["1841.76", "1.36541"],
+        ["1841.21", "0.98752"],
+        ["1840.67", "1.56321"],
+        ["1840.12", "2.36541"],
+        ["1839.54", "1.78952"],
+        ["1838.98", "0.95623"],
+        ["1838.45", "1.23654"],
+        ["1837.87", "2.56321"],
+        ["1837.34", "1.45632"],
+        ["1836.89", "0.87542"],
+        ["1836.32", "1.23654"],
+        ["1835.78", "2.36541"],
+        ["1835.23", "1.12358"],
+        ["1834.89", "0.95623"],
+        ["1834.32", "1.56321"]
+    ]
+};
+
 const OrderBookSkeleton = () => {
     return (
         <div className="w-full max-w-xs mx-auto bg-gray-900 rounded-xl border border-gray-800 text-white p-4 animate-pulse">
@@ -118,27 +166,50 @@ const OrderBookPrep = () => {
 
         const fetchOrderBook = async () => {
             try {
-                const response = await fetch('https://www.okx.com/api/v5/market/books?instId=ETH-USDC&sz=20');
-                const data = await response.json();
+                // Use mock data instead of actual API call
+                const asks = processOrders(MOCK_DATA.asks, true);
+                const bids = processOrders(MOCK_DATA.bids, false);
+                
+                const lastPrice = parseFloat(MOCK_DATA.asks[0][0]);
+                const spread = Number((parseFloat(MOCK_DATA.asks[0][0]) - parseFloat(MOCK_DATA.bids[0][0])).toFixed(2));
 
-                if (data.data?.[0]) {
-                    const bookData = data.data[0];
-                    const asks = processOrders(bookData.asks, true);
-                    const bids = processOrders(bookData.bids, false);
+                setOrderBook({
+                    asks,
+                    bids,
+                    lastPrice,
+                    spread,
+                    lastUpdate: Date.now()
+                });
+                
+                // Add some randomness to simulate real-time updates
+                if (!initialLoading) {
+                    // Randomly modify some prices and sizes to simulate market movement
+                    MOCK_DATA.asks.forEach((ask, index) => {
+                        if (Math.random() > 0.7) {
+                            const currentPrice = parseFloat(ask[0]);
+                            const priceChange = (Math.random() - 0.5) * 0.1;
+                            MOCK_DATA.asks[index][0] = (currentPrice + priceChange).toFixed(2);
+                            
+                            const currentSize = parseFloat(ask[1]);
+                            const sizeChange = (Math.random() - 0.5) * 0.2;
+                            MOCK_DATA.asks[index][1] = Math.max(0.01, currentSize + sizeChange).toFixed(5);
+                        }
+                    });
                     
-                    const lastPrice = parseFloat(bookData.asks[0][0]);
-                    const spread = Number((parseFloat(bookData.asks[0][0]) - parseFloat(bookData.bids[0][0])).toFixed(2));
-
-                    setOrderBook({
-                        asks,
-                        bids,
-                        lastPrice,
-                        spread,
-                        lastUpdate: Date.now()
+                    MOCK_DATA.bids.forEach((bid, index) => {
+                        if (Math.random() > 0.7) {
+                            const currentPrice = parseFloat(bid[0]);
+                            const priceChange = (Math.random() - 0.5) * 0.1;
+                            MOCK_DATA.bids[index][0] = (currentPrice + priceChange).toFixed(2);
+                            
+                            const currentSize = parseFloat(bid[1]);
+                            const sizeChange = (Math.random() - 0.5) * 0.2;
+                            MOCK_DATA.bids[index][1] = Math.max(0.01, currentSize + sizeChange).toFixed(5);
+                        }
                     });
                 }
             } catch (error) {
-                console.error('Error fetching order book:', error);
+                console.error('Error processing order book:', error);
             } finally {
                 setInitialLoading(false);
             }
@@ -148,7 +219,7 @@ const OrderBookPrep = () => {
         fetchOrderBook(); // Initial fetch
 
         return () => clearInterval(interval);
-    }, [mounted]);
+    }, [mounted, initialLoading]);
 
     const toggleView = useCallback(() => {
         const views: ViewType[] = ['both', 'bids', 'asks'];
