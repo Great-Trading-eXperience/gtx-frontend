@@ -85,8 +85,8 @@ export default function ClobDex() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] py-[4px]">
-                <div className="shadow-lg rounded-lg">
+            <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px]">
+                <div className="shadow-lg rounded-lg border border-gray-700/20">
                     <MarketDataWidget onPoolChange={handlePoolChange} />
                     <ChartComponent />
                 </div>

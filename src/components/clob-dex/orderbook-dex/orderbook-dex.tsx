@@ -292,7 +292,7 @@ const EnhancedOrderBookDex = () => {
   const baseToken = selectedPool?.coin?.split("/")[0] || "WETH"
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
+    <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
 
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="flex items-center gap-2">

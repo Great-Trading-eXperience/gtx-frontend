@@ -20,7 +20,7 @@ export default function TradingHistory() {
   };
 
   return (
-    <div className="relative mt-4">
+    <div className="relative mt-1">
       {/* Decorative Elements */}
       <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
       <div className="absolute -right-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
