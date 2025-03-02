@@ -346,16 +346,17 @@ const CreatePoolComponent: React.FC = () => {
                           <p className="font-medium text-green-400">Pool created successfully!</p>
                           {createPoolHash && (
                             <a
-                              href={`https://etherscan.io/tx/${createPoolHash}`}
+                              href={`https://testnet-explorer.riselabs.xyz/tx/${createPoolHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                             >
-                              View transaction on Etherscan
+                              View transaction on Rise Sepolia
                             </a>
                           )}
                         </div>
                       </div>
+                      
                     </div>
                   )}
 
