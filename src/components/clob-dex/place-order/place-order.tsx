@@ -14,19 +14,32 @@ import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/us
 import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/write/usePlaceOrder"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { ArrowDown, ArrowUp, BarChart3, ChevronDown, CreditCard, Layers, RefreshCw, Wallet } from "lucide-react"
-import { useMarketStore } from "@/store/market-store"
 
 // Order side type
 type Side = 0 | 1 // 0 = BUY, 1 = SELL
 
-// Configuration constants - replace with actual contract addresses
-const BALANCE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_GTX_BALANCE_MANAGER_ADDRESS as HexAddress
+// Define the expected data structure from the GraphQL query
+interface PoolsData {
+  poolss: {
+    items: Array<{
+      id: string
+      coin: string
+      orderBook: string
+      baseCurrency: string
+      quoteCurrency: string
+      lotSize: string
+      maxOrderAmount: string
+      timestamp: string
+    }>
+  }
+}
+
+// Configuration constants
+const BALANCE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_BALANCE_MANAGER_ADDRESS as HexAddress
 
 const PlaceOrder = () => {
   const { address, isConnected } = useAccount()
-  // Use the shared store for selected pool
-  const { selectedPool } = useMarketStore()
-  
+  const [selectedPool, setSelectedPool] = useState<any>(null)
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
   const [side, setSide] = useState<Side>(0) // Default to BUY
   const [price, setPrice] = useState<string>("")
@@ -63,6 +76,23 @@ const PlaceOrder = () => {
     });
   };
 
+  // Fetch pools data with react-query
+  const {
+    data: poolsData,
+    isLoading: poolsLoading,
+    error: poolsError,
+  } = useQuery<PoolsData>({
+    queryKey: ["poolsData"],
+    queryFn: async () => {
+      return await request(GTX_GRAPHQL_URL as string, poolsQuery)
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: false,
+  })
+
   // Use individual hooks - split for better error isolation
   const {
     handlePlaceLimitOrder,
@@ -77,13 +107,6 @@ const PlaceOrder = () => {
     marketSimulateError,
   } = usePlaceOrder()
 
-  // Update orderBookAddress when selectedPool changes
-  useEffect(() => {
-    if (selectedPool?.orderBook) {
-      setOrderBookAddress(selectedPool.orderBook as HexAddress)
-    }
-  }, [selectedPool])
-
   const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBookAPI(
     (orderBookAddress as HexAddress) || "0x0000000000000000000000000000000000000000",
   )
@@ -95,6 +118,35 @@ const PlaceOrder = () => {
     deposit,
     loading: balanceLoading,
   } = useTradingBalances(BALANCE_MANAGER_ADDRESS)
+
+  // Set the first pool as default when data is loaded
+  useEffect(() => {
+    if (poolsData && poolsData.poolss.items.length > 0 && !selectedPool) {
+      // Find WETH/USDC pair with exact match
+      const wethPool = poolsData.poolss.items.find(
+        pool =>
+          pool.coin?.toLowerCase() === 'weth/usdc' ||
+          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
+      );
+
+      // Fallback: look for any pool with WETH in it
+      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
+        pool => pool.coin?.toLowerCase().includes('weth')
+      ) : null;
+
+      // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
+      if (wethPool) {
+        setSelectedPool(wethPool);
+        setOrderBookAddress(wethPool.orderBook as HexAddress);
+      } else if (wethFallbackPool) {
+        setSelectedPool(wethFallbackPool);
+        setOrderBookAddress(wethFallbackPool.orderBook as HexAddress);
+      } else {
+        setSelectedPool(poolsData.poolss.items[0]);
+        setOrderBookAddress(poolsData.poolss.items[0].orderBook as HexAddress);
+      }
+    }
+  }, [poolsData])
 
   // Update total when price or quantity changes
   useEffect(() => {
@@ -189,6 +241,13 @@ const PlaceOrder = () => {
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side])
 
+  const handlePoolChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const poolId = e.target.value
+    const pool = poolsData?.poolss.items.find((p: any) => p.id === poolId)
+    setSelectedPool(pool)
+    setOrderBookAddress(pool?.orderBook as HexAddress)
+  }
+
   const handleMaxDeposit = () => {
     if (availableBalance !== "Error" && !isLoadingBalance && !balanceLoading) {
       // Subtract a small amount to account for gas fees if this is the native token
@@ -202,14 +261,6 @@ const PlaceOrder = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!selectedPool) {
-      setNotificationMessage("No trading pair selected.")
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
-      return
-    }
 
     // Log wallet address being used for this order
     console.log("Placing order using wallet address:", address)
@@ -332,7 +383,7 @@ const PlaceOrder = () => {
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed
   const orderError = limitSimulateError || marketSimulateError
 
-  if (!selectedPool) {
+  if (poolsLoading)
     return (
       <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
         <div className="flex items-center gap-2 text-gray-300">
@@ -341,7 +392,13 @@ const PlaceOrder = () => {
         </div>
       </div>
     )
-  }
+
+  if (poolsError)
+    return (
+      <div className="p-4 bg-gradient-to-br from-red-900/40 to-red-950/40 rounded-xl border border-red-800/50 text-red-300">
+        <p>Error loading trading pairs: {(poolsError as Error).message}</p>
+      </div>
+    )
 
   return (
     <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-5 max-w-md mx-auto border border-gray-700/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] backdrop-blur-sm">
@@ -426,10 +483,12 @@ const PlaceOrder = () => {
           >
             {balanceLoading ? (
               <>
+                {/* <RefreshCw className="w-3.5 h-3.5 animate-spin" /> */}
                 <span>Loading</span>
               </>
             ) : (
               <>
+                {/* <ArrowDown className="w-3.5 h-3.5" /> */}
                 <span>Deposit</span>
               </>
             )}
@@ -612,3 +671,4 @@ const PlaceOrder = () => {
 }
 
 export default PlaceOrder
+
