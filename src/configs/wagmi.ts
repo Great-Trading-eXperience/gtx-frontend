@@ -80,6 +80,32 @@ const riseSepolia: Chain = {
   testnet: true,
 };
 
+// Monad
+const monad: Chain = {
+  id: 10143, 
+  name: "Monad",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Monad Ether",
+    symbol: "ETH",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://testnet-rpc.monad.xyz"],
+    },
+    public: {
+      http: ["https://testnet-rpc.monad.xyz"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Monad Explorer",
+      url: "https://testnet.monadexplorer.com",
+    },
+  },
+  testnet: true,
+};
+
 const connectors = connectorsForWallets(
   [
     {
@@ -104,13 +130,14 @@ const connectors = connectorsForWallets(
 );
 
 export const wagmiConfig = createConfig({
-  chains: [riseSepolia, localChain, conduitChain, arbitrumSepolia],
+  chains: [riseSepolia, localChain, conduitChain, arbitrumSepolia, monad, sepolia],
   connectors: connectors,
   transports: {
     [riseSepolia.id]: http("https://testnet.riselabs.xyz"),
     [localChain.id]: http("http://127.0.0.1:8545"),
     [conduitChain.id]: http("https://odyssey.ithaca.xyz"),
     [arbitrumSepolia.id]: http("https://sepolia-rollup.arbitrum.io/rpc"),
-    [sepolia.id]: http("https://sepolia.infura.io/v3/jBG4sMyhez7V13jNTeQKfVfgNa54nCmF")
+    [sepolia.id]: http("https://sepolia.infura.io/v3/jBG4sMyhez7V13jNTeQKfVfgNa54nCmF"),
+    [monad.id]: http("https://testnet-rpc.monad.xyz")
   }
 })

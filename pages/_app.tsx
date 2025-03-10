@@ -16,6 +16,9 @@ import { Toaster } from "@/components/ui/toaster";
 
 const queryClient = new QueryClient();
 
+// Monad Testnet chain ID
+const MONAD_TESTNET_CHAIN_ID = 10143;
+
 // Tambahkan tipe untuk mendukung getLayout
 type NextPageWithLayout = NextPage & {
   getLayout?: (page: ReactNode) => ReactNode;
@@ -31,13 +34,12 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={11155931}
+          initialChain={MONAD_TESTNET_CHAIN_ID} // Updated to use Monad as default
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",
           })}
         >
-
           <Head>
             <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
             <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
@@ -68,5 +70,3 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
 }
 
 export default MyApp;
-
-// Update theme

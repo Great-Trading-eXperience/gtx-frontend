@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, AlertCircle, X, Copy, ExternalLink } from "lucide-react"
+import { CheckCircle, AlertCircle, Copy, ExternalLink, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface NotificationDialogProps {
   isOpen: boolean
@@ -11,9 +12,159 @@ interface NotificationDialogProps {
   message: string
   isSuccess: boolean
   txHash?: string
+  explorerBaseUrl?: string // New prop for customizable explorer URL
 }
 
-export function NotificationDialog({ isOpen, onClose, message, isSuccess, txHash }: NotificationDialogProps) {
+// Component for displaying transaction hash with copy functionality
+function TransactionHash({
+  txHash,
+  onCopy,
+  copied,
+}: {
+  txHash: string
+  onCopy: () => void
+  copied: boolean
+}) {
+  const shortHash = `${txHash.substring(0, 10)}...${txHash.substring(txHash.length - 8)}`
+
+  return (
+    <div className="mt-5 p-4 bg-blue-950/50 backdrop-blur-md rounded-xl border border-blue-400/30 relative overflow-hidden group">
+      {/* Decorative hexagon pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <pattern id="hexagons" width="28" height="49" patternUnits="userSpaceOnUse" patternTransform="scale(2)">
+            <path
+              d="M14 0l14 24.5L14 49 0 24.5z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              className="text-blue-300"
+            />
+          </pattern>
+          <rect width="100%" height="100%" fill="url(#hexagons)" />
+        </svg>
+      </div>
+
+      <div className="flex justify-between items-center relative z-10">
+        <span className="text-sm font-medium text-blue-200">Transaction Hash</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-8 text-xs font-medium rounded-full px-3 transition-all duration-300",
+            copied ? "bg-blue-500/20 text-blue-200" : "text-blue-300 hover:text-blue-100 hover:bg-blue-500/20",
+          )}
+          onClick={onCopy}
+        >
+          {copied ? (
+            <span className="flex items-center gap-1.5">
+              <CheckCircle size={14} className="text-blue-300" />
+              Copied
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <Copy size={14} />
+              Copy Hash
+            </span>
+          )}
+        </Button>
+      </div>
+
+      <div className="mt-2 relative">
+        <p className="text-sm font-mono text-blue-100 overflow-hidden text-ellipsis tracking-wider" title={txHash}>
+          {shortHash}
+        </p>
+        <div className="absolute left-0 bottom-0 h-[1px] w-full bg-gradient-to-r from-transparent via-blue-400/30 to-transparent" />
+      </div>
+    </div>
+  )
+}
+
+// Component for dialog actions
+function DialogActions({ 
+  isSuccess, 
+  txHash, 
+  explorerBaseUrl 
+}: { 
+  isSuccess: boolean; 
+  txHash?: string;
+  explorerBaseUrl: string;
+}) {
+  if (!isSuccess || !txHash) return null
+
+  return (
+    <div className="mt-6 flex justify-center">
+      <Button
+        variant="outline"
+        size="lg"
+        className="border-blue-400/30 bg-blue-900/30 text-blue-100 hover:bg-blue-800/50 hover:border-blue-400/50 backdrop-blur-sm flex items-center gap-2 px-6 py-5 h-auto rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+        onClick={() => window.open(`${explorerBaseUrl}${txHash}`, "_blank")}
+      >
+        View on Explorer <ExternalLink size={16} />
+      </Button>
+    </div>
+  )
+}
+
+// Decorative elements component
+function DecorativeElements({ isSuccess }: { isSuccess: boolean }) {
+  return (
+    <>
+      {/* Circuit-like decorative lines */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-[150px] h-[150px]">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <circle cx="90" cy="10" r="3" className="fill-blue-400/30" />
+            <path
+              d="M90 10 H60 V40 H30 V70"
+              fill="none"
+              stroke="rgba(96, 165, 250, 0.3)"
+              strokeWidth="1"
+              strokeDasharray="4 2"
+            />
+            <circle cx="30" cy="70" r="2" className="fill-blue-400/30" />
+          </svg>
+        </div>
+        <div className="absolute bottom-0 left-0 w-[120px] h-[120px]">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <circle cx="10" cy="90" r="3" className="fill-blue-400/30" />
+            <path
+              d="M10 90 H40 V60 H70 V30"
+              fill="none"
+              stroke="rgba(96, 165, 250, 0.3)"
+              strokeWidth="1"
+              strokeDasharray="4 2"
+            />
+            <circle cx="70" cy="30" r="2" className="fill-blue-400/30" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Glowing orbs */}
+      <div
+        className={cn(
+          "absolute -right-4 -top-4 w-16 h-16 rounded-full blur-xl opacity-60",
+          isSuccess ? "bg-blue-500" : "bg-red-500",
+        )}
+      />
+      <div
+        className={cn(
+          "absolute -left-4 -bottom-4 w-12 h-12 rounded-full blur-xl opacity-40",
+          isSuccess ? "bg-blue-400" : "bg-red-400",
+        )}
+      />
+    </>
+  )
+}
+
+export function NotificationDialog({ 
+  isOpen, 
+  onClose, 
+  message, 
+  isSuccess, 
+  txHash,
+  explorerBaseUrl = "https://etherscan.io/tx/" // Default value for backward compatibility
+}: NotificationDialogProps) {
   const [open, setOpen] = useState(isOpen)
   const [copied, setCopied] = useState(false)
 
@@ -23,7 +174,7 @@ export function NotificationDialog({ isOpen, onClose, message, isSuccess, txHash
       const timer = setTimeout(() => {
         setOpen(false)
         onClose()
-      }, 5000)
+      }, 10000)
       return () => clearTimeout(timer)
     }
   }, [isOpen, onClose])
@@ -36,92 +187,82 @@ export function NotificationDialog({ isOpen, onClose, message, isSuccess, txHash
     }
   }
 
+  const bgGradient = isSuccess
+    ? "bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800"
+    : "bg-gradient-to-br from-red-950 via-red-900 to-red-800"
+
+  const iconBg = isSuccess ? "bg-blue-100" : "bg-red-100"
+  const iconColor = isSuccess ? "text-blue-600" : "text-red-600"
+  const glowColor = isSuccess ? "shadow-blue-500/50" : "shadow-red-500/50"
+  const statusIcon = isSuccess ? <CheckCircle size={28} /> : <AlertCircle size={28} />
+  const statusTitle = isSuccess ? "Transaction Successful" : "Transaction Failed"
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="p-0 overflow-hidden border-0 shadow-2xl rounded-xl max-w-md">
-        <div className="relative">
-          {/* High contrast gradient background */}
-          <div
-            className={`absolute inset-0 ${
-              isSuccess
-                ? "bg-gradient-to-r from-blue-900 via-blue-700 to-blue-500"
-                : "bg-gradient-to-r from-red-900 via-red-700 to-red-500"
-            } opacity-50`}
-          />
+    <Dialog
+      open={open}
+      onOpenChange={(newOpenState) => {
+        setOpen(newOpenState)
+        if (!newOpenState) onClose()
+      }}
+    >
+      <DialogContent
+        className="p-0 overflow-hidden border-0 shadow-2xl rounded-2xl max-w-[480px] sm:max-w-[520px] z-50 mx-auto"
+        style={{ maxHeight: "calc(100vh - 40px)" }}
+      >
+        <div className={cn("relative", bgGradient)}>
+          {/* Close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-3 z-50 text-blue-200 hover:text-white hover:bg-blue-800/50 rounded-full h-8 w-8"
+            onClick={onClose}
+          >
+            <X size={16} />
+            <span className="sr-only">Close</span>
+          </Button>
 
-          <div className="relative p-6">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-start space-x-4">
-              <div className={`rounded-full p-2 ${isSuccess ? "bg-white text-blue-600" : "bg-white text-red-600"}`}>
-                {isSuccess ? <CheckCircle size={28} /> : <AlertCircle size={28} />}
-              </div>
-
-              <div className="flex-1">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold text-white">
-                    {isSuccess ? "Transaction Successful" : "Transaction Failed"}
-                  </DialogTitle>
-                </DialogHeader>
-
-                <p className="mt-2 text-white text-opacity-90">{message}</p>
-
-                {isSuccess && txHash && (
-                  <div className="mt-4 p-3 bg-white bg-opacity-10 backdrop-blur-sm rounded-lg border border-white border-opacity-20">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-white text-opacity-80">Transaction Hash</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs text-white hover:text-blue-200 p-0 flex items-center gap-1"
-                        onClick={handleCopy}
-                      >
-                        {copied ? "Copied!" : "Copy"} {!copied && <Copy size={12} />}
-                      </Button>
-                    </div>
-                    <p className="text-xs font-mono text-white truncate mt-1">{txHash}</p>
-                  </div>
-                )}
-
-                <div className="mt-5 flex justify-end">
-                  {isSuccess && txHash && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mr-2 border-white border-opacity-30 text-white hover:bg-white hover:bg-opacity-10 flex items-center gap-1"
-                      onClick={() => window.open(`https://etherscan.io/tx/${txHash}`, "_blank")}
-                    >
-                      View on Explorer <ExternalLink size={14} />
-                    </Button>
+          <div className="relative p-6 sm:p-8">
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <DialogHeader className="flex flex-col items-center text-center mb-5">
+                {/* Status icon with animation */}
+                <div
+                  className={cn(
+                    "rounded-full p-3 flex-shrink-0 mb-4 shadow-lg transition-all duration-500",
+                    iconBg,
+                    iconColor,
+                    `shadow-[0_0_20px_rgba(59,130,246,0.5)]`,
                   )}
-                  {/* <Button
-                    onClick={onClose}
-                    className={`${
-                      isSuccess ? "bg-white text-blue-700 hover:bg-gray-100" : "bg-white text-red-700 hover:bg-gray-100"
-                    } border-0 font-medium`}
-                    size="sm"
-                  >
-                    Close
-                  </Button> */}
+                >
+                  {statusIcon}
                 </div>
-              </div>
+
+                <DialogTitle className="text-2xl font-bold text-white tracking-tight">{statusTitle}</DialogTitle>
+
+                <p className="mt-3 text-blue-100 text-opacity-90 max-w-sm mx-auto">{message}</p>
+              </DialogHeader>
+
+              {/* Transaction hash section */}
+              {isSuccess && txHash && <TransactionHash txHash={txHash} onCopy={handleCopy} copied={copied} />}
+
+              {/* Action buttons */}
+              <DialogActions isSuccess={isSuccess} txHash={txHash} explorerBaseUrl={explorerBaseUrl} />
             </div>
           </div>
 
-          {/* Decorative blockchain-inspired elements with higher contrast */}
-          <div className="absolute bottom-0 left-0 w-full h-1.5 bg-white bg-opacity-30" />
-          <div className="absolute -left-3 -bottom-3 w-8 h-8 rounded-full bg-white opacity-30" />
-          <div className="absolute -right-2 -top-2 w-6 h-6 rounded-full bg-white opacity-30" />
-          <div className="absolute left-1/4 -bottom-1 w-4 h-4 rounded-full bg-white opacity-20" />
-          <div className="absolute right-1/3 -top-1 w-3 h-3 rounded-full bg-white opacity-20" />
+          {/* Decorative elements */}
+          <DecorativeElements isSuccess={isSuccess} />
+
+          {/* Bottom hexagon border */}
+          <div className="absolute bottom-0 left-0 w-full h-2 overflow-hidden">
+            <div className="absolute inset-0 flex">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <div key={i} className="h-2 w-4 border-l border-r border-blue-400/30" />
+              ))}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
-

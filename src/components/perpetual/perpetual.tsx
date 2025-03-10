@@ -8,12 +8,14 @@ import TradingView from "./trading-view/trading-view"
 import RecentTradesPrep from "./recent-trades-prep/recent-trades-prep"
 import OrderBookPrep from "./order-book-prep/order-book-prep"
 import TradingPosition from "./trading-position/trading-position"
-import TradingTabs from "./buy-and-sell/buy-and-sell"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName } from "wagmi"
 import { QueryClient } from "@tanstack/react-query"
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
+import PerpetualPlaceOrderTabs from "./perpetual-place-order/perpetual-place-order"
+import PerpetualPlaceOrder from "./perpetual-place-order/perpetual-place-order"
+// import PerpetualPlaceOrderTabs from "./perpetual-place-order/buy-and-sellace-order"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -50,7 +52,7 @@ export default function Perpetual() {
         <div className="min-h-screen bg-[#303030] text-white">
             
 
-            <div className="grid grid-cols-[1fr_300px_300px] gap-[3px] px-[2px] py-[3px]">
+            <div className="grid grid-cols-[1fr_320px_320px] gap-[3px] px-[2px] py-[3px]">
                 <div className="space-y-[3px]">
                     <Market />
                     <TradingView />
@@ -82,7 +84,7 @@ export default function Perpetual() {
                 </div>
 
                 <div className="space-y-2">
-                    <TradingTabs />
+                    <PerpetualPlaceOrder />
                 </div>
             </div>
 
