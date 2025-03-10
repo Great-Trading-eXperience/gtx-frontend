@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown, RefreshCw } from 'lucide-react';
+import { OrderBookSkeleton } from './order-book-skeleton';
 
 interface Order {
     price: number;
@@ -18,7 +19,7 @@ interface OrderBook {
 type ViewType = 'both' | 'bids' | 'asks';
 type DecimalPrecision = '0.01' | '0.1' | '1';
 
-const STANDARD_ORDER_COUNT = 10;
+const STANDARD_ORDER_COUNT = 8;
 
 // Mock data for the order book
 const MOCK_DATA = {
@@ -68,50 +69,6 @@ const MOCK_DATA = {
     ]
 };
 
-const OrderBookSkeleton = () => {
-    return (
-        <div className="w-full max-w-xs mx-auto bg-gray-900 rounded-xl border border-gray-800 text-white p-4 animate-pulse">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-2">
-                    <div className="w-8 h-8 bg-gray-800 rounded" />
-                    <div className="w-8 h-8 bg-gray-800 rounded" />
-                </div>
-                <div className="w-16 h-8 bg-gray-800 rounded" />
-            </div>
-
-            <div>
-                <div className="grid grid-cols-2 mb-2">
-                    <div className="w-12 h-4 bg-gray-800 rounded" />
-                    <div className="w-12 h-4 bg-gray-800 rounded ml-auto" />
-                </div>
-
-                <div className="space-y-1 mb-2">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={`ask-${i}`} className="grid grid-cols-2 gap-4">
-                            <div className="w-20 h-4 bg-gray-800 rounded" />
-                            <div className="w-20 h-4 bg-gray-800 rounded ml-auto" />
-                        </div>
-                    ))}
-                </div>
-
-                <div className="py-4 flex justify-between">
-                    <div className="w-24 h-4 bg-gray-800 rounded" />
-                    <div className="w-20 h-4 bg-gray-800 rounded" />
-                </div>
-
-                <div className="space-y-1">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={`bid-${i}`} className="grid grid-cols-2 gap-4">
-                            <div className="w-20 h-4 bg-gray-800 rounded" />
-                            <div className="w-20 h-4 bg-gray-800 rounded ml-auto" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const OrderBookPrep = () => {
     const [mounted, setMounted] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -128,6 +85,7 @@ const OrderBookPrep = () => {
     });
     
     const [viewType, setViewType] = useState<ViewType>('both');
+    const baseToken = "WETH";
 
     const formatPrice = (price: number): string => {
         const precision = parseFloat(selectedDecimal);
@@ -154,7 +112,7 @@ const OrderBookPrep = () => {
             order.total = runningTotal;
         });
 
-        return result;
+        return isAsk ? result.sort((a, b) => a.price - b.price) : result.sort((a, b) => b.price - a.price);
     };
 
     useEffect(() => {
@@ -228,34 +186,45 @@ const OrderBookPrep = () => {
     }, [viewType]);
 
     if (!mounted || initialLoading) {
-        return <OrderBookSkeleton />;
+        return (
+            <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
+                <div className="flex justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="w-full bg-gray-900 text-white rounded-b-lg">
-            <div className="flex items-center justify-between px-2 py-3 border-b border-gray-800">
-                
+        <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
+            <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
                 <div className="flex items-center gap-2">
-                    <button onClick={toggleView}>
-                        <Menu className="w-4 h-4 text-gray-400" />
+                    <button
+                        onClick={toggleView}
+                        className="rounded-lg bg-gray-900/40 p-1.5 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300"
+                    >
+                        <Menu className="h-4 w-4" />
                     </button>
+                    <span className="text-xs text-gray-300">
+                        {viewType === "both" ? "Order Book" : viewType === "asks" ? "Asks Only" : "Bids Only"}
+                    </span>
                 </div>
 
                 <div className="relative">
-                    <button 
+                    <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex items-center gap-2 hover:bg-gray-800 rounded px-2 py-1 transition-colors duration-200 border border-gray-800"
+                        className="flex items-center gap-2 rounded border border-gray-700/50 bg-gray-900/40 px-3 py-1.5 text-gray-200 transition-all duration-200 hover:bg-gray-800/50"
                     >
-                        <span className="text-xs">{selectedDecimal}</span>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs">Precision: {selectedDecimal}</span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
                     </button>
-                    
+
                     {isDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 bg-gray-800 rounded shadow-lg z-50">
+                        <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">
                             {priceOptions.map((option) => (
                                 <button
                                     key={option}
-                                    className="w-full text-left px-4 py-2 text-xs hover:bg-gray-700 transition-colors duration-200"
+                                    className="w-full px-4 py-2 text-left text-xs text-gray-200 transition-colors duration-200 hover:bg-gray-800 hover:text-white"
                                     onClick={() => {
                                         setSelectedDecimal(option as DecimalPrecision);
                                         setIsDropdownOpen(false);
@@ -269,59 +238,89 @@ const OrderBookPrep = () => {
                 </div>
             </div>
 
-            <div className="px-0 py-2">
-                <div className="grid grid-cols-3 px-2 py-1 text-xs text-gray-400">
-                    <div>Price</div>
-                    <div className="text-center">Size</div>
-                    <div className="text-right">Total</div>
-                </div>
-
+            <div className="py-2">
                 {(viewType === 'both' || viewType === 'asks') && (
-                    <div className="flex flex-col-reverse space-y-[5px] space-y-reverse">
-                        {orderBook.asks.map((ask, i) => (
-                            <div key={`ask-${i}`} className="relative group">
-                                <div
-                                    className="absolute left-0 top-0 bottom-0 bg-[#FF6978] bg-opacity-20"
-                                    style={{
-                                        width: `${(ask.total || 0) / Math.max(...orderBook.asks.map(a => a.total || 0)) * 100}%`
-                                    }}
-                                />
-                                <div className="relative grid grid-cols-3 px-2 py-[2px] text-xs">
-                                    <div className="text-[#FF6978]">{formatPrice(ask.price)}</div>
-                                    <div className="text-center text-gray-300">{ask.size.toFixed(6)}</div>
-                                    <div className="text-right text-gray-300">{(ask.total || 0).toFixed(2)}</div>
-                                </div>
-                            </div>
-                        ))}
+                    <div>
+                        {/* Column Headers for Asks */}
+                        <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+                            <div>Price ({baseToken})</div>
+                            <div className="text-center">Size ({baseToken})</div>
+                            <div className="text-right">Total</div>
+                        </div>
+
+                        <div className="flex flex-col-reverse space-y-[2px] space-y-reverse">
+                            {orderBook.asks.map((ask, i) => {
+                                const maxTotal = orderBook.asks.reduce(
+                                    (max, curr) =>
+                                        curr.total && max ? (curr.total > max ? curr.total : max) : curr.total || max || 1,
+                                    0,
+                                );
+
+                                return (
+                                    <div key={`ask-${i}`} className="group relative">
+                                        <div
+                                            className="absolute bottom-0 left-0 top-0 bg-rose-500/10 transition-all group-hover:bg-rose-500/20"
+                                            style={{
+                                                width: `${((ask.total || 0) * 100) / maxTotal}%`,
+                                            }}
+                                        />
+                                        <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
+                                            <div className="font-medium text-rose-400">{formatPrice(ask.price)}</div>
+                                            <div className="text-center text-gray-200">{ask.size.toFixed(6)}</div>
+                                            <div className="text-right text-gray-200">{(ask.total || 0).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
                 {viewType === 'both' && (
-                    <div className="px-2 py-1 my-[5px] border-y border-gray-800 text-xs bg-gray-800">
-                        <div className="flex justify-between text-white">
+                    <div className="my-2 border-y border-gray-800/30 bg-gray-900/40 px-4 py-2 text-xs">
+                        <div className="flex justify-between text-gray-200">
                             <span>Spread</span>
-                            <span>{orderBook.spread}</span>
+                            <span className="font-medium text-white">
+                                {orderBook.spread} ({baseToken})
+                            </span>
                         </div>
                     </div>
                 )}
 
                 {(viewType === 'both' || viewType === 'bids') && (
-                    <div className="space-y-[5px]">
-                        {orderBook.bids.map((bid, i) => (
-                            <div key={`bid-${i}`} className="relative group">
-                                <div
-                                    className="absolute left-0 top-0 bottom-0 bg-green-900/20"
-                                    style={{
-                                        width: `${(bid.total || 0) / Math.max(...orderBook.bids.map(b => b.total || 0)) * 100}%`
-                                    }}
-                                />
-                                <div className="relative grid grid-cols-3 px-2 py-[2px] text-xs">
-                                    <div className="text-green-400">{formatPrice(bid.price)}</div>
-                                    <div className="text-center text-gray-300">{bid.size.toFixed(6)}</div>
-                                    <div className="text-right text-gray-300">{(bid.total || 0).toFixed(2)}</div>
-                                </div>
-                            </div>
-                        ))}
+                    <div>
+                        {/* Column Headers for Bids */}
+                        <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+                            <div>Price (USDC)</div>
+                            <div className="text-center">Size (USDC)</div>
+                            <div className="text-right">Total</div>
+                        </div>
+
+                        <div className="space-y-[2px]">
+                            {orderBook.bids.map((bid, i) => {
+                                const maxTotal = orderBook.bids.reduce(
+                                    (max, curr) =>
+                                        curr.total && max ? (curr.total > max ? curr.total : max) : curr.total || max || 1,
+                                    0,
+                                );
+
+                                return (
+                                    <div key={`bid-${i}`} className="group relative">
+                                        <div
+                                            className="absolute bottom-0 left-0 top-0 bg-emerald-500/10 transition-all group-hover:bg-emerald-500/20"
+                                            style={{
+                                                width: `${((bid.total || 0) * 100) / maxTotal}%`,
+                                            }}
+                                        />
+                                        <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
+                                            <div className="font-medium text-emerald-400">{formatPrice(bid.price)}</div>
+                                            <div className="text-center text-gray-200">{bid.size.toFixed(6)}</div>
+                                            <div className="text-right text-gray-200">{(bid.total || 0).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </div>
