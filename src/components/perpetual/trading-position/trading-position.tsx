@@ -35,12 +35,6 @@ export default function TradingPosition() {
                   Open Orders
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="twap"
-                  className="flex px-3 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-[#0064A7] data-[state=active]:text-white text-gray-400"
-                >
-                  TWAP
-                </TabsTrigger>
-                <TabsTrigger 
                   value="trade-history"
                   className="flex px-3 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-[#0064A7] data-[state=active]:text-white text-gray-400"
                 >
@@ -84,60 +78,6 @@ export default function TradingPosition() {
             </div>
             <div className="px-4 py-8 text-gray-400 text-sm text-center">
               No open positions yet
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar */}
-        <div className="w-[300px] ml-[2px] bg-gray-900 rounded-lg border-l border-gray-800 p-4">
-          <div className="text-center mb-6">
-            <p className="text-sm text-gray-400 mb-2">
-              Connect your wallet to start trading with zero gas.
-            </p>
-            <Button className="w-full bg-[#0064A7] hover:bg-[#0064A7]/90 text-white">
-              Connect
-            </Button>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-medium mb-2">Account Equity</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Spot</span>
-                  <span>$0.00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 underline">Perps</span>
-                  <span>$0.00</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">Perps Overview</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 underline">Balance</span>
-                  <span>$0.00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Unrealized PNL</span>
-                  <span>$0.00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 underline">Cross Margin Ratio</span>
-                  <span>0.00%</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Maintenance Margin</span>
-                  <span>$0.00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 underline">Cross Account Leverage</span>
-                  <span>0.00x</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>

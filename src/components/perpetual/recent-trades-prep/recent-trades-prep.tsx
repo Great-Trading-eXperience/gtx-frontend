@@ -145,7 +145,7 @@ const RecentTradesPrep = () => {
                 </div>
             </div>
 
-            <div className="flex h-[550px] flex-col rounded-lg">
+            <div className="flex h-[546px] flex-col rounded-lg">
                 {/* Column Headers */}
                 <div className="sticky top-0 z-10 border-b border-gray-800/30 bg-gray-900/40 px-4 py-2">
                     <div className="grid grid-cols-3 items-center text-xs font-medium text-gray-300">

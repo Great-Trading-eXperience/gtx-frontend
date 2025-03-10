@@ -374,9 +374,9 @@ const PerpetualPlaceOrder = () => {
             {/* Leverage section */}
             <div className="flex items-center justify-between mb-3">
                 <LeverageDialog leverage={leverage} setLeverage={setLeverage} maxLeverage={20} />
-                <div className="bg-gray-900/40 text-white text-sm font-light p-2 border border-gray-700/40 rounded-lg">
+                {/* <div className="bg-gray-900/40 text-white text-sm font-light p-2 border border-gray-700/40 rounded-lg">
                     Cross
-                </div>
+                </div> */}
             </div>
 
             {/* Form Content */}
@@ -519,19 +519,19 @@ const PerpetualPlaceOrder = () => {
 
             {/* Order Information */}
             <div className="flex flex-col gap-1.5 border-t border-gray-800 pt-3 mt-3">
-                <div className="flex justify-between text-[0.8rem]">
+                <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Liquidation Price</span>
                     <span className="text-white">{Number(liquidationPrice) > 0 ? `$${(Number(liquidationPrice) / 1e18).toFixed(2)}` : "N/A"}</span>
                 </div>
-                <div className="flex justify-between text-[0.8rem]">
+                <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Order Value</span>
                     <span className="text-white">${(Number(orderValue) / 1e18).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-[0.8rem]">
+                <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Margin Required</span>
                     <span className="text-white">${(Number(marginRequired) / 1e18).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-[0.8rem]">
+                <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Fees</span>
                     <span className="text-white">0.0350% / 0.0100%</span>
                 </div>
