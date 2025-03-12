@@ -2,8 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart2, LineChart } from "lucide-react"
-import OrderBookPrep from "../order-book-prep/order-book-prep"
-import RecentTradesPrep from "../recent-trades-prep/recent-trades-prep"
+import OrderBookPrep from "./order-book-prep/order-book-prep"
+import RecentTradesPrep from "./recent-trades-prep/recent-trades-prep"
 
 const PerpetualMarketDataTabs = () => {
   return (

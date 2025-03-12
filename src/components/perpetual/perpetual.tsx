@@ -6,12 +6,13 @@ import { useTheme } from "next-themes"
 import useCurrentTheme from "@/hooks/styles/theme"
 import { useAccount, useConnect, useDisconnect, useEnsAvatar, useEnsName } from "wagmi"
 
-import TradingPosition from "./trading-position/trading-position"
+import TradingPosition from "./perpetual-history/perpetual-history"
 import PerpetualPlaceOrder from "./perpetual-place-order/perpetual-place-order"
 import PerpetualMarketDataTabs from "./perpetual-market-data-tabs/perpetual-market-data-tabs"
 import GradientLoader from "../gradient-loader/gradient-loader"
 import PerpetualChartComponent from "./perpetual-chart/perpetual-chart"
 import PerpetualMarket from "./perpetual-market/perpetual-market"
+import PerpetualHistory from "./perpetual-history/perpetual-history"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -105,7 +106,7 @@ export default function Perpetual() {
                 </div>
 
                 <div className="mt-[4px]">
-                    <TradingPosition />
+                    <PerpetualHistory />
                 </div>
             </div>
         </QueryClientProvider>
