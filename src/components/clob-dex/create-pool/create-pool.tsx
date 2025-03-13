@@ -381,26 +381,6 @@ const CreatePoolComponent: React.FC = () => {
                 </form>
               </CardContent>
             </Card>
-
-            {/* Transaction History Section */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-cyan-500/10 blur-[16px] rounded-full"></div>
-                  <Hexagon className="w-12 h-12 text-cyan-500/20 absolute -left-1 -top-1" />
-                  <History className="w-10 h-10 text-cyan-400 relative z-10" />
-                </div>
-                <h2 className="text-2xl font-semibold text-cyan-50">Pool Creation History</h2>
-              </div>
-
-              <Card className="border-0 bg-white/5 backdrop-blur-xl">
-                <CardContent className="p-6">
-                  <div className="text-center py-8 text-cyan-100/60">
-                    <p>Your pool creation history will appear here</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         ) : (
           <div className="min-h-[60vh] flex items-center justify-center">

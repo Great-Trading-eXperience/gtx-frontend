@@ -17,7 +17,8 @@ const Header = () => {
     { destination: "/perpetual", label: "Perpetual" },
     { destination: "/earn", label: "Earn" },
     { destination: "/faucet", label: "Faucet" },
-    { destination: "/create-pool", label: "Create Pool" },
+    { destination: "/create", label: "Create" },
+    // { destination: "/perpetual/create-market", label: "Create Market" },
     { destination: "https://github.com/Great-Trading-eXperience", label: "Docs" }
   ];
 

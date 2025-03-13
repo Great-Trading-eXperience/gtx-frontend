@@ -83,7 +83,7 @@ const riseSepolia: Chain = {
 // Monad
 const monad: Chain = {
   id: 10143, 
-  name: "Monad",
+  name: "Monad Testnet",
   nativeCurrency: {
     decimals: 18,
     name: "Monad Ether",

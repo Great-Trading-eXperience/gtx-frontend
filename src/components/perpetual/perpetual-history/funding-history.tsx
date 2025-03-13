@@ -151,8 +151,8 @@ const FundingHistory = () => {
             }`}
           />
         </button>
-        <div className="text-sm font-medium text-gray-200">Market</div>
-        <div className="text-sm font-medium text-gray-200">Collateral</div>
+        {/* <div className="text-sm font-medium text-gray-200">Market</div>
+        <div className="text-sm font-medium text-gray-200">Collateral</div> */}
         <button
           onClick={() => handleSort("fundingFee")}
           className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
@@ -175,8 +175,8 @@ const FundingHistory = () => {
               className="grid grid-cols-4 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
             >
               <div className="text-gray-200">{formatDate(fee.timestamp.toString())}</div>
-              <div className="text-gray-200">{getMarketName(fee.marketToken, markets)}</div>
-              <div className="text-gray-200">{getTokenName(fee.collateralToken)}</div>
+              {/* <div className="text-gray-200">{getMarketName(fee.marketToken, markets)}</div>
+              <div className="text-gray-200">{getTokenName(fee.collateralToken)}</div> */}
               <div className={BigInt(fee.fundingFee) >= 0n ? "text-emerald-400" : "text-rose-400"}>
                 {formatUsd(fee.fundingFee)}
               </div>
