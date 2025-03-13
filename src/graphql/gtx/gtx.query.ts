@@ -248,3 +248,118 @@ export const dailyCandleStickQuery = gql`
     }
   }
 `;
+
+export const getCuratorVaultsQuery = gql`
+  query GetCuratorVaults {
+    assetVaults {
+      items {
+        asset
+        blockNumber
+        id
+        name
+        tvl
+        token
+        timestamp
+        tokenName
+        tokenSymbol
+        transactionHash
+        curator {
+          blockNumber
+          contractAddress
+          curator
+          id
+          name
+          timestamp
+          transactionHash
+          uri
+        }
+        allocations {
+          items {
+            allocation
+            blockNumber
+            curator
+            id
+            marketToken
+            timestamp
+            transactionHash
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const getCuratorVaultQuery = gql`
+  query GetCuratorAssetVaultQuery($assetVault: String!) {
+    assetVault(id: $assetVault) {
+      asset
+      blockNumber
+      timestamp
+      id
+      name
+      token
+      tokenName
+      transactionHash
+      tokenSymbol
+      tvl
+      curator {
+        blockNumber
+        contractAddress
+        curator
+        id
+        name
+        timestamp
+        transactionHash
+        uri
+      }
+    }
+  }
+`;
+
+export const getAllocationsQuery = gql`
+  query GetAllocations($assetVault: String!) {
+    allocations(where: {assetVault: $assetVault}) {
+      items {
+        allocation
+        blockNumber
+        curator
+        id
+        marketToken
+        timestamp
+        transactionHash
+      }
+    }
+  }
+`;
+
+export const getCuratorVaultDepositQuerys = gql`
+  query GetCuratorVaultDeposits($assetVault: String!)  {
+    curatorVaultDeposits(where: {assetVault: $assetVault}) {
+      items {
+        blockNumber
+        id
+        timestamp
+        shares
+        transactionHash
+        user
+        amount
+      }
+    }
+  }
+`;
+
+export const getCuratorVaultWithdrawQuerys = gql`
+  query GetcuratorVaultWithdrawals($assetVault: String!)  {
+    curatorVaultWithdrawals(where: {assetVault: $assetVault}) {
+      items {
+        blockNumber
+        id
+        timestamp
+        shares
+        transactionHash
+        user
+        amount
+      }
+    }
+  }
+`;

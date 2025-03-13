@@ -29,7 +29,9 @@ const pools: Pool[] = [
   },
 ]
 
-export default function CuratorPage({ params }: { params: { wallet: string } }) {
+export default function Vault({ params }: { params: { vault: string } }) {
+
+  
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}

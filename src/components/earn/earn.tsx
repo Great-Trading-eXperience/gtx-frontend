@@ -1,58 +1,71 @@
 'use client'
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
+import { getCuratorVaultsQuery } from "@/graphql/gtx/gtx.query"
+import { useQuery } from "@tanstack/react-query"
+import request from 'graphql-request'
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
-import GradientLoader from "../gradient-loader/gradient-loader"
-import { useAccount } from "wagmi"
 import { useEffect, useState } from "react"
+import { useAccount } from "wagmi"
+import GradientLoader from "../gradient-loader/gradient-loader"
+import { VaultRow } from "./vault-row"
 
-interface Pair {
-  icon: string
-  name: string
+// Allocation model
+interface Allocation {
+  allocation: string;
+  blockNumber: number | null;
+  curator: string;
+  id: string;
+  marketToken: string;
+  timestamp: number;
+  transactionHash: string;
 }
 
-interface Asset {
-  icon: string
-  symbol: string
-  name: string
-  pairs: Pair[]
-  apy: string
-  tvl: string
+// Collection of Allocations
+interface AllocationConnection {
+  items: Allocation[];
 }
 
-const assets: Asset[] = [
-  {
-    icon: "/usdc.png",
-    symbol: "USDC",
-    name: "Curator 3",
-    pairs: [{ icon: "/bitcoin.png", name: "BTC/USDT" }],
-    apy: "12.5%",
-    tvl: "$1.2M",
-  },
-  {
-    icon: "/usdc.png",
-    symbol: "USDC",
-    name: "Curator 1",
-    pairs: [
-      { icon: "/eth.png", name: "ETH/USDT" },
-      { icon: "/bitcoin.png", name: "BTC/USDT" },
-    ],
-    apy: "10.2%",
-    tvl: "$800K",
-  },
-  {
-    icon: "/usdc.png",
-    symbol: "USDC",
-    name: "Curator 2",
-    pairs: [{ icon: "/eth.png", name: "ETH/USDT" }],
-    apy: "11.8%",
-    tvl: "$1.5M",
-  },
-]
+// Curator model
+interface Curator {
+  blockNumber: number | null;
+  contractAddress: string;
+  curator: string;
+  id: string;
+  name: string;
+  timestamp: number;
+  transactionHash: string | null;
+  uri: string | null;
+}
+
+// AssetVault model
+interface CuratorVault {
+  asset: string;
+  blockNumber: number | null;
+  id: string;
+  name: string;
+  tvl: string;
+  token: string | null;
+  timestamp: number;
+  tokenName: string | null;
+  tokenSymbol: string | null;
+  transactionHash: string | null;
+  allocations: AllocationConnection;
+  curator: Curator;
+}
+
+// Collection of AssetVaults
+interface CuratorVaults {
+  items: CuratorVault[];
+}
+
+// Root response structure
+interface GetCuratorVaultsResponse {
+  assetVaults: CuratorVaults;
+}
 
 export default function GTXEarn() {
   const router = useRouter()
@@ -60,6 +73,15 @@ export default function GTXEarn() {
   const [showConnectionLoader, setShowConnectionLoader] = useState(false)
   const { isConnected } = useAccount()
   const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
+
+  // Fetch pools data
+  const { data: curatorVaultsData, isLoading: curatorVaultsLoading } = useQuery<GetCuratorVaultsResponse>({
+    queryKey: ['curatorVaults'],
+    queryFn: async () => {
+      return await request(PERPETUAL_GRAPHQL_URL, getCuratorVaultsQuery)
+    },
+    staleTime: 60000, // 1 minute - pools don't change often
+  })
 
   // Handle component mounting
   useEffect(() => {
@@ -82,8 +104,8 @@ export default function GTXEarn() {
     }
   }, [isConnected, previousConnectionState, mounted])
 
-  const handleRowClick = (asset: Asset) => {
-    router.push(`/earn/0xe9c1de5ea494219b965652`)
+  const handleRowClick = (vaultAddress: string) => {
+    router.push(`/earn/${vaultAddress}`)
   }
 
   // Show connection loading state when transitioning from disconnected to connected
@@ -111,45 +133,20 @@ export default function GTXEarn() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-blue-500/20">
                   <TableHead className="text-blue-300">Asset</TableHead>
-                  <TableHead className="text-blue-300">Name</TableHead>
+                  <TableHead className="text-blue-300">Vault</TableHead>
+                  <TableHead className="text-blue-300">Curator</TableHead>
                   <TableHead className="text-blue-300">Market</TableHead>
                   <TableHead className="text-right text-blue-300">APY</TableHead>
                   <TableHead className="text-right text-blue-300">TVL</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map((asset, i) => (
-                  <TableRow
-                    key={i}
-                    className="hover:bg-blue-500/5 border-blue-500/20 cursor-pointer transition-colors duration-200"
-                    onClick={() => handleRowClick(asset)}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-cyan-300 p-0.5">
-                          <img
-                            src={asset.icon}
-                            alt={asset.symbol}
-                            className="w-full h-full rounded-full bg-black"
-                          />
-                        </div>
-                        <span>{asset.symbol}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{asset.name}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {asset.pairs.map((pair, j) => (
-                          <div key={j} className="flex items-center gap-2 bg-blue-500/10 rounded-full px-3 py-1">
-                            <img src={pair.icon} alt={pair.name} className="w-4 h-4 rounded-full" />
-                            <span className="text-sm text-blue-300">{pair.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right text-green-400">{asset.apy}</TableCell>
-                    <TableCell className="text-right text-cyan-300">{asset.tvl}</TableCell>
-                  </TableRow>
+                {curatorVaultsData?.assetVaults.items.map((vault) => (
+                  <VaultRow
+                    key={vault.id}
+                    vault={vault}
+                    onClick={handleRowClick}
+                  />
                 ))}
               </TableBody>
             </Table>
