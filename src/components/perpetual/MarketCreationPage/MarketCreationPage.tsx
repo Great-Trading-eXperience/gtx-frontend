@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import { CheckCircle2, Loader2, Hexagon, Wallet, Settings, History, Droplets } from 'lucide-react';
 import { toast } from 'sonner';
-import { USDC_ADDRESS } from '@/hooks/web3/gtx/perpetual/contract-address';
 import useCreateMarket from '@/hooks/web3/gtx/perpetual/useCreateMarket';
 import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager';
 import TokenSelection from './TokenSelection';
@@ -21,6 +20,7 @@ import OracleSources from './OracleSources';
 import { useAccount } from 'wagmi';
 import ButtonConnectWallet from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import GradientLoader from '@/components/gradient-loader/gradient-loader';
+import { USDC_ADDRESS } from '@/constants/contract-address';
 
 const MarketCreationPage: React.FC = () => {
   // Wallet connection and loading states

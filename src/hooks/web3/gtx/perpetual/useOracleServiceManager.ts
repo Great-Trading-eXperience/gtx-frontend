@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { wagmiConfig } from "@/configs/wagmi";
 import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceManagerABI";
-import { GTXORACLE_SERVICE_MANAGER_ADDRESS } from "@/constants/contract-address";
+import { ORACLE_ADDRESS } from "@/constants/contract-address";
 
 // Define types
 export type HexAddress = `0x${string}`;
@@ -32,7 +32,7 @@ export const useOracleServiceManager = () => {
         
         try {
           const price = await readContract(wagmiConfig, {
-            address: GTXORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'getPrice',
             args: [tokenAddress]
@@ -59,7 +59,7 @@ export const useOracleServiceManager = () => {
         
         try {
           const sources = await readContract(wagmiConfig, {
-            address: GTXORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'getSources',
             args: [tokenAddress]
@@ -96,7 +96,7 @@ export const useOracleServiceManager = () => {
           console.log('Requesting oracle price task for token:', tokenAddress);
           
           const hash = await writeContract(wagmiConfig, {
-            address: GTXORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'requestOraclePriceTask',
             args: [tokenAddress]
@@ -169,7 +169,7 @@ export const useOracleServiceManager = () => {
           console.log('Requesting new oracle task with parameters:', params);
           
           const hash = await writeContract(wagmiConfig, {
-            address: GTXORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'requestNewOracleTask',
             args: [
@@ -258,7 +258,7 @@ export const useOracleServiceManager = () => {
           console.log('Setting price for token:', params);
           
           const hash = await writeContract(wagmiConfig, {
-            address: GTXORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'setPrice',
             args: [

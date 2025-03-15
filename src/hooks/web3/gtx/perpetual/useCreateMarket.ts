@@ -4,14 +4,12 @@ import { writeContract, readContract, waitForTransactionReceipt } from "wagmi/ac
 import { useState } from "react";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { wagmiConfig } from "@/configs/wagmi";
-import PerpetualRouterABI from "@/abis/gtx/perpetual/PerpetualRouterABI";
+import RouterABI from "@/abis/gtx/perpetual/RouterABI";
 import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceManagerABI";
-import { 
-  PERPETUAL_ROUTER_ADDRESS, 
-  ORACLE_SERVICE_MANAGER_ADDRESS 
-} from "@/constants/contract-address";
+
 // Import crypto-js instead of ethers and bs58
 import { SHA3 } from "crypto-js";
+import { ORACLE_ADDRESS, ROUTER_ADDRESS } from "@/constants/contract-address";
 
 // Define types
 export type HexAddress = `0x${string}`;
@@ -118,7 +116,7 @@ export const useCreateMarket = () => {
   const checkExistingSources = async (tokenAddress: HexAddress) => {
     try {
       const result = await readContract(wagmiConfig, {
-        address: ORACLE_SERVICE_MANAGER_ADDRESS,
+        address: ORACLE_ADDRESS,
         abi: GTXOracleServiceManagerABI,
         functionName: 'getSources',
         args: [tokenAddress]
@@ -140,7 +138,7 @@ export const useCreateMarket = () => {
   ) => {
     try {
       const hash = await writeContract(wagmiConfig, {
-        address: ORACLE_SERVICE_MANAGER_ADDRESS,
+        address: ORACLE_ADDRESS,
         abi: GTXOracleServiceManagerABI,
         functionName: 'requestNewOracleTask',
         args: [tokenAddress, tokenAddress2, tokenPair, sources]
@@ -159,7 +157,7 @@ export const useCreateMarket = () => {
   const requestOraclePriceTask = async (tokenAddress: HexAddress) => {
     try {
       const hash = await writeContract(wagmiConfig, {
-        address: ORACLE_SERVICE_MANAGER_ADDRESS,
+        address: ORACLE_ADDRESS,
         abi: GTXOracleServiceManagerABI,
         functionName: 'requestOraclePriceTask',
         args: [tokenAddress]
@@ -226,13 +224,13 @@ export const useCreateMarket = () => {
           shortToken: params.shortToken,
           tokenPair: params.tokenPair,
           sources: sources,
-          address: PERPETUAL_ROUTER_ADDRESS
+          address: ROUTER_ADDRESS
         });
 
         // Execute the createMarket transaction
         const hash = await writeContract(wagmiConfig, {
-          address: PERPETUAL_ROUTER_ADDRESS,
-          abi: PerpetualRouterABI,
+          address: ROUTER_ADDRESS,
+          abi: RouterABI,
           functionName: 'createMarket',
           args: [
             finalLongToken,
@@ -284,7 +282,7 @@ export const useCreateMarket = () => {
     try {
       // Look for logs from your contract
       const relevantLog = receipt.logs.find((log: any) => 
-        log.address.toLowerCase() === PERPETUAL_ROUTER_ADDRESS.toLowerCase()
+        log.address.toLowerCase() === ROUTER_ADDRESS.toLowerCase()
       );
       
       if (relevantLog && relevantLog.topics && relevantLog.topics.length > 1) {

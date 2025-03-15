@@ -32,9 +32,10 @@ import {
 } from '@/components/ui/accordion';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { COMMON_TOKENS, USDC_ADDRESS } from '@/hooks/web3/gtx/perpetual/contract-address';
+import { COMMON_TOKENS } from '@/hooks/web3/gtx/perpetual/chain-id';
 import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager';
 import useCreateMarket from '@/hooks/web3/gtx/perpetual/useCreateMarket';
+import { USDC_ADDRESS } from '@/constants/contract-address';
 
 // Define Solana token options
 const SOLANA_TOKENS = [

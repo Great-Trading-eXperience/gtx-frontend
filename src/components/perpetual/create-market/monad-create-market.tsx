@@ -12,17 +12,17 @@ import { toast } from "sonner"
 import { writeContract, waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/configs/wagmi"
 import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
-import { PERPETUAL_ROUTER_ADDRESS } from "@/constants/contract-address"
 
 // Import token addresses directly
 import {
   WETH_ADDRESS,
   WBTC_ADDRESS,
-  USDC_ADDRESS
+  USDC_ADDRESS,
+  ROUTER_ADDRESS
 } from "@/constants/contract-address"
 
-// PerpetualRouterABI with createMarket function
-const PerpetualRouterABI = [
+// RouterABI with createMarket function
+const RouterABI = [
   {
     type: "function",
     name: "createMarket",
@@ -114,7 +114,7 @@ const MonadCreateMarket: React.FC = () => {
         shortTokenType: typeof shortToken,
         shortTokenLength: shortToken.length,
         tokenPair,
-        router: PERPETUAL_ROUTER_ADDRESS
+        router: ROUTER_ADDRESS
       })
       
       // Create oracle sources array with correct network values
@@ -146,8 +146,8 @@ const MonadCreateMarket: React.FC = () => {
       
      // Call the contract
 const hash = await writeContract(wagmiConfig, {
-    address: PERPETUAL_ROUTER_ADDRESS,
-    abi: PerpetualRouterABI,
+    address: ROUTER_ADDRESS,
+    abi: RouterABI,
     functionName: 'createMarket',
     args: [
       longToken as `0x${string}`,

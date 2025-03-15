@@ -48,17 +48,36 @@ const getCoinIcon = (pair: string | null) => {
     return "/icon/sol-usdc.png"
   } else if (lowerPair.includes("shib")) {
     return "/icon/shib-usdc.png"
+  } else if (lowerPair.includes("doge")) {
+    return "/icon/doge-usdc.png"
+  } else if (lowerPair.includes("trump")) {
+    return "/icon/trump-usdc.png"
   }
   
   // Default icon
   return "/icon/eth-usdc.png"
 }
 
-// Helper function to get unique pairs (filtering duplicates)
+// Specific allowed pairs
+const ALLOWED_PAIRS = [
+  'WETH-USDC',
+  'WBTC-USDC',
+  'LINK-USDC',
+  'PEPE-USDC',
+  'TRUMP-USDC'
+];
+
+// Helper function to get unique pairs (filtering to only allowed pairs)
 const getUniquePairs = (pairs: Array<{ id: string; symbol: string; name: string }>) => {
   const uniquePairMap = new Map<string, { id: string; symbol: string; name: string }>()
   
-  pairs.forEach(pair => {
+  // Filter to only include the specific allowed pairs
+  const validPairs = pairs.filter(pair => {
+    const normalizedSymbol = pair.symbol.toUpperCase();
+    return ALLOWED_PAIRS.includes(normalizedSymbol);
+  });
+  
+  validPairs.forEach(pair => {
     // Use lowercase symbol as key to identify duplicates regardless of case
     const key = pair.symbol.toLowerCase()
     
@@ -71,36 +90,26 @@ const getUniquePairs = (pairs: Array<{ id: string; symbol: string; name: string 
   // Convert map values back to array
   const uniquePairs = Array.from(uniquePairMap.values())
   
-  // Priority order for common pairs
+  // Priority order matching the allowed pairs order
   const priorityOrder = [
-    'eth',
-    'btc',
-    'sol',
-    'link'
+    'weth',
+    'wbtc',
+    'link',
+    'pepe',
+    'trump'
   ]
   
-  // Custom sort function: prioritized pairs first, then alphabetical order
+  // Custom sort function based on the priorityOrder
   return uniquePairs.sort((a, b) => {
     const aLower = a.symbol.toLowerCase()
     const bLower = b.symbol.toLowerCase()
     
-    // Get priority index (-1 if not in priority list)
+    // Get priority index
     const aIndex = priorityOrder.findIndex(p => aLower.includes(p))
     const bIndex = priorityOrder.findIndex(p => bLower.includes(p))
     
-    // If both have priority, sort by priority order
-    if (aIndex >= 0 && bIndex >= 0) {
-      return aIndex - bIndex
-    }
-    
-    // If only a has priority, it comes first
-    if (aIndex >= 0) return -1
-    
-    // If only b has priority, it comes first
-    if (bIndex >= 0) return 1
-    
-    // Regular alphabetical sort for other pairs
-    return a.symbol.localeCompare(b.symbol)
+    // Sort by priority order
+    return aIndex - bIndex
   })
 }
 
@@ -111,7 +120,39 @@ export function PerpetualPairDropdown({ pairs, selectedPairId, onPairSelect }: P
   const uniquePairs = getUniquePairs(pairs)
   
   // Find the currently selected pair
-  const selectedPair = uniquePairs.find(pair => pair.id === selectedPairId) || uniquePairs[0]
+  let selectedPair = uniquePairs.find(pair => pair.id === selectedPairId)
+  
+  // If selected pair is not in the allowed list, default to first allowed pair
+  if (!selectedPair && uniquePairs.length > 0) {
+    selectedPair = uniquePairs[0]
+    // Update selected ID to match first pair (could be done with a useEffect)
+    setTimeout(() => onPairSelect(uniquePairs[0].id), 0)
+  }
+
+  // If no valid pairs after filtering, show an empty state
+  if (uniquePairs.length === 0) {
+    return (
+      <Button
+        variant="outline"
+        className="w-[200px] justify-between bg-transparent border-none text-white hover:bg-gray-800/50 hover:text-white"
+        disabled
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-[40px] h-[25px] relative">
+            <img 
+              src="/icon/eth-usdc.png" 
+              alt="No pairs available" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <span className="font-medium text-sm truncate">
+            No pairs available
+          </span>
+          <span className="text-emerald-600 dark:text-emerald-500 text-xs p-1 bg-emerald-100 dark:bg-emerald-500/10 rounded">Perp</span>
+        </div>
+      </Button>
+    )
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

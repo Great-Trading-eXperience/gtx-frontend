@@ -13,6 +13,7 @@ import GradientLoader from "../gradient-loader/gradient-loader"
 import PerpetualChartComponent from "./perpetual-chart/perpetual-chart"
 import PerpetualMarket from "./perpetual-market/perpetual-market"
 import PerpetualHistory from "./perpetual-history/perpetual-history"
+import PlacePerpOrder from "./perpetual-place-order/PlacePerpOrder"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);

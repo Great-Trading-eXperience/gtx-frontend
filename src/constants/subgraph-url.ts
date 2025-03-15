@@ -8,7 +8,8 @@ export const FAUCET_INDEXER_URL = "https://gtx-faucet.bobbyfiando.com/";
 export const GTX_GRAPHQL_URL = "https://gtx-rise-indexer.bobbyfiando.com/";
 
 // export const PERPETUAL_GRAPHQL_URL = "https://gtx-perp-indexer.bobbyfiando.com/";
-export const PERPETUAL_GRAPHQL_URL = "http://localhost:42069";
+// export const PERPETUAL_GRAPHQL_URL = "https://2d6c-103-13-204-17.ngrok-free.app/";
+export const PERPETUAL_GRAPHQL_URL = "https://princess-appendix-workforce-utilize.trycloudflare.com";
 
 
 export const CLOB_GRAPHQL_URL = "https://gtx-monad-clob-indexer.bobbyfiando.com/";

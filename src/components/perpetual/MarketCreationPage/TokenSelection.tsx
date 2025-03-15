@@ -7,9 +7,9 @@ import {
   TabsList,
   TabsTrigger
 } from '@/components/ui/tabs';
-import { COMMON_TOKENS, USDC_ADDRESS } from '@/hooks/web3/gtx/perpetual/contract-address';
 import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager';
 import { Hexagon, Code } from 'lucide-react';
+import { COMMON_TOKENS } from '@/hooks/web3/gtx/perpetual/chain-id';
 
 interface SolanaToken {
   address: string;

@@ -121,24 +121,26 @@ export const marketsQuery = gql`
   query GetMarkets {
     markets {
       items {
+        blockNumber
         id
-        marketToken
         longToken
+        marketToken
+        name
         shortToken
         timestamp
-        blockNumber
         transactionHash
       }
-      totalCount
       pageInfo {
-        startCursor
-        hasPreviousPage
-        hasNextPage
         endCursor
+        hasNextPage
+        hasPreviousPage
+        startCursor
       }
+      totalCount
     }
   }
 `;
+
 
 export const liquidationsQuery = gql`
   query GetLiquidations {

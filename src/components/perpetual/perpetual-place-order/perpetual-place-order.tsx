@@ -8,8 +8,8 @@ import { HexAddress } from "@/types/web3/general/address"
 import { usePerpetualPlaceOrder } from "@/hooks/web3/gtx/perpetual/usePerpetualPlaceOrder"
 import { LeverageDialog } from "./leverage-dialog"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
-import { PERPETUAL_MARKET_ADDRESS } from "@/constants/contract-address"
 import PercentageSlider from "./percentage-slider"
+import { usePerpetualMarketStore } from "@/store/perpetual-market-store"
 
 // Define local type for token
 type TokenInfo = {
@@ -31,11 +31,19 @@ type OrderParams = {
     autoCancel?: boolean;
 };
 
-// Supported tokens config
-const SUPPORTED_TOKENS: TokenInfo[] = [
-    { symbol: "WETH", address: "0x97f3d75FcC683c8F557D637196857FA303f7cebd" as HexAddress, decimals: 18 },
-    { symbol: "USDC", address: "0x37e9b288c56B734c0291d37af478F60cE58a9Fc6" as HexAddress, decimals: 6 }
-]
+// Default decimals for tokens
+const TOKEN_DECIMALS = {
+    "WETH": 18,
+    "ETH": 18,
+    "WBTC": 8,
+    "BTC": 8,
+    "USDC": 6,
+    "LINK": 18,
+    "DOGE": 18,
+    "PEPE": 18,
+    "TRUMP": 18,
+    "DEFAULT": 18
+}
 
 const formatNumberWithCommas = (value: number | string) => {
     // Parse the number and format it with thousands separators and 4 decimal places
@@ -61,7 +69,7 @@ const PerpetualPlaceOrder = () => {
 
     const [sizeValue, setSizeValue] = useState<string>("")
     const [sliderValue, setSliderValue] = useState([0])
-    const [selectedToken, setSelectedToken] = useState<TokenInfo>(SUPPORTED_TOKENS[0])
+    const [selectedCollateralToken, setSelectedCollateralToken] = useState<HexAddress | null>(null)
     const [showTPSL, setShowTPSL] = useState(false)
     const [reduceOnly, setReduceOnly] = useState(false)
     const [limitPrice, setLimitPrice] = useState<string>("")
@@ -70,6 +78,7 @@ const PerpetualPlaceOrder = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [leverage, setLeverage] = useState(1) // Default 1x leverage
     const [isClient, setIsClient] = useState(false)
+    
     // Add change source state to track what triggered the change
     const [changeSource, setChangeSource] = useState<"input" | "slider" | null>(null)
 
@@ -79,15 +88,50 @@ const PerpetualPlaceOrder = () => {
     const [notificationSuccess, setNotificationSuccess] = useState(true)
     const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>()
 
+    // Get market data from Zustand store
+    const { 
+        selectedTokenId, 
+        marketTokenMap, 
+        markets,
+        marketData, 
+        tradingPairs 
+    } = usePerpetualMarketStore()
+
     // Set isClient to true when component mounts (client-side only)
     useEffect(() => {
         setIsClient(true)
     }, [])
 
+    // Update selected collateral token when selected token changes in the store
+    useEffect(() => {
+        if (selectedTokenId && marketTokenMap[selectedTokenId]) {
+            const market = marketTokenMap[selectedTokenId]
+            setSelectedCollateralToken(market.longToken)
+        }
+    }, [selectedTokenId, marketTokenMap])
+
+    // Get current market details
+    const currentMarket = selectedTokenId ? marketTokenMap[selectedTokenId] : null
+    
+    // Get token symbol from market name
+    const getTokenSymbolFromMarketName = (marketName: string | undefined): string => {
+        if (!marketName) return "TOKEN";
+        
+        // Extract token symbol from market name (e.g., "GTX_WETH_USDC" -> "WETH")
+        const parts = marketName.split('_');
+        return parts.length >= 2 ? parts[1] : "TOKEN";
+    }
+    
+    // Get current token symbol
+    const currentTokenSymbol = currentMarket?.name ? getTokenSymbolFromMarketName(currentMarket.name) : "TOKEN"
+    
+    // Get decimals for the current token
+    const currentTokenDecimals = TOKEN_DECIMALS[currentTokenSymbol as keyof typeof TOKEN_DECIMALS] || TOKEN_DECIMALS.DEFAULT
+
     // Fetch balance of selected token
     const { data: balance } = useBalance({
         address,
-        token: selectedToken.address,
+        token: selectedCollateralToken || undefined,
     })
 
     // Get perpetual order hooks
@@ -108,21 +152,33 @@ const PerpetualPlaceOrder = () => {
         }
     }, [orderHash])
 
-    // Default prices for tokens - in a real app, you'd fetch these from an API
-    const getTokenPrice = (symbol: string): bigint => {
-        switch (symbol) {
-            case "WETH": return 3000n;
-            case "USDC": return 1n;
-            default: return 0n;
+    // Use price from Zustand store if available
+    const getTokenPrice = (): bigint => {
+        if (marketData.price !== null) {
+            return BigInt(Math.floor(marketData.price * 1e18))
+        }
+        
+        // Fallback prices if market data is not available
+        switch (currentTokenSymbol) {
+            case "WETH": return 3000n * 10n ** 18n;
+            case "ETH": return 3000n * 10n ** 18n;
+            case "WBTC": return 60000n * 10n ** 18n;
+            case "BTC": return 60000n * 10n ** 18n;
+            case "LINK": return 20n * 10n ** 18n;
+            case "DOGE": return 1n * 10n ** 18n;
+            case "PEPE": return 1n * 10n ** 18n;
+            case "TRUMP": return 1n * 10n ** 18n;
+            case "USDC": return 1n * 10n ** 18n;
+            default: return 1000n * 10n ** 18n;
         }
     }
 
     // Calculate order values WITH CORRECT LEVERAGE APPLIED
-    const tokenPrice = getTokenPrice(selectedToken.symbol)
+    const tokenPrice = getTokenPrice()
     const sizeTokenAmount = sizeValue ? parseFloat(sizeValue) : 0
 
     // Calculate the USD value of the collateral
-    const collateralValueUsd = BigInt(Math.floor(sizeTokenAmount * Number(tokenPrice) * 1e18))
+    const collateralValueUsd = BigInt(Math.floor(sizeTokenAmount * Number(tokenPrice / 10n ** 18n)))
 
     // Apply leverage to get the true position size
     const sizeDeltaUsd = collateralValueUsd * BigInt(leverage)
@@ -136,7 +192,7 @@ const PerpetualPlaceOrder = () => {
     // For limit orders, use the specified price
     const calculatedTriggerPrice = orderType === "limit" && limitPrice
         ? parseUnits(limitPrice, 18)
-        : tokenPrice * 10n ** 18n
+        : tokenPrice
 
     // Calculate liquidation price (more accurate calculation with leverage)
     const liquidationPrice = side
@@ -167,15 +223,18 @@ const PerpetualPlaceOrder = () => {
         }
     }, [sliderValue, balance, changeSource])
 
-    const handleTokenSelect = (token: TokenInfo) => {
-        setSelectedToken(token)
-        setIsDropdownOpen(false)
-    }
-
     const handlePlaceOrder = async () => {
         if (!address) {
             // Show error notification instead of toast
             setNotificationMessage("Please connect your wallet first")
+            setNotificationSuccess(false)
+            setNotificationTxHash(undefined)
+            setShowNotification(true)
+            return
+        }
+
+        if (!currentMarket) {
+            setNotificationMessage("No market available")
             setNotificationSuccess(false)
             setNotificationTxHash(undefined)
             setShowNotification(true)
@@ -199,11 +258,15 @@ const PerpetualPlaceOrder = () => {
         }
 
         try {
-            const collateralAmount = parseUnits(sizeValue, selectedToken.decimals)
+            if (!selectedCollateralToken) {
+                throw new Error("No collateral token selected")
+            }
+
+            const collateralAmount = parseUnits(sizeValue, currentTokenDecimals)
 
             const orderParams: OrderParams = {
-                market: PERPETUAL_MARKET_ADDRESS,
-                collateralToken: selectedToken.address,
+                market: currentMarket.marketToken as HexAddress,
+                collateralToken: selectedCollateralToken,
                 isLong: side,
                 sizeDeltaUsd: sizeDeltaUsd, // Now correctly includes leverage
                 collateralAmount: collateralAmount,
@@ -236,7 +299,7 @@ const PerpetualPlaceOrder = () => {
             }
 
             // Show success notification
-            setNotificationMessage(`${orderTypeText} ${sideText} order for ${sizeValue} ${selectedToken.symbol} with ${leverage}x leverage placed successfully.`)
+            setNotificationMessage(`${orderTypeText} ${sideText} order for ${sizeValue} ${currentTokenSymbol} with ${leverage}x leverage placed successfully.`)
             setNotificationSuccess(true)
             setShowNotification(true)
 
@@ -256,6 +319,12 @@ const PerpetualPlaceOrder = () => {
             setShowNotification(true)
         }
     }
+
+    // Find the current market name to display in the header
+    const selectedPair = tradingPairs.find(pair => pair.id === selectedTokenId);
+    const currentMarketDisplayName = selectedPair?.symbol || "Loading...";
+
+    const areMarketsLoading = !marketData.marketsLoaded;
 
     return (
         <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-4 max-w-md mx-auto border border-gray-700/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] backdrop-blur-sm">
@@ -285,7 +354,7 @@ const PerpetualPlaceOrder = () => {
                     </div>
                     {isConnected && (
                         <div className="text-sm px-2 py-0.5 rounded-full bg-gray-800/50 border border-gray-700/50 text-gray-300 flex items-center gap-1">
-                            <span>{selectedToken.symbol}/USDC</span>
+                            <span>{areMarketsLoading ? "Loading..." : currentMarketDisplayName}</span>
                             <BarChart3 className="w-3 h-3" />
                         </div>
                     )}
@@ -312,12 +381,12 @@ const PerpetualPlaceOrder = () => {
                             {balance ? formatNumberWithCommas(formatEther(balance.value).slice(0, 8)) : "0.0000"}
                         </div>
                         <div className="text-gray-300 text-sm px-2 py-0.5 bg-gray-800/40 rounded-md border border-gray-700/40">
-                            {selectedToken.symbol}
+                            {currentTokenSymbol}
                         </div>
                     </div>
                     <div className="flex items-center justify-between mt-1.5 text-xs text-gray-400">
                         <span>Current Position</span>
-                        <span>0.0000 {selectedToken.symbol}</span>
+                        <span>0.0000 {currentTokenSymbol}</span>
                     </div>
                 </div>
             </div>
@@ -374,9 +443,6 @@ const PerpetualPlaceOrder = () => {
             {/* Leverage section */}
             <div className="flex items-center justify-between mb-3">
                 <LeverageDialog leverage={leverage} setLeverage={setLeverage} maxLeverage={20} />
-                {/* <div className="bg-gray-900/40 text-white text-sm font-light p-2 border border-gray-700/40 rounded-lg">
-                    Cross
-                </div> */}
             </div>
 
             {/* Form Content */}
@@ -426,29 +492,9 @@ const PerpetualPlaceOrder = () => {
                         />
                         <div className="absolute right-2 top-1/2 -translate-y-1/2">
                             <div className="relative">
-                                {isClient && (
-                                    <button
-                                        className="flex items-center gap-1 text-white text-sm bg-gray-800 px-2 py-0.5 rounded border border-gray-700/40"
-                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    >
-                                        {selectedToken.symbol}
-                                        <ChevronDown className="h-3 w-3" />
-                                    </button>
-                                )}
-
-                                {isClient && isDropdownOpen && (
-                                    <div className="absolute right-0 mt-1 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-11">
-                                        {SUPPORTED_TOKENS.map((token) => (
-                                            <div
-                                                key={token.symbol}
-                                                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 cursor-pointer text-sm text-gray-300"
-                                                onClick={() => handleTokenSelect(token)}
-                                            >
-                                                {token.symbol}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-1 text-white text-sm bg-gray-800 px-2 py-0.5 rounded border border-gray-700/40">
+                                    {currentTokenSymbol}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -520,6 +566,10 @@ const PerpetualPlaceOrder = () => {
             {/* Order Information */}
             <div className="flex flex-col gap-1.5 border-t border-gray-800 pt-3 mt-3">
                 <div className="flex justify-between text-[0.72rem]">
+                    <span className="text-gray-400">Mark Price</span>
+                    <span className="text-white">${marketData.price !== null ? marketData.price.toFixed(2) : "---"}</span>
+                </div>
+                <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Liquidation Price</span>
                     <span className="text-white">{Number(liquidationPrice) > 0 ? `$${(Number(liquidationPrice) / 1e18).toFixed(2)}` : "N/A"}</span>
                 </div>
@@ -530,6 +580,14 @@ const PerpetualPlaceOrder = () => {
                 <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Margin Required</span>
                     <span className="text-white">${(Number(marginRequired) / 1e18).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[0.72rem]">
+                    <span className="text-gray-400">Funding Rate</span>
+                    <span className={`${marketData.fundingRate !== null && marketData.fundingRate >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {marketData.fundingRate !== null
+                            ? `${marketData.fundingRate >= 0 ? '+' : ''}${(marketData.fundingRate * 100).toFixed(4)}%`
+                            : "---"}
+                    </span>
                 </div>
                 <div className="flex justify-between text-[0.72rem]">
                     <span className="text-gray-400">Fees</span>

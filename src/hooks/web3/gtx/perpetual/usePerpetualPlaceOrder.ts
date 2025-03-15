@@ -1,8 +1,8 @@
-import PerpetualRouterABI from "@/abis/gtx/perpetual/PerpetualRouterABI";
+import RouterABI from "@/abis/gtx/perpetual/RouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import {
-    PERPETUAL_ORDER_VAULT_ADDRESS,
-    PERPETUAL_ROUTER_ADDRESS,
+    ORDER_VAULT_ADDRESS,
+    ROUTER_ADDRESS,
 } from "@/constants/contract-address";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -113,20 +113,20 @@ export const usePerpetualPlaceOrder = () => {
 
                 // Encode function calls for multicall
                 const sendWntData = encodeFunctionData({
-                    abi: PerpetualRouterABI,
+                    abi: RouterABI,
                     functionName: 'sendWnt',
-                    args: [PERPETUAL_ORDER_VAULT_ADDRESS, executionFee]
+                    args: [ORDER_VAULT_ADDRESS, executionFee]
                 });
 
                 const sendTokensData = encodeFunctionData({
-                    abi: PerpetualRouterABI,
+                    abi: RouterABI,
                     functionName: 'sendTokens',
-                    args: [params.collateralToken, PERPETUAL_ORDER_VAULT_ADDRESS, params.collateralAmount]
+                    args: [params.collateralToken, ORDER_VAULT_ADDRESS, params.collateralAmount]
                 });
 
                 // For the Router's createOrder function (not the OrderHandler's)
                 const createOrderData = encodeFunctionData({
-                    abi: PerpetualRouterABI,
+                    abi: RouterABI,
                     functionName: 'createOrder',
                     args: [createOrderParams]
                 });
@@ -140,8 +140,8 @@ export const usePerpetualPlaceOrder = () => {
 
                 // Execute multicall
                 const hash = await writeContract(wagmiConfig, {
-                    address: PERPETUAL_ROUTER_ADDRESS,
-                    abi: PerpetualRouterABI,
+                    address: ROUTER_ADDRESS,
+                    abi: RouterABI,
                     functionName: 'multicall',
                     args: [multicallData]
                 });

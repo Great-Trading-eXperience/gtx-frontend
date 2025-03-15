@@ -1,10 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import request from 'graphql-request'
 import { gql } from 'graphql-request'
-import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import {
   Tooltip,
@@ -15,6 +14,32 @@ import {
 import { PerpetualPairDropdown } from './perpetual-pair-dropdown'
 import { PERPETUAL_GRAPHQL_URL } from '@/constants/subgraph-url'
 import { fundingFeesQuery, openInterestsQuery, pricesQuery } from '@/graphql/gtx/perpetual.query'
+import { usePerpetualMarketStore, Market as StoreMarket } from '@/store/perpetual-market-store'
+
+// Define the markets query
+export const marketsQuery = gql`
+  query GetMarkets {
+    markets {
+      items {
+        blockNumber
+        id
+        longToken
+        marketToken
+        name
+        shortToken
+        timestamp
+        transactionHash
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+        hasPreviousPage
+        startCursor
+      }
+      totalCount
+    }
+  }
+`;
 
 // Define types for the GraphQL response data
 interface Price {
@@ -43,6 +68,18 @@ interface FundingFee {
   marketToken: string | null;
   timestamp: number;
   transactionHash: string | null;
+}
+
+// Local Market interface for GraphQL response data
+interface LocalMarket {
+  blockNumber: number;
+  id: string;
+  longToken: string;
+  marketToken: string;
+  name: string;
+  shortToken: string;
+  timestamp: number;
+  transactionHash: string;
 }
 
 interface PageInfo {
@@ -75,22 +112,13 @@ interface FundingFeesResponse {
   };
 }
 
-// Token mapping
-const tokenMapping: Record<string, { symbol: string, name: string }> = {
-  '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1': { symbol: 'WETH-USD', name: 'Ethereum' },
-  '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f': { symbol: 'WBTC-USD', name: 'Bitcoin' },
-  '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0': { symbol: 'UNI-USD', name: 'Uniswap' },
-  '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4': { symbol: 'LINK-USD', name: 'Chainlink' },
-  '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1': { symbol: 'DAI-USD', name: 'Dai' },
-  '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8': { symbol: 'USDC-USD', name: 'USD Coin' },
-  '0xFD086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9': { symbol: 'USDT-USD', name: 'Tether' },
-  '0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a': { symbol: 'GMX-USD', name: 'GMX' },
-  '0x912CE59144191C1204E64559FE8253a0e49E6548': { symbol: 'ARB-USD', name: 'Arbitrum' },
-  '0xaf88d065e77c8cC2239327C5EDb3A432268e5831': { symbol: 'USDC-USD', name: 'USD Coin' },
-  // Add new token from the response
-  '0x37e9b288c56B734c0291d37af478F60cE58a9Fc6': { symbol: 'USDT-USD', name: 'Tether' },
-  '0x97f3d75FcC683c8F557D637196857FA303f7cebd': { symbol: 'BTC-USD', name: 'Bitcoin' },
-};
+interface MarketsResponse {
+  markets: {
+    items: LocalMarket[];
+    pageInfo: PageInfo;
+    totalCount: number;
+  };
+}
 
 // Format number with appropriate suffix (K, M, B)
 const formatVolume = (value: number | bigint, decimals: number = 2) => {
@@ -125,9 +153,87 @@ const SkeletonLoader = () => (
   </div>
 )
 
+// Helper function to parse market name
+const parseMarketName = (name: string) => {
+  if (!name) return { symbol: 'Unknown', name: 'Unknown' };
+  
+  // Extract trading pair from GTX_XXX_YYY format
+  const parts = name.split('_');
+  if (parts.length >= 3) {
+    const base = parts[1];
+    const quote = parts[2];
+    const fullName = getFullName(base);
+    
+    // Create symbol in the format BASE-QUOTE
+    const symbol = `${base}-${quote}`;
+    
+    // Check if this is one of our allowed pairs
+    const allowedPairs = [
+      'WETH-USDC',
+      'WBTC-USDC',
+      'LINK-USDC',
+      'PEPE-USDC',
+      'TRUMP-USDC'
+    ];
+    
+    if (allowedPairs.includes(symbol.toUpperCase())) {
+      return {
+        symbol: symbol,
+        name: fullName || base // Use the full name if available, otherwise the base token
+      };
+    } else {
+      // Return empty name to indicate this pair should not be displayed
+      return {
+        symbol: symbol,
+        name: ''
+      };
+    }
+  }
+  
+  return { symbol: name, name: '' };
+}
+
+// Helper to get full name from symbol
+const getFullName = (symbol: string) => {
+  const nameMap: Record<string, string> = {
+    'WETH': 'Ethereum',
+    'ETH': 'Ethereum',
+    'WBTC': 'Bitcoin',
+    'BTC': 'Bitcoin',
+    'LINK': 'Chainlink',
+    'UNI': 'Uniswap',
+    'PEPE': 'Pepe',
+    'DOGE': 'Dogecoin',
+    'SOL': 'Solana',
+    'SHIB': 'Shiba Inu',
+    'USDC': 'USD Coin',
+    'USDT': 'Tether',
+    'DAI': 'Dai',
+    'TRUMP': 'Trump'
+  };
+  
+  return nameMap[symbol] || '';
+}
+
 const PerpetualMarket = () => {
-  // State for selected pair (token address)
-  const [selectedToken, setSelectedToken] = useState('')
+  // Get state and actions from Zustand store
+  const { 
+    marketTokenMap, setMarketTokenMap,
+    tradingPairs, setTradingPairs,
+    selectedTokenId, setSelectedTokenId,
+    marketData, updateMarketData,
+    DEFAULT_PAIR
+  } = usePerpetualMarketStore();
+  
+  // Fetch markets data
+  const { data: marketsData, isLoading: marketsLoading } = useQuery<MarketsResponse>({
+    queryKey: ['markets'],
+    queryFn: async () => {
+      return await request(PERPETUAL_GRAPHQL_URL, marketsQuery)
+    },
+    refetchInterval: 30000,
+    staleTime: 10000,
+  })
   
   // Fetch prices data
   const { data: pricesData, isLoading: pricesLoading } = useQuery<PricesResponse>({
@@ -159,98 +265,179 @@ const PerpetualMarket = () => {
     staleTime: 10000,
   })
 
-  // Process data to create pairs for dropdown
-  const [pairs, setPairs] = useState<Array<{id: string, symbol: string, name: string}>>([])
-  
+  // Update loading state in store
   useEffect(() => {
-    if (pricesData) {
+    updateMarketData({
+      marketsLoaded: !marketsLoading,
+      pricesLoaded: !pricesLoading
+    });
+  }, [marketsLoading, pricesLoading, updateMarketData]);
+  
+  // Process markets data with proper type conversion
+  useEffect(() => {
+    if (marketsData?.markets?.items) {
+      // Store markets in the store
+      const markets = marketsData.markets.items;
+      
+      // Create a map of market tokens for easy lookup
+      const marketMap: Record<string, StoreMarket> = {};
+      
+      markets.forEach(localMarket => {
+        // Convert each local market to the store's expected format
+        const storeMarket: StoreMarket = {
+          ...localMarket,
+          // Convert string addresses to the template literal type expected by the store
+          longToken: localMarket.longToken as `0x${string}`,
+          shortToken: localMarket.shortToken as `0x${string}`,
+          marketToken: localMarket.marketToken as `0x${string}`,
+        };
+        
+        // Map all tokens to their corresponding market
+        marketMap[localMarket.longToken] = storeMarket;
+        marketMap[localMarket.shortToken] = storeMarket;
+        marketMap[localMarket.marketToken] = storeMarket;
+        
+        // Also map by token address
+        const pricesWithThisMarket = pricesData?.prices?.items.filter(
+          price => price.token === localMarket.longToken || 
+                 price.token === localMarket.shortToken || 
+                 price.token === localMarket.marketToken
+        ) || [];
+        
+        pricesWithThisMarket.forEach(price => {
+          marketMap[price.token] = storeMarket;
+        });
+      });
+      
+      // Now we can safely pass the map to the store
+      setMarketTokenMap(marketMap);
+    }
+  }, [marketsData, pricesData, setMarketTokenMap]);
+  
+  // Process price data and create pairs
+  useEffect(() => {
+    if (pricesData && Object.keys(marketTokenMap).length > 0) {
       // Extract unique tokens and create pairs
       const uniqueTokens = new Set<string>()
       pricesData.prices.items.forEach((item: Price) => {
         uniqueTokens.add(item.token)
       })
       
-      // Create pairs array for dropdown
+      // Create pairs array for dropdown using markets data
       const pairsArray = Array.from(uniqueTokens).map(token => {
-        const mapping = tokenMapping[token] || { symbol: token.slice(0, 6) + '...', name: 'Unknown' }
-        return {
-          id: token,
-          symbol: mapping.symbol,
-          name: mapping.name
+        // Try to find the token in the market data
+        const market = marketTokenMap[token];
+        
+        if (market) {
+          // Use market data when available
+          const { symbol, name } = parseMarketName(market.name);
+          return {
+            id: token,
+            tokenAddress: token, // Add the tokenAddress property
+            symbol,
+            name
+          };
+        } else {
+          // For tokens not in market data, create a generic display
+          return {
+            id: token,
+            tokenAddress: token, // Add the tokenAddress property
+            symbol: `${token.slice(0, 6)}...`,
+            name: 'Unknown Token'
+          };
         }
-      })
+      }).filter(pair => pair.symbol !== 'Unknown'); // Filter out any unidentified tokens
       
-      setPairs(pairsArray)
+      // Store pairs in the Zustand store
+      setTradingPairs(pairsArray);
       
       // Set default selected token if not already set
-      if (!selectedToken && pairsArray.length > 0) {
-        // Prefer WETH if available
-        const ethPair = pairsArray.find(p => p.symbol.includes('ETH'))
+      if (!selectedTokenId && pairsArray.length > 0) {
+        // Look for default pair (WETH-USDC) first
+        const defaultPairToken = pairsArray.find(p => 
+          p.symbol.toLowerCase() === DEFAULT_PAIR.toLowerCase()
+        );
+        
+        // If default pair is not available, try any ETH pair
+        const ethUsdcPair = pairsArray.find(p => 
+          p.symbol.toLowerCase().includes('weth') && 
+          p.symbol.toLowerCase().includes('usdc')
+        );
+        
+        // If ETH-USDC is not available, try any ETH pair
+        const ethPair = defaultPairToken || ethUsdcPair || pairsArray.find(p => 
+          p.symbol.toLowerCase().includes('eth')
+        );
+        
         if (ethPair) {
-          setSelectedToken(ethPair.id)
+          setSelectedTokenId(ethPair.id);
         } else {
-          setSelectedToken(pairsArray[0].id)
+          setSelectedTokenId(pairsArray[0].id);
         }
       }
     }
-  }, [pricesData, selectedToken])
+  }, [pricesData, marketTokenMap, selectedTokenId, setTradingPairs, setSelectedTokenId, DEFAULT_PAIR]);
   
-  // Get current price for selected token
-  const getCurrentPrice = () => {
-    if (!pricesData || !selectedToken) return null
-    
-    // Find latest price for selected token
-    const tokenPrices = pricesData.prices.items
-      .filter((item: Price) => item.token === selectedToken)
-      .sort((a: Price, b: Price) => b.timestamp - a.timestamp)
-    
-    return tokenPrices.length > 0 ? Number(tokenPrices[0].price) / 1e18 : null // Adjusted divisor to 1e18
-  }
-  
-  // Get open interest for selected token
-  const getOpenInterest = () => {
-    if (!openInterestsData || !selectedToken) return null
-    
-    // Find latest open interest for selected token
-    const tokenOI = openInterestsData.openInterests.items
-      .filter((item: OpenInterest) => item.token === selectedToken)
-      .sort((a: OpenInterest, b: OpenInterest) => b.timestamp - a.timestamp)
+  // Update market data when selected token changes or new data arrives
+  useEffect(() => {
+    if (selectedTokenId) {
+      // Get current price for selected token
+      const getCurrentPrice = () => {
+        if (!pricesData) return null;
+        
+        // Find latest price for selected token
+        const tokenPrices = pricesData.prices.items
+          .filter((item: Price) => item.token === selectedTokenId)
+          .sort((a: Price, b: Price) => b.timestamp - a.timestamp);
+        
+        return tokenPrices.length > 0 ? Number(tokenPrices[0].price) / 1e18 : null;
+      }
       
-    return tokenOI.length > 0 ? Number(tokenOI[0].openInterest) / 1e18 : null // Adjusted divisor to 1e18
-  }
-  
-  // Get funding rate for selected token
-  const getFundingRate = () => {
-    if (!fundingFeesData || !selectedToken) return null
-    
-    // Modified to handle null marketToken field - using the token from selectedToken instead
-    const tokenFunding = fundingFeesData.fundingFees.items
-      // We'll use the latest funding fee since marketToken is null in the response
-      .sort((a: FundingFee, b: FundingFee) => b.timestamp - a.timestamp)
+      // Get open interest for selected token
+      const getOpenInterest = () => {
+        if (!openInterestsData) return null;
+        
+        // Find latest open interest for selected token
+        const tokenOI = openInterestsData.openInterests.items
+          .filter((item: OpenInterest) => item.token === selectedTokenId)
+          .sort((a: OpenInterest, b: OpenInterest) => b.timestamp - a.timestamp);
+          
+        return tokenOI.length > 0 ? Number(tokenOI[0].openInterest) / 1e18 : null;
+      }
       
-    // Convert funding fee to annual rate (approximate)
-    if (tokenFunding.length > 0) {
-      // Funding rate is typically expressed as a percentage per 8 hours
-      // We need to convert it to a decimal (e.g., 0.01% -> 0.0001)
-      return Number(tokenFunding[0].fundingFee) / 1e18 
+      // Get funding rate for selected token
+      const getFundingRate = () => {
+        if (!fundingFeesData) return null;
+        
+        // Get the latest funding fee
+        const tokenFunding = fundingFeesData.fundingFees.items
+          .sort((a: FundingFee, b: FundingFee) => b.timestamp - a.timestamp);
+          
+        // Convert funding fee to annual rate (approximate)
+        if (tokenFunding.length > 0) {
+          return Number(tokenFunding[0].fundingFee) / 1e18;
+        }
+        
+        return null;
+      }
+      
+      // Update market data in the store
+      updateMarketData({
+        price: getCurrentPrice(),
+        openInterest: getOpenInterest(),
+        fundingRate: getFundingRate()
+      });
     }
-    
-    return null
-  }
-  
-  // Get current price, open interest, and funding rate
-  const currentPrice = getCurrentPrice()
-  const openInterest = getOpenInterest()
-  const fundingRate = getFundingRate()
+  }, [selectedTokenId, pricesData, openInterestsData, fundingFeesData, updateMarketData]);
   
   // Handle pair selection
   const handlePairSelect = (tokenAddress: string) => {
-    setSelectedToken(tokenAddress)
+    setSelectedTokenId(tokenAddress);
   }
   
   // Show loading state if data is loading
-  if (pricesLoading || openInterestsLoading || fundingFeesLoading || pairs.length === 0) {
-    return <SkeletonLoader />
+  if (marketsLoading || pricesLoading || openInterestsLoading || fundingFeesLoading || tradingPairs.length === 0) {
+    return <SkeletonLoader />;
   }
 
   return (
@@ -258,8 +445,8 @@ const PerpetualMarket = () => {
       <div className="flex items-center h-16 px-4">
         <div className="flex items-center space-x-2 w-72">
           <PerpetualPairDropdown 
-            pairs={pairs}
-            selectedPairId={selectedToken}
+            pairs={tradingPairs}
+            selectedPairId={selectedTokenId || ''}
             onPairSelect={handlePairSelect}
           />
         </div>
@@ -268,10 +455,10 @@ const PerpetualMarket = () => {
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1 underline'>Mark</div>
             <div className='text-gray-900 dark:text-white'>
-              {currentPrice 
-                ? `$${currentPrice.toLocaleString('en-US', {
+              {marketData.price != null
+                ? `$${marketData.price.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
-                    maximumFractionDigits: currentPrice < 0.01 ? 8 : 2
+                    maximumFractionDigits: marketData.price < 0.01 ? 8 : 2
                   })}` 
                 : '-'}
             </div>
@@ -280,29 +467,29 @@ const PerpetualMarket = () => {
           <div className="text-gray-600 dark:text-gray-400 text-xs w-40">
             <div className='font-semibold text-[15px] pb-1'>Open Interest</div>
             <div className='text-gray-900 dark:text-white'>
-              {openInterest 
-                ? `$${formatVolume(openInterest)}` 
+              {marketData.openInterest != null
+                ? `$${formatVolume(marketData.openInterest)}` 
                 : '-'}
             </div>
           </div>
           
           <div className="text-gray-600 dark:text-gray-400 text-xs w-36">
             <div className='font-semibold text-[15px] pb-1'>Funding</div>
-            {fundingRate !== null ? (
+            {marketData.fundingRate !== null ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger className="flex items-center">
                     <span className={
-                      fundingRate >= 0 
+                      marketData.fundingRate >= 0 
                         ? 'text-green-600 dark:text-[#5BBB6F]' 
                         : 'text-red-600 dark:text-[#FF6978]'
                     }>
-                      {fundingRate >= 0 ? '+' : ''}
-                      {(fundingRate * 100).toFixed(4)}%
+                      {marketData.fundingRate >= 0 ? '+' : ''}
+                      {(marketData.fundingRate * 100).toFixed(4)}%
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Annualized: {(fundingRate * 100 * 3 * 365).toFixed(2)}%</p>
+                    <p>Annualized: {(marketData.fundingRate * 100 * 3 * 365).toFixed(2)}%</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

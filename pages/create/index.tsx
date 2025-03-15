@@ -5,6 +5,8 @@ import CreatePoolComponent from "@/components/clob-dex/create-pool/create-pool";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Hexagon, ArrowLeftRight, TrendingUp } from "lucide-react";
 import MarketCreationPage from '@/components/perpetual/MarketCreationPage/MarketCreationPage';
+import CreateMarketComponent from '@/components/perpetual/create-market/create-market';
+import CreateMarketForm from '@/components/perpetual/MarketCreationPage/Test';
 
 const CreatePairFormPage = () => {
     const [activeTab, setActiveTab] = useState<'spot' | 'perpetual'>('spot');
@@ -65,7 +67,7 @@ const CreatePairFormPage = () => {
             {activeTab === 'spot' ? (
                 <CreatePoolComponent />
             ) : (
-                <MarketCreationPage />
+                <CreateMarketForm />
             )}
         </div>
     );

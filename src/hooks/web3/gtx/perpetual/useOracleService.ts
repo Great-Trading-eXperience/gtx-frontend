@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { wagmiConfig } from "@/configs/wagmi";
 import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceManagerABI";
 import { toast } from "sonner";
+import { ORACLE_ADDRESS } from "@/constants/contract-address";
 
 // Define types
 export type HexAddress = `0x${string}`;
@@ -22,8 +23,6 @@ export type OraclePrice = {
   maxBlockInterval: bigint;
 };
 
-export const ORACLE_SERVICE_MANAGER_ADDRESS = '0xe18769210e128687bf2488fc2c967e9dd6576d16' as const; // Replace with your actual address
-
 export const useOracleService = () => {
   const { address } = useAccount();
   const [currentTaskId, setCurrentTaskId] = useState<number | undefined>(undefined);
@@ -37,7 +36,7 @@ export const useOracleService = () => {
         
         try {
           const price = await readContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'getPrice',
             args: [tokenAddress]
@@ -63,7 +62,7 @@ export const useOracleService = () => {
         
         try {
           const result = await readContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'prices',
             args: [tokenAddress]
@@ -100,7 +99,7 @@ export const useOracleService = () => {
         
         try {
           const sources = await readContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'getSources',
             args: [tokenAddress]
@@ -136,7 +135,7 @@ export const useOracleService = () => {
 
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'requestNewOracleTask',
             args: [tokenAddress1, tokenAddress2, tokenPair, sources]
@@ -151,7 +150,7 @@ export const useOracleService = () => {
             // You may need to adjust this based on your contract's event structure
             try {
               const relevantLog = receipt.logs.find((log: any) => 
-                log.address.toLowerCase() === ORACLE_SERVICE_MANAGER_ADDRESS.toLowerCase()
+                log.address.toLowerCase() === ORACLE_ADDRESS.toLowerCase()
               );
               
               if (relevantLog?.topics?.[1]) {
@@ -189,7 +188,7 @@ export const useOracleService = () => {
 
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'requestOraclePriceTask',
             args: [tokenAddress]
@@ -242,7 +241,7 @@ export const useOracleService = () => {
           };
 
           const hash = await writeContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'registerOperatorToAVS',
             args: [operator, operatorSignature]
@@ -279,7 +278,7 @@ export const useOracleService = () => {
 
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'deregisterOperatorFromAVS',
             args: [operator]
@@ -313,7 +312,7 @@ export const useOracleService = () => {
       queryFn: async () => {
         try {
           const strategies = await readContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'getRestakeableStrategies',
             args: []
@@ -337,7 +336,7 @@ export const useOracleService = () => {
         
         try {
           const strategies = await readContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'getOperatorRestakedStrategies',
             args: [operatorAddress]
@@ -369,7 +368,7 @@ export const useOracleService = () => {
 
         try {
           const hash = await writeContract(wagmiConfig, {
-            address: ORACLE_SERVICE_MANAGER_ADDRESS,
+            address: ORACLE_ADDRESS,
             abi: GTXOracleServiceManagerABI,
             functionName: 'setPrice',
             args: [tokenAddress, price]

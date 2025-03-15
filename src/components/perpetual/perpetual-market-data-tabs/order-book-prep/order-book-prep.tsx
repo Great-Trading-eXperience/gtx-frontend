@@ -19,7 +19,7 @@ interface OrderBook {
 type ViewType = 'both' | 'bids' | 'asks';
 type DecimalPrecision = '0.01' | '0.1' | '1';
 
-const STANDARD_ORDER_COUNT = 8;
+const STANDARD_ORDER_COUNT = 9;
 
 // Mock data for the order book
 const MOCK_DATA = {

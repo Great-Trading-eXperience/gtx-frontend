@@ -3,8 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { writeContract, waitForTransactionReceipt } from "wagmi/actions";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import routerABI from "@/abis/perp/Router"; // You'll need to create this ABI file
+import routerABI from "@/abis/gtx/perpetual/RouterABI"; 
 import { wagmiConfig } from "@/configs/wagmi";
+import { encodeFunctionData } from "viem";
 
 // Type definitions for clarity
 export type HexAddress = `0x${string}`;
@@ -108,40 +109,32 @@ export const usePerpetualOrder = (
           )
         );
 
-        // Create multicall data array for all operations
-        const multicallData = [
-          // 1. Send WNT for execution fee
-          {
-            functionName: "sendWnt",
-            args: [orderVaultAddress, executionFeeAmount]
-          },
-          
-          // 2. Send collateral token
-          {
-            functionName: "sendTokens",
-            args: [params.initialCollateralToken, orderVaultAddress, collateralAmount]
-          },
-          
-          // 3. Create order
-          {
-            functionName: "createOrder",
-            args: [params]
-          }
-        ];
+        // Use type assertions to ensure TypeScript understands the correct types
+        // Here we explicitly cast function names to match what's in your ABI
+        const sendWntData = encodeFunctionData({
+          abi: routerABI, 
+          functionName: 'sendWnt' as any,
+          args: [orderVaultAddress, executionFeeAmount]
+        });
+        
+        const sendTokensData = encodeFunctionData({
+          abi: routerABI,
+          functionName: 'sendTokens' as any,
+          args: [params.initialCollateralToken, orderVaultAddress, collateralAmount]
+        });
+        
+        const createOrderData = encodeFunctionData({
+          abi: routerABI,
+          functionName: 'createOrder' as any,
+          args: [params] as any
+        });
 
-        // Execute the transaction as a multicall
+        // Execute the transaction as a multicall with properly encoded data
         const hash = await writeContract(wagmiConfig, {
           abi: routerABI,
           address: routerAddress,
-          functionName: "multicall",
-          args: [multicallData.map(call => 
-            // Encode each function call
-            writeContract.encodeFunctionData({
-              abi: routerABI,
-              functionName: call.functionName,
-              args: call.args
-            })
-          )]
+          functionName: 'multicall',
+          args: [[sendWntData, sendTokensData, createOrderData]]
         });
 
         // Set the transaction hash
@@ -284,4 +277,60 @@ export const usePerpetualOrder = (
     collateralAmount,
     sizeDeltaUsd,
     executionFee = BigInt(1e9),
-    lever
+    leverageMultiplier = 10n, // Default 10x leverage
+    slippagePercentage = 5n,  // Default 5% slippage
+    triggerPrice = 0n         // Use 0 for market orders or set for limit orders
+  }: {
+    market: HexAddress;
+    collateralToken: HexAddress;
+    collateralAmount: bigint;
+    sizeDeltaUsd: bigint;
+    executionFee?: bigint;
+    leverageMultiplier?: bigint;
+    slippagePercentage?: bigint;
+    triggerPrice?: bigint;
+  }) => {
+    if (!address) {
+      toast.error("Wallet not connected");
+      return;
+    }
+
+    // Calculate acceptable price with slippage for a short position (reverse direction)
+    const acceptablePrice = triggerPrice > 0n
+      ? (triggerPrice * (100n - slippagePercentage)) / 100n
+      : (triggerPrice * (100n - slippagePercentage)) / 100n || 0n;
+
+    // Create order parameters
+    const params: CreateOrderParams = {
+      receiver: address as HexAddress,
+      cancellationReceiver: address as HexAddress,
+      callbackContract: "0x0000000000000000000000000000000000000000" as HexAddress,
+      uiFeeReceiver: "0x0000000000000000000000000000000000000000" as HexAddress,
+      market,
+      initialCollateralToken: collateralToken,
+      orderType: OrderType.MarketIncrease,
+      sizeDeltaUsd,
+      initialCollateralDeltaAmount: collateralAmount,
+      triggerPrice,
+      acceptablePrice,
+      executionFee,
+      validFromTime: 0n,
+      isLong: false, // False for short position
+      autoCancel: false
+    };
+
+    return createOrderMutation.mutateAsync({
+      params,
+      collateralAmount,
+      executionFeeAmount: executionFee
+    });
+  };
+
+  return {
+    createOrderMutation,
+    createMarketLongPosition,
+    createMarketShortPosition,
+    steps,
+    txHash
+  };
+};
