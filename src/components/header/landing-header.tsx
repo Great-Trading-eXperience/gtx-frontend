@@ -10,6 +10,8 @@ const LandingHeader = () => {
     { destination: "/", label: "Home" },
     { destination: "/spot", label: "Spot" },
     { destination: "/perpetual", label: "Perpetual" },
+    { destination: "/faucet", label: "Faucet" },
+    { destination: "/create", label: "Create" },
     { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" },
   ]
 
