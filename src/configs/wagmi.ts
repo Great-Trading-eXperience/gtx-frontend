@@ -82,7 +82,7 @@ const riseSepolia: Chain = {
 
 // Monad
 const monad: Chain = {
-  id: 10143, 
+  id: 10143,
   name: "Monad Testnet",
   nativeCurrency: {
     decimals: 18,
@@ -101,6 +101,32 @@ const monad: Chain = {
     default: {
       name: "Monad Explorer",
       url: "https://testnet.monadexplorer.com",
+    },
+  },
+  testnet: true,
+};
+
+// GTXpresso chain
+const gtxpresso: Chain = {
+  id: 1020201,
+  name: "GTXpresso",
+  nativeCurrency: {
+    decimals: 18,
+    name: "GTX Ether",
+    symbol: "ETH",
+  },
+  rpcUrls: {
+    default: {
+      http: ["http://157.173.201.26:8547"],
+    },
+    public: {
+      http: ["http://157.173.201.26:8547"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "GTXpresso Explorer",
+      url: "http://157.173.201.26:4000", // Placeholder - update if there's a real explorer
     },
   },
   testnet: true,
@@ -130,7 +156,7 @@ const connectors = connectorsForWallets(
 );
 
 export const wagmiConfig = createConfig({
-  chains: [riseSepolia, localChain, conduitChain, arbitrumSepolia, monad, sepolia],
+  chains: [riseSepolia, localChain, conduitChain, arbitrumSepolia, monad, sepolia, gtxpresso],
   connectors: connectors,
   transports: {
     [riseSepolia.id]: http("https://testnet.riselabs.xyz"),
@@ -138,6 +164,7 @@ export const wagmiConfig = createConfig({
     [conduitChain.id]: http("https://odyssey.ithaca.xyz"),
     [arbitrumSepolia.id]: http("https://sepolia-rollup.arbitrum.io/rpc"),
     [sepolia.id]: http("https://sepolia.infura.io/v3/jBG4sMyhez7V13jNTeQKfVfgNa54nCmF"),
-    [monad.id]: http("https://testnet-rpc.monad.xyz")
+    [monad.id]: http("https://testnet-rpc.monad.xyz"),
+    [gtxpresso.id]: http("http://157.173.201.26:8547")
   }
 })

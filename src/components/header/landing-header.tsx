@@ -13,6 +13,7 @@ const LandingHeader = () => {
     { destination: "/earn", label: "Earn" },
     { destination: "/faucet", label: "Faucet" },
     { destination: "/create", label: "Create" },
+    { destination: "/swap", label: "Swap" },
     { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" },
   ]
 
@@ -23,7 +24,7 @@ const LandingHeader = () => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center">
-              <img src="/logo/gtx-white.png" alt="GTX Logo" className="h-7 w-7 mr-2" />
+              <img src="/logo/gtx-update.png" alt="GTX Logo" className="h-7 w-7 mr-2" />
               <span className="text-white text-lg font-medium">GTX</span>
             </Link>
           </div>

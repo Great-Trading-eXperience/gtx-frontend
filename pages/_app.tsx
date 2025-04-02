@@ -16,11 +16,16 @@ import { Toaster } from "@/components/ui/toaster";
 import LandingHeader from "@/components/header/landing-header";
 import { useRouter } from "next/router";
 import GradientLoader from "@/components/gradient-loader/gradient-loader";
+import { arbitrumSepolia } from "wagmi/chains"
 
 const queryClient = new QueryClient();
 
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;
+const RISE_SEPOLIA_CHAIN_ID = 11155931;
+const CONDUIT_CHAIN_ID = 911867;
+const LOCAL_ANVIL_CHAIN_ID = 31337;
+const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 // Add type to support getLayout
 type NextPageWithLayout = NextPage & {
@@ -106,7 +111,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={MONAD_TESTNET_CHAIN_ID} // Updated to use Monad as default
+          initialChain={ARBITRUM_SEPOLIA_CHAIN_ID} // Updated to use Arbitrum as default
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",

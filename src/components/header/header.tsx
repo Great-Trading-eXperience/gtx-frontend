@@ -18,6 +18,7 @@ const Header = () => {
     { destination: "/earn", label: "Earn" },
     { destination: "/faucet", label: "Faucet" },
     { destination: "/create", label: "Create" },
+    { destination: "/swap", label: "Swap" },
     // { destination: "/perpetual/create-market", label: "Create Market" },
     { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" }
   ];
@@ -36,7 +37,7 @@ const Header = () => {
         <div className="flex flex-row gap-4 items-center">
           <Link href="/" className="flex flex-row items-center gap-2">
             <img
-              src={"/logo/gtx-white.png"}
+              src={"/logo/gtx-update.png"}
               className="h-9"
               alt="GTX Logo"
             />
