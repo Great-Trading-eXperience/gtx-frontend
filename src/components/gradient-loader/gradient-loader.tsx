@@ -88,7 +88,7 @@ const GradientLoader: React.FC = () => {
             <span className="gradient-span blur-50"></span>
           </div>
           <img 
-            src="/logo/gtx-gradient.png" 
+            src="/logo/gtx-update.png" 
             alt="Loading" 
             className="center-image"
           />

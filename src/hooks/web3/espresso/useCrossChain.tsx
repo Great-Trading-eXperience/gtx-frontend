@@ -1,3 +1,4 @@
+// CrossChainProvider.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAccount } from 'wagmi';
 import { readContract } from '@wagmi/core';
@@ -13,12 +14,12 @@ const NETWORK = {
 };
 
 /**
- * Hyperlane configuration
+ * Hyperlane configuration with router addresses
  */
 const HYPERLANE = {
   MAILBOX: process.env.NEXT_PUBLIC_MAILBOX as HexAddress,
   ROUTER: {
-    ARBITRUM_SEPOLIA: process.env.NEXT_PUBLIC_ROUTER_ADDRESS as HexAddress,
+    ARBITRUM_SEPOLIA: process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress,
     GTXPRESSO: process.env.NEXT_PUBLIC_ROUTER_GTX_ADDRESS as HexAddress,
   },
   DOMAIN: {
@@ -52,23 +53,27 @@ const TOKENS = {
   }
 };
 
-/**
- * Get current domain ID
- */
-const getCurrentDomainId = (): number => {
-  switch (NETWORK.NAME) {
-    case 'arbitrum-sepolia':
-      return HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
-    case 'gtxpresso':
-      return HYPERLANE.DOMAIN.GTXPRESSO;
-    default:
-      return HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
+// Get current domain ID
+const getCurrentDomainId = async (router: HexAddress): Promise<number> => {
+  try {
+    const domain = await readContract(
+      wagmiConfig,
+      {
+        address: router,
+        abi: HyperlaneABI,
+        functionName: 'localDomain',
+      }
+    );
+    return Number(domain);
+  } catch (err) {
+    console.warn('Failed to read localDomain from contract:', err);
+    // Fallback based on router address
+    const isGtx = router.toLowerCase() === HYPERLANE.ROUTER.GTXPRESSO.toLowerCase();
+    return isGtx ? HYPERLANE.DOMAIN.GTXPRESSO : HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
   }
 };
 
-/**
- * Get domain ID for a specific network
- */
+// Get domain ID for network
 const getDomainId = (network: string): number => {
   switch (network) {
     case 'arbitrum-sepolia':
@@ -80,11 +85,9 @@ const getDomainId = (network: string): number => {
   }
 };
 
-/**
- * Get current router address
- */
-const getCurrentRouterAddress = (): HexAddress => {
-  switch (NETWORK.NAME) {
+// Get router address for network
+const getRouterAddressForNetwork = (network: string): HexAddress => {
+  switch (network) {
     case 'arbitrum-sepolia':
       return HYPERLANE.ROUTER.ARBITRUM_SEPOLIA;
     case 'gtxpresso':
@@ -94,9 +97,12 @@ const getCurrentRouterAddress = (): HexAddress => {
   }
 };
 
-/**
- * Get network tokens
- */
+// Get current router address
+const getCurrentRouterAddress = (): HexAddress => {
+  return getRouterAddressForNetwork(NETWORK.NAME);
+};
+
+// Get network tokens
 const getNetworkTokens = (network: string): Record<string, HexAddress> => {
   switch (network) {
     case 'arbitrum-sepolia':
@@ -108,11 +114,9 @@ const getNetworkTokens = (network: string): Record<string, HexAddress> => {
   }
 };
 
-/**
- * Get remote network based on current network
- */
-const getRemoteNetwork = (): string => {
-  switch (NETWORK.NAME) {
+// Get remote network based on current network
+const getRemoteNetwork = (currentNetwork: string = NETWORK.NAME): string => {
+  switch (currentNetwork) {
     case 'arbitrum-sepolia':
       return 'gtxpresso';
     case 'gtxpresso':
@@ -122,32 +126,39 @@ const getRemoteNetwork = (): string => {
   }
 };
 
-/**
- * Get remote router address
- */
-const getRemoteRouterAddress = (): HexAddress => {
-  switch (NETWORK.NAME) {
-    case 'arbitrum-sepolia':
-      return HYPERLANE.ROUTER.GTXPRESSO;
-    case 'gtxpresso':
-      return HYPERLANE.ROUTER.ARBITRUM_SEPOLIA;
-    default:
-      return HYPERLANE.ROUTER.GTXPRESSO;
-  }
+// Get remote router address based on current network
+const getRemoteRouterAddress = (currentNetwork: string = NETWORK.NAME): HexAddress => {
+  return getRouterAddressForNetwork(getRemoteNetwork(currentNetwork));
 };
 
-/**
- * Get remote domain ID
- */
-const getRemoteDomainId = (): number => {
-  switch (NETWORK.NAME) {
-    case 'arbitrum-sepolia':
-      return HYPERLANE.DOMAIN.GTXPRESSO;
-    case 'gtxpresso':
-      return HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
-    default:
-      return HYPERLANE.DOMAIN.GTXPRESSO;
-  }
+// Get remote domain ID based on current network
+const getRemoteDomainId = (currentNetwork: string = NETWORK.NAME): number => {
+  return getDomainId(getRemoteNetwork(currentNetwork));
+};
+
+// Check if a token is supported on a network
+const isTokenSupportedOnNetwork = (token: HexAddress, network: string): boolean => {
+  const networkTokens = getNetworkTokens(network);
+  return Object.values(networkTokens).some(addr => addr.toLowerCase() === token.toLowerCase());
+};
+
+// Get equivalent token on remote network
+const getEquivalentTokenOnNetwork = (
+  token: HexAddress, 
+  sourceNetwork: string, 
+  targetNetwork: string
+): HexAddress | null => {
+  // Find the token symbol in source network
+  const sourceTokens = getNetworkTokens(sourceNetwork);
+  const tokenSymbol = Object.keys(sourceTokens).find(
+    symbol => sourceTokens[symbol].toLowerCase() === token.toLowerCase()
+  );
+  
+  if (!tokenSymbol) return null;
+  
+  // Get the equivalent token on target network
+  const targetTokens = getNetworkTokens(targetNetwork);
+  return targetTokens[tokenSymbol] || null;
 };
 
 // Context type definition
@@ -162,10 +173,16 @@ interface CrossChainContextType {
   isRouterEnabled: boolean;
   checkRemoteRouter: () => Promise<boolean>;
   isReadOnly: boolean;
-  // Add helper functions for easier access
+  // Helper functions
   getTokens: (network?: string) => Record<string, HexAddress>;
   getRemoteTokens: () => Record<string, HexAddress>;
   getDomainId: (network: string) => number;
+  getRouterAddressForNetwork: (network: string) => HexAddress;
+  isTokenSupportedOnNetwork: (token: HexAddress, network: string) => boolean;
+  getEquivalentTokenOnNetwork: (token: HexAddress, sourceNetwork: string, targetNetwork: string) => HexAddress | null;
+  // New helper functions for gas estimation
+  estimateGasPayment: (sourceNetwork: string, destinationNetwork: string) => Promise<string>;
+  getNetworkGasToken: (network: string) => { symbol: string, address: HexAddress };
 }
 
 // Default context values
@@ -182,7 +199,12 @@ const defaultContextValue: CrossChainContextType = {
   isReadOnly: true,
   getTokens: (network?: string) => getNetworkTokens(network || NETWORK.NAME),
   getRemoteTokens: () => getNetworkTokens(getRemoteNetwork()),
-  getDomainId: getDomainId,
+  getDomainId,
+  getRouterAddressForNetwork,
+  isTokenSupportedOnNetwork,
+  getEquivalentTokenOnNetwork,
+  estimateGasPayment: async () => '0.0005',
+  getNetworkGasToken: () => ({ symbol: 'ETH', address: '0x0000000000000000000000000000000000000000' }),
 };
 
 // Create context
@@ -209,7 +231,7 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     const initialize = async () => {
       try {
-        // Try to read current domain from contract with fallback to hardcoded value
+        // Try to read current domain from contract
         let domain;
         try {
           domain = await readContract(
@@ -221,14 +243,14 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
             }
           );
         } catch (domainError) {
-          console.warn('Failed to read localDomain from contract, using fallback value:', domainError);
-          domain = getCurrentDomainId();
+          console.warn('Failed to read localDomain from contract:', domainError);
+          domain = getDomainId(currentNetwork);
         }
         
         setCurrentDomain(Number(domain));
-        setRemoteDomain(getRemoteDomainId());
+        setRemoteDomain(getRemoteDomainId(currentNetwork));
         
-        // Read owner from contract with fallback
+        // Read owner from contract
         let owner;
         try {
           owner = await readContract(
@@ -240,14 +262,14 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
             }
           ) as HexAddress;
         } catch (ownerError) {
-          console.warn('Failed to read owner from contract, using default value:', ownerError);
+          console.warn('Failed to read owner from contract:', ownerError);
           owner = process.env.NEXT_PUBLIC_ROUTER_OWNER as HexAddress || 
                  '0x0000000000000000000000000000000000000000' as HexAddress;
         }
         
         setRouterOwner(owner);
         
-        // Check if remote router is enrolled with fallback
+        // Check if remote router is enrolled
         let isEnrolled = false;
         try {
           const remoteRouterBytes32 = await readContract(
@@ -256,28 +278,28 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
               address: currentRouter,
               abi: HyperlaneABI,
               functionName: 'routers',
-              args: [getRemoteDomainId()],
+              args: [getRemoteDomainId(currentNetwork)],
             }
           );
           
           // If remote router bytes32 is not all zeros, it's enrolled
           isEnrolled = remoteRouterBytes32 !== '0x0000000000000000000000000000000000000000000000000000000000000000';
         } catch (routerError) {
-          console.warn('Failed to check remote router enrollment, assuming not enrolled:', routerError);
+          console.warn('Failed to check remote router enrollment:', routerError);
           isEnrolled = false;
         }
         
         setIsRouterEnabled(isEnrolled);
         
-        // Check if connected wallet is owner or read-only
+        // Check if connected wallet is owner
         setIsReadOnly(isConnected ? owner.toLowerCase() !== address?.toLowerCase() : true);
         
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize CrossChainProvider:', error);
         // Set default values on error
-        setCurrentDomain(getCurrentDomainId());
-        setRemoteDomain(getRemoteDomainId());
+        setCurrentDomain(getDomainId(currentNetwork));
+        setRemoteDomain(getRemoteDomainId(currentNetwork));
         setIsInitialized(true);
       }
     };
@@ -294,7 +316,7 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
           address: currentRouter,
           abi: HyperlaneABI,
           functionName: 'routers',
-          args: [getRemoteDomainId()],
+          args: [getRemoteDomainId(currentNetwork)],
         }
       );
       
@@ -307,9 +329,43 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
   
+  // Get gas payment estimate for cross-chain transfer
+  const estimateGasPayment = async (sourceNetwork: string, destinationNetwork: string): Promise<string> => {
+    try {
+      const sourceRouter = getRouterAddressForNetwork(sourceNetwork);
+      const destinationDomain = getDomainId(destinationNetwork);
+      
+      const gasPayment = await readContract(
+        wagmiConfig,
+        {
+          address: sourceRouter,
+          abi: HyperlaneABI,
+          functionName: 'quoteGasPayment',
+          args: [destinationDomain],
+        }
+      );
+      
+      // Convert to ETH string (assuming 18 decimals)
+      return (Number(gasPayment) / 10**18).toFixed(6);
+    } catch (error) {
+      console.warn('Failed to estimate gas payment:', error);
+      // Return default estimate
+      return '0.0005';
+    }
+  };
+  
+  // Get gas token for a network
+  const getNetworkGasToken = (network: string) => {
+    // Currently all networks use ETH as gas token
+    return { 
+      symbol: 'ETH', 
+      address: '0x0000000000000000000000000000000000000000' as HexAddress 
+    };
+  };
+  
   // Helper functions
   const getTokens = (network?: string) => getNetworkTokens(network || currentNetwork);
-  const getRemoteTokens = () => getNetworkTokens(getRemoteNetwork());
+  const getRemoteTokens = () => getNetworkTokens(getRemoteNetwork(currentNetwork));
   
   // Context value
   const contextValue: CrossChainContextType = {
@@ -326,6 +382,11 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
     getTokens,
     getRemoteTokens,
     getDomainId,
+    getRouterAddressForNetwork,
+    isTokenSupportedOnNetwork,
+    getEquivalentTokenOnNetwork,
+    estimateGasPayment,
+    getNetworkGasToken,
   };
   
   return (
@@ -338,7 +399,7 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
 // Custom hook to use the context
 export const useCrossChain = () => useContext(CrossChainContext);
 
-// Export all helper functions for potential standalone use
+// Export utility functions for standalone use
 export {
   NETWORK,
   HYPERLANE,
@@ -349,7 +410,10 @@ export {
   getNetworkTokens,
   getRemoteNetwork,
   getRemoteRouterAddress,
-  getRemoteDomainId
+  getRemoteDomainId,
+  getRouterAddressForNetwork,
+  isTokenSupportedOnNetwork,
+  getEquivalentTokenOnNetwork
 };
 
 export default CrossChainProvider;

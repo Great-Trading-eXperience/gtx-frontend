@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import type { HexAddress } from '@/types/web3/general/address'
 
 // Define TypeScript interfaces
 export interface Network {
@@ -18,21 +19,18 @@ export interface Token {
   name: string
   symbol: string
   icon: string
-  address: string
+  address: HexAddress
   description?: string
-}
-
-export interface TokensByNetwork {
-  [networkId: string]: Token[]
 }
 
 interface TokenNetworkSelectorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   networks: Network[]
-  tokens: TokensByNetwork
+  tokens: Record<string, Token[]>
   initialNetwork: Network
   onSelect: (network: Network, token: Token) => void
+  title?: string
 }
 
 export default function TokenNetworkSelector({
@@ -42,12 +40,13 @@ export default function TokenNetworkSelector({
   tokens,
   initialNetwork,
   onSelect,
+  title = "Select a token"
 }: TokenNetworkSelectorProps): JSX.Element {
   const [selectedNetwork, setSelectedNetwork] = useState<Network>(initialNetwork)
   const [networkSearch, setNetworkSearch] = useState<string>("")
   const [tokenSearch, setTokenSearch] = useState<string>("")
 
-  // Reset search and selected network when dialog opens
+  // Reset search and update selected network when dialog opens or initialNetwork changes
   useEffect(() => {
     if (open) {
       setSelectedNetwork(initialNetwork)
@@ -61,20 +60,28 @@ export default function TokenNetworkSelector({
     ? networks.filter((network) => network.name.toLowerCase().includes(networkSearch.toLowerCase()))
     : networks
 
-  // Filter tokens based on search
+  // Filter tokens based on search and ensure we have tokens for the selected network
+  const availableTokens = tokens[selectedNetwork.id] || []
   const filteredTokens = tokenSearch
-    ? tokens[selectedNetwork.id].filter(
+    ? availableTokens.filter(
         (token) =>
           token.symbol.toLowerCase().includes(tokenSearch.toLowerCase()) ||
           token.name.toLowerCase().includes(tokenSearch.toLowerCase()) ||
           token.address.toLowerCase().includes(tokenSearch.toLowerCase()),
       )
-    : tokens[selectedNetwork.id]
+    : availableTokens
 
   // Handle token selection
   const handleTokenSelect = (token: Token) => {
     onSelect(selectedNetwork, token)
     onOpenChange(false)
+  }
+
+  // Handle image error
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.currentTarget
+    target.onerror = null
+    target.src = "/tokens/default-token.png"
   }
 
   return (
@@ -102,9 +109,10 @@ export default function TokenNetworkSelector({
                   }`}
                 >
                   <img
-                    src={network.icon || "/placeholder.svg?height=32&width=32"}
+                    src={network.icon}
                     alt={network.name}
                     className="h-6 w-6 rounded-full"
+                    onError={handleImageError}
                   />
                   <span className="font-medium">{network.name}</span>
                 </button>
@@ -116,9 +124,9 @@ export default function TokenNetworkSelector({
           <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold">Select a token</h2>
+                <h2 className="text-xl font-bold">{title}</h2>
                 <p className="text-sm text-gray-400">
-                  Select a token from our default list or search for a token by symbol or address.
+                  Select a token from {selectedNetwork.name} network
                 </p>
               </div>
               <Button
@@ -134,7 +142,7 @@ export default function TokenNetworkSelector({
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder="Search by token or address"
+                placeholder="Search by token name or address"
                 value={tokenSearch}
                 onChange={(e) => setTokenSearch(e.target.value)}
                 className="border-white/10 bg-[#1A1A1A] pl-9 text-white placeholder:text-gray-500"
@@ -150,9 +158,10 @@ export default function TokenNetworkSelector({
                   className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 hover:bg-white/20 transition-colors"
                 >
                   <img
-                    src={token.icon || "/placeholder.svg?height=24&width=24"}
+                    src={token.icon}
                     alt={token.symbol}
                     className="h-6 w-6 rounded-full"
+                    onError={handleImageError}
                   />
                   <span className="font-medium">{token.symbol}</span>
                 </button>
@@ -162,30 +171,37 @@ export default function TokenNetworkSelector({
             {/* All Tokens List */}
             <div>
               <h3 className="mb-2 text-lg font-medium">All Tokens</h3>
-              <div className="space-y-2">
-                {filteredTokens.map((token) => (
-                  <button
-                    key={token.id}
-                    onClick={() => handleTokenSelect(token)}
-                    className="flex w-full items-center justify-between rounded-lg p-3 hover:bg-white/10 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={token.icon || "/placeholder.svg?height=32&width=32"}
-                        alt={token.symbol}
-                        className="h-8 w-8 rounded-full"
-                      />
-                      <div className="text-left">
-                        <div className="font-medium">{token.symbol}</div>
-                        <div className="text-sm text-gray-400">{token.name}</div>
+              {filteredTokens.length === 0 ? (
+                <div className="py-4 text-center text-gray-400">
+                  No tokens found. Try a different search term.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredTokens.map((token) => (
+                    <button
+                      key={token.id}
+                      onClick={() => handleTokenSelect(token)}
+                      className="flex w-full items-center justify-between rounded-lg p-3 hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={token.icon}
+                          alt={token.symbol}
+                          className="h-8 w-8 rounded-full"
+                          onError={handleImageError}
+                        />
+                        <div className="text-left">
+                          <div className="font-medium">{token.symbol}</div>
+                          <div className="text-sm text-gray-400">{token.name}</div>
+                        </div>
                       </div>
-                    </div>
-                    {token.description && (
-                      <div className="text-sm text-gray-400">{token.description}</div>
-                    )}
-                  </button>
-                ))}
-              </div>
+                      {token.description && (
+                        <div className="text-sm text-gray-400">{token.description}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
