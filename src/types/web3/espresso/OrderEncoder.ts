@@ -23,6 +23,41 @@ export interface OrderData {
   data: `0x${string}`;
 }
 
+// Define a type for the encoded order parameters
+type EncodedOrderParams = {
+  sender: `0x${string}`;
+  recipient: `0x${string}`;
+  inputToken: `0x${string}`;
+  outputToken: `0x${string}`;
+  targetInputToken: `0x${string}`;
+  targetOutputToken: `0x${string}`;
+  amountIn: bigint;
+  amountOut: bigint;
+  originDomain: number;
+  destinationDomain: number;
+  targetDomain: number;
+  destinationSettler: `0x${string}`;
+  sourceSettler: `0x${string}`;
+  fillDeadline: number;
+  action: number;
+  nonce: bigint;
+  data: `0x${string}`;
+};
+
+// Helper function to convert address to bytes32
+const toBytes32 = (value: string): `0x${string}` => {
+  // If it's already 66 characters long (including '0x'), return as is
+  if (value.length === 66) return value as `0x${string}`;
+  
+  // If it's a standard Ethereum address, pad it
+  if (value.startsWith('0x') && value.length === 42) {
+    return `0x${value.slice(2).padStart(64, '0')}` as `0x${string}`;
+  }
+  
+  // If it's not a valid address, throw an error
+  throw new Error(`Invalid address format: ${value}`);
+};
+
 export const OrderEncoder = {
   // Match the contract's orderDataType constant
   orderDataType: (): `0x${string}` => 
@@ -35,46 +70,52 @@ export const OrderEncoder = {
     // Convert nonce to bigint regardless of input type
     const nonce = BigInt(orderData.nonce);
     
+    const abiParams = [
+      {
+        type: 'tuple',
+        components: [
+          { type: 'bytes32', name: 'sender' },
+          { type: 'bytes32', name: 'recipient' },
+          { type: 'bytes32', name: 'inputToken' },
+          { type: 'bytes32', name: 'outputToken' },
+          { type: 'bytes32', name: 'targetInputToken' },
+          { type: 'bytes32', name: 'targetOutputToken' },
+          { type: 'uint256', name: 'amountIn' },
+          { type: 'uint256', name: 'amountOut' },
+          { type: 'uint32', name: 'originDomain' },
+          { type: 'uint32', name: 'destinationDomain' },
+          { type: 'uint32', name: 'targetDomain' },
+          { type: 'bytes32', name: 'destinationSettler' },
+          { type: 'bytes32', name: 'sourceSettler' },
+          { type: 'uint32', name: 'fillDeadline' },
+          { type: 'uint8', name: 'action' },
+          { type: 'uint256', name: 'nonce' },
+          { type: 'bytes', name: 'data' }
+        ]
+      }
+    ];
+
     return encodeAbiParameters(
-      parseAbiParameters([
-        'bytes32 sender,', 
-        'bytes32 recipient,', 
-        'bytes32 inputToken,', 
-        'bytes32 outputToken,', 
-        'bytes32 targetInputToken', 
-        'bytes32 targetOutputToken', 
-        'uint256 amountIn,', 
-        'uint256 amountOut,', 
-        'uint32 originDomain,', 
-        'uint32 destinationDomain,', 
-        'uint32 targetDomain,', 
-        'bytes32 destinationSettler,', 
-        'bytes32 sourceSettler,', 
-        'uint32 fillDeadline,', 
-        'uint8 action,', 
-        'uint256 nonce,',
-        'bytes data'
-      ]),
-      [
-        orderData.sender,
-        orderData.recipient,
-        orderData.inputToken,
-        orderData.outputToken,
-        orderData.targetInputToken,
-        orderData.targetOutputToken,
-        orderData.amountIn,
-        orderData.amountOut,
-        orderData.originDomain,
-        orderData.destinationDomain,
-        orderData.targetDomain,
-        orderData.destinationSettler,
-        orderData.sourceSettler,
-        orderData.fillDeadline,
-        action, // Use the converted action
-        nonce, // Use the converted nonce
-        orderData.data
-      ]
-    );
+      abiParams,
+      [{
+        sender: orderData.sender,
+        recipient: orderData.recipient,
+        inputToken: orderData.inputToken,
+        outputToken: orderData.outputToken,
+        targetInputToken: orderData.targetInputToken,
+        targetOutputToken: orderData.targetOutputToken,
+        amountIn: orderData.amountIn,
+        amountOut: orderData.amountOut,
+        originDomain: orderData.originDomain,
+        destinationDomain: orderData.destinationDomain,
+        targetDomain: orderData.targetDomain,
+        destinationSettler: orderData.destinationSettler,
+        sourceSettler: orderData.sourceSettler,
+        fillDeadline: orderData.fillDeadline,
+        action: action,
+        nonce: nonce,
+        data: orderData.data
+      }])
   },
   
   id: (orderData: OrderData): `0x${string}` => {

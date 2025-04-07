@@ -117,10 +117,10 @@ const gtxpresso: Chain = {
   },
   rpcUrls: {
     default: {
-      http: ["http://157.173.201.26:8547"],
+      http: ["https://rpc.gtx.alwaysbedream.dev"],
     },
     public: {
-      http: ["http://157.173.201.26:8547"],
+      http: ["https://rpc.gtx.alwaysbedream.dev"],
     },
   },
   blockExplorers: {

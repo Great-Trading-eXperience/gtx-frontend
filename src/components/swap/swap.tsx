@@ -14,6 +14,7 @@ import type { HexAddress } from '@/types/web3/general/address';
 import { useCrossChain } from '@/hooks/web3/espresso/useCrossChain';
 import { useCrossChainOrder } from '@/hooks/web3/espresso/useCrossChainOrder';
 import TokenNetworkSelector from './token-network-selector';
+import { SwapProgressDialog } from '../ui/swap-progress-dialog';
 
 // Types for token and network selection
 export interface Network {
@@ -53,7 +54,10 @@ const CrossChainOrderForm: React.FC = () => {
     currentNetwork === 'arbitrum-sepolia' ? 'gtxpresso' : 'arbitrum-sepolia'
   );
   const [sourceNetworkRouter, setSourceNetworkRouter] = useState<HexAddress>(currentRouter);
-  
+
+  // State for swap progress
+  const [isSwapProgressDialogOpen, setSwapProgressDialogOpen] = useState(false)
+
   // State for tokens and amounts
   const [sourceTokensList, setSourceTokensList] = useState<Record<string, HexAddress>>(getTokens(sourceNetworkId));
   const [destTokensList, setDestTokensList] = useState<Record<string, HexAddress>>(getTokens(destNetworkId));
@@ -61,25 +65,25 @@ const CrossChainOrderForm: React.FC = () => {
   const [estimatedReceived, setEstimatedReceived] = useState<string>('0');
   const [minReceived, setMinReceived] = useState<string>('0');
   const [gasFeesEth, setGasFeesEth] = useState<string>('0.0005');
-  
+
   // Transaction status
   const [txStatus, setTxStatus] = useState<string | null>(null);
   const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null);
-  
+
   // Token selector state
   const [selectorOpen, setSelectorOpen] = useState<boolean>(false);
   const [isSellSelector, setIsSellSelector] = useState<boolean>(true);
-  
+
   // Client-side rendering state
   const [isClient, setIsClient] = useState(false);
-  
+
   // Initialize cross-chain order hook
-  const { 
-    createOrder, 
-    getOrderStatus, 
-    isProcessing, 
-    txHash, 
-    error 
+  const {
+    createOrder,
+    getOrderStatus,
+    isProcessing,
+    txHash,
+    error
   } = useCrossChainOrder(sourceNetworkRouter);
 
   // Networks for the selector
@@ -90,7 +94,7 @@ const CrossChainOrderForm: React.FC = () => {
       icon: '/network/arbitrum-spolia.png'
     }
   ];
-  
+
   const destNetworks: Network[] = [
     {
       id: 'arbitrum-sepolia',
@@ -163,9 +167,9 @@ const CrossChainOrderForm: React.FC = () => {
           'FLOKI': 'floki.png',
           'NATIVE': 'eth.png'
         };
-        
+
         const iconFilename = iconMap[symbol] || `${symbol.toLowerCase()}.png`;
-        
+
         return {
           id: symbol.toLowerCase(),
           name: getTokenFullName(symbol),
@@ -198,7 +202,7 @@ const CrossChainOrderForm: React.FC = () => {
     'arbitrum-sepolia': convertTokensForSelector(getTokens('arbitrum-sepolia'), 'arbitrum-sepolia'),
     'gtxpresso': convertTokensForSelector(getTokens('gtxpresso'), 'gtxpresso')
   };
-  
+
   // Initialize with Arbitrum Sepolia as the source network
   useEffect(() => {
     setSourceNetworkId('arbitrum-sepolia');
@@ -212,7 +216,7 @@ const CrossChainOrderForm: React.FC = () => {
   const [destNetwork, setDestNetwork] = useState<Network>(
     destNetworks.find(n => n.id === destNetworkId) || destNetworks[1]
   );
-  
+
   // Token selections
   const [sourceToken, setSourceToken] = useState<Token | null>(null);
   const [destToken, setDestToken] = useState<Token | null>(null);
@@ -258,7 +262,7 @@ const CrossChainOrderForm: React.FC = () => {
   // Mock wallet balances for each token
   const getMockTokenBalance = (address: HexAddress | undefined, symbol: string): string => {
     if (!address) return "0";
-    
+
     const balanceMap: Record<string, string> = {
       'WETH': '2.45',
       'ETH': '3.21',
@@ -273,7 +277,7 @@ const CrossChainOrderForm: React.FC = () => {
       'SHIB': '25000000',
       'FLOKI': '890000'
     };
-    
+
     return balanceMap[symbol] || '0';
   };
 
@@ -295,12 +299,12 @@ const CrossChainOrderForm: React.FC = () => {
     };
     return priceMap[symbol] || 1;
   };
-  
+
   // Calculate exchange ratio between tokens
   const calculateExchangeRatio = (sourceSymbol: string, destSymbol: string): string => {
     const sourcePrice = getTokenUsdPrice(sourceSymbol);
     const destPrice = getTokenUsdPrice(destSymbol);
-    
+
     if (!sourcePrice || !destPrice) return '1';
     return (sourcePrice / destPrice).toFixed(6);
   };
@@ -319,7 +323,7 @@ const CrossChainOrderForm: React.FC = () => {
     // Only allow numbers and one decimal point
     const filteredValue = value.replace(/[^0-9.]/g, '');
     const parts = filteredValue.split('.');
-    
+
     if (parts.length > 2) {
       // More than one decimal point, keep only the first one
       setAmount(parts[0] + '.' + parts.slice(1).join(''));
@@ -339,12 +343,12 @@ const CrossChainOrderForm: React.FC = () => {
     if (isSellSelector) {
       // Update source token only (network is fixed to Arbitrum Sepolia)
       setSourceToken(token);
-      
+
       // Update destination token if needed for compatibility
       if (destToken && !isTokenSupportedOnNetwork(destToken.address, destNetworkId)) {
         const equivalentToken = getEquivalentTokenOnNetwork(token.address, sourceNetworkId, destNetworkId);
         if (equivalentToken) {
-          const newDestToken = tokensByNetwork[destNetworkId].find(t => 
+          const newDestToken = tokensByNetwork[destNetworkId].find(t =>
             t.address.toLowerCase() === equivalentToken.toLowerCase()
           );
           if (newDestToken) {
@@ -358,7 +362,7 @@ const CrossChainOrderForm: React.FC = () => {
       setDestNetwork(network);
       setDestToken(token);
       setDestNetworkId(network.id);
-      
+
       // Check if source token is compatible with new destination
       if (sourceToken && !isTokenSupportedOnNetwork(sourceToken.address, network.id)) {
         toast.info('Note: The selected token may not be directly supported on the destination chain');
@@ -376,10 +380,10 @@ const CrossChainOrderForm: React.FC = () => {
         toast.warning('Cannot swap - source must be Arbitrum Sepolia');
         return;
       }
-      
+
       const sourceTokenSupported = isTokenSupportedOnNetwork(sourceToken.address, destNetworkId);
       const destTokenSupported = isTokenSupportedOnNetwork(destToken.address, sourceNetworkId);
-      
+
       if (!sourceTokenSupported || !destTokenSupported) {
         toast.warning('Cannot swap - tokens are not compatible across chains');
         return;
@@ -398,13 +402,13 @@ const CrossChainOrderForm: React.FC = () => {
     if (statusCheckInterval) {
       clearInterval(statusCheckInterval);
     }
-    
+
     // Set up status checking interval
     const interval = setInterval(async () => {
       try {
         const status = await getOrderStatus(txHashToCheck);
         setTxStatus(`Order status: ${status}`);
-        
+
         if (status === 'SETTLED' || status === 'REFUNDED') {
           clearInterval(interval);
           setStatusCheckInterval(null);
@@ -413,9 +417,9 @@ const CrossChainOrderForm: React.FC = () => {
         console.error("Error checking status:", error);
       }
     }, 10000); // Check every 10 seconds
-    
+
     setStatusCheckInterval(interval);
-    
+
     // Auto-stop checking after 5 minutes
     setTimeout(() => {
       clearInterval(interval);
@@ -443,16 +447,16 @@ const CrossChainOrderForm: React.FC = () => {
       const inputTokenAddress = sourceToken.address;
       const outputTokenAddress = destToken.address;
       const recipientAddress = address as HexAddress;
-      
+
       // Get destination router and domain
       const destinationRouterAddress = getRouterAddressForNetwork(destNetwork.id);
       const destinationDomainId = getDomainId(destNetwork.id);
       const targetDomainId = destinationDomainId;
-      
+
       // Always use specific target tokens based on the successful example
       let targetInputTokenAddress: HexAddress;
       let targetOutputTokenAddress: HexAddress;
-      
+
       // If destination is GTXpresso from Arbitrum, use the pattern from successful example
       if (destNetworkId === 'gtxpresso' && sourceNetworkId === 'arbitrum-sepolia') {
         // Get the GTXpresso WETH token address for target input
@@ -465,10 +469,10 @@ const CrossChainOrderForm: React.FC = () => {
         targetInputTokenAddress = outputTokenAddress;
         targetOutputTokenAddress = outputTokenAddress;
       }
-      
+
       // Always use action 1 (Swap) for cross-chain transactions
       const action = sourceNetworkId !== destNetworkId ? 1 : 0;
-      
+
       console.log(`Creating order with parameters:`, {
         router: sourceNetworkRouter,
         destinationRouter: destinationRouterAddress,
@@ -481,6 +485,23 @@ const CrossChainOrderForm: React.FC = () => {
         amount,
         action
       });
+
+      console.log("swap.tx")
+      console.log({
+        recipient: recipientAddress,
+        inputToken: inputTokenAddress,
+        outputToken: outputTokenAddress,
+        targetInputToken: targetInputTokenAddress,
+        targetOutputToken: targetOutputTokenAddress,
+        amountIn: amount,
+        amountOut: minReceived, // Use min received amount with slippage
+        destinationDomain: destinationDomainId,
+        targetDomain: targetDomainId,
+        destinationRouter: destinationRouterAddress,
+        action: action, // Use action instead of orderAction
+      })
+
+      // return;
 
       const result = await createOrder({
         recipient: recipientAddress,
@@ -497,19 +518,20 @@ const CrossChainOrderForm: React.FC = () => {
       });
 
       if (result?.success) {
-  setTxStatus('Order created successfully!');
-  
-  if (result.txHash) {
-    // No need to set txHash as it's already managed by the hook
-    startStatusChecking(result.txHash);
-  }
-} else {
-  const errorMessage = result?.error instanceof Error
-    ? result.error.message
-    : 'Unknown error';
+        setTxStatus('Order created successfully!');
 
-  setTxStatus(`Order creation failed: ${errorMessage}`);
-}
+        if (result.txHash) {
+          // No need to set txHash as it's already managed by the hook
+          startStatusChecking(result.txHash);
+          setSwapProgressDialogOpen(true);
+        }
+      } else {
+        const errorMessage = result?.error instanceof Error
+          ? result.error.message
+          : 'Unknown error';
+
+        setTxStatus(`Order creation failed: ${errorMessage}`);
+      }
     } catch (err) {
       console.error('Error submitting order:', err);
       setTxStatus(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -517,7 +539,7 @@ const CrossChainOrderForm: React.FC = () => {
   };
 
   // Exchange rate for display
-  const exchangeRate = sourceToken && destToken 
+  const exchangeRate = sourceToken && destToken
     ? calculateExchangeRatio(sourceToken.symbol, destToken.symbol)
     : '0';
 
@@ -525,7 +547,7 @@ const CrossChainOrderForm: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
       <div className="w-full max-w-md">
         <Card className="border-white/20 bg-[#121212] p-4">
-          <div className="mb-2 text-3xl font-bold text-white">Cross-Chain Bridge</div>
+          <div className="mb-2 text-3xl font-bold text-white">Cross-Chain Swap</div>
           {sourceToken && destToken && (
             <div className="mb-6 text-blue-500">
               <span>
@@ -596,9 +618,9 @@ const CrossChainOrderForm: React.FC = () => {
                 <Wallet className="mr-1 h-4 w-4" />
                 <span>
                   {isClient
-                    ? (isConnected 
-                        ? `${getMockTokenBalance(address, sourceToken?.symbol || '')} ${sourceToken?.symbol || ''}`
-                        : "Connect wallet")
+                    ? (isConnected
+                      ? `${getMockTokenBalance(address, sourceToken?.symbol || '')} ${sourceToken?.symbol || ''}`
+                      : "Connect wallet")
                     : "Loading..."}
                 </span>
               </div>
@@ -680,9 +702,9 @@ const CrossChainOrderForm: React.FC = () => {
                 <Wallet className="mr-1 h-4 w-4" />
                 <span>
                   {isClient
-                    ? (isConnected 
-                        ? `${getMockTokenBalance(address, destToken?.symbol || '')} ${destToken?.symbol || ''}`
-                        : "Connect wallet")
+                    ? (isConnected
+                      ? `${getMockTokenBalance(address, destToken?.symbol || '')} ${destToken?.symbol || ''}`
+                      : "Connect wallet")
                     : "Loading..."}
                 </span>
               </div>
@@ -749,10 +771,10 @@ const CrossChainOrderForm: React.FC = () => {
           >
             {isClient
               ? (!isConnected
-                  ? 'Connect Wallet'
-                  : isProcessing
-                    ? 'Processing...'
-                    : `Bridge to ${destNetwork?.name}`)
+                ? 'Connect Wallet'
+                : isProcessing
+                  ? 'Processing...'
+                  : `Swap`)
               : 'Loading...'}
           </Button>
         </Card>
@@ -770,6 +792,17 @@ const CrossChainOrderForm: React.FC = () => {
           title={isSellSelector ? "Select source token" : "Select destination token"}
         />
       )}
+
+      <SwapProgressDialog
+        open={isSwapProgressDialogOpen}
+        onOpenChange={setSwapProgressDialogOpen}
+        sourceChain={sourceNetwork.name}
+        destinationChain={destNetwork.name}
+        sourceToken={`${sourceToken?.name} ${sourceToken?.address}`}
+        destinationToken={`${destToken?.name} ${destToken?.address}`}
+        amount={amount}
+        txHash={txHash}
+      />
     </div>
   );
 };

@@ -74,7 +74,7 @@ export const useCrossChainOrder = (
     try {
       // Determine if we have an orderId or txHash
       let orderId = orderIdOrTxHash;
-      
+
       // If this looks like a transaction hash, try to extract the orderId from events
       if (orderIdOrTxHash.startsWith('0x') && orderIdOrTxHash.length === 66) {
         try {
@@ -85,7 +85,7 @@ export const useCrossChainOrder = (
           console.warn('Failed to get transaction receipt:', err);
         }
       }
-      
+
       console.log(`Checking order status for ID ${orderId} on contract ${localRouterAddress}`);
 
       // Get status constants from the contract
@@ -234,6 +234,23 @@ export const useCrossChainOrder = (
       fillDeadline = Math.floor(2 ** 32 - 1),
     } = params;
 
+    console.log("createOrder")
+    console.log({
+      sender,
+      recipient,
+      inputToken,
+      outputToken,
+      targetInputToken,
+      targetOutputToken,
+      amountIn,
+      amountOut,
+      destinationDomain,
+      targetDomain,
+      destinationRouter,
+      action, // Default to Transfer (0), changed from orderAction 
+      fillDeadline,
+    })
+
     if (!address) {
       toast.error('Wallet not connected');
       return { success: false, error: new Error('Wallet not connected') };
@@ -244,31 +261,25 @@ export const useCrossChainOrder = (
       setError(null);
 
       console.log('Creating order with parameters:', {
-        inputToken,
-        outputToken,
-        targetInputToken,
-        targetOutputToken,
-        destinationDomain,
-        targetDomain,
-        action
+        ...params
       });
 
       // Ensure targetInputToken and targetOutputToken are set
-      if (!targetInputToken) targetInputToken = outputToken;
+      if (!targetInputToken) targetInputToken = inputToken;
       if (!targetOutputToken) targetOutputToken = outputToken;
 
       // Check if inputToken is a contract (ERC20) or native token
       const bytecode = await getBytecode(wagmiConfig, { address: inputToken });
       const isNativeToken = !bytecode || bytecode === '0x';
-      
-      if (isNativeToken) {
-        console.log('Using native token as input');
-        inputToken = '0x0000000000000000000000000000000000000000';
-      }
+
+      // if (isNativeToken) {
+      //   console.log('Using native token as input');
+      //   inputToken = '0x0000000000000000000000000000000000000000';
+      // }
 
       // Get the local domain
       const originDomain = await getLocalDomain();
-      
+
       // Convert amounts to BigInt
       const amountInBigInt = parseUnits(amountIn.toString(), 18);
       const amountOutBigInt = parseUnits(amountOut.toString(), 18);
@@ -291,7 +302,7 @@ export const useCrossChainOrder = (
           if (BigInt(allowance) < amountInBigInt) {
             toast.info('Approving tokens...');
             console.log(`Approving ${formatUnits(amountInBigInt, 18)} tokens from ${address} to ${localRouterAddress}`);
-            
+
             const approvalHash = await writeContract(wagmiConfig, {
               account: address,
               address: inputToken,
@@ -327,7 +338,7 @@ export const useCrossChainOrder = (
         console.warn('Failed to read lastNonce, using 1:', nonceError);
         nonce = 1; // Default nonce if we can't read from contract
       }
-      
+
       // No special handling needed for token encoding - use the actual WETH address
 
       // Create the order data structure
@@ -368,11 +379,12 @@ export const useCrossChainOrder = (
       console.log(`Destination Router : ${orderData.destinationSettler}`);
       console.log(`Local Router : ${orderData.sourceSettler}`);
       console.log(`Fill Deadline : ${orderData.fillDeadline}`);
-      console.log(`Action : ${orderData.action}`);
       console.log(`Nonce : ${orderData.nonce}`);
       console.log('==========================');
 
       console.log('Order data structure:', orderData);
+
+      // return;
 
       // Encode the order data
       const encodedOrderData = OrderEncoder.encode(orderData);
@@ -416,7 +428,9 @@ export const useCrossChainOrder = (
 
       // Submit the transaction - always using ERC20 tokens (no native ETH case)
       console.log('Sending transaction with ERC20 token. Gas payment:', formatUnits(gasPayment, 18));
-      
+
+      console.log('onChainOrder', onchainOrder)
+
       const txHash = await writeContract(wagmiConfig, {
         account: address,
         address: localRouterAddress,
@@ -445,10 +459,10 @@ export const useCrossChainOrder = (
       }
     } catch (err) {
       console.error('Error creating cross-chain order:', err);
-      
+
       // Format error message for user
       const errorObj = err instanceof Error ? err : new Error('Order creation failed');
-      
+
       // Try to extract more specific error information
       if (typeof err === 'object' && err !== null) {
         // Check for common contract errors
@@ -463,7 +477,7 @@ export const useCrossChainOrder = (
           errorObj.message = 'Invalid order type. There may be a contract configuration issue.';
         }
       }
-      
+
       setError(errorObj);
       toast.error(errorObj.message);
       return { success: false, error: errorObj };
