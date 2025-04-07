@@ -34,8 +34,8 @@ interface PoolsData {
   }
 }
 
-// Configuration constants - replace with actual contract addresses
-const BALANCE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_GTX_BALANCE_MANAGER_ADDRESS as HexAddress
+// Configuration constants
+const BALANCE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_BALANCE_MANAGER_ADDRESS as HexAddress
 
 const PlaceOrder = () => {
   const { address, isConnected } = useAccount()
@@ -401,7 +401,7 @@ const PlaceOrder = () => {
     )
 
   return (
-    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-6 max-w-md mx-auto border border-gray-700/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] backdrop-blur-sm">
+    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-5 max-w-md mx-auto border border-gray-700/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] backdrop-blur-sm">
       {/* Header with glowing effect */}
       <div className="relative mb-6">
         <div className="absolute -top-4 -left-4 w-12 h-12 bg-gray-500/20 rounded-full blur-xl"></div>
@@ -496,7 +496,7 @@ const PlaceOrder = () => {
         </form>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Order Type and Side Row */}
         <div className="grid grid-cols-2 gap-3">
           {/* Order Type Selection */}

@@ -7,4 +7,12 @@ export const FAUCET_INDEXER_URL = "https://gtx-faucet.bobbyfiando.com/";
 
 export const GTX_GRAPHQL_URL = "https://gtx-rise-indexer.bobbyfiando.com/";
 
+// export const PERPETUAL_GRAPHQL_URL = "https://gtx-perp-indexer.bobbyfiando.com/";
+// export const PERPETUAL_GRAPHQL_URL = "https://2d6c-103-13-204-17.ngrok-free.app/";
+// export const PERPETUAL_GRAPHQL_URL = "https://princess-appendix-workforce-utilize.trycloudflare.com";
+export const PERPETUAL_GRAPHQL_URL = "https://gtx-monad-perpetual-indexer.bobbyfiando.com";
+
+
+export const CLOB_GRAPHQL_URL = "https://gtx-monad-clob-indexer.bobbyfiando.com/";
+
 // export const GTX_GRAPHQL_URL = "http://103.127.137.152:42069";

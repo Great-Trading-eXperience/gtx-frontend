@@ -13,17 +13,7 @@ import { readContract } from "@wagmi/core"
 import { wagmiConfig } from "@/configs/wagmi"
 import OrderBookABI from "@/abis/gtx/clob-dex/OrderBookABI"
 import { poolsQuery } from "@/graphql/gtx/gtx.query"
-
-interface Pool {
-  baseCurrency: string
-  coin: string
-  id: string
-  lotSize: string
-  maxOrderAmount: string
-  orderBook: string
-  quoteCurrency: string
-  timestamp: number
-}
+import { useMarketStore, Pool } from "@/store/market-store"
 
 interface PoolsResponse {
   poolss: {
@@ -63,7 +53,9 @@ const EnhancedOrderBookDex = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isPairDropdownOpen, setIsPairDropdownOpen] = useState(false)
   const priceOptions = ["0.01", "0.1", "1"]
-  const [selectedPool, setSelectedPool] = useState<Pool | null>(null)
+  
+  // Use the Zustand store instead of local state for selected pool
+  const { selectedPool } = useMarketStore()
 
   const [orderBook, setOrderBook] = useState<OrderBook>({
     asks: [],
@@ -75,7 +67,7 @@ const EnhancedOrderBookDex = () => {
 
   const [viewType, setViewType] = useState<ViewType>("both")
 
-  // Fetch pools data
+  // Fetch pools data - keep this as a fallback
   const {
     data: poolsData,
     isLoading: isLoadingPools,
@@ -88,32 +80,6 @@ const EnhancedOrderBookDex = () => {
     },
     staleTime: 60000, // 1 minute
   })
-
-  // Set WETH/USDC as the default selected pool when data loads
-  useEffect(() => {
-    if (poolsData && poolsData.poolss.items.length > 0 && !selectedPool) {
-      // Find WETH/USDC pair with exact match
-      const wethPool = poolsData.poolss.items.find(
-        pool =>
-          pool.coin?.toLowerCase() === 'weth/usdc' ||
-          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
-      );
-
-      // Fallback: look for any pool with WETH in it
-      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
-        pool => pool.coin?.toLowerCase().includes('weth')
-      ) : null;
-
-      // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
-      if (wethPool) {
-        setSelectedPool(wethPool);
-      } else if (wethFallbackPool) {
-        setSelectedPool(wethFallbackPool);
-      } else {
-        setSelectedPool(poolsData.poolss.items[0]);
-      }
-    }
-  }, [poolsData])
 
   // Use the custom hooks
   const { getBestPrice: getDefaultBestPrice, isLoading: isLoadingBestPrice, error: bestPriceError } = useGetBestPrice()
@@ -292,7 +258,7 @@ const EnhancedOrderBookDex = () => {
   const baseToken = selectedPool?.coin?.split("/")[0] || "WETH"
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
+    <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
 
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="flex items-center gap-2">
@@ -435,4 +401,3 @@ const EnhancedOrderBookDex = () => {
 }
 
 export default EnhancedOrderBookDex
-

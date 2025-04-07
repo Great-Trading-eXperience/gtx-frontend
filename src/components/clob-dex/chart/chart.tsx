@@ -79,7 +79,7 @@ interface ChartComponentProps {
   height?: number
 }
 
-function ChartComponent({ height = 500 }: ChartComponentProps) {
+function ChartComponent({ height = 530 }: ChartComponentProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)

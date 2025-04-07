@@ -7,9 +7,9 @@ import MarketDataWidget from "./market-widget/market-widget"
 import PlaceOrder from "./place-order/place-order"
 import MarketDataTabs from "./market-data-tabs/market-data-tabs"
 import TradingHistory from "./trading-history/trading-history"
-// import GradientLoader from "./gradient-loader/gradient-loader"
 import { useAccount } from "wagmi"
 import GradientLoader from "../gradient-loader/gradient-loader"
+import { useMarketStore } from "@/store/market-store"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -34,7 +34,7 @@ export default function ClobDex() {
         },
     }));
 
-    const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
+    const { selectedPoolId } = useMarketStore();
     const [mounted, setMounted] = useState(false);
     const [showConnectionLoader, setShowConnectionLoader] = useState(false);
     const { isConnected } = useAccount();
@@ -43,7 +43,7 @@ export default function ClobDex() {
     // Function to handle pool changes from MarketDataWidget
     const handlePoolChange = (poolId: string) => {
         console.log(`Pool selection changed to: ${poolId}`);
-        setSelectedPoolId(poolId);
+        // No need to set local state as it's now handled by the Zustand store
     }
 
     // Debug effect to monitor selectedPoolId changes
@@ -65,7 +65,7 @@ export default function ClobDex() {
                 setShowConnectionLoader(true);
                 const timer = setTimeout(() => {
                     setShowConnectionLoader(false);
-                }, 2000); // Show for 3 seconds as requested
+                }, 2000); // Show for 2 seconds as specified
                 return () => clearTimeout(timer);
             }
             setPreviousConnectionState(isConnected);
@@ -85,8 +85,8 @@ export default function ClobDex() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] py-[4px]">
-                <div className="shadow-lg rounded-lg">
+            <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px]">
+                <div className="shadow-lg rounded-lg border border-gray-700/20">
                     <MarketDataWidget onPoolChange={handlePoolChange} />
                     <ChartComponent />
                 </div>

@@ -4,8 +4,10 @@ import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
 import { tradesQuery, poolsQuery } from '@/graphql/gtx/gtx.query'
 import { useQuery } from '@tanstack/react-query'
 import request from 'graphql-request'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { formatUnits } from 'viem'
+import { useMarketStore } from '@/store/market-store'
+import { PairDropdown } from './pair-dropdown'
 
 // Define interfaces for the trades query response
 interface TradeItem {
@@ -90,14 +92,6 @@ const formatVolume = (value: bigint, decimals: number = 6) => {
   }
 }
 
-interface MarketData {
-  price: number | null
-  priceChange24h: number | null
-  priceChangePercent24h: number | null
-  volume: bigint | null
-  pair: string | null
-}
-
 const SkeletonLoader = () => (
   <div className="w-full h-16 bg-gray-100 dark:bg-[#1B2028] rounded-t-lg animate-pulse flex items-center px-4 space-x-8">
     {[...Array(7)].map((_, i) => (
@@ -107,22 +101,29 @@ const SkeletonLoader = () => (
 )
 
 export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poolId: string) => void }) {
-  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null)
+  // Use Zustand store for state management
+  const { 
+    selectedPoolId, 
+    setSelectedPoolId, 
+    marketData, 
+    setMarketData,
+    DEFAULT_PAIR
+  } = useMarketStore()
   
   // Notify parent component when pool changes
   const handlePoolChange = (poolId: string) => {
     setSelectedPoolId(poolId)
+    
+    // Also set the selected pool object in the store
+    const selectedPoolObject = poolsData?.poolss.items.find(pool => pool.id === poolId)
+    if (selectedPoolObject) {
+      useMarketStore.getState().setSelectedPool(selectedPoolObject)
+    }
+    
     if (onPoolChange) {
       onPoolChange(poolId)
     }
   }
-  const [marketData, setMarketData] = useState<MarketData>({
-    price: null,
-    priceChange24h: null,
-    priceChangePercent24h: null,
-    volume: null,
-    pair: null
-  })
 
   // Fetch pools data
   const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
@@ -135,32 +136,40 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
 
   // Set default selected pool when pools data is loaded
   useEffect(() => {
-    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
-      // Find WETH/USDC pair (ensuring exact match for WETH/USDC)
-      const wethPool = poolsData.poolss.items.find(
+    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0 && !selectedPoolId) {
+      // Find WETH/USDC pair based on DEFAULT_PAIR from the store
+      const defaultPool = poolsData.poolss.items.find(
         pool => 
-          pool.coin?.toLowerCase() === 'weth/usdc' || 
+          pool.coin?.toLowerCase() === DEFAULT_PAIR.toLowerCase() || 
           (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
       );
       
       // As a backup, look for anything with WETH in it
-      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
+      const wethFallbackPool = !defaultPool ? poolsData.poolss.items.find(
         pool => pool.coin?.toLowerCase().includes('weth')
       ) : null;
       
-      // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
-      if (wethPool) {
-        setSelectedPoolId(wethPool.id);
+      // Set default if found, then try fallback, otherwise use first pool
+      let poolToSelect = null;
+      
+      if (defaultPool) {
+        poolToSelect = defaultPool;
       } else if (wethFallbackPool) {
-        setSelectedPoolId(wethFallbackPool.id);
+        poolToSelect = wethFallbackPool;
       } else {
-        setSelectedPoolId(poolsData.poolss.items[0].id);
+        poolToSelect = poolsData.poolss.items[0];
+      }
+      
+      if (poolToSelect) {
+        setSelectedPoolId(poolToSelect.id);
+        // Also set the selectedPool object
+        useMarketStore.getState().setSelectedPool(poolToSelect);
       }
     }
-  }, [poolsData])
+  }, [poolsData, selectedPoolId, setSelectedPoolId, DEFAULT_PAIR])
 
   // Fetch trades data
-  const { data: tradesData, isLoading: tradesLoading, error: tradesError } = useQuery<TradesResponse>({
+  const { data: tradesData, isLoading: tradesLoading } = useQuery<TradesResponse>({
     queryKey: ['trades', selectedPoolId],
     queryFn: async () => {
       return await request(GTX_GRAPHQL_URL, tradesQuery)
@@ -227,7 +236,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       volume: totalVolume,
       pair: pair
     })
-  }, [tradesData, selectedPoolId, poolsData])
+  }, [tradesData, selectedPoolId, poolsData, setMarketData])
 
   const formatNumber = (value: number | null, options: {
     decimals?: number
@@ -273,23 +282,22 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       {/* Market data display with integrated selector */}
       <div className="flex items-center h-16 px-4">
         <div className="flex items-center space-x-2 w-72">
-          <img src={getCoinIcon(marketData.pair)} alt={marketData.pair || 'Trading Pair'} className="w-[50px] h-[30px]" />
+          {/* <img src={getCoinIcon(marketData.pair)} alt={marketData.pair || 'Trading Pair'} className="w-[50px] h-[30px]" /> */}
           <div className="flex flex-col">
-            {/* Integrated trading pair selector */}
+            {/* Integrated trading pair selector using shadcn/ui */}
             <div className="flex items-center gap-2">
-              <select 
-                className="font-medium text-lg bg-transparent border-none outline-none cursor-pointer appearance-none"
-                value={selectedPoolId || ''}
-                onChange={(e) => handlePoolChange(e.target.value)}
-                style={{ backgroundImage: "url('/icon/chevron-down.svg')", backgroundPosition: "right center", backgroundRepeat: "no-repeat", paddingRight: "20px" }}
-              >
-                {poolsData?.poolss.items.map(pool => (
-                  <option key={pool.id} value={pool.id}>
-                    {pool.coin}
-                  </option>
-                ))}
-              </select>
-              <span className="text-emerald-600 dark:text-emerald-500 text-xs p-1 bg-emerald-100 dark:bg-emerald-500/10 rounded">Spot</span>
+              {poolsData?.poolss.items ? (
+                <div className="flex items-center gap-2">
+                  <PairDropdown
+                    pairs={poolsData.poolss.items}
+                    selectedPairId={selectedPoolId || ''}
+                    onPairSelect={handlePoolChange}
+                  />
+                  <span className="text-emerald-600 dark:text-emerald-500 text-xs p-1 bg-emerald-100 dark:bg-emerald-500/10 rounded">Spot</span>
+                </div>
+              ) : (
+                <div className="h-9 w-[180px] bg-gray-800/50 animate-pulse rounded"></div>
+              )}
             </div>
           </div>
         </div>
