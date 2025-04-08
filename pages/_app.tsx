@@ -50,6 +50,7 @@ function AppLayout({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [prevPath, setPrevPath] = useState("");
   const isHomePage = router.pathname === "/";
+  const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true'
 
   useEffect(() => {
     // Store the previous path when it changes
@@ -99,7 +100,7 @@ function AppLayout({ children }: { children: ReactNode }) {
       {loading && <CustomLoader />}
       {isHomePage ? <LandingHeader /> : <Header />}
       {children}
-      {isHomePage && <Footer />}
+      {isHomePage || isWaitlistMode && <Footer />}
       <Toaster />
     </>
   );
