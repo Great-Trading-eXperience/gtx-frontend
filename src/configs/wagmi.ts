@@ -156,7 +156,15 @@ const connectors = connectorsForWallets(
 );
 
 export const wagmiConfig = createConfig({
-  chains: [riseSepolia, localChain, conduitChain, arbitrumSepolia, monad, sepolia, gtxpresso],
+  chains: [
+    riseSepolia, 
+    localChain, 
+    conduitChain, 
+    arbitrumSepolia, 
+    monad, 
+    sepolia, 
+    gtxpresso
+  ],
   connectors: connectors,
   transports: {
     [riseSepolia.id]: http("https://testnet.riselabs.xyz"),

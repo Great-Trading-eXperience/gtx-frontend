@@ -51,7 +51,6 @@ export default function Home() {
               <div className="flex flex-wrap gap-5 pt-6">
                 <Link href="/perpetual">
                   <Button className="relative bg-black text-white border border-white/20 px-6 py-5 text-base font-bold rounded-md shadow-md hover:shadow-lg transition-all duration-300 hover:bg-[#1A1A1A]">
-                    {/* <div className="absolute top-0 left-0 w-full h-full bg-black text-white hover:opacity-80 transition-opacity duration-300 rounded-md"></div> */}
                     <div className="flex items-center gap-2">
                       <TrendingUp size={20} />
                       Start Perpetual Trading
