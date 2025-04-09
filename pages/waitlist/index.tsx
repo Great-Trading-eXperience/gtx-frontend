@@ -131,8 +131,7 @@ export default function WaitlistPage() {
               </h1>
 
               <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Be among the first to experience the power of permissionless spot trading with
-                institutional-grade tools and unmatched capital efficiency
+                Be among the first to experience the power of permissionless spot trading
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
@@ -205,11 +204,11 @@ export default function WaitlistPage() {
                           description: "Be among the first to trade on GTX before public launch",
                           icon: Clock,
                         },
-                        {
-                          title: "Priority support",
-                          description: "Get dedicated support from our team",
-                          icon: Shield,
-                        },
+                        // {
+                        //   title: "Priority support",
+                        //   description: "Get dedicated support from our team",
+                        //   icon: Shield,
+                        // },
                       ].map((item, index) => (
                         <div key={index} className="flex gap-4">
                           <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -269,7 +268,7 @@ export default function WaitlistPage() {
               },
               {
                 title: "Start Trading",
-                description: "Access perpetual futures with up to 30x leverage or spot markets with deep liquidity",
+                description: "Access spot markets with deep liquidity",
                 icon: LineChart,
                 accent: "border-l-white",
               },
@@ -314,9 +313,10 @@ export default function WaitlistPage() {
               {
                 title: "High-Performance Order Book",
                 description:
-                  "Experience seamless trading with our optimized order book implementation featuring efficient matching engine and bitmap-based tick management.",
+                  "Experience seamless trading powered by Rise chain's exceptional performance. Our order book leverages red-black trees and linked lists for efficient matching.",
                 icon: Code2,
-                stats: ["2ms Latency", "100k Orders/sec"],
+                // stats: ["2ms Latency", "100k Orders/sec"],
+                stats: [],
               },
               // {
               //   title: "Advanced Oracle System",
@@ -337,7 +337,8 @@ export default function WaitlistPage() {
                 description:
                   "Fully permissionless system allowing anyone to create markets, provide liquidity, and participate in the ecosystem.",
                 icon: Puzzle,
-                stats: ["Permissionless", "Composable"],
+                // stats: ["Permissionless", "Composable"],
+                stats: []
               },
             ].map((feature, index) => (
               <div

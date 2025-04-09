@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "Join the Waitlist | GTX - Next-Gen Trading Platform",
   description:
-    "Join the exclusive waitlist for GTX, the next-generation trading platform with institutional-grade tools and unmatched capital efficiency.",
+    "Join the exclusive waitlist for GTX, the next-generation trading platform.",
 }
 
 export default function WaitlistLayout({

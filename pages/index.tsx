@@ -44,8 +44,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Experience the power of permissionless perpetual futures and spot trading with institutional-grade tools
-                and unmatched capital efficiency
+                Experience the power of permissionless perpetual spot.
               </p>
 
               <div className="flex flex-wrap gap-5 pt-6">
