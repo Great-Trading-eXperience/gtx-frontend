@@ -28,8 +28,6 @@ export async function GET() {
       throw new Error(responseData.detail || "Failed to get subscriber count")
     }
 
-    console.log(responseData)
-
     // Return the total number of subscribers
     return NextResponse.json({ 
       count: responseData.total_items || 0,

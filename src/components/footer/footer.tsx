@@ -6,14 +6,14 @@ import Link from "next/link"
 import { Twitter, MessageCircle, Github } from "lucide-react"
 
 const resources = [
-  {
-    label: "Institutional",
-    destination: "/institutional",
-  },
-  {
-    label: "Fee Discounts",
-    destination: "/fee-discounts",
-  },
+  // {
+  //   label: "Institutional",
+  //   destination: "/institutional",
+  // },
+  // {
+  //   label: "Fee Discounts",
+  //   destination: "/fee-discounts",
+  // },
   {
     label: "Privacy Policy",
     destination: "/privacy-policy",
@@ -70,8 +70,7 @@ const Footer = () => {
               <span className="text-3xl font-bold text-white">GTX</span>
             </Link>
             <p className="mt-4 text-gray-400 text-sm leading-relaxed">
-              Experience the power of permissionless perpetual futures and spot trading with institutional-grade tools
-              and unmatched capital efficiency.
+              Experience the power of permissionless spot trading.
             </p>
             <div className="py-5">
               <p className="text-gray-400 text-sm">© 2025 Great Trading eXperience</p>
@@ -118,7 +117,7 @@ const Footer = () => {
           <div className="col-span-1">
             <h2 className="text-white font-semibold mb-4 text-lg">Community</h2>
             <div className="flex flex-col space-y-4">
-              <a
+              {/* <a
                 href="https://discord.gg/liquidbook"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -128,9 +127,9 @@ const Footer = () => {
                   <MessageCircle size={18} />
                 </div>
                 <span>Discord</span>
-              </a>
+              </a> */}
               <a
-                href="https://twitter.com/liquidbook"
+                href="https://x.com/gtxfi_official"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
@@ -140,7 +139,7 @@ const Footer = () => {
                 </div>
                 <span>Twitter</span>
               </a>
-              <a
+              {/* <a
                 href="https://github.com/Great-Trading-eXperience"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -150,7 +149,7 @@ const Footer = () => {
                   <Github size={18} />
                 </div>
                 <span>Github</span>
-              </a>
+              </a> */}
             </div>
           </div>
         </div>
