@@ -121,7 +121,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
           <Head>
             <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
             <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
-            <link rel="icon" type="image/png" href="/logo/gtx-gradient.png" />
+            <link rel="icon" type="image/png" href="/logo/gtx-update-dark.webp" />
           </Head>
           <ThemeProvider
             disableTransitionOnChange
