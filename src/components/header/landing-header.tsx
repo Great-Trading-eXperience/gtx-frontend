@@ -10,7 +10,7 @@ const LandingHeader = () => {
     { destination: "/", label: "Home" },
     { destination: "/swap", label: "Swap" },
     { destination: "/spot", label: "Spot" },
-    { destination: "/perpetual", label: "Perpetual" },
+    // { destination: "/perpetual", label: "Perpetual" },
     { destination: "/earn", label: "Earn" },
     { destination: "/faucet", label: "Faucet" },
     { destination: "/create", label: "Create" },
