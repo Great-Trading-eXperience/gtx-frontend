@@ -20,7 +20,7 @@ const Header = () => {
     { destination: "/faucet", label: "Faucet" },
     { destination: "/create", label: "Create" },
     // { destination: "/perpetual/create-market", label: "Create Market" },
-    { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" }
+    // { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" }
   ];
 
   const solidColorConfig = {

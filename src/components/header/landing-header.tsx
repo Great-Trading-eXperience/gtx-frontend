@@ -14,7 +14,7 @@ const LandingHeader = () => {
     { destination: "/earn", label: "Earn" },
     { destination: "/faucet", label: "Faucet" },
     { destination: "/create", label: "Create" },
-    { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" },
+    // { destination: "https://github.com/Great-Trading-eXperience", label: "Documentation" },
   ]
 
   return (
