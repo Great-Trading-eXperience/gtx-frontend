@@ -10,6 +10,7 @@ import TradingHistory from "./trading-history/trading-history"
 import { useAccount } from "wagmi"
 import GradientLoader from "../gradient-loader/gradient-loader"
 import { useMarketStore } from "@/store/market-store"
+import { usePathname } from "next/navigation"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -34,7 +35,8 @@ export default function ClobDex() {
         },
     }));
 
-    const { selectedPoolId } = useMarketStore();
+    const pathname = usePathname();
+    const { selectedPoolId, setSelectedPoolId } = useMarketStore();
     const [mounted, setMounted] = useState(false);
     const [showConnectionLoader, setShowConnectionLoader] = useState(false);
     const { isConnected } = useAccount();
@@ -43,13 +45,27 @@ export default function ClobDex() {
     // Function to handle pool changes from MarketDataWidget
     const handlePoolChange = (poolId: string) => {
         console.log(`Pool selection changed to: ${poolId}`);
-        // No need to set local state as it's now handled by the Zustand store
+        // The store update is handled by the MarketDataWidget
     }
 
-    // Debug effect to monitor selectedPoolId changes
+    // Extract pool ID from URL when the component mounts or URL changes
     useEffect(() => {
-        console.log(`selectedPoolId changed to: ${selectedPoolId || 'null'}`);
-    }, [selectedPoolId]);
+        // Wait until the component is mounted to access the pathname
+        if (!mounted) return;
+        
+        if (pathname) {
+            const urlParts = pathname.split('/');
+            if (urlParts.length >= 3) {
+                const poolIdFromUrl = urlParts[2];
+                
+                // Only update the store if the pool ID has changed
+                if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
+                    console.log(`Setting pool ID from URL: ${poolIdFromUrl}`);
+                    setSelectedPoolId(poolIdFromUrl);
+                }
+            }
+        }
+    }, [pathname, mounted, selectedPoolId, setSelectedPoolId]);
 
     // Handle component mounting
     useEffect(() => {
@@ -71,6 +87,13 @@ export default function ClobDex() {
             setPreviousConnectionState(isConnected);
         }
     }, [isConnected, previousConnectionState, mounted]);
+
+    // Debug effect to monitor selectedPoolId changes
+    useEffect(() => {
+        if (mounted) {
+            console.log(`selectedPoolId changed to: ${selectedPoolId || 'null'}`);
+        }
+    }, [selectedPoolId, mounted]);
 
     const isClient = useIsClient();
 

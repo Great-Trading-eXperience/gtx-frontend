@@ -4,10 +4,11 @@ import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
 import { tradesQuery, poolsQuery } from '@/graphql/gtx/gtx.query'
 import { useQuery } from '@tanstack/react-query'
 import request from 'graphql-request'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
 import { useMarketStore } from '@/store/market-store'
 import { PairDropdown } from './pair-dropdown'
+import { useRouter, usePathname } from 'next/navigation'
 
 // Define interfaces for the trades query response
 interface TradeItem {
@@ -44,20 +45,18 @@ interface TradesResponse {
 }
 
 // Define interfaces for the pools query response
-interface PoolItem {
-  baseCurrency: string;
-  coin: string;
-  id: string;
-  lotSize: string;
-  maxOrderAmount: string;
-  orderBook: string;
-  quoteCurrency: string;
-  timestamp: number;
-}
-
 interface PoolsResponse {
   poolss: {
-    items: PoolItem[];
+    items: Array<{
+      baseCurrency: string;
+      coin: string;
+      id: string;
+      lotSize: string;
+      maxOrderAmount: string;
+      orderBook: string;
+      quoteCurrency: string;
+      timestamp: number;
+    }>;
     totalCount: number;
     pageInfo: {
       endCursor: string;
@@ -101,30 +100,22 @@ const SkeletonLoader = () => (
 )
 
 export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poolId: string) => void }) {
+  // Use Next.js router for URL manipulation
+  const router = useRouter()
+  const pathname = usePathname()
+  const [lastPathname, setLastPathname] = useState<string | null>(null)
+  
   // Use Zustand store for state management
   const { 
     selectedPoolId, 
-    setSelectedPoolId, 
+    setSelectedPoolId,
+    setSelectedPool,
     marketData, 
     setMarketData,
-    DEFAULT_PAIR
+    syncWithUrl,
+    getUrlFromPool
   } = useMarketStore()
   
-  // Notify parent component when pool changes
-  const handlePoolChange = (poolId: string) => {
-    setSelectedPoolId(poolId)
-    
-    // Also set the selected pool object in the store
-    const selectedPoolObject = poolsData?.poolss.items.find(pool => pool.id === poolId)
-    if (selectedPoolObject) {
-      useMarketStore.getState().setSelectedPool(selectedPoolObject)
-    }
-    
-    if (onPoolChange) {
-      onPoolChange(poolId)
-    }
-  }
-
   // Fetch pools data
   const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
     queryKey: ['pools'],
@@ -133,40 +124,77 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
     },
     staleTime: 60000, // 1 minute - pools don't change often
   })
-
-  // Set default selected pool when pools data is loaded
+  
+  // Track URL changes to detect when coming from other components
   useEffect(() => {
-    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0 && !selectedPoolId) {
-      // Find WETH/USDC pair based on DEFAULT_PAIR from the store
-      const defaultPool = poolsData.poolss.items.find(
-        pool => 
-          pool.coin?.toLowerCase() === DEFAULT_PAIR.toLowerCase() || 
-          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
-      );
+    if (pathname !== lastPathname) {
+      setLastPathname(pathname)
       
-      // As a backup, look for anything with WETH in it
-      const wethFallbackPool = !defaultPool ? poolsData.poolss.items.find(
-        pool => pool.coin?.toLowerCase().includes('weth')
-      ) : null;
-      
-      // Set default if found, then try fallback, otherwise use first pool
-      let poolToSelect = null;
-      
-      if (defaultPool) {
-        poolToSelect = defaultPool;
-      } else if (wethFallbackPool) {
-        poolToSelect = wethFallbackPool;
-      } else {
-        poolToSelect = poolsData.poolss.items[0];
-      }
-      
-      if (poolToSelect) {
-        setSelectedPoolId(poolToSelect.id);
-        // Also set the selectedPool object
-        useMarketStore.getState().setSelectedPool(poolToSelect);
+      // Only process if we have pools data
+      if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
+        // Extract pool ID from URL
+        const urlParts = pathname?.split('/') || []
+        if (urlParts.length >= 3) {
+          const poolIdFromUrl = urlParts[2]
+          
+          // Check if this is a valid pool ID that exists in our data
+          const poolExists = poolsData.poolss.items.some(pool => pool.id === poolIdFromUrl)
+          
+          if (poolExists && poolIdFromUrl !== selectedPoolId) {
+            // Update the selected pool ID in the store
+            setSelectedPoolId(poolIdFromUrl)
+            
+            // Update the selected pool object
+            const poolObject = poolsData.poolss.items.find(pool => pool.id === poolIdFromUrl)
+            if (poolObject) {
+              setSelectedPool(poolObject)
+            }
+            
+            // Call onPoolChange callback if provided
+            if (onPoolChange) {
+              onPoolChange(poolIdFromUrl)
+            }
+          }
+        }
       }
     }
-  }, [poolsData, selectedPoolId, setSelectedPoolId, DEFAULT_PAIR])
+  }, [pathname, lastPathname, poolsData, selectedPoolId, setSelectedPoolId, setSelectedPool, onPoolChange])
+  
+  // Sync URL with store on initial load and when pools data changes
+  useEffect(() => {
+    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
+      // If no pool is selected yet and we have pools data, sync with URL
+      if (!selectedPoolId) {
+        const syncedPoolId = syncWithUrl(pathname, poolsData.poolss.items)
+        
+        // If we successfully synced and got a pool ID, update the URL if needed
+        if (syncedPoolId && pathname === '/spot') {
+          router.push(getUrlFromPool(syncedPoolId))
+        }
+      }
+    }
+  }, [pathname, poolsData, selectedPoolId, syncWithUrl, router, getUrlFromPool])
+  
+  // Handle pool change from dropdown
+  const handlePoolChange = (poolId: string) => {
+    setSelectedPoolId(poolId)
+    
+    // Set the selected pool object
+    if (poolsData?.poolss.items) {
+      const selectedPoolObject = poolsData.poolss.items.find(pool => pool.id === poolId)
+      if (selectedPoolObject) {
+        setSelectedPool(selectedPoolObject)
+      }
+    }
+    
+    // Update URL
+    router.push(getUrlFromPool(poolId))
+    
+    // Notify parent component if needed
+    if (onPoolChange) {
+      onPoolChange(poolId)
+    }
+  }
 
   // Fetch trades data
   const { data: tradesData, isLoading: tradesLoading } = useQuery<TradesResponse>({
@@ -256,25 +284,6 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
     return `${prefix}${formatter.format(value)}${suffix}`
   }
 
-  // Create a mapping of coin types to appropriate icons
-  const getCoinIcon = (pair: string | null) => {
-    if (!pair) return "/icon/eth-usdc.png"
-    
-    const lowerPair = pair.toLowerCase()
-    if (lowerPair.includes("eth") || lowerPair.includes("weth")) {
-      return "/icon/eth-usdc.png"
-    } else if (lowerPair.includes("btc") || lowerPair.includes("wbtc")) {
-      return "/icon/btc-usdc.png" 
-    } else if (lowerPair.includes("pepe")) {
-      return "/icon/pepe-usdc.png"
-    } else if (lowerPair.includes("link")) {
-      return "/icon/link-usdc.png"
-    }
-    
-    // Default icon
-    return "/icon/eth-usdc.png"
-  }
-
   if (poolsLoading || tradesLoading) return <SkeletonLoader />
 
   return (
@@ -282,7 +291,6 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       {/* Market data display with integrated selector */}
       <div className="flex items-center h-16 px-4">
         <div className="flex items-center space-x-2 w-72">
-          {/* <img src={getCoinIcon(marketData.pair)} alt={marketData.pair || 'Trading Pair'} className="w-[50px] h-[30px]" /> */}
           <div className="flex flex-col">
             {/* Integrated trading pair selector using shadcn/ui */}
             <div className="flex items-center gap-2">

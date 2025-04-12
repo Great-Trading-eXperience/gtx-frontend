@@ -1,3 +1,5 @@
+"use client"
+
 import { type AvatarComponent, ConnectButton } from "@rainbow-me/rainbowkit"
 import { Button } from "../ui/button"
 import Image from "next/image"
@@ -61,62 +63,62 @@ type GradientColorConfig = BaseColorConfig & {
   toColor: string
   hoverFromColor: string
   hoverToColor: string
-  mode: 'gradient'
+  mode: "gradient"
 }
 
 type SolidColorConfig = BaseColorConfig & {
   backgroundColor: string
   hoverBackgroundColor: string
-  mode: 'solid'
+  mode: "solid"
 }
 
 type ColorConfig = GradientColorConfig | SolidColorConfig
 
 const defaultGradientColors: GradientColorConfig = {
-  fromColor: "from-cyan-500",
-  toColor: "to-blue-500",
-  hoverFromColor: "hover:from-cyan-600",
+  fromColor: "from-blue-600",
+  toColor: "to-blue-700",
+  hoverFromColor: "hover:from-blue-500",
   hoverToColor: "hover:to-blue-600",
-  shadowColor: "shadow-[0_0_15px_rgba(56,189,248,0.15)]",
+  shadowColor: "shadow-[0_0_15px_rgba(59,130,246,0.15)]",
   textColor: "text-white",
-  mode: 'gradient'
+  mode: "gradient",
 }
 
 const defaultSolidColors: SolidColorConfig = {
   backgroundColor: "bg-blue-500",
   hoverBackgroundColor: "hover:bg-blue-600",
-  shadowColor: "shadow-[0_0_15px_rgba(56,189,248,0.15)]",
+  shadowColor: "shadow-[0_0_15px_rgba(59,130,246,0.15)]",
   textColor: "text-white",
-  mode: 'solid'
+  mode: "solid",
 }
 
-export const ButtonConnectWallet = ({ 
+export const ButtonConnectWallet = ({
   colors = defaultGradientColors,
-  className 
-}: { 
+  className,
+}: {
   colors?: ColorConfig
-  className?: string 
+  className?: string
 }) => {
   return <ConnectButtonWalletComponents colors={colors} className={className} />
 }
 
-export const ConnectButtonWalletComponents = ({ 
+export const ConnectButtonWalletComponents = ({
   colors = defaultGradientColors,
-  className
-}: { 
+  className,
+}: {
   colors?: ColorConfig
-  className?: string 
+  className?: string
 }) => {
   const getButtonClassName = (colorConfig: ColorConfig) => {
     const { shadowColor, textColor } = colorConfig
-    const commonClasses = `${textColor} ${shadowColor} hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] transition-all rounded-lg text-sm sm:text-xs font-bold`
+    const commonClasses = `${textColor} ${shadowColor} hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all rounded-lg text-sm sm:text-xs font-bold`
 
-    if (colorConfig.mode === 'gradient') {
+    if (colorConfig.mode === "gradient") {
       const { fromColor, toColor, hoverFromColor, hoverToColor } = colorConfig
-      return `bg-gradient-to-r ${fromColor} ${toColor} ${hoverFromColor} ${hoverToColor} ${commonClasses} ${className || ''}`
+      return `bg-gradient-to-r ${fromColor} ${toColor} ${hoverFromColor} ${hoverToColor} ${commonClasses} ${className || ""}`
     } else {
       const { backgroundColor, hoverBackgroundColor } = colorConfig
-      return `${backgroundColor} ${hoverBackgroundColor} ${commonClasses} ${className || ''}`
+      return `${backgroundColor} ${hoverBackgroundColor} ${commonClasses} ${className || ""}`
     }
   }
 
@@ -140,10 +142,7 @@ export const ConnectButtonWalletComponents = ({
 
         if (!connected) {
           return (
-            <Button
-              onClick={openConnectModal}
-              className={getButtonClassName(colors)}
-            >
+            <Button onClick={openConnectModal} className={getButtonClassName(colors)}>
               <Wallet className="mr-2 h-4 w-4" />
               Connect Wallet
             </Button>
@@ -163,7 +162,7 @@ export const ConnectButtonWalletComponents = ({
             <Button
               onClick={openChainModal}
               variant="outline"
-              className="text-sm sm:text-xs font-bold rounded-xl max-w-40 bg-slate-900/50 border-cyan-500/10 hover:border-cyan-500/20 hover:bg-slate-900/70 transition-all"
+              className="text-sm sm:text-xs font-bold rounded-xl max-w-40 bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
             >
               {chain.hasIcon && (
                 <ChainIcon iconUrl={chain.iconUrl} name={chain.name} background={chain.iconBackground} />
@@ -174,7 +173,7 @@ export const ConnectButtonWalletComponents = ({
             <Button
               onClick={openAccountModal}
               variant="outline"
-              className="text-sm sm:text-xs font-bold rounded-xl bg-slate-900/50 border-cyan-500/10 hover:border-cyan-500/20 hover:bg-slate-900/70 transition-all"
+              className="text-sm sm:text-xs font-bold rounded-xl bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
             >
               {CustomAvatar && <CustomAvatar address={account.address} ensImage={account.ensAvatar} size={18} />}
               <span className="mx-2">{account.displayName}</span>

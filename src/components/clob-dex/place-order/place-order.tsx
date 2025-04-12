@@ -13,7 +13,9 @@ import { useOrderBookAPI } from "@/hooks/web3/gtx/clob-dex/orderbook/useOrderBoo
 import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances"
 import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/write/usePlaceOrder"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
-import { ArrowDown, ArrowUp, BarChart3, ChevronDown, CreditCard, Layers, RefreshCw, Wallet } from "lucide-react"
+import { RefreshCw, Wallet } from "lucide-react"
+import { useMarketStore, Pool } from "@/store/market-store"
+import { usePathname } from "next/navigation"
 
 // Order side type
 type Side = 0 | 1 // 0 = BUY, 1 = SELL
@@ -34,12 +36,26 @@ interface PoolsData {
   }
 }
 
+// Create a mapping type to convert string timestamp to number
+type PoolItemWithStringTimestamp = {
+  id: string
+  coin: string
+  orderBook: string
+  baseCurrency: string
+  quoteCurrency: string
+  lotSize: string
+  maxOrderAmount: string
+  timestamp: string
+}
+
 // Configuration constants
 const BALANCE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_BALANCE_MANAGER_ADDRESS as HexAddress
 
 const PlaceOrder = () => {
   const { address, isConnected } = useAccount()
-  const [selectedPool, setSelectedPool] = useState<any>(null)
+  const pathname = usePathname()
+  const { selectedPool, selectedPoolId, setSelectedPool } = useMarketStore()
+  
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
   const [side, setSide] = useState<Side>(0) // Default to BUY
   const [price, setPrice] = useState<string>("")
@@ -58,23 +74,40 @@ const PlaceOrder = () => {
   const [notificationMessage, setNotificationMessage] = useState("")
   const [notificationSuccess, setNotificationSuccess] = useState(true)
   const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>()
+  
+  // Component mounted state
+  const [mounted, setMounted] = useState(false)
 
   const formatNumberWithCommas = (value: number | string) => {
     // Parse the number and format it with thousands separators and 4 decimal places
-    if (typeof value === 'string') {
-      value = parseFloat(value);
+    if (typeof value === "string") {
+      value = Number.parseFloat(value)
     }
 
     if (isNaN(value)) {
-      return "0.0000";
+      return "0.0000"
     }
 
     // Format with commas and 4 decimal places
-    return value.toLocaleString('en-US', {
+    return value.toLocaleString("en-US", {
       minimumFractionDigits: 4,
-      maximumFractionDigits: 4
-    });
-  };
+      maximumFractionDigits: 4,
+    })
+  }
+
+  const inputStyles = `
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox */
+  input[type=number] {
+    appearance: textfield;
+  }
+`
 
   // Fetch pools data with react-query
   const {
@@ -118,35 +151,88 @@ const PlaceOrder = () => {
     deposit,
     loading: balanceLoading,
   } = useTradingBalances(BALANCE_MANAGER_ADDRESS)
+  
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  // Helper function to convert pool item from API to store format
+  const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
+    return {
+      ...poolItem,
+      timestamp: parseInt(poolItem.timestamp, 10)
+    }
+  }
+  
+  // Sync with URL and store
+  useEffect(() => {
+    if (!mounted || !poolsData?.poolss?.items) return
+    
+    // Watch for URL changes that might indicate a pool change from another component
+    if (pathname) {
+      const urlParts = pathname.split('/')
+      if (urlParts.length >= 3) {
+        const poolIdFromUrl = urlParts[2]
+        
+        // If URL has a different pool ID than what's selected, check if it's a valid pool
+        if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
+          const poolItem = poolsData.poolss.items.find(p => p.id === poolIdFromUrl)
+          if (poolItem) {
+            console.log(`PlaceOrder: Detected pool change from URL to ${poolItem.coin}`)
+            const pool = convertToPoolType(poolItem)
+            setSelectedPool(pool)
+            setOrderBookAddress(pool.orderBook as HexAddress)
+          }
+        }
+      }
+    }
+  }, [pathname, selectedPoolId, poolsData, mounted, setSelectedPool])
+  
+  // Update orderBookAddress when selectedPool changes
+  useEffect(() => {
+    if (selectedPool && selectedPool.orderBook) {
+      console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`)
+      setOrderBookAddress(selectedPool.orderBook as HexAddress)
+      
+      // Reset price when pool changes
+      setPrice("")
+      setQuantity("")
+      setTotal("0")
+    }
+  }, [selectedPool])
 
-  // Set the first pool as default when data is loaded
+  // Fall back to first pool if selectedPool is not set
   useEffect(() => {
     if (poolsData && poolsData.poolss.items.length > 0 && !selectedPool) {
       // Find WETH/USDC pair with exact match
-      const wethPool = poolsData.poolss.items.find(
-        pool =>
-          pool.coin?.toLowerCase() === 'weth/usdc' ||
-          (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
-      );
+      const wethPoolItem = poolsData.poolss.items.find(
+        (pool) =>
+          pool.coin?.toLowerCase() === "weth/usdc" ||
+          (pool.baseCurrency?.toLowerCase() === "weth" && pool.quoteCurrency?.toLowerCase() === "usdc"),
+      )
 
       // Fallback: look for any pool with WETH in it
-      const wethFallbackPool = !wethPool ? poolsData.poolss.items.find(
-        pool => pool.coin?.toLowerCase().includes('weth')
-      ) : null;
+      const wethFallbackPoolItem = !wethPoolItem
+        ? poolsData.poolss.items.find((pool) => pool.coin?.toLowerCase().includes("weth"))
+        : null
 
       // Set WETH/USDC as default if found, then try fallback, otherwise use first pool
-      if (wethPool) {
-        setSelectedPool(wethPool);
-        setOrderBookAddress(wethPool.orderBook as HexAddress);
-      } else if (wethFallbackPool) {
-        setSelectedPool(wethFallbackPool);
-        setOrderBookAddress(wethFallbackPool.orderBook as HexAddress);
+      if (wethPoolItem) {
+        const wethPool = convertToPoolType(wethPoolItem)
+        setSelectedPool(wethPool)
+        setOrderBookAddress(wethPool.orderBook as HexAddress)
+      } else if (wethFallbackPoolItem) {
+        const wethFallbackPool = convertToPoolType(wethFallbackPoolItem)
+        setSelectedPool(wethFallbackPool)
+        setOrderBookAddress(wethFallbackPool.orderBook as HexAddress)
       } else {
-        setSelectedPool(poolsData.poolss.items[0]);
-        setOrderBookAddress(poolsData.poolss.items[0].orderBook as HexAddress);
+        const firstPool = convertToPoolType(poolsData.poolss.items[0])
+        setSelectedPool(firstPool)
+        setOrderBookAddress(firstPool.orderBook as HexAddress)
       }
     }
-  }, [poolsData])
+  }, [poolsData, selectedPool, setSelectedPool])
 
   // Update total when price or quantity changes
   useEffect(() => {
@@ -241,13 +327,6 @@ const PlaceOrder = () => {
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side])
 
-  const handlePoolChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const poolId = e.target.value
-    const pool = poolsData?.poolss.items.find((p: any) => p.id === poolId)
-    setSelectedPool(pool)
-    setOrderBookAddress(pool?.orderBook as HexAddress)
-  }
-
   const handleMaxDeposit = () => {
     if (availableBalance !== "Error" && !isLoadingBalance && !balanceLoading) {
       // Subtract a small amount to account for gas fees if this is the native token
@@ -261,6 +340,14 @@ const PlaceOrder = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!selectedPool) {
+      setNotificationMessage("No trading pair selected.")
+      setNotificationSuccess(false)
+      setNotificationTxHash(undefined)
+      setShowNotification(true)
+      return
+    }
 
     // Log wallet address being used for this order
     console.log("Placing order using wallet address:", address)
@@ -383,7 +470,7 @@ const PlaceOrder = () => {
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed
   const orderError = limitSimulateError || marketSimulateError
 
-  if (poolsLoading)
+  if (poolsLoading || !mounted)
     return (
       <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
         <div className="flex items-center gap-2 text-gray-300">
@@ -401,121 +488,52 @@ const PlaceOrder = () => {
     )
 
   return (
-    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-5 max-w-md mx-auto border border-gray-700/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] backdrop-blur-sm">
-      {/* Header with glowing effect */}
-      <div className="relative mb-6">
-        <div className="absolute -top-4 -left-4 w-12 h-12 bg-gray-500/20 rounded-full blur-xl"></div>
-        <h2 className="text-2xl font-bold text-white flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-2">
-            <Layers className="w-6 h-6 text-gray-400" />
-            <span>Trade</span>
-          </div>
-          {isConnected && (
-            <div className="text-sm px-3 py-1 rounded-full bg-gray-800/50 border border-gray-700/50 text-gray-300 flex items-center gap-1.5">
-              <span>{selectedPool?.coin}</span>
-              <BarChart3 className="w-4 h-4" />
-            </div>
-          )}
-        </h2>
-      </div>
+    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
+      {/* Add style tag to remove number input spinners */}
+      <style jsx global>
+        {inputStyles}
+      </style>
 
       {/* Balance Row */}
-      <div className="flex flex-col w-full gap-4 mb-5">
+      <div className="flex flex-col w-full gap-3 mb-3">
         {isConnected && selectedPool && (
-          <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-4">
+          <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-gray-300 flex items-center gap-1.5">
                 <Wallet className="w-4 h-4" />
                 <span>Available Balance</span>
               </h3>
-              <button
-                onClick={() => refreshOrderBook()}
-                className="text-gray-400 hover:text-gray-300 transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
             </div>
             <div className="flex items-center justify-between">
-              <div className="text-xl font-bold text-white">
-                {isLoadingBalance || balanceLoading
-                  ? "..."
-                  : availableBalance === "Error"
-                    ? "Error"
-                    : formatNumberWithCommas(availableBalance)}
-              </div>
-              <div className="text-gray-300 text-sm px-2 py-0.5 bg-gray-800/40 rounded-md border border-gray-700/40">
-                {side === 0 ? "USDC" : selectedPool.coin.split("/")[0]}
-              </div>
+              <span className="text-gray-300">{availableBalance}</span>
+              <span className="text-gray-400">{side === 0 ? "USDC" : selectedPool.coin.split("/")[0]}</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Deposit Form */}
-      <div className="mb-5">
-        <form onSubmit={handleDeposit} className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <CreditCard className="w-4 h-4" />
-          </div>
-          <input
-            type="number"
-            className="w-full bg-gray-900/40 text-white text-sm rounded-l-lg py-3 pl-10 pr-24 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
-            value={depositAmount}
-            onChange={(e) => setDepositAmount(e.target.value)}
-            placeholder={`Deposit ${side === 0 ? "USDC" : selectedPool?.coin?.split("/")[0] || ""}`}
-            step="0.0001"
-            min="0"
-          />
-          <div className="absolute right-[76px] top-1/2 -translate-y-1/2">
-            <button
-              type="button"
-              onClick={handleMaxDeposit}
-              className="text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-1 py-1 rounded border border-gray-700/50 transition-colors"
-              disabled={balanceLoading || availableBalance === "Error" || !isConnected}
-            >
-              MAX
-            </button>
-          </div>
-          <button
-            type="submit"
-            className="absolute right-0 top-0 h-full bg-blue-600 hover:bg-blue-700 text-white text-sm px-2 rounded-r-lg transition-colors flex items-center gap-1 border border-blue-500"
-            disabled={balanceLoading || !depositAmount}
-          >
-            {balanceLoading ? (
-              <>
-                {/* <RefreshCw className="w-3.5 h-3.5 animate-spin" /> */}
-                <span>Loading</span>
-              </>
-            ) : (
-              <>
-                {/* <ArrowDown className="w-3.5 h-3.5" /> */}
-                <span>Deposit</span>
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}
         <div className="grid grid-cols-2 gap-3">
           {/* Order Type Selection */}
           <div className="relative">
-            <div className="flex h-11 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
+            <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "limit" ? "bg-blue-600 text-white" : "bg-transparent text-blue-300 hover:bg-blue-800/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
+                  orderType === "limit" ? "bg-blue-600 text-white" : "bg-transparent text-blue-300 hover:bg-blue-800/50"
+                }`}
                 onClick={() => setOrderType("limit")}
               >
                 <span>Limit</span>
               </button>
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "market"
-                  ? "bg-blue-600 text-white"
-                  : "bg-transparent text-blue-300 hover:bg-blue-800/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
+                  orderType === "market"
+                    ? "bg-blue-600 text-white"
+                    : "bg-transparent text-blue-300 hover:bg-blue-800/50"
+                }`}
                 onClick={() => setOrderType("market")}
               >
                 <span>Market</span>
@@ -525,23 +543,23 @@ const PlaceOrder = () => {
 
           {/* Buy/Sell Selection */}
           <div className="relative">
-            <div className="flex h-11 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
+            <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${side === 0 ? "bg-emerald-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
+                  side === 0 ? "bg-emerald-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
+                }`}
                 onClick={() => setSide(0)}
               >
-                <ArrowDown className="w-3.5 h-3.5" />
                 <span>Buy</span>
               </button>
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${side === 1 ? "bg-rose-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
+                  side === 1 ? "bg-rose-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
+                }`}
                 onClick={() => setSide(1)}
               >
-                <ArrowUp className="w-3.5 h-3.5" />
                 <span>Sell</span>
               </button>
             </div>
@@ -557,7 +575,7 @@ const PlaceOrder = () => {
             <div className="relative">
               <input
                 type="number"
-                className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-3 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
+                className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="Enter price"
@@ -580,7 +598,7 @@ const PlaceOrder = () => {
           <div className="relative">
             <input
               type="number"
-              className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-3 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
+              className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="Enter amount"
@@ -602,7 +620,7 @@ const PlaceOrder = () => {
           <div className="relative">
             <input
               type="text"
-              className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-3 px-3 pr-16 border border-gray-700/50"
+              className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50"
               value={total}
               placeholder="Total amount"
               readOnly
@@ -616,15 +634,17 @@ const PlaceOrder = () => {
         {/* Submit Button with glow effect */}
         <div className="relative mt-6 group">
           <div
-            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${side === 0 ? "bg-emerald-500/30" : "bg-rose-500/30"
-              } ${isPending || isConfirming || !isConnected ? "opacity-0" : "opacity-50"}`}
+            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
+              side === 0 ? "bg-emerald-500/30" : "bg-rose-500/30"
+            } ${isPending || isConfirming || !isConnected ? "opacity-0" : "opacity-50"}`}
           ></div>
           <button
             type="submit"
-            className={`relative w-full py-3.5 px-4 rounded-lg text-sm font-medium transition-all ${side === 0
-              ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-              : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
-              } ${isPending || isConfirming || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`relative w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              side === 0
+                ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+            } ${isPending || isConfirming || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={isPending || isConfirming || !isConnected}
           >
             {isPending ? (
@@ -643,8 +663,7 @@ const PlaceOrder = () => {
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                {side === 0 ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
-                <span>{`${side === 0 ? "Buy" : "Sell"} ${selectedPool?.coin.split("/")[0]}`}</span>
+                <span>{`${side === 0 ? "Buy" : "Sell"} ${selectedPool?.coin?.split("/")[0] || ""}`}</span>
               </div>
             )}
           </button>
@@ -652,7 +671,7 @@ const PlaceOrder = () => {
       </form>
 
       {!isConnected && (
-        <div className="mt-4 p-3 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
+        <div className="mt-3 p-2 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
           <Wallet className="w-4 h-4" />
           <span>Please connect wallet to trade</span>
         </div>
@@ -671,4 +690,3 @@ const PlaceOrder = () => {
 }
 
 export default PlaceOrder
-

@@ -14,6 +14,7 @@ import { wagmiConfig } from "@/configs/wagmi"
 import OrderBookABI from "@/abis/gtx/clob-dex/OrderBookABI"
 import { poolsQuery } from "@/graphql/gtx/gtx.query"
 import { useMarketStore, Pool } from "@/store/market-store"
+import { usePathname } from "next/navigation"
 
 interface PoolsResponse {
   poolss: {
@@ -45,7 +46,7 @@ interface OrderBook {
 type ViewType = "both" | "bids" | "asks"
 type DecimalPrecision = "0.01" | "0.1" | "1"
 
-const STANDARD_ORDER_COUNT = 8
+const STANDARD_ORDER_COUNT = 6
 
 const EnhancedOrderBookDex = () => {
   const [mounted, setMounted] = useState(false)
@@ -54,8 +55,11 @@ const EnhancedOrderBookDex = () => {
   const [isPairDropdownOpen, setIsPairDropdownOpen] = useState(false)
   const priceOptions = ["0.01", "0.1", "1"]
   
-  // Use the Zustand store instead of local state for selected pool
-  const { selectedPool } = useMarketStore()
+  // Use the Zustand store for selected pool and pool ID
+  const { selectedPool, selectedPoolId, setSelectedPool } = useMarketStore()
+  
+  // Get the current URL to detect changes
+  const pathname = usePathname()
 
   const [orderBook, setOrderBook] = useState<OrderBook>({
     asks: [],
@@ -67,7 +71,7 @@ const EnhancedOrderBookDex = () => {
 
   const [viewType, setViewType] = useState<ViewType>("both")
 
-  // Fetch pools data - keep this as a fallback
+  // Fetch pools data
   const {
     data: poolsData,
     isLoading: isLoadingPools,
@@ -80,6 +84,37 @@ const EnhancedOrderBookDex = () => {
     },
     staleTime: 60000, // 1 minute
   })
+  
+  // When URL or selectedPoolId changes, ensure selectedPool is updated
+  useEffect(() => {
+    if (!mounted || !poolsData) return
+    
+    // If we have a selectedPoolId but no selectedPool, find the pool in the data
+    if (selectedPoolId && (!selectedPool || selectedPool.id !== selectedPoolId)) {
+      console.log(`OrderBook: Updating selectedPool for ID ${selectedPoolId}`)
+      const pool = poolsData.poolss.items.find(p => p.id === selectedPoolId)
+      if (pool) {
+        setSelectedPool(pool)
+      }
+    }
+    
+    // Extract pool ID from URL when it changes
+    if (pathname) {
+      const urlParts = pathname.split('/')
+      if (urlParts.length >= 3) {
+        const poolIdFromUrl = urlParts[2]
+        
+        // If URL has a different pool ID than what's selected, update the pool
+        if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId && poolsData) {
+          const pool = poolsData.poolss.items.find(p => p.id === poolIdFromUrl)
+          if (pool) {
+            setSelectedPool(pool)
+            console.log(`OrderBook: Updated pool from URL to ${pool.coin}`)
+          }
+        }
+      }
+    }
+  }, [pathname, selectedPoolId, selectedPool, poolsData, mounted, setSelectedPool])
 
   // Use the custom hooks
   const { getBestPrice: getDefaultBestPrice, isLoading: isLoadingBestPrice, error: bestPriceError } = useGetBestPrice()
@@ -151,9 +186,25 @@ const EnhancedOrderBookDex = () => {
     setMounted(true)
   }, [])
 
+  // Reset orderbook when selectedPool changes
+  useEffect(() => {
+    if (selectedPool) {
+      console.log(`OrderBook: Selected pool changed to ${selectedPool.coin}, resetting orderbook`)
+      setOrderBook({
+        asks: [],
+        bids: [],
+        lastPrice: BigInt(0),
+        spread: BigInt(0),
+        lastUpdate: Date.now(),
+      })
+    }
+  }, [selectedPool])
+
   useEffect(() => {
     if (!mounted || !selectedPool) return
 
+    console.log(`OrderBook: Fetching data for ${selectedPool.coin}`)
+    
     const fetchOrderBook = async () => {
       try {
         const askBestPrice = await getBestPrice({
@@ -259,28 +310,27 @@ const EnhancedOrderBookDex = () => {
 
   return (
     <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
-
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="flex items-center gap-2">
           <button
             onClick={toggleView}
-            className="rounded-lg bg-gray-900/40 p-1.5 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300"
+            className="rounded-lg bg-gray-700/40 py-1.5 px-2 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300 border border-gray-700/50"
           >
             <Menu className="h-4 w-4" />
           </button>
           <span className="text-xs text-gray-300">
-            {viewType === "both" ? "Order Book" : viewType === "asks" ? "Asks Only" : "Bids Only"}
+            {viewType === "both" ? "Bid/Ask" : viewType === "asks" ? "Asks Only" : "Bids Only"}
           </span>
         </div>
 
         <div className="relative">
-          <button
+          {/* <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-2 rounded border border-gray-700/50 bg-gray-900/40 px-3 py-1.5 text-gray-200 transition-all duration-200 hover:bg-gray-800/50"
           >
             <span className="text-xs">Precision: {selectedDecimal}</span>
             <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button>
+          </button> */}
 
           {isDropdownOpen && (
             <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">

@@ -135,12 +135,12 @@ const RecentTradesComponent = () => {
   return (
     <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
+      {/* <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="flex items-center gap-2">
           <BarChart2 className="h-5 w-5 text-gray-400" />
           <h2 className="text-lg font-medium text-white">Recent Trades</h2>
         </div>
-      </div>
+      </div> */}
 
       <div className="flex h-[550px] flex-col rounded-lg">
         {/* Column Headers */}

@@ -112,7 +112,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={ARBITRUM_SEPOLIA_CHAIN_ID} // Updated to use Arbitrum as default
+          initialChain={RISE_SEPOLIA_CHAIN_ID} // Updated to use Rise Sepolia as default
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",

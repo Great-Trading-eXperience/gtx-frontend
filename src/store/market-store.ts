@@ -34,18 +34,23 @@ interface MarketStore {
   marketData: MarketData
   setMarketData: (data: MarketData) => void
   
+  // URL-related utilities
+  syncWithUrl: (pathname: string | null, pools: Pool[]) => string | null
+  findDefaultPool: (pools: Pool[]) => Pool | null
+  getUrlFromPool: (poolId: string) => string
+  
   // Default values
   DEFAULT_PAIR: string
 }
 
-export const useMarketStore = create<MarketStore>((set) => ({
+export const useMarketStore = create<MarketStore>((set, get) => ({
   // Selected pool
   selectedPoolId: null,
   setSelectedPoolId: (poolId) => set({ selectedPoolId: poolId }),
   
   // Selected pool object
   selectedPool: null,
-  setSelectedPool: (pool) => set({ selectedPool: pool }),
+  setSelectedPool: (pool: Pool) => set({ selectedPool: pool }),
   
   // Market data
   marketData: {
@@ -55,7 +60,71 @@ export const useMarketStore = create<MarketStore>((set) => ({
     volume: null,
     pair: null
   },
-  setMarketData: (data) => set({ marketData: data }),
+  setMarketData: (data: MarketData) => set({ marketData: data }),
+  
+  // URL-related utilities
+  syncWithUrl: (pathname, pools) => {
+    if (!pathname || !pools || pools.length === 0) return null
+    
+    // Extract the pool ID from the URL if it exists
+    const urlParts = pathname.split('/')
+    if (urlParts.length >= 3) {
+      const poolIdFromUrl = urlParts[2]
+      
+      // Check if this pool ID exists in our data
+      const poolExists = pools.some(pool => pool.id === poolIdFromUrl)
+      
+      if (poolExists) {
+        // Set the pool ID and pool object
+        set({ 
+          selectedPoolId: poolIdFromUrl,
+          selectedPool: pools.find(pool => pool.id === poolIdFromUrl) || null
+        })
+        return poolIdFromUrl
+      }
+    }
+    
+    // If we couldn't set from URL, use default logic
+    const defaultPool = get().findDefaultPool(pools)
+    if (defaultPool) {
+      set({ 
+        selectedPoolId: defaultPool.id,
+        selectedPool: defaultPool
+      })
+      return defaultPool.id
+    }
+    
+    return null
+  },
+  
+  // Helper to find the default pool based on preferences
+  findDefaultPool: (pools) => {
+    if (!pools || pools.length === 0) return null
+    
+    const DEFAULT_PAIR = get().DEFAULT_PAIR
+    
+    // Find WETH/USDC pair based on DEFAULT_PAIR
+    const defaultPool = pools.find(
+      pool => 
+        pool.coin?.toLowerCase() === DEFAULT_PAIR.toLowerCase() || 
+        (pool.baseCurrency?.toLowerCase() === 'weth' && pool.quoteCurrency?.toLowerCase() === 'usdc')
+    )
+    
+    // As a backup, look for anything with WETH in it
+    const wethFallbackPool = !defaultPool ? pools.find(
+      pool => pool.coin?.toLowerCase().includes('weth')
+    ) : null
+    
+    // Set default if found, then try fallback, otherwise use first pool
+    if (defaultPool) return defaultPool
+    if (wethFallbackPool) return wethFallbackPool
+    return pools[0]
+  },
+  
+  // Generate a URL for a given pool ID
+  getUrlFromPool: (poolId) => {
+    return `/spot/${poolId}`
+  },
   
   // Default values
   DEFAULT_PAIR: 'WETH/USDC'
