@@ -1,14 +1,14 @@
 'use client'
 
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { tradesQuery, poolsQuery } from '@/graphql/gtx/gtx.query'
+import { poolsQuery, tradesQuery } from '@/graphql/gtx/gtx.query'
+import { useMarketStore } from '@/store/market-store'
 import { useQuery } from '@tanstack/react-query'
 import request from 'graphql-request'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
-import { useMarketStore } from '@/store/market-store'
 import { PairDropdown } from './pair-dropdown'
-import { useRouter, usePathname } from 'next/navigation'
 
 // Define interfaces for the trades query response
 interface TradeItem {
@@ -99,7 +99,7 @@ const SkeletonLoader = () => (
   </div>
 )
 
-export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poolId: string) => void }) {
+export default function MarketDataWidget() {
   // Use Next.js router for URL manipulation
   const router = useRouter()
   const pathname = usePathname()
@@ -108,6 +108,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
   // Use Zustand store for state management
   const { 
     selectedPoolId, 
+    quoteDecimals,
     setSelectedPoolId,
     setSelectedPool,
     marketData, 
@@ -124,7 +125,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
     },
     staleTime: 60000, // 1 minute - pools don't change often
   })
-  
+
   // Track URL changes to detect when coming from other components
   useEffect(() => {
     if (pathname !== lastPathname) {
@@ -149,17 +150,12 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
             if (poolObject) {
               setSelectedPool(poolObject)
             }
-            
-            // Call onPoolChange callback if provided
-            if (onPoolChange) {
-              onPoolChange(poolIdFromUrl)
-            }
           }
         }
       }
     }
-  }, [pathname, lastPathname, poolsData, selectedPoolId, setSelectedPoolId, setSelectedPool, onPoolChange])
-  
+  }, [pathname, lastPathname, poolsData, selectedPoolId, setSelectedPoolId, setSelectedPool])
+
   // Sync URL with store on initial load and when pools data changes
   useEffect(() => {
     if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
@@ -189,11 +185,6 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
     
     // Update URL
     router.push(getUrlFromPool(poolId))
-    
-    // Notify parent component if needed
-    if (onPoolChange) {
-      onPoolChange(poolId)
-    }
   }
 
   // Fetch trades data
@@ -233,7 +224,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
 
     // Get current price from the most recent trade
     const currentTrade = sortedItems[0]
-    const currentPrice = Number(formatUnits(BigInt(currentTrade.price), 12)) // Adjust decimals as needed
+    const currentPrice = Number(currentTrade.price) // Adjust decimals as needed
     
     // Find trade from 24 hours ago
     const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
@@ -241,7 +232,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       trade.timestamp <= twentyFourHoursAgo
     ) || sortedItems[sortedItems.length - 1] // Use oldest trade if none from 24h ago
     
-    const prevDayPrice = Number(formatUnits(BigInt(prevDayTrade.price), 12)) // Adjust decimals as needed
+    const prevDayPrice = Number(prevDayTrade.price) // Adjust decimals as needed
     const priceChange = currentPrice - prevDayPrice
     const priceChangePercent = (priceChange / prevDayPrice) * 100
 
@@ -280,6 +271,9 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       maximumFractionDigits: decimals,
       notation: compact ? 'compact' : 'standard',
     })
+    
+    console.log('value', value)
+    console.log('decimals', decimals)
 
     return `${prefix}${formatter.format(value)}${suffix}`
   }
@@ -313,7 +307,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
         <div className="flex-1 flex gap-4 justify-center">
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1 underline'>Price</div>
-            <div className='text-gray-900 dark:text-white'>{formatNumber(marketData.price, { prefix: '$', decimals: 5 })}</div>
+            <div className='text-gray-900 dark:text-white'>{formatNumber(Number(formatUnits(BigInt(marketData.price ?? 0), quoteDecimals)), { prefix: '$' })}</div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">

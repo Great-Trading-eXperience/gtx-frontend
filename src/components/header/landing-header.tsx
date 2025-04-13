@@ -33,7 +33,7 @@ const LandingHeader = () => {
               </div>
               <div className="ml-3 flex flex-col">
                 <span className="text-white text-xl font-bold tracking-wide">GTX</span>
-                <span className="text-[10px] text-blue-600/80 font-medium -mt-1">BLOCKCHAIN EXCHANGE</span>
+                {/* <span className="text-[10px] text-blue-600/80 font-medium -mt-1">BLOCKCHAIN EXCHANGE</span> */}
               </div>
             </Link>
           </div>

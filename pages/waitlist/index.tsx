@@ -225,12 +225,12 @@ export default function WaitlistPage() {
                     <div className="pt-4 border-t border-white/10">
                       <div className="flex justify-between items-center">
                         <div className="text-sm text-gray-400">Waitlist spots remaining</div>
-                        <div className="text-sm font-semibold">{subscriberCount !== null ? `${subscriberCount}+` : "Loading..."} / 500</div>
+                        <div className="text-sm font-semibold">{subscriberCount !== null ? `${subscriberCount}+` : "Loading..."} / 1000</div>
                       </div>
                       <div className="mt-2 w-full h-2 bg-white/10 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
-                          style={{ width: `${(subscriberCount ?? 0) / 500 * 100}%` }}
+                          style={{ width: `${(subscriberCount ?? 0) / 1000 * 1000}%` }}
                         ></div>
                       </div>
                     </div>

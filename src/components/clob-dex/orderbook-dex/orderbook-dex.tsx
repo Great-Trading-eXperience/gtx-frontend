@@ -1,20 +1,20 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { ArrowDownUp, ChevronDown, Menu, RefreshCw } from "lucide-react"
-import { formatUnits } from "viem"
-import { Side } from "@/types/web3/gtx/gtx"
+import OrderBookABI from "@/abis/gtx/clob-dex/OrderBookABI"
+import { wagmiConfig } from "@/configs/wagmi"
+import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
+import { poolsQuery } from "@/graphql/gtx/gtx.query"
 import { useGetBestPrice } from "@/hooks/web3/gtx/clob-dex/orderbook/useGetBestPrice"
 import { useGetNextBestPrices } from "@/hooks/web3/gtx/clob-dex/orderbook/useGetNextBestPrices"
+import { Pool, useMarketStore } from "@/store/market-store"
+import { Side } from "@/types/web3/gtx/gtx"
 import { useQuery } from "@tanstack/react-query"
-import request from "graphql-request"
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { readContract } from "@wagmi/core"
-import { wagmiConfig } from "@/configs/wagmi"
-import OrderBookABI from "@/abis/gtx/clob-dex/OrderBookABI"
-import { poolsQuery } from "@/graphql/gtx/gtx.query"
-import { useMarketStore, Pool } from "@/store/market-store"
+import request from "graphql-request"
+import { Menu, RefreshCw } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { formatUnits } from "viem"
 
 interface PoolsResponse {
   poolss: {
@@ -208,21 +208,21 @@ const EnhancedOrderBookDex = () => {
     const fetchOrderBook = async () => {
       try {
         const askBestPrice = await getBestPrice({
-          side: Side.Sell,
+          side: Side.SELL,
         })
 
         const bidBestPrice = await getBestPrice({
-          side: Side.Buy,
+          side: Side.BUY,
         })
 
         const nextAsks = await getNextBestPrices({
-          side: Side.Sell,
+          side: Side.SELL,
           price: askBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
         })
 
         const nextBids = await getNextBestPrices({
-          side: Side.Buy,
+          side: Side.BUY,
           price: bidBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
         })
