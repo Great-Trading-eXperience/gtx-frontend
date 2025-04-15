@@ -93,7 +93,7 @@ const OrderHistoryTable = () => {
   const chainId = useChainId()
   const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
-  const { quoteDecimals } = useMarketStore()
+  const { selectedPoolId, quoteDecimals } = useMarketStore()
 
   const { data: poolsData } = useQuery<PoolsResponse>({
     queryKey: ["pools"],
@@ -117,11 +117,11 @@ const OrderHistoryTable = () => {
       const currentChainId = Number(chainId ?? defaultChain)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request<OrdersResponse>(url, orderHistorysQuery, { userAddress })
+      return await request<OrdersResponse>(url, orderHistorysQuery, { userAddress, poolId: selectedPoolId })
     },
     enabled: !!address,
-    staleTime: 30000,
-    refetchInterval: 30000,
+    staleTime: 1000,
+    refetchInterval: 1000,
   })
 
   const handleSort = (key: SortableKey) => {

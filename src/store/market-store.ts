@@ -19,6 +19,8 @@ export interface MarketData {
   price: number | null
   priceChange24h: number | null
   priceChangePercent24h: number | null
+  high24h: number | null
+  low24h: number | null
   volume: bigint | null
   pair: string | null
 }
@@ -65,6 +67,8 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
     price: null,
     priceChange24h: null,
     priceChangePercent24h: null,
+    high24h: null,
+    low24h: null,
     volume: null,
     pair: null
   },

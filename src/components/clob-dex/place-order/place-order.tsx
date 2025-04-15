@@ -146,7 +146,7 @@ const PlaceOrder = () => {
   const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBook(
     (orderBookAddress as HexAddress) || "0x0000000000000000000000000000000000000000",
   )
-  
+
   // Use the fixed balance hook
   const {
     getWalletBalance,
@@ -304,7 +304,7 @@ const PlaceOrder = () => {
     if (orderBookAddress) {
       const interval = setInterval(() => {
         refreshOrderBook()
-      }, 10000) // Refresh every 10 seconds
+      }, 1000) // Refresh every 10 seconds
 
       return () => clearInterval(interval)
     }
@@ -328,7 +328,6 @@ const PlaceOrder = () => {
       setNotificationSuccess(true)
       // Assuming you have the transaction hash saved somewhere in your hooks
       // setNotificationTxHash(txHash);
-      setShowNotification(true)
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side])
 

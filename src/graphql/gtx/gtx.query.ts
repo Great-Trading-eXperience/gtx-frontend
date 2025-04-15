@@ -24,8 +24,15 @@ export const poolsQuery = gql`
 
 
 export const tradesQuery = gql`
-  query GetTrades {
-    tradess {
+  query GetTrades($poolId: String) {
+    tradess(
+      where: { 
+        poolId: $poolId
+      }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: 20
+    ) {
       items {
         id
         order {
@@ -107,8 +114,10 @@ export const ordersQuery = gql`
 `;
 
 export const orderHistorysQuery = gql`
-  query GetOrderHistory($userAddress: String!) {
-    orderss(where: { user: $userAddress }) {
+  query GetOrderHistory($userAddress: String!, $poolId: String) {
+    orderss(
+      where: { user: $userAddress, poolId: $poolId }
+    ) {
       items {
         expiry
         filled
@@ -171,6 +180,7 @@ export const minuteCandleStickQuery = gql`
       where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
       orderBy: "timestamp"
       orderDirection: "asc"
+      limit: 1000
     ) {
       items {
         open
@@ -191,6 +201,7 @@ export const fiveMinuteCandleStickQuery = gql`
       where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
+      limit: 1000
     ) {
       items {
         open
@@ -211,6 +222,7 @@ export const hourCandleStickQuery = gql`
       where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
+      limit: 1000
     ) {
       items {
         open
@@ -231,6 +243,7 @@ export const dailyCandleStickQuery = gql`
       where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
+      limit: 1000
     ) {
       items {
         open

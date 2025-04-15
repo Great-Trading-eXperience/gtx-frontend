@@ -11,9 +11,9 @@ import { Side } from "@/types/web3/gtx/gtx"
 import { useQuery } from "@tanstack/react-query"
 import { readContract } from "@wagmi/core"
 import request from "graphql-request"
-import { Menu, RefreshCw } from "lucide-react"
+import { ArrowDown, ArrowUp, Menu, RefreshCw } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { formatUnits } from "viem"
 import { useChainId } from 'wagmi'
 
@@ -34,6 +34,9 @@ interface Order {
   price: number
   size: number
   total?: number
+  key?: string
+  isMatched?: boolean
+  lastUpdated?: number
 }
 
 interface OrderBook {
@@ -42,22 +45,28 @@ interface OrderBook {
   lastPrice: bigint
   spread: bigint
   lastUpdate?: number
+  previousAsks?: Order[]
+  previousBids?: Order[]
 }
 
 type ViewType = "both" | "bids" | "asks"
 type DecimalPrecision = "0.01" | "0.1" | "1"
 
 const STANDARD_ORDER_COUNT = 6
+const PRICE_MATCH_THRESHOLD = 0.07 // Consider orders within 0.1 as matched
+const TOTAL_MATCH_THRESHOLD = 4
 
 const EnhancedOrderBookDex = () => {
   const [mounted, setMounted] = useState(false)
   const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>("0.01")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [isPairDropdownOpen, setIsPairDropdownOpen] = useState(false)
   const priceOptions = ["0.01", "0.1", "1"]
-  
-  const { selectedPool, selectedPoolId, quoteDecimals, baseDecimals, setSelectedPool } = useMarketStore()
-  
+  const previousOrderBook = useRef<OrderBook | null>(null)
+  const previousPrice = useRef<number | null>(null)
+  const priceDirection = useRef<'up' | 'down' | null>(null)
+
+  const { selectedPool, selectedPoolId, marketData, quoteDecimals, baseDecimals, setSelectedPool } = useMarketStore()
+
   // Get the current URL to detect changes
   const pathname = usePathname()
 
@@ -86,13 +95,12 @@ const EnhancedOrderBookDex = () => {
       if (!url) throw new Error('GraphQL URL not found')
       return await request<PoolsResponse>(url, poolsQuery)
     },
-    staleTime: 60000, // 1 minute
   })
-  
+
   // When URL or selectedPoolId changes, ensure selectedPool is updated
   useEffect(() => {
     if (!mounted || !poolsData) return
-    
+
     // If we have a selectedPoolId but no selectedPool, find the pool in the data
     if (selectedPoolId && (!selectedPool || selectedPool.id !== selectedPoolId)) {
       console.log(`OrderBook: Updating selectedPool for ID ${selectedPoolId}`)
@@ -101,13 +109,13 @@ const EnhancedOrderBookDex = () => {
         setSelectedPool(pool)
       }
     }
-    
+
     // Extract pool ID from URL when it changes
     if (pathname) {
       const urlParts = pathname.split('/')
       if (urlParts.length >= 3) {
         const poolIdFromUrl = urlParts[2]
-        
+
         // If URL has a different pool ID than what's selected, update the pool
         if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId && poolsData) {
           const pool = poolsData.poolss.items.find(p => p.id === poolIdFromUrl)
@@ -196,12 +204,73 @@ const EnhancedOrderBookDex = () => {
         spread: BigInt(0),
         lastUpdate: Date.now(),
       })
+      previousOrderBook.current = null
+      previousPrice.current = null
+      priceDirection.current = null
     }
   }, [selectedPool])
 
+  // Helper function to detect if an order should be highlighted (matched)
+  const detectMatchedOrders = (
+    newOrders: Order[],
+    previousOrders: Order[] | undefined,
+    now: number
+  ): Order[] => {
+    if (!previousOrders || previousOrders.length === 0) {
+      return newOrders.map(order => ({
+        ...order,
+        key: `${order.price}-${now}`,
+        isMatched: false,
+        lastUpdated: now
+      }));
+    }
+
+    return newOrders.map(newOrder => {
+      // Check if this is a new price level that didn't exist before
+      const existingOrderAtSamePrice = previousOrders.find(
+        prevOrder => Math.abs(prevOrder.price - newOrder.price) < PRICE_MATCH_THRESHOLD
+      );
+
+      // Check if there's a size change at this price level
+      const isMatched = existingOrderAtSamePrice
+        ? Math.abs((existingOrderAtSamePrice.total || 0) - (newOrder.total || 0)) / (existingOrderAtSamePrice.total || 1) > TOTAL_MATCH_THRESHOLD / 100
+        : false;
+
+      if (isMatched) {
+        console.log("existingOrderAtSamePrice.total", existingOrderAtSamePrice?.total, newOrder.total)
+        console.log("Matched order:", newOrder, existingOrderAtSamePrice)
+      }
+
+      return {
+        ...newOrder,
+        key: isMatched ? `${newOrder.price}-${now}` : existingOrderAtSamePrice?.key || `${newOrder.price}-${now}`,
+        isMatched,
+        lastUpdated: isMatched ? now : existingOrderAtSamePrice?.lastUpdated || now
+      };
+    });
+  };
+
+  // Update price direction whenever the price changes
+  useEffect(() => {
+    if (marketData?.price) {
+      // Compare with previous price and set direction
+      if (previousPrice.current !== null) {
+        if (marketData.price < previousPrice.current) {
+          priceDirection.current = 'down';
+        } else if (marketData.price > previousPrice.current) {
+          priceDirection.current = 'up';
+        }
+        // If equal, maintain the previous direction
+      }
+      
+      // Store the current price for the next comparison
+      previousPrice.current = marketData.price;
+    }
+  }, [marketData?.price]);
+
   useEffect(() => {
     if (!mounted || !selectedPool) return
-    
+
     const fetchOrderBook = async () => {
       try {
         const askBestPrice = await getBestPrice({
@@ -228,27 +297,46 @@ const EnhancedOrderBookDex = () => {
           count: STANDARD_ORDER_COUNT - 1,
         })
 
+        const sortedNextAsks = nextAsks.sort((a, b) => Number(a.price) - Number(b.price))
+        const sortedNextBids = nextBids.sort((a, b) => Number(b.price) - Number(a.price))
+
         const asks = [
           {
             price: Number(formatUnits(askBestPrice.price, quoteDecimals)),
             size: Number(formatUnits(askBestPrice.volume, baseDecimals)),
           },
-          ...nextAsks.map((pv) => ({
+          ...sortedNextAsks.map((pv) => ({
             price: Number(formatUnits(pv.price, quoteDecimals)),
             size: Number(formatUnits(pv.volume, baseDecimals)),
           })),
-        ].sort((a, b) => a.price - b.price)
+        ]
+          .filter(ask => ask.price > 0 && ask.size > 0)
+          .reduce((unique, ask) => {
+            const exists = unique.find(u => u.price === ask.price);
+            if (!exists) {
+              unique.push(ask);
+            }
+            return unique;
+          }, [] as Order[])
+          .sort((a, b) => a.price - b.price)
 
         const bids = [
           {
             price: Number(formatUnits(bidBestPrice.price, quoteDecimals)),
             size: Number(formatUnits(bidBestPrice.volume, baseDecimals)),
           },
-          ...nextBids.map((pv) => ({
+          ...sortedNextBids.map((pv) => ({
             price: Number(formatUnits(pv.price, quoteDecimals)),
             size: Number(formatUnits(pv.volume, baseDecimals)),
           })),
-        ].sort((a, b) => b.price - a.price)
+        ].filter(ask => ask.price > 0 && ask.size > 0)
+          .reduce((unique, ask) => {
+            const exists = unique.find(u => u.price === ask.price);
+            if (!exists) {
+              unique.push(ask);
+            }
+            return unique;
+          }, [] as Order[]).sort((a, b) => b.price - a.price)
 
         let bidTotal = 0
         const bidsWithTotal = bids.map((bid) => {
@@ -262,15 +350,34 @@ const EnhancedOrderBookDex = () => {
           return { ...ask, total: askTotal }
         })
 
-        const spread = Number((asks[0]?.price - bids[0]?.price).toFixed(2))
+        const spread = asks[0]?.price && bids[0]?.price 
+          ? ((Math.abs(asks[0].price - bids[0].price) / ((asks[0].price + bids[0].price) / 2)) * 100).toFixed(2)
+          : "0"
+        const now = Date.now()
 
-        setOrderBook({
-          asks: asksWithTotal,
-          bids: bidsWithTotal,
+        // Detect matched orders based on previous state
+        const matchedAsks = detectMatchedOrders(asksWithTotal, previousOrderBook.current?.asks, now);
+        const matchedBids = detectMatchedOrders(bidsWithTotal, previousOrderBook.current?.bids, now);
+
+        const newOrderBook = {
+          asks: matchedAsks,
+          bids: matchedBids,
           lastPrice: BigInt(Math.round(asks[0]?.price)),
           spread: BigInt(Math.round(spread)),
-          lastUpdate: Date.now(),
-        })
+          lastUpdate: now,
+          previousAsks: previousOrderBook.current?.asks,
+          previousBids: previousOrderBook.current?.bids
+        };
+
+        previousOrderBook.current = {
+          asks: matchedAsks,
+          bids: matchedBids,
+          lastPrice: newOrderBook.lastPrice,
+          spread: newOrderBook.spread,
+          lastUpdate: now
+        };
+
+        setOrderBook(newOrderBook);
       } catch (error) {
         console.error("Error fetching order book:", error)
       }
@@ -368,25 +475,41 @@ const EnhancedOrderBookDex = () => {
                 </div>
 
                 <div className="flex flex-col-reverse space-y-[2px] space-y-reverse">
-                  {orderBook.asks.map((ask, i) => {
+                  {orderBook.asks.slice(0, 10).map((ask, i) => {
                     const maxTotal = orderBook.asks.reduce(
                       (max, curr) =>
                         curr.total && max ? (curr.total > max ? curr.total : max) : curr.total || max || 1,
                       0,
                     )
 
+                    // Determine if this order should be blinking
+                    const isBlinking = ask.isMatched;
+
                     return (
-                      <div key={`ask-${i}`} className="group relative">
+                      <div key={ask.key || `ask-${i}`} className={`group relative ${isBlinking ? 'animate-blink-bg' : ''}`}>
+                        {/* Volume bar - not animated */}
                         <div
                           className="absolute bottom-0 left-0 top-0 bg-rose-500/10 transition-all group-hover:bg-rose-500/20"
                           style={{
                             width: `${((ask.total || 0) * 100) / maxTotal}%`,
                           }}
                         />
+
+                        {/* Full-width blinking overlay when matched */}
+                        {isBlinking && (
+                          <div className="absolute inset-0 animate-blink-highlight-ask"></div>
+                        )}
+
                         <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
-                          <div className="font-medium text-rose-400">{formatPrice(ask.price)}</div>
-                          <div className="text-center text-gray-200">{ask.size.toFixed(2)}</div>
-                          <div className="text-right text-gray-200">{(ask.total || 0).toFixed(2)}</div>
+                          <div className={`font-medium text-rose-400 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                            {formatPrice(ask.price)}
+                          </div>
+                          <div className={`text-center text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                            {ask.size.toFixed(2)}
+                          </div>
+                          <div className={`text-right text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                            {(ask.total || 0).toFixed(2)}
+                          </div>
                         </div>
                       </div>
                     )
@@ -397,11 +520,35 @@ const EnhancedOrderBookDex = () => {
 
             {viewType === "both" && (
               <div className="my-2 border-y border-gray-800/30 bg-gray-900/40 px-4 py-2 text-xs">
+                {/* Single row with price (with arrow) and spread */}
                 <div className="flex justify-between text-gray-200">
-                  <span>Spread</span>
-                  <span className="font-medium text-white">
-                    {Number(orderBook.spread) / 10 ** 8} ({baseToken})
-                  </span>
+                  <div className="flex items-center gap-4">
+                    {/* Price with arrow */}
+                    <div className="flex items-center">
+                      {marketData?.price && (
+                        <span className={`font-medium flex items-center ${
+                          priceDirection.current === 'down' 
+                            ? "text-rose-400" 
+                            : "text-emerald-400"
+                        }`}>
+                          {formatPrice(marketData.price)}
+                          {priceDirection.current && (
+                            priceDirection.current === 'up' 
+                              ? <ArrowUp className="h-3 w-3 ml-1" /> 
+                              : <ArrowDown className="h-3 w-3 ml-1" />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Spread */}
+                    <div className="flex items-center gap-1">
+                      <span>Spread: </span>
+                      <span className="font-medium text-white">
+                        {(Number(orderBook.spread) / 100)}% 
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -416,25 +563,41 @@ const EnhancedOrderBookDex = () => {
                 </div>
 
                 <div className="space-y-[2px]">
-                  {orderBook.bids.map((bid, i) => {
+                  {orderBook.bids.slice(0, 10).map((bid, i) => {
                     const maxTotal = orderBook.bids.reduce(
                       (max, curr) =>
                         curr.total && max ? (curr.total > max ? curr.total : max) : curr.total || max || 1,
                       0,
                     )
 
+                    // Determine if this order should be blinking
+                    const isBlinking = bid.isMatched;
+
                     return (
-                      <div key={`bid-${i}`} className="group relative">
+                      <div key={bid.key || `bid-${i}`} className={`group relative ${isBlinking ? 'animate-blink-bg' : ''}`}>
+                        {/* Volume bar - not animated */}
                         <div
                           className="absolute bottom-0 left-0 top-0 bg-emerald-500/10 transition-all group-hover:bg-emerald-500/20"
                           style={{
                             width: `${((bid.total || 0) * 100) / maxTotal}%`,
                           }}
                         />
+
+                        {/* Full-width blinking overlay when matched */}
+                        {isBlinking && (
+                          <div className="absolute inset-0 animate-blink-highlight-bid"></div>
+                        )}
+
                         <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
-                          <div className="font-medium text-emerald-400">{formatPrice(bid.price)}</div>
-                          <div className="text-center text-gray-200">{bid.size.toFixed(2)}</div>
-                          <div className="text-right text-gray-200">{(bid.total || 0).toFixed(2)}</div>
+                          <div className={`font-medium text-emerald-400 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                            {formatPrice(bid.price)}
+                          </div>
+                          <div className={`text-center text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                            {bid.size.toFixed(2)}
+                          </div>
+                          <div className={`text-right text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                            {(bid.total || 0).toFixed(2)}
+                          </div>
                         </div>
                       </div>
                     )
@@ -445,6 +608,49 @@ const EnhancedOrderBookDex = () => {
           </>
         )}
       </div>
+
+      {/* Add CSS for the blinking animations with much slower animations */}
+      <style jsx global>{`
+        @keyframes blink-bg {
+          0% { background-color: transparent; }
+          100% { background-color: rgba(255, 255, 255, 0.1); }
+        }
+        
+        @keyframes blink-highlight-bid {
+          0% { background-color: rgba(16, 185, 129, 0.3); }
+          100% { background-color: rgba(16, 185, 129, 1); }
+        }
+        
+        @keyframes blink-highlight-ask {
+          0% { background-color: rgba(239, 68, 68, 0.3); }
+          100% { background-color: rgba(239, 68, 68, 1); }
+        }
+        
+        @keyframes blink-text {
+          0% { opacity: 1; }
+          20% { opacity: 0.9; font-weight: bold; }
+          40% { opacity: 1; }
+          60% { opacity: 0.95; font-weight: bold; }
+          80% { opacity: 1; }
+          100% { opacity: 1; }
+        }
+        
+        .animate-blink-bg {
+          animation: blink-bg 10s linear;
+        }
+        
+        .animate-blink-highlight-bid {
+          animation: blink-highlight-bid 10s linear;
+        }
+        
+        .animate-blink-highlight-ask {
+          animation: blink-highlight-ask 10s linear;
+        }
+        
+        .animate-blink-text {
+          animation: blink-text 10s linear;
+        }
+      `}</style>
     </div>
   )
 }

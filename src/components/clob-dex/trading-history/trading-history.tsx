@@ -26,8 +26,8 @@ export default function TradingHistory() {
       <div className="absolute -right-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
 
       <Card className="overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
-        <Tabs defaultValue="open-orders" className="w-full">
-          <div className="space-y-6 p-6">
+        <Tabs defaultValue="trades" className="w-full">
+          <div className="space-y-3 p-3">
             <div className="relative">
               <TabsList className="flex w-full justify-start gap-6 bg-transparent">
                 <TabsTrigger
@@ -35,7 +35,7 @@ export default function TradingHistory() {
                   className="group relative flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
                 >
                   <BookOpen className="h-5 w-5" />
-                  <span>Open Orders</span>
+                  <span className="text-sm">Open Orders</span>
                   <span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
                 </TabsTrigger>
                 <TabsTrigger
@@ -43,7 +43,7 @@ export default function TradingHistory() {
                   className="group relative flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
                 >
                   <History className="h-5 w-5" />
-                  <span>Trade History</span>
+                  <span className="text-sm">Trade History</span>
                   <span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
                 </TabsTrigger>
                 <TabsTrigger
@@ -51,7 +51,7 @@ export default function TradingHistory() {
                   className="group relative flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
                 >
                   <Wallet className="h-5 w-5" />
-                  <span>Balances</span>
+                  <span className="text-sm">Balances</span>
                   <span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
                 </TabsTrigger>
               </TabsList>
