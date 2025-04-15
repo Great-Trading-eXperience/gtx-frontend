@@ -11,6 +11,8 @@ export interface Pool {
   orderBook: string
   quoteCurrency: string
   timestamp: number
+  baseDecimals: number
+  quoteDecimals: number
 }
 
 export interface MarketData {
@@ -41,6 +43,12 @@ interface MarketStore {
   
   // Default values
   DEFAULT_PAIR: string
+
+  // Decimals
+  baseDecimals: number
+  quoteDecimals: number
+  setBaseDecimals: (decimals: number) => void
+  setQuoteDecimals: (decimals: number) => void
 }
 
 export const useMarketStore = create<MarketStore>((set, get) => ({
@@ -127,5 +135,11 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
   },
   
   // Default values
-  DEFAULT_PAIR: 'WETH/USDC'
+  DEFAULT_PAIR: 'WETH/USDC',
+
+  // Decimals
+  baseDecimals: 18,
+  quoteDecimals: 6,
+  setBaseDecimals: (decimals: number) => set({ baseDecimals: decimals }),
+  setQuoteDecimals: (decimals: number) => set({ quoteDecimals: decimals })
 }))

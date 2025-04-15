@@ -1,14 +1,17 @@
 'use client'
 
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { tradesQuery, poolsQuery } from '@/graphql/gtx/gtx.query'
+import { poolsQuery, tradesQuery } from '@/graphql/gtx/gtx.query'
+import { useMarketStore } from '@/store/market-store'
 import { useQuery } from '@tanstack/react-query'
 import request from 'graphql-request'
-import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState, useMemo } from 'react'
 import { formatUnits } from 'viem'
-import { useMarketStore } from '@/store/market-store'
 import { PairDropdown } from './pair-dropdown'
-import { useRouter, usePathname } from 'next/navigation'
+import { useChainId } from 'wagmi'
+import React from 'react'
+import { Pool } from '@/store/market-store'
 
 // Define interfaces for the trades query response
 interface TradeItem {
@@ -45,31 +48,32 @@ interface TradesResponse {
 }
 
 // Define interfaces for the pools query response
-interface PoolsResponse {
-  poolss: {
-    items: Array<{
-      baseCurrency: string;
-      coin: string;
-      id: string;
-      lotSize: string;
-      maxOrderAmount: string;
-      orderBook: string;
-      quoteCurrency: string;
-      timestamp: number;
-    }>;
-    totalCount: number;
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-  };
+interface PoolItem {
+  baseCurrency: string
+  coin: string
+  id: string
+  lotSize: string
+  maxOrderAmount: string
+  orderBook: string
+  quoteCurrency: string
+  timestamp: number
 }
 
-const formatVolume = (value: bigint, decimals: number = 6) => {
-  const formatted = formatUnits(value, decimals)
-  const num = parseFloat(formatted)
+interface PoolsResponse {
+  poolss: {
+    items: PoolItem[]
+    totalCount: number
+    pageInfo: {
+      endCursor: string
+      hasNextPage: boolean
+      hasPreviousPage: boolean
+      startCursor: string
+    }
+  }
+}
+
+const formatVolume = (value: number, decimals: number = 6) => {
+  const num = parseFloat(value.toString())
   
   const config = {
     minimumFractionDigits: 2,
@@ -99,112 +103,117 @@ const SkeletonLoader = () => (
   </div>
 )
 
-export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poolId: string) => void }) {
-  // Use Next.js router for URL manipulation
-  const router = useRouter()
+export default function MarketWidget() {
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
   const pathname = usePathname()
+  const router = useRouter()
   const [lastPathname, setLastPathname] = useState<string | null>(null)
-  
-  // Use Zustand store for state management
-  const { 
-    selectedPoolId, 
+
+  const {
+    selectedPoolId,
     setSelectedPoolId,
     setSelectedPool,
-    marketData, 
+    marketData,
     setMarketData,
     syncWithUrl,
-    getUrlFromPool
+    getUrlFromPool,
+    setBaseDecimals,
+    setQuoteDecimals,
+    quoteDecimals
   } = useMarketStore()
-  
-  // Fetch pools data
+
   const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
-    queryKey: ['pools'],
+    queryKey: ['pools', String(chainId ?? defaultChain)],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, poolsQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request(url, poolsQuery)
     },
     staleTime: 60000, // 1 minute - pools don't change often
   })
-  
-  // Track URL changes to detect when coming from other components
+
+  // Transform the pool items to include decimals before using them
+  const poolsWithDecimals = useMemo<Pool[]>(() => {
+    if (!poolsData?.poolss?.items) return []
+    return poolsData.poolss.items.map(pool => ({
+      ...pool,
+      baseDecimals: 18, // Default ERC20 decimals
+      quoteDecimals: 6, // Default USDC decimals
+    }))
+  }, [poolsData])
+
+  // Track URL changes and update pool selection
   useEffect(() => {
     if (pathname !== lastPathname) {
       setLastPathname(pathname)
       
-      // Only process if we have pools data
-      if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
-        // Extract pool ID from URL
+      if (poolsWithDecimals.length > 0) {
         const urlParts = pathname?.split('/') || []
         if (urlParts.length >= 3) {
           const poolIdFromUrl = urlParts[2]
-          
-          // Check if this is a valid pool ID that exists in our data
-          const poolExists = poolsData.poolss.items.some(pool => pool.id === poolIdFromUrl)
+          const poolExists = poolsWithDecimals.some(pool => pool.id === poolIdFromUrl)
           
           if (poolExists && poolIdFromUrl !== selectedPoolId) {
-            // Update the selected pool ID in the store
             setSelectedPoolId(poolIdFromUrl)
-            
-            // Update the selected pool object
-            const poolObject = poolsData.poolss.items.find(pool => pool.id === poolIdFromUrl)
+            const poolObject = poolsWithDecimals.find(pool => pool.id === poolIdFromUrl)
             if (poolObject) {
               setSelectedPool(poolObject)
-            }
-            
-            // Call onPoolChange callback if provided
-            if (onPoolChange) {
-              onPoolChange(poolIdFromUrl)
+              setBaseDecimals(poolObject.baseDecimals)
+              setQuoteDecimals(poolObject.quoteDecimals)
             }
           }
         }
       }
     }
-  }, [pathname, lastPathname, poolsData, selectedPoolId, setSelectedPoolId, setSelectedPool, onPoolChange])
-  
-  // Sync URL with store on initial load and when pools data changes
+  }, [pathname, lastPathname, poolsWithDecimals, selectedPoolId, setSelectedPoolId, setSelectedPool, setBaseDecimals, setQuoteDecimals])
+
+  // Initial sync with URL
   useEffect(() => {
-    if (poolsData?.poolss?.items && poolsData.poolss.items.length > 0) {
-      // If no pool is selected yet and we have pools data, sync with URL
-      if (!selectedPoolId) {
-        const syncedPoolId = syncWithUrl(pathname, poolsData.poolss.items)
-        
-        // If we successfully synced and got a pool ID, update the URL if needed
-        if (syncedPoolId && pathname === '/spot') {
-          router.push(getUrlFromPool(syncedPoolId))
+    if (poolsWithDecimals.length > 0) {
+      const poolId = syncWithUrl(pathname, poolsWithDecimals)
+      if (poolId) {
+        const pool = poolsWithDecimals.find((p) => p.id === poolId)
+        if (pool) {
+          setSelectedPool(pool)
+          setBaseDecimals(pool.baseDecimals)
+          setQuoteDecimals(pool.quoteDecimals)
         }
       }
     }
-  }, [pathname, poolsData, selectedPoolId, syncWithUrl, router, getUrlFromPool])
-  
+  }, [pathname, poolsWithDecimals, syncWithUrl, setSelectedPool, setBaseDecimals, setQuoteDecimals])
+
   // Handle pool change from dropdown
   const handlePoolChange = (poolId: string) => {
     setSelectedPoolId(poolId)
     
     // Set the selected pool object
-    if (poolsData?.poolss.items) {
-      const selectedPoolObject = poolsData.poolss.items.find(pool => pool.id === poolId)
+    if (poolsWithDecimals) {
+      const selectedPoolObject = poolsWithDecimals.find(pool => pool.id === poolId)
       if (selectedPoolObject) {
         setSelectedPool(selectedPoolObject)
+        setBaseDecimals(selectedPoolObject.baseDecimals)
+        setQuoteDecimals(selectedPoolObject.quoteDecimals)
       }
     }
     
     // Update URL
     router.push(getUrlFromPool(poolId))
-    
-    // Notify parent component if needed
-    if (onPoolChange) {
-      onPoolChange(poolId)
-    }
   }
 
   // Fetch trades data
   const { data: tradesData, isLoading: tradesLoading } = useQuery<TradesResponse>({
-    queryKey: ['trades', selectedPoolId],
+    queryKey: ['trades', String(chainId ?? defaultChain)],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, tradesQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request(url, tradesQuery)
     },
     refetchInterval: 5000,
     staleTime: 0,
-    enabled: !!selectedPoolId, // Only fetch trades when a pool is selected
+    refetchOnWindowFocus: true,
   })
 
   // Process trade data to calculate market statistics
@@ -221,7 +230,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
         priceChange24h: null,
         priceChangePercent24h: null,
         volume: null,
-        pair: poolsData?.poolss.items.find(pool => pool.id === selectedPoolId)?.coin || null
+        pair: poolsWithDecimals.find(pool => pool.id === selectedPoolId)?.coin || null
       })
       return
     }
@@ -233,7 +242,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
 
     // Get current price from the most recent trade
     const currentTrade = sortedItems[0]
-    const currentPrice = Number(formatUnits(BigInt(currentTrade.price), 12)) // Adjust decimals as needed
+    const currentPrice = Number(currentTrade.price) // Adjust decimals as needed
     
     // Find trade from 24 hours ago
     const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
@@ -241,7 +250,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       trade.timestamp <= twentyFourHoursAgo
     ) || sortedItems[sortedItems.length - 1] // Use oldest trade if none from 24h ago
     
-    const prevDayPrice = Number(formatUnits(BigInt(prevDayTrade.price), 12)) // Adjust decimals as needed
+    const prevDayPrice = Number(prevDayTrade.price) // Adjust decimals as needed
     const priceChange = currentPrice - prevDayPrice
     const priceChangePercent = (priceChange / prevDayPrice) * 100
 
@@ -255,7 +264,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
     }, BigInt(0))
 
     // Get trading pair
-    const pair = poolsData?.poolss.items.find(pool => pool.id === selectedPoolId)?.coin || 'Unknown Pair'
+    const pair = poolsWithDecimals.find(pool => pool.id === selectedPoolId)?.coin || 'Unknown Pair'
 
     setMarketData({
       price: currentPrice,
@@ -264,7 +273,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
       volume: totalVolume,
       pair: pair
     })
-  }, [tradesData, selectedPoolId, poolsData, setMarketData])
+  }, [tradesData, selectedPoolId, poolsWithDecimals, setMarketData])
 
   const formatNumber = (value: number | null, options: {
     decimals?: number
@@ -294,10 +303,10 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
           <div className="flex flex-col">
             {/* Integrated trading pair selector using shadcn/ui */}
             <div className="flex items-center gap-2">
-              {poolsData?.poolss.items ? (
+              {poolsWithDecimals.length > 0 ? (
                 <div className="flex items-center gap-2">
                   <PairDropdown
-                    pairs={poolsData.poolss.items}
+                    pairs={poolsWithDecimals}
                     selectedPairId={selectedPoolId || ''}
                     onPairSelect={handlePoolChange}
                   />
@@ -313,7 +322,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
         <div className="flex-1 flex gap-4 justify-center">
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1 underline'>Price</div>
-            <div className='text-gray-900 dark:text-white'>{formatNumber(marketData.price, { prefix: '$', decimals: 5 })}</div>
+            <div className='text-gray-900 dark:text-white'>{formatNumber(Number(formatUnits(BigInt(marketData.price ?? 0), quoteDecimals)), { prefix: '$' })}</div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
@@ -325,9 +334,9 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
             }>
               {marketData.priceChange24h && marketData.priceChangePercent24h && (
                 <>
-                  {formatNumber(marketData.priceChange24h, { 
-                    prefix: marketData.priceChange24h >= 0 ? '+' : '',
-                    decimals: 5
+                  {formatNumber(Math.abs(Number(formatUnits(BigInt(marketData.priceChange24h ?? 0), quoteDecimals))), { 
+                    prefix: marketData.priceChange24h >= 0 ? '+$' : '-$',
+                    decimals: 2
                   })} /{' '}
                   {formatNumber(marketData.priceChangePercent24h, { 
                     prefix: marketData.priceChangePercent24h >= 0 ? '+' : '', 
@@ -340,7 +349,7 @@ export default function MarketDataWidget({ onPoolChange }: { onPoolChange?: (poo
           </div>
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1'>24h Volume</div>
-            <div className='text-gray-900 dark:text-white'>${formatVolume(marketData.volume ?? BigInt(0), 6)}</div>
+            <div className='text-gray-900 dark:text-white'>${formatVolume(Number(formatUnits(marketData.volume ?? BigInt(0), quoteDecimals)), 2)}</div>
           </div>
         </div>
       </div>

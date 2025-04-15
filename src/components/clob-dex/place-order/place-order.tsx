@@ -1,24 +1,22 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { request } from "graphql-request"
-import { formatUnits, parseUnits } from "viem"
-import { useAccount } from "wagmi"
-import type { HexAddress } from "@/types/web3/general/address"
-import { poolsQuery } from "@/graphql/gtx/gtx.query"
+import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { useOrderBookAPI } from "@/hooks/web3/gtx/clob-dex/orderbook/useOrderBookAPI"
+import { poolsQuery } from "@/graphql/gtx/gtx.query"
 import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances"
 import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/write/usePlaceOrder"
-import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
+import { useOrderBook } from "@/hooks/web3/gtx/clob-dex/orderbook/useOrderBook"
+import { Pool, useMarketStore } from "@/store/market-store"
+import type { HexAddress } from "@/types/web3/general/address"
+import { Side } from "@/types/web3/gtx/gtx"
+import { useQuery } from "@tanstack/react-query"
+import { request } from "graphql-request"
 import { RefreshCw, Wallet } from "lucide-react"
-import { useMarketStore, Pool } from "@/store/market-store"
 import { usePathname } from "next/navigation"
-
-// Order side type
-type Side = 0 | 1 // 0 = BUY, 1 = SELL
+import type React from "react"
+import { useEffect, useState } from "react"
+import { formatUnits, parseUnits } from "viem"
+import { useAccount, useChainId } from "wagmi"
 
 // Define the expected data structure from the GraphQL query
 interface PoolsData {
@@ -54,10 +52,12 @@ const BALANCE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_BALANCE_MANAGER_ADDRESS 
 const PlaceOrder = () => {
   const { address, isConnected } = useAccount()
   const pathname = usePathname()
-  const { selectedPool, selectedPoolId, setSelectedPool } = useMarketStore()
-  
+  const { selectedPool, selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } = useMarketStore()
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
-  const [side, setSide] = useState<Side>(0) // Default to BUY
+  const [side, setSide] = useState<Side>(Side.BUY) // Default to BUY
   const [price, setPrice] = useState<string>("")
   const [quantity, setQuantity] = useState<string>("")
   const [total, setTotal] = useState<string>("0")
@@ -74,7 +74,7 @@ const PlaceOrder = () => {
   const [notificationMessage, setNotificationMessage] = useState("")
   const [notificationSuccess, setNotificationSuccess] = useState(true)
   const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>()
-  
+
   // Component mounted state
   const [mounted, setMounted] = useState(false)
 
@@ -115,9 +115,12 @@ const PlaceOrder = () => {
     isLoading: poolsLoading,
     error: poolsError,
   } = useQuery<PoolsData>({
-    queryKey: ["poolsData"],
+    queryKey: ["poolsData", String(chainId ?? defaultChain)],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL as string, poolsQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<PoolsData>(url, poolsQuery)
     },
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: false,
@@ -140,10 +143,10 @@ const PlaceOrder = () => {
     marketSimulateError,
   } = usePlaceOrder()
 
-  const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBookAPI(
+  const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBook(
     (orderBookAddress as HexAddress) || "0x0000000000000000000000000000000000000000",
   )
-
+  
   // Use the fixed balance hook
   const {
     getWalletBalance,
@@ -151,30 +154,32 @@ const PlaceOrder = () => {
     deposit,
     loading: balanceLoading,
   } = useTradingBalances(BALANCE_MANAGER_ADDRESS)
-  
-  // Set mounted state
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  
+
   // Helper function to convert pool item from API to store format
   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
     return {
       ...poolItem,
-      timestamp: parseInt(poolItem.timestamp, 10)
+      timestamp: parseInt(poolItem.timestamp, 10),
+      baseDecimals,
+      quoteDecimals,
     }
   }
-  
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Sync with URL and store
   useEffect(() => {
     if (!mounted || !poolsData?.poolss?.items) return
-    
+
     // Watch for URL changes that might indicate a pool change from another component
     if (pathname) {
       const urlParts = pathname.split('/')
       if (urlParts.length >= 3) {
         const poolIdFromUrl = urlParts[2]
-        
+
         // If URL has a different pool ID than what's selected, check if it's a valid pool
         if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
           const poolItem = poolsData.poolss.items.find(p => p.id === poolIdFromUrl)
@@ -188,13 +193,13 @@ const PlaceOrder = () => {
       }
     }
   }, [pathname, selectedPoolId, poolsData, mounted, setSelectedPool])
-  
+
   // Update orderBookAddress when selectedPool changes
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
       console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`)
       setOrderBookAddress(selectedPool.orderBook as HexAddress)
-      
+
       // Reset price when pool changes
       setPrice("")
       setQuantity("")
@@ -254,10 +259,10 @@ const PlaceOrder = () => {
     if (!price && orderType === "limit") {
       if (side === 0 && bestPriceSell) {
         // Buy - use best sell price
-        setPrice(formatUnits(bestPriceSell.price, 0))
+        setPrice(formatUnits(bestPriceSell.price, quoteDecimals))
       } else if (side === 1 && bestPriceBuy) {
         // Sell - use best buy price
-        setPrice(formatUnits(bestPriceBuy.price, 0))
+        setPrice(formatUnits(bestPriceBuy.price, quoteDecimals))
       }
     }
   }, [bestPriceBuy, bestPriceSell, side, price, orderType])
@@ -276,11 +281,11 @@ const PlaceOrder = () => {
           // Use wallet balance as fallback if manager balance fails
           try {
             const total = await getTotalAvailableBalance(relevantCurrency)
-            setAvailableBalance(formatUnits(total, 18)) // Assuming 18 decimals
+            setAvailableBalance(formatUnits(total, side === 0 ? quoteDecimals : baseDecimals)) // Assuming 18 decimals
           } catch (error) {
             console.error("Failed to get total balance, falling back to wallet balance:", error)
             const walletBal = await getWalletBalance(relevantCurrency)
-            setAvailableBalance(formatUnits(walletBal, 18))
+            setAvailableBalance(formatUnits(walletBal, side === 0 ? quoteDecimals : baseDecimals))
           }
         } catch (error) {
           console.error("Error loading any balance:", error)
@@ -327,17 +332,6 @@ const PlaceOrder = () => {
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side])
 
-  const handleMaxDeposit = () => {
-    if (availableBalance !== "Error" && !isLoadingBalance && !balanceLoading) {
-      // Subtract a small amount to account for gas fees if this is the native token
-      const maxAmount = Number.parseFloat(availableBalance)
-      if (!isNaN(maxAmount)) {
-        // Format to 6 decimal places to avoid floating point issues
-        setDepositAmount(maxAmount.toFixed(4))
-      }
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -354,8 +348,8 @@ const PlaceOrder = () => {
 
     try {
       // Enhanced parameter validation
-      const quantityBigInt = parseUnits(quantity, 18)
-      const priceBigInt = parseUnits(price, 0)
+      const quantityBigInt = parseUnits(quantity, baseDecimals)
+      const priceBigInt = parseUnits(price, quoteDecimals)
 
       // Additional checks before contract call
       if (quantityBigInt <= 0n) {
@@ -397,72 +391,6 @@ const PlaceOrder = () => {
         setShowNotification(true)
       }
     }
-  }
-
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!isConnected || !selectedPool || !address) {
-      setNotificationMessage("Please connect your wallet first.")
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
-      return
-    }
-
-    try {
-      const relevantCurrency =
-        side === 0
-          ? (selectedPool.quoteCurrency as HexAddress) // For buys, we need quote currency (USDC)
-          : (selectedPool.baseCurrency as HexAddress) // For sells, we need base currency (ETH)
-
-      const depositBigInt = parseUnits(depositAmount, 18) // Assuming 18 decimals
-      await deposit(relevantCurrency, depositBigInt)
-
-      // Reset and refresh balance
-      setDepositAmount("")
-      setDepositMode(false)
-
-      // Refresh balance
-      try {
-        const total = await getTotalAvailableBalance(relevantCurrency)
-        setAvailableBalance(formatUnits(total, 18))
-
-        // Show success message
-        setNotificationMessage("Successfully deposited funds.")
-        setNotificationSuccess(true)
-        // You can set transaction hash here if available
-        // setNotificationTxHash(depositTxHash);
-        setShowNotification(true)
-      } catch (error) {
-        console.error("Failed to refresh balance after deposit:", error)
-      }
-    } catch (error) {
-      console.error("Deposit error:", error)
-
-      setNotificationMessage("There was an error processing your deposit.")
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
-    }
-  }
-
-  const getCoinIcon = (pair: string | null) => {
-    if (!pair) return "/icon/eth-usdc.png"
-
-    const lowerPair = pair.toLowerCase()
-    if (lowerPair.includes("eth") || lowerPair.includes("weth")) {
-      return "/icon/eth-usdc.png"
-    } else if (lowerPair.includes("btc") || lowerPair.includes("wbtc")) {
-      return "/icon/btc-usdc.png"
-    } else if (lowerPair.includes("pepe")) {
-      return "/icon/pepe-usdc.png"
-    } else if (lowerPair.includes("link")) {
-      return "/icon/link-usdc.png"
-    }
-
-    // Default icon
-    return "/icon/eth-usdc.png"
   }
 
   const isPending = isLimitOrderPending || isMarketOrderPending
@@ -520,20 +448,18 @@ const PlaceOrder = () => {
             <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
-                  orderType === "limit" ? "bg-blue-600 text-white" : "bg-transparent text-blue-300 hover:bg-blue-800/50"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "limit" ? "bg-blue-600 text-white" : "bg-transparent text-blue-300 hover:bg-blue-800/50"
+                  }`}
                 onClick={() => setOrderType("limit")}
               >
                 <span>Limit</span>
               </button>
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
-                  orderType === "market"
-                    ? "bg-blue-600 text-white"
-                    : "bg-transparent text-blue-300 hover:bg-blue-800/50"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "market"
+                  ? "bg-blue-600 text-white"
+                  : "bg-transparent text-blue-300 hover:bg-blue-800/50"
+                  }`}
                 onClick={() => setOrderType("market")}
               >
                 <span>Market</span>
@@ -546,18 +472,16 @@ const PlaceOrder = () => {
             <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
-                  side === 0 ? "bg-emerald-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${side === 0 ? "bg-emerald-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
+                  }`}
                 onClick={() => setSide(0)}
               >
                 <span>Buy</span>
               </button>
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
-                  side === 1 ? "bg-rose-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${side === 1 ? "bg-rose-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
+                  }`}
                 onClick={() => setSide(1)}
               >
                 <span>Sell</span>
@@ -579,12 +503,12 @@ const PlaceOrder = () => {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="Enter price"
-                step="0.000001"
+                step={`0.${"0".repeat(quoteDecimals - 1)}1`}
                 min="0"
                 required
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-                USDC
+                {selectedPool?.quoteCurrency ? selectedPool.coin.split("/")[1] : ""}
               </div>
             </div>
           </div>
@@ -634,17 +558,15 @@ const PlaceOrder = () => {
         {/* Submit Button with glow effect */}
         <div className="relative mt-6 group">
           <div
-            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
-              side === 0 ? "bg-emerald-500/30" : "bg-rose-500/30"
-            } ${isPending || isConfirming || !isConnected ? "opacity-0" : "opacity-50"}`}
+            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${side === 0 ? "bg-emerald-500/30" : "bg-rose-500/30"
+              } ${isPending || isConfirming || !isConnected ? "opacity-0" : "opacity-50"}`}
           ></div>
           <button
             type="submit"
-            className={`relative w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-              side === 0
-                ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
-            } ${isPending || isConfirming || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`relative w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${side === 0
+              ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+              : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+              } ${isPending || isConfirming || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={isPending || isConfirming || !isConnected}
           >
             {isPending ? (

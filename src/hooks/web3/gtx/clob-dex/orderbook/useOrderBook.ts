@@ -29,7 +29,7 @@ type Order = {
 /**
  * Custom hook for querying order book data from the OrderBook contract
  */
-export const useOrderBookAPI = (orderBookAddress: HexAddress) => {
+export const useOrderBook = (orderBookAddress: HexAddress) => {
   const [error, setError] = useState<Error | null>(null);
   const isValidAddress = orderBookAddress && orderBookAddress !== '0x0000000000000000000000000000000000000000';
 

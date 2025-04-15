@@ -47,6 +47,7 @@ export const usePlaceOrder = () => {
       orderParams.quantity,
       orderParams.side,
       address,
+      0
     ] : undefined,
   });
 

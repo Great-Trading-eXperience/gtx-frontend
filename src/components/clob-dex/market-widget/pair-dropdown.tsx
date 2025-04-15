@@ -226,13 +226,6 @@ export function PairDropdown({ pairs, selectedPairId, onPairSelect }: PairDropdo
     )
   }
 
-  // Debug effect to log when selected pair changes
-  useEffect(() => {
-    if (selectedPair) {
-      console.log(`Selected pair in dropdown: ${selectedPair.id} (${selectedPair.coin})`)
-    }
-  }, [selectedPair])
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

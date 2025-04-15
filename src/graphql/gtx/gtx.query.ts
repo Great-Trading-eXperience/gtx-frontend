@@ -7,8 +7,6 @@ export const poolsQuery = gql`
         baseCurrency
         coin
         id
-        lotSize
-        maxOrderAmount
         orderBook
         quoteCurrency
         timestamp
@@ -54,8 +52,6 @@ export const tradesQuery = gql`
             baseCurrency
             coin
             id
-            lotSize
-            maxOrderAmount
             orderBook
             quoteCurrency
             timestamp
@@ -190,9 +186,9 @@ export const minuteCandleStickQuery = gql`
 `;
 
 export const fiveMinuteCandleStickQuery = gql`
-  query GetFiveMinuteCandleStick {
+  query GetFiveMinuteCandleStick($poolId: String!) {
     fiveMinuteBucketss(
-      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
     ) {
@@ -210,9 +206,9 @@ export const fiveMinuteCandleStickQuery = gql`
 `;
 
 export const hourCandleStickQuery = gql`
-  query GetHourCandleStick {
+  query GetHourCandleStick($poolId: String!) {
     hourBucketss(
-      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
     ) {
@@ -230,9 +226,9 @@ export const hourCandleStickQuery = gql`
 `;
 
 export const dailyCandleStickQuery = gql`
-  query GetDailyCandleStick {
+  query GetDailyCandleStick($poolId: String!) {
     dailyBucketss(
-      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
     ) {

@@ -1,7 +1,6 @@
 'use client';
 
 import MarketList from "@/components/markets/markets";
-import MarketsPage from "@/components/markets/markets";
 
 const Markets = () => {
     return (

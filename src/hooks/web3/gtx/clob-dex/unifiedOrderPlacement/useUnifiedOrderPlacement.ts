@@ -14,7 +14,7 @@ import PoolManagerABI from '@/abis/gtx/clob-dex/PoolManagerABI';
 
 // Types
 import { HexAddress } from '@/types/web3/general/address';
-import { useOrderBookAPI } from '../orderbook/useOrderBookAPI';
+import { useOrderBook } from '../orderbook/useOrderBook';
 import { useCancelOrder } from '../orderbook/useCencelOrder';
 import { useTradingBalances } from '../balance-manager/useTradingBalances';
 
@@ -533,7 +533,7 @@ export const useGTXTrading = (
     // Combine all the hooks
     const orderPlacement = useUnifiedOrderPlacement(routerAddress, balanceManagerAddress);
     const balances = useTradingBalances(balanceManagerAddress);
-    const orderBookAPI = useOrderBookAPI(orderBookAddress);
+    const orderBookAPI = useOrderBook(orderBookAddress);
     const cancelOrder = useCancelOrder();
 
     return {

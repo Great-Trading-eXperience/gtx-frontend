@@ -132,6 +132,32 @@ const gtxpresso: Chain = {
   testnet: true,
 };
 
+// GTX chain
+const gtxChain: Chain = {
+  id: 31338,
+  name: "GTX",
+  nativeCurrency: {
+    decimals: 18,
+    name: "GTX Ether",
+    symbol: "ETH",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://anvil.gtxdex.xyz"],
+    },
+    public: {
+      http: ["https://anvil.gtxdex.xyz"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "GTX Explorer",
+      url: "https://indexer-anvil.gtxdex.xyz",
+    },
+  },
+  testnet: true,
+};
+
 const connectors = connectorsForWallets(
   [
     {
@@ -155,24 +181,32 @@ const connectors = connectorsForWallets(
   { appName: "RainbowKit App", projectId: projectId },
 );
 
+const allChains = [
+  riseSepolia, 
+  localChain, 
+  conduitChain,
+  arbitrumSepolia, 
+  monad, 
+  sepolia, 
+  gtxpresso,
+  gtxChain,
+]
+
+const enabledChains = process.env.ENABLED_CHAINS
+  ? allChains.filter((chain) => process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString()))
+  : [gtxChain] // Default to GTX chain if no chains are specified
+
+if (enabledChains.length === 0) {
+  enabledChains.push(gtxChain) // Ensure at least GTX chain is enabled
+}
+
+const transports = enabledChains.reduce((acc, chain) => {
+  acc[chain.id] = http(chain.rpcUrls.default.http[0])
+  return acc
+}, {} as Record<number, ReturnType<typeof http>>)
+
 export const wagmiConfig = createConfig({
-  chains: [
-    riseSepolia, 
-    localChain, 
-    conduitChain, 
-    arbitrumSepolia, 
-    monad, 
-    sepolia, 
-    gtxpresso
-  ],
+  chains: enabledChains as [Chain, ...Chain[]],
   connectors: connectors,
-  transports: {
-    [riseSepolia.id]: http("https://testnet.riselabs.xyz"),
-    [localChain.id]: http("http://127.0.0.1:8545"),
-    [conduitChain.id]: http("https://odyssey.ithaca.xyz"),
-    [arbitrumSepolia.id]: http("https://sepolia-rollup.arbitrum.io/rpc"),
-    [sepolia.id]: http("https://sepolia.infura.io/v3/jBG4sMyhez7V13jNTeQKfVfgNa54nCmF"),
-    [monad.id]: http("https://testnet-rpc.monad.xyz"),
-    [gtxpresso.id]: http("http://157.173.201.26:8547")
-  }
+  transports
 })

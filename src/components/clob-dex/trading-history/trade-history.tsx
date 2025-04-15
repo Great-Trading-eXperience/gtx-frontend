@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import { ArrowDownUp, ChevronDown, Clock, ExternalLink, Loader2, Wallet2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import request from 'graphql-request';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import { tradesQuery } from '@/graphql/gtx/gtx.query';
 import { formatDate } from '../../../../helper';
 import { formatUnits } from 'viem';
 import type { HexAddress } from '@/types/web3/general/address';
+import { useMarketStore } from '@/store/market-store';
 
 // Updated interface for trade items based on the new query structure
 interface TradeItem {
@@ -68,14 +69,14 @@ interface TradeHistoryResponse {
 }
 
 const formatPrice = (price: string): string => {
-  return Number(formatUnits(BigInt(price), 12)).toLocaleString('en-US', {
+  return Number(price).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 };
 
 const formatQuantity = (quantity: string): string => {
-  return Number(formatUnits(BigInt(quantity), 18)).toLocaleString('en-US', {
+  return Number(quantity).toLocaleString('en-US', {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   });
@@ -85,11 +86,16 @@ const TradeHistoryTable = () => {
   const { address } = useAccount();
   type SortDirection = 'asc' | 'desc';
   type SortableKey = 'timestamp' | 'quantity' | 'price';
-  
+
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: SortDirection }>({
     key: 'timestamp',
     direction: 'desc'
   });
+
+  const { quoteDecimals, baseDecimals } = useMarketStore()
 
   const { data, isLoading, error } = useQuery<TradeHistoryResponse>({
     queryKey: ['tradeHistory', address],
@@ -98,8 +104,12 @@ const TradeHistoryTable = () => {
         throw new Error('Wallet address not available');
       }
 
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+
       const response = await request<TradeHistoryResponse>(
-        GTX_GRAPHQL_URL, 
+        url,
         tradesQuery
       );
 
@@ -114,7 +124,7 @@ const TradeHistoryTable = () => {
           if (trade.order?.user?.user) {
             return trade.order.user.user.toLowerCase() === address.toLowerCase();
           }
-          
+
           return false;
         });
       }
@@ -170,21 +180,21 @@ const TradeHistoryTable = () => {
 
   const sortedTrades = [...trades].sort((a, b) => {
     const key = sortConfig.key;
-    
+
     if (key === 'timestamp') {
       return sortConfig.direction === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
     }
     if (key === 'quantity') {
       const aValue = BigInt(a.quantity);
       const bValue = BigInt(b.quantity);
-      return sortConfig.direction === 'asc' 
+      return sortConfig.direction === 'asc'
         ? aValue < bValue ? -1 : aValue > bValue ? 1 : 0
         : bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
     }
     if (key === 'price') {
       const aValue = BigInt(a.price);
       const bValue = BigInt(b.price);
-      return sortConfig.direction === 'asc' 
+      return sortConfig.direction === 'asc'
         ? aValue < bValue ? -1 : aValue > bValue ? 1 : 0
         : bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
     }
@@ -202,9 +212,8 @@ const TradeHistoryTable = () => {
           <Clock className="h-4 w-4" />
           <span>Time</span>
           <ChevronDown
-            className={`h-4 w-4 transition-transform ${
-              sortConfig.key === 'timestamp' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-            }`}
+            className={`h-4 w-4 transition-transform ${sortConfig.key === 'timestamp' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+              }`}
           />
         </button>
         <div className="text-sm font-medium text-gray-200">Pair</div>
@@ -214,9 +223,8 @@ const TradeHistoryTable = () => {
         >
           <span>Price</span>
           <ChevronDown
-            className={`h-4 w-4 transition-transform ${
-              sortConfig.key === 'price' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-            }`}
+            className={`h-4 w-4 transition-transform ${sortConfig.key === 'price' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+              }`}
           />
         </button>
         <div className="text-sm font-medium text-gray-200">Side</div>
@@ -226,9 +234,8 @@ const TradeHistoryTable = () => {
         >
           <span>Amount</span>
           <ChevronDown
-            className={`h-4 w-4 transition-transform ${
-              sortConfig.key === 'quantity' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-            }`}
+            className={`h-4 w-4 transition-transform ${sortConfig.key === 'quantity' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+              }`}
           />
         </button>
         <div className="text-sm font-medium text-gray-200">Transaction</div>
@@ -240,7 +247,7 @@ const TradeHistoryTable = () => {
           sortedTrades.map((trade) => {
             const isBuy = trade.order?.side === 'Buy';
             const pair = trade.order?.pool?.coin || 'Unknown';
-            
+
             return (
               <div
                 key={trade.id}
@@ -248,15 +255,15 @@ const TradeHistoryTable = () => {
               >
                 <div className="text-gray-200">{formatDate(trade.timestamp.toString())}</div>
                 <div className="text-gray-200">{pair}</div>
-                <div className="font-medium text-white">${formatPrice(trade.price)}</div>
+                <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(trade.price), quoteDecimals))}</div>
                 <div className={isBuy ? "text-emerald-400" : "text-rose-400"}>
                   {isBuy ? 'Buy' : 'Sell'}
                 </div>
-                <div className="font-medium text-white">{formatQuantity(trade.quantity)}</div>
+                <div className="font-medium text-white">{formatQuantity(formatUnits(BigInt(trade.quantity), baseDecimals))}</div>
                 <div className="text-blue-400 hover:text-blue-300 transition-colors truncate">
-                  <a 
-                    href={`https://testnet-explorer.riselabs.xyz/tx/${trade.transactionId}`} 
-                    target="_blank" 
+                  <a
+                    href={`https://testnet-explorer.riselabs.xyz/tx/${trade.transactionId}`}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="underline"
                   >

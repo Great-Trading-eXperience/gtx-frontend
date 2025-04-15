@@ -5,6 +5,7 @@ import { TransactionReceipt } from 'viem';
 import { POOL_MANAGER_ADDRESS } from '@/constants/contract-address';
 import PoolManagerABI from '@/abis/gtx/clob-dex/PoolManagerABI';
 import { HexAddress } from '@/types/web3/general/address';
+import { useChainId } from 'wagmi';
 
 // Common types
 interface BaseOptions {
@@ -38,13 +39,15 @@ export const usePoolManagerOwner = (): UsePoolManagerOwnerReturn => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const getOwner = useCallback(async (): Promise<HexAddress> => {
         setIsLoading(true);
         setError(null);
 
         try {
             const owner = await readContract(wagmiConfig, {
-                address: POOL_MANAGER_ADDRESS,
+                address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                 abi: PoolManagerABI,
                 functionName: 'owner',
             });
@@ -82,6 +85,8 @@ export const useSetRouter = (options: BaseOptions = {}): UseSetRouterReturn => {
     const [isSettingRouter, setIsSettingRouter] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const setRouter = useCallback(
         async ({ router }: SetRouterParams): Promise<TransactionReceipt> => {
             setIsSettingRouter(true);
@@ -89,7 +94,7 @@ export const useSetRouter = (options: BaseOptions = {}): UseSetRouterReturn => {
 
             try {
                 const hash = await writeContract(wagmiConfig, {
-                    address: POOL_MANAGER_ADDRESS,
+                    address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                     abi: PoolManagerABI,
                     functionName: 'setRouter',
                     args: [router] as const,
@@ -138,6 +143,8 @@ export const useCreatePool = (options: BaseOptions = {}): UseCreatePoolReturn =>
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const createPool = useCallback(
         async ({ poolKey, lotSize, maxOrderAmount }: CreatePoolParams): Promise<TransactionReceipt> => {
             setIsCreating(true);
@@ -145,7 +152,7 @@ export const useCreatePool = (options: BaseOptions = {}): UseCreatePoolReturn =>
 
             try {
                 const hash = await writeContract(wagmiConfig, {
-                    address: POOL_MANAGER_ADDRESS,
+                    address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                     abi: PoolManagerABI,
                     functionName: 'createPool',
                     args: [{
@@ -194,13 +201,15 @@ export const useGetPool = (): UseGetPoolReturn => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const getPool = useCallback(async ({ poolKey }: GetPoolParams): Promise<Pool> => {
         setIsLoading(true);
         setError(null);
 
         try {
             const pool = await readContract(wagmiConfig, {
-                address: POOL_MANAGER_ADDRESS,
+                address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                 abi: PoolManagerABI,
                 functionName: 'getPool',
                 args: [{
@@ -241,13 +250,15 @@ export const useGetPoolId = (): UseGetPoolIdReturn => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const getPoolId = useCallback(async ({ poolKey }: GetPoolIdParams): Promise<string> => {
         setIsLoading(true);
         setError(null);
 
         try {
             const poolId = await readContract(wagmiConfig, {
-                address: POOL_MANAGER_ADDRESS,
+                address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                 abi: PoolManagerABI,
                 functionName: 'getPoolId',
                 args: [{
@@ -288,13 +299,15 @@ export const useGetPoolById = (): UseGetPoolByIdReturn => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const getPoolById = useCallback(async ({ poolId }: GetPoolByIdParams): Promise<Pool> => {
         setIsLoading(true);
         setError(null);
 
         try {
             const poolData = await readContract(wagmiConfig, {
-                address: POOL_MANAGER_ADDRESS,
+                address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                 abi: PoolManagerABI,
                 functionName: 'pools',
                 args: [poolId] as const,
@@ -340,6 +353,8 @@ export const useTransferOwnership = (options: BaseOptions = {}): UseTransferOwne
     const [isTransferring, setIsTransferring] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const transferOwnership = useCallback(
         async ({ newOwner }: TransferOwnershipParams): Promise<TransactionReceipt> => {
             setIsTransferring(true);
@@ -347,7 +362,7 @@ export const useTransferOwnership = (options: BaseOptions = {}): UseTransferOwne
 
             try {
                 const hash = await writeContract(wagmiConfig, {
-                    address: POOL_MANAGER_ADDRESS,
+                    address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                     abi: PoolManagerABI,
                     functionName: 'transferOwnership',
                     args: [newOwner] as const,
@@ -390,13 +405,15 @@ export const useRenounceOwnership = (options: BaseOptions = {}): UseRenounceOwne
     const [isRenouncing, setIsRenouncing] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    const chainId = useChainId()
+
     const renounceOwnership = useCallback(async (): Promise<TransactionReceipt> => {
         setIsRenouncing(true);
         setError(null);
 
         try {
             const hash = await writeContract(wagmiConfig, {
-                address: POOL_MANAGER_ADDRESS,
+                address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
                 abi: PoolManagerABI,
                 functionName: 'renounceOwnership',
             });

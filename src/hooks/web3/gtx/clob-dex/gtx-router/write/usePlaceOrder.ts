@@ -2,7 +2,7 @@ import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 import { writeContract, waitForTransactionReceipt } from "wagmi/actions";
 import { useState } from "react";
-import { useAccount, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import GTXRouterABI from "@/abis/gtx/clob-dex/GTXRouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { GTX_ROUTER_ADDRESS } from "@/constants/contract-address";
@@ -20,9 +20,8 @@ export const usePlaceOrder = () => {
   const [limitOrderHash, setLimitOrderHash] = useState<HexAddress | undefined>(undefined);
   const [marketOrderHash, setMarketOrderHash] = useState<HexAddress | undefined>(undefined);
 
-  // Get the router address from environment variables
+  const chainId = useChainId()
   
-
   // Mutation for limit orders
   const {
     mutateAsync: placeLimitOrder,
@@ -31,13 +30,15 @@ export const usePlaceOrder = () => {
     error: limitSimulateError,
   } = useMutation({
     mutationFn: async ({
-      poolKey,
+      baseCurrency,
+      quoteCurrency,
       price,
       quantity,
       side,
       withDeposit = false
     }: {
-      poolKey: PoolKey;
+      baseCurrency: HexAddress;
+      quoteCurrency: HexAddress;
       price: bigint;
       quantity: bigint;
       side: Side;
@@ -48,17 +49,17 @@ export const usePlaceOrder = () => {
         
         if (withDeposit) {
           hash = await writeContract(wagmiConfig, {
-            address: GTX_ROUTER_ADDRESS,
+            address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeOrderWithDeposit',
-            args: [poolKey, price, quantity, side] as const,
+            args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
           });
         } else {
           hash = await writeContract(wagmiConfig, {
-            address: GTX_ROUTER_ADDRESS,
+            address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeOrder',
-            args: [poolKey, price, quantity, side] as const,
+            args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
           });
         }
 
@@ -91,13 +92,15 @@ export const usePlaceOrder = () => {
     error: marketSimulateError,
   } = useMutation({
     mutationFn: async ({
-      poolKey,
+      baseCurrency,
+      quoteCurrency,
       quantity,
       side,
       price,
       withDeposit = false
     }: {
-      poolKey: PoolKey;
+      baseCurrency: HexAddress;
+      quoteCurrency: HexAddress;
       quantity: bigint;
       side: Side;
       price?: bigint;
@@ -112,17 +115,17 @@ export const usePlaceOrder = () => {
           }
           
           hash = await writeContract(wagmiConfig, {
-            address: GTX_ROUTER_ADDRESS,
+            address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeMarketOrderWithDeposit',
-            args: [poolKey, price, quantity, side] as const,
+            args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, BigInt(quantity), side, address as `0x${string}` ] as const,
           });
         } else {
           hash = await writeContract(wagmiConfig, {
-            address: GTX_ROUTER_ADDRESS,
+            address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
-            args: [poolKey, quantity, side] as const,
+            args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, quantity, side, address as `0x${string}` ] as const,
           });
         }
 
@@ -166,7 +169,7 @@ const {
 
   // Wrapper functions with validation
   const handlePlaceLimitOrder = async (
-    poolKey: PoolKey,
+    poolKey: { baseCurrency: HexAddress; quoteCurrency: HexAddress },
     price: bigint,
     quantity: bigint,
     side: Side,
@@ -177,7 +180,6 @@ const {
       return;
     }
 
-    // Add validation here if needed
     if (price <= 0n) {
       toast.error('Price must be greater than zero');
       return;
@@ -188,11 +190,18 @@ const {
       return;
     }
 
-    return placeLimitOrder({ poolKey, price, quantity, side, withDeposit });
+    return placeLimitOrder({ 
+      baseCurrency: poolKey.baseCurrency, 
+      quoteCurrency: poolKey.quoteCurrency, 
+      price, 
+      quantity, 
+      side, 
+      withDeposit 
+    });
   };
 
   const handlePlaceMarketOrder = async (
-    poolKey: PoolKey,
+    poolKey: { baseCurrency: HexAddress; quoteCurrency: HexAddress },
     quantity: bigint,
     side: Side,
     price?: bigint,
@@ -203,13 +212,19 @@ const {
       return;
     }
 
-    // Add validation here if needed
     if (quantity <= 0n) {
       toast.error('Quantity must be greater than zero');
       return;
     }
 
-    return placeMarketOrder({ poolKey, quantity, side, price, withDeposit });
+    return placeMarketOrder({ 
+      baseCurrency: poolKey.baseCurrency, 
+      quoteCurrency: poolKey.quoteCurrency, 
+      quantity, 
+      side, 
+      price, 
+      withDeposit 
+    });
   };
 
   return {

@@ -7,6 +7,8 @@ import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { formatUnits } from "viem"
 import { tradesQuery } from "@/graphql/gtx/gtx.query"
 import { ArrowDown, ArrowUp, BarChart2, Clock, RefreshCw } from "lucide-react"
+import { useChainId } from "wagmi"
+import { useMarketStore } from "@/store/market-store"
 
 // Define interface for the trades response based on the example data
 interface TradeItem {
@@ -65,11 +67,19 @@ const formatPrice = (price: number): string => {
 const RecentTradesComponent = () => {
   const [mounted, setMounted] = useState(false)
 
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
+  const { baseDecimals } = useMarketStore()
+
   // Query for trade events
   const { data, isLoading, error } = useQuery<TradesResponse>({
     queryKey: ["trades"],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, tradesQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<TradesResponse>(url, tradesQuery)
     },
     refetchInterval: 5000, // Refresh every 5 seconds
     staleTime: 0,
@@ -86,20 +96,20 @@ const RecentTradesComponent = () => {
     // Process each trade
     return sortedTrades.slice(0, 25).map((trade, index, array) => {
       // Convert price from string to number (assuming price is in wei)
-      const priceNum = Number(formatUnits(BigInt(trade.price), 12)) // Adjust decimal places as needed
-
+      const priceNum = Number(trade.price)
+      
       // Determine the side of the trade using a simple heuristic:
       // If the price is higher than the previous trade, it's a buy, otherwise it's a sell
       // For the first trade, we'll default to 'Buy'
       let side: "Buy" | "Sell" = "Buy"
       if (index > 0) {
-        const prevPrice = Number(formatUnits(BigInt(array[index - 1].price), 12))
+        const prevPrice = Number(array[index - 1].price)
         side = priceNum >= prevPrice ? "Buy" : "Sell"
       }
 
       return {
         price: priceNum,
-        size: Number(formatUnits(BigInt(trade.quantity), 18)), // Assuming quantity is in wei (18 decimals)
+        size: Number(trade.quantity) * priceNum / (10 ** (baseDecimals)), // Assuming quantity is in wei (18 decimals)
         side: side,
         time: formatTime(trade.timestamp),
       }
