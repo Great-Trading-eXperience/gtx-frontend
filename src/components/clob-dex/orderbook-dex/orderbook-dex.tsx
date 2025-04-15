@@ -1,11 +1,11 @@
 "use client"
 
+import GTXRouterABI from "@/abis/gtx/clob-dex/GTXRouterABI"
 import OrderBookABI from "@/abis/gtx/clob-dex/OrderBookABI"
 import { wagmiConfig } from "@/configs/wagmi"
+import { GTX_ROUTER_ADDRESS } from "@/constants/contract-address"
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { poolsQuery } from "@/graphql/gtx/gtx.query"
-import { useGetBestPrice } from "@/hooks/web3/gtx/clob-dex/orderbook/useGetBestPrice"
-import { useGetNextBestPrices } from "@/hooks/web3/gtx/clob-dex/orderbook/useGetNextBestPrices"
 import { Pool, useMarketStore } from "@/store/market-store"
 import { Side } from "@/types/web3/gtx/gtx"
 import { useQuery } from "@tanstack/react-query"
@@ -15,6 +15,7 @@ import { Menu, RefreshCw } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { formatUnits } from "viem"
+import { useChainId } from 'wagmi'
 
 interface PoolsResponse {
   poolss: {
@@ -55,8 +56,7 @@ const EnhancedOrderBookDex = () => {
   const [isPairDropdownOpen, setIsPairDropdownOpen] = useState(false)
   const priceOptions = ["0.01", "0.1", "1"]
   
-  // Use the Zustand store for selected pool and pool ID
-  const { selectedPool, selectedPoolId, setSelectedPool } = useMarketStore()
+  const { selectedPool, selectedPoolId, quoteDecimals, baseDecimals, setSelectedPool } = useMarketStore()
   
   // Get the current URL to detect changes
   const pathname = usePathname()
@@ -71,16 +71,20 @@ const EnhancedOrderBookDex = () => {
 
   const [viewType, setViewType] = useState<ViewType>("both")
 
-  // Fetch pools data
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
   const {
     data: poolsData,
     isLoading: isLoadingPools,
     error: poolsError,
   } = useQuery<PoolsResponse>({
-    queryKey: ["pools"],
+    queryKey: ["pools", String(chainId ?? defaultChain)],
     queryFn: async () => {
-      const response = await request<PoolsResponse>(GTX_GRAPHQL_URL, poolsQuery)
-      return response
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<PoolsResponse>(url, poolsQuery)
     },
     staleTime: 60000, // 1 minute
   })
@@ -116,14 +120,6 @@ const EnhancedOrderBookDex = () => {
     }
   }, [pathname, selectedPoolId, selectedPool, poolsData, mounted, setSelectedPool])
 
-  // Use the custom hooks
-  const { getBestPrice: getDefaultBestPrice, isLoading: isLoadingBestPrice, error: bestPriceError } = useGetBestPrice()
-  const {
-    getNextBestPrices: getDefaultNextBestPrices,
-    isLoading: isLoadingNextPrices,
-    error: nextPricesError,
-  } = useGetNextBestPrices()
-
   // Custom functions to handle dynamic orderbook addresses
   const getBestPrice = async ({ side }: { side: Side }) => {
     if (!selectedPool) {
@@ -144,10 +140,14 @@ const EnhancedOrderBookDex = () => {
   }
 
   const getNextBestPrices = async ({
+    baseCurrency,
+    quoteCurrency,
     side,
     price,
     count,
   }: {
+    baseCurrency: string
+    quoteCurrency: string
     side: Side
     price: bigint
     count: number
@@ -158,10 +158,10 @@ const EnhancedOrderBookDex = () => {
 
     try {
       const prices = await readContract(wagmiConfig, {
-        address: selectedPool.orderBook as `0x${string}`,
-        abi: OrderBookABI,
+        address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+        abi: GTXRouterABI,
         functionName: "getNextBestPrices",
-        args: [side, price, count] as const,
+        args: [selectedPool.baseCurrency as `0x${string}`, selectedPool.quoteCurrency as `0x${string}`, side, price, count] as const,
       })
 
       return [...prices] as Array<{ price: bigint; volume: bigint }>
@@ -189,7 +189,6 @@ const EnhancedOrderBookDex = () => {
   // Reset orderbook when selectedPool changes
   useEffect(() => {
     if (selectedPool) {
-      console.log(`OrderBook: Selected pool changed to ${selectedPool.coin}, resetting orderbook`)
       setOrderBook({
         asks: [],
         bids: [],
@@ -202,8 +201,6 @@ const EnhancedOrderBookDex = () => {
 
   useEffect(() => {
     if (!mounted || !selectedPool) return
-
-    console.log(`OrderBook: Fetching data for ${selectedPool.coin}`)
     
     const fetchOrderBook = async () => {
       try {
@@ -216,12 +213,16 @@ const EnhancedOrderBookDex = () => {
         })
 
         const nextAsks = await getNextBestPrices({
+          baseCurrency: selectedPool.baseCurrency as `0x${string}`,
+          quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
           side: Side.SELL,
           price: askBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
         })
 
         const nextBids = await getNextBestPrices({
+          baseCurrency: selectedPool.baseCurrency as `0x${string}`,
+          quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
           side: Side.BUY,
           price: bidBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
@@ -229,23 +230,23 @@ const EnhancedOrderBookDex = () => {
 
         const asks = [
           {
-            price: Number(formatUnits(askBestPrice.price, 6)),
-            size: Number(formatUnits(askBestPrice.volume, 18)),
+            price: Number(formatUnits(askBestPrice.price, quoteDecimals)),
+            size: Number(formatUnits(askBestPrice.volume, baseDecimals)),
           },
           ...nextAsks.map((pv) => ({
-            price: Number(formatUnits(pv.price, 6)),
-            size: Number(formatUnits(pv.volume, 18)),
+            price: Number(formatUnits(pv.price, quoteDecimals)),
+            size: Number(formatUnits(pv.volume, baseDecimals)),
           })),
         ].sort((a, b) => a.price - b.price)
 
         const bids = [
           {
-            price: Number(formatUnits(bidBestPrice.price, 6)),
-            size: Number(formatUnits(bidBestPrice.volume, 18)),
+            price: Number(formatUnits(bidBestPrice.price, quoteDecimals)),
+            size: Number(formatUnits(bidBestPrice.volume, baseDecimals)),
           },
           ...nextBids.map((pv) => ({
-            price: Number(formatUnits(pv.price, 6)),
-            size: Number(formatUnits(pv.volume, 18)),
+            price: Number(formatUnits(pv.price, quoteDecimals)),
+            size: Number(formatUnits(pv.volume, baseDecimals)),
           })),
         ].sort((a, b) => b.price - a.price)
 
@@ -266,8 +267,8 @@ const EnhancedOrderBookDex = () => {
         setOrderBook({
           asks: asksWithTotal,
           bids: bidsWithTotal,
-          lastPrice: BigInt(Math.round(asks[0]?.price * 10 ** 8)),
-          spread: BigInt(Math.round(spread * 10 ** 8)),
+          lastPrice: BigInt(Math.round(asks[0]?.price)),
+          spread: BigInt(Math.round(spread)),
           lastUpdate: Date.now(),
         })
       } catch (error) {
@@ -279,7 +280,7 @@ const EnhancedOrderBookDex = () => {
     fetchOrderBook()
 
     return () => clearInterval(interval)
-  }, [mounted, selectedPool, getBestPrice, getNextBestPrices])
+  }, [mounted, selectedPool, quoteDecimals, baseDecimals, getBestPrice, getNextBestPrices])
 
   const toggleView = useCallback(() => {
     const views: ViewType[] = ["both", "bids", "asks"]
@@ -287,9 +288,9 @@ const EnhancedOrderBookDex = () => {
     setViewType(views[(currentIndex + 1) % views.length])
   }, [viewType])
 
-  const isLoading = isLoadingBestPrice || isLoadingNextPrices || isLoadingPools
+  const isLoading = isLoadingPools
 
-  if (bestPriceError || nextPricesError || poolsError) {
+  if (poolsError) {
     return (
       <div className="w-full rounded-xl bg-gray-950 p-4 text-white border border-gray-800/30">
         <p className="text-rose-400 flex items-center gap-2">
@@ -297,9 +298,7 @@ const EnhancedOrderBookDex = () => {
           Error loading data
         </p>
         <p className="mt-2 text-sm text-gray-300">
-          {bestPriceError?.message ||
-            nextPricesError?.message ||
-            (poolsError instanceof Error ? poolsError.message : "Unknown error")}
+          {poolsError instanceof Error ? poolsError.message : "Unknown error"}
         </p>
       </div>
     )
@@ -363,8 +362,8 @@ const EnhancedOrderBookDex = () => {
               <div>
                 {/* Column Headers for Asks */}
                 <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
-                  <div>Price ({baseToken})</div>
-                  <div className="text-center">Size ({baseToken})</div>
+                  <div>Price</div>
+                  <div className="text-center">Size</div>
                   <div className="text-right">Total</div>
                 </div>
 
@@ -386,7 +385,7 @@ const EnhancedOrderBookDex = () => {
                         />
                         <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
                           <div className="font-medium text-rose-400">{formatPrice(ask.price)}</div>
-                          <div className="text-center text-gray-200">{ask.size.toFixed(6)}</div>
+                          <div className="text-center text-gray-200">{ask.size.toFixed(2)}</div>
                           <div className="text-right text-gray-200">{(ask.total || 0).toFixed(2)}</div>
                         </div>
                       </div>
@@ -411,8 +410,8 @@ const EnhancedOrderBookDex = () => {
               <div>
                 {/* Column Headers for Bids */}
                 <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
-                  <div>Price (USDC)</div>
-                  <div className="text-center">Size (USDC)</div>
+                  <div>Price</div>
+                  <div className="text-center">Size</div>
                   <div className="text-right">Total</div>
                 </div>
 
@@ -434,7 +433,7 @@ const EnhancedOrderBookDex = () => {
                         />
                         <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
                           <div className="font-medium text-emerald-400">{formatPrice(bid.price)}</div>
-                          <div className="text-center text-gray-200">{bid.size.toFixed(6)}</div>
+                          <div className="text-center text-gray-200">{bid.size.toFixed(2)}</div>
                           <div className="text-right text-gray-200">{(bid.total || 0).toFixed(2)}</div>
                         </div>
                       </div>

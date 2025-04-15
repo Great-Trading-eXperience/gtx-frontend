@@ -1,17 +1,15 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery, minuteCandleStickQuery } from "@/graphql/gtx/gtx.query"
-// import { minuteCandleStickQuery, fiveMinuteCandleStickQuery } from "@/graphql/gtx/gtx.query"
+import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery, minuteCandleStickQuery, poolsQuery } from "@/graphql/gtx/gtx.query"
+import { useMarketStore } from "@/store/market-store"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
 import { type CandlestickData, ColorType, createChart, type IChartApi, type Time } from "lightweight-charts"
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
-// import gql from "graphql-tag"
-
-
+import { useChainId } from "wagmi"
 
 // Define interfaces for the candlestick data response
 interface CandleStickItem {
@@ -46,13 +44,13 @@ interface VolumeData {
 }
 
 const formatPrice = (price: number): string => {
-  return Number(formatUnits(BigInt(price), 12)).toLocaleString("en-US", {
+  return Number(price).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function processCandleStickData(data: CandleStickItem[]): {
+function processCandleStickData(data: CandleStickItem[], quoteDecimals: number): {
   candlesticks: CandlestickData<Time>[]
   volumes: VolumeData[]
 } {
@@ -61,10 +59,10 @@ function processCandleStickData(data: CandleStickItem[]): {
 
   data.forEach(candle => {
     // Convert pricing data from raw to formatted values with proper decimal places
-    const openPrice = Number(formatUnits(BigInt(candle.open), 12));
-    const closePrice = Number(formatUnits(BigInt(candle.close), 12));
-    const lowPrice = Number(formatUnits(BigInt(candle.low), 12));
-    const highPrice = Number(formatUnits(BigInt(candle.high), 12));
+    const openPrice = Number(formatUnits(BigInt(candle.open), quoteDecimals));
+    const closePrice = Number(formatUnits(BigInt(candle.close), quoteDecimals));
+    const lowPrice = Number(formatUnits(BigInt(candle.low), quoteDecimals));
+    const highPrice = Number(formatUnits(BigInt(candle.high), quoteDecimals));
 
     // Create candlestick data point
     candlesticks.push({
@@ -104,6 +102,11 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
   const [timeframe, setTimeframe] = useState<TimeframeOption>("5m")
 
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
+  const { quoteDecimals } = useMarketStore()
+
   // Get the right query based on selected timeframe
   const getQueryForTimeframe = () => {
     switch (timeframe) {
@@ -121,9 +124,12 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
   }
 
   const { data, isLoading, error } = useQuery<CandleStickResponse>({
-    queryKey: ["candlesticks", timeframe],
+    queryKey: ["candlesticks", timeframe, String(chainId ?? defaultChain)],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, getQueryForTimeframe())
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<CandleStickResponse>(url, getQueryForTimeframe())
     },
     refetchInterval: 5000,
     staleTime: 0,
@@ -153,9 +159,8 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
                   data.dailyBucketss?.items;
     
     if (items && items.length > 0) {
-      // Find the candle with the latest timestamp
       const latestCandle = [...items].sort((a, b) => b.timestamp - a.timestamp)[0];
-      setCurrentPrice(formatPrice(latestCandle.close));
+      setCurrentPrice(formatPrice(Number(formatUnits(BigInt(latestCandle.close), quoteDecimals))));
     }
   }, [data]);
 
@@ -253,7 +258,7 @@ function ChartComponent({ height = 500 }: ChartComponentProps) {
                   data.dailyBucketss?.items;
 
     if (items) {
-      const { candlesticks, volumes } = processCandleStickData(items)
+      const { candlesticks, volumes } = processCandleStickData(items, quoteDecimals)
 
       candlestickSeries.setData(candlesticks)
       volumeSeries.setData(volumes)

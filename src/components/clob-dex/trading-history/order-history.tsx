@@ -3,13 +3,14 @@
 import { useState } from "react"
 import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
-import { useAccount } from "wagmi"
+import { useAccount, useChainId } from "wagmi"
 import request from "graphql-request"
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { formatDate } from "../../../../helper"
 import { formatUnits } from "viem"
 import { orderHistorysQuery, poolsQuery } from "@/graphql/gtx/gtx.query"
 import type { HexAddress } from "@/types/web3/general/address"
+import { useMarketStore } from "@/store/market-store"
 
 // Interfaces remain the same...
 interface UserInfo {
@@ -61,7 +62,7 @@ interface PoolsResponse {
 }
 
 const formatPrice = (price: string): string => {
-  return Number(formatUnits(BigInt(price), 12)).toLocaleString("en-US", {
+  return Number(price).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
@@ -89,10 +90,18 @@ const OrderHistoryTable = () => {
     direction: "desc",
   })
 
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
+  const { quoteDecimals } = useMarketStore()
+
   const { data: poolsData } = useQuery<PoolsResponse>({
     queryKey: ["pools"],
     queryFn: async () => {
-      return await request<PoolsResponse>(GTX_GRAPHQL_URL, poolsQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<PoolsResponse>(url, poolsQuery)
     },
     staleTime: 60000,
   })
@@ -105,10 +114,10 @@ const OrderHistoryTable = () => {
       }
 
       const userAddress = address.toLowerCase() as HexAddress
-
-      const response = await request<OrdersResponse>(GTX_GRAPHQL_URL, orderHistorysQuery, { userAddress })
-
-      return response
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<OrdersResponse>(url, orderHistorysQuery, { userAddress })
     },
     enabled: !!address,
     staleTime: 30000,
@@ -247,7 +256,7 @@ const OrderHistoryTable = () => {
             >
               <div className="text-gray-200">{formatDate(order.timestamp.toString())}</div>
               <div className="text-gray-200">{getPoolName(order.poolId)}</div>
-              <div className="font-medium text-white">${formatPrice(order.price)}</div>
+              <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(order.price), quoteDecimals))}</div>
               <div className={order.side === "Buy" ? "text-emerald-400" : "text-rose-400"}>{order.side}</div>
               <div className="font-medium text-white">{calculateFillPercentage(order.filled, order.quantity)}%</div>
               <div

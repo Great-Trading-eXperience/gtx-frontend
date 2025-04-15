@@ -1,8 +1,6 @@
 "use client"
 
-import TokenABI from "@/abis/tokens/TokenABI"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
-import { wagmiConfig } from "@/configs/wagmi"
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { poolsQuery } from "@/graphql/gtx/gtx.query"
 import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances"
@@ -10,16 +8,15 @@ import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/write/usePla
 import { useOrderBook } from "@/hooks/web3/gtx/clob-dex/orderbook/useOrderBook"
 import { Pool, useMarketStore } from "@/store/market-store"
 import type { HexAddress } from "@/types/web3/general/address"
-import { AssetType, Side } from "@/types/web3/gtx/gtx"
+import { Side } from "@/types/web3/gtx/gtx"
 import { useQuery } from "@tanstack/react-query"
-import { readContract } from "@wagmi/core"
 import { request } from "graphql-request"
 import { RefreshCw, Wallet } from "lucide-react"
 import { usePathname } from "next/navigation"
 import type React from "react"
 import { useEffect, useState } from "react"
 import { formatUnits, parseUnits } from "viem"
-import { useAccount } from "wagmi"
+import { useAccount, useChainId } from "wagmi"
 
 // Define the expected data structure from the GraphQL query
 interface PoolsData {
@@ -56,6 +53,8 @@ const PlaceOrder = () => {
   const { address, isConnected } = useAccount()
   const pathname = usePathname()
   const { selectedPool, selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } = useMarketStore()
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
   const [side, setSide] = useState<Side>(Side.BUY) // Default to BUY
@@ -116,9 +115,12 @@ const PlaceOrder = () => {
     isLoading: poolsLoading,
     error: poolsError,
   } = useQuery<PoolsData>({
-    queryKey: ["poolsData"],
+    queryKey: ["poolsData", String(chainId ?? defaultChain)],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL as string, poolsQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<PoolsData>(url, poolsQuery)
     },
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: false,
@@ -144,11 +146,7 @@ const PlaceOrder = () => {
   const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBook(
     (orderBookAddress as HexAddress) || "0x0000000000000000000000000000000000000000",
   )
-
-  console.log("bestPriceSell", bestPriceSell)
-  console.log("bestPriceBuy", bestPriceBuy)
-  console.log("price", price)
-
+  
   // Use the fixed balance hook
   const {
     getWalletBalance,
@@ -393,72 +391,6 @@ const PlaceOrder = () => {
         setShowNotification(true)
       }
     }
-  }
-
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!isConnected || !selectedPool || !address) {
-      setNotificationMessage("Please connect your wallet first.")
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
-      return
-    }
-
-    try {
-      const relevantCurrency =
-        side === Side.BUY
-          ? (selectedPool.quoteCurrency as HexAddress) // For buys, we need quote currency (USDC)
-          : (selectedPool.baseCurrency as HexAddress) // For sells, we need base currency (ETH)
-
-      const depositBigInt = parseUnits(depositAmount, 18) // Assuming 18 decimals
-      await deposit(relevantCurrency, depositBigInt)
-
-      // Reset and refresh balance
-      setDepositAmount("")
-      setDepositMode(false)
-
-      // Refresh balance
-      try {
-        const total = await getTotalAvailableBalance(relevantCurrency)
-        setAvailableBalance(formatUnits(total, 18))
-
-        // Show success message
-        setNotificationMessage("Successfully deposited funds.")
-        setNotificationSuccess(true)
-        // You can set transaction hash here if available
-        // setNotificationTxHash(depositTxHash);
-        setShowNotification(true)
-      } catch (error) {
-        console.error("Failed to refresh balance after deposit:", error)
-      }
-    } catch (error) {
-      console.error("Deposit error:", error)
-
-      setNotificationMessage("There was an error processing your deposit.")
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
-    }
-  }
-
-  const getCoinIcon = (pair: string | null) => {
-    if (!pair) return "/icon/eth-usdc.png"
-
-    const lowerPair = pair.toLowerCase()
-    if (lowerPair.includes("eth") || lowerPair.includes("weth")) {
-      return "/icon/eth-usdc.png"
-    } else if (lowerPair.includes("btc") || lowerPair.includes("wbtc")) {
-      return "/icon/btc-usdc.png"
-    } else if (lowerPair.includes("pepe")) {
-      return "/icon/pepe-usdc.png"
-    } else if (lowerPair.includes("link")) {
-      return "/icon/link-usdc.png"
-    }
-
-    // Default icon
-    return "/icon/eth-usdc.png"
   }
 
   const isPending = isLimitOrderPending || isMarketOrderPending

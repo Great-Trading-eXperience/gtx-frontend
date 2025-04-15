@@ -13,6 +13,8 @@ import { poolsQuery, tradesQuery } from "@/graphql/gtx/gtx.query"
 import { formatUnits } from "viem"
 import { DotPattern } from "../magicui/dot-pattern"
 import { useRouter } from "next/navigation"
+import { useChainId } from "wagmi"
+import { useMarketStore } from "@/store/market-store"
 
 // Define interfaces for the data
 interface PoolItem {
@@ -111,17 +113,32 @@ export default function MarketList() {
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null)
   const [copiedToken, setCopiedToken] = useState<{ id: string; name: string } | null>(null)
 
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
   // Fetch pools data
-  const { data: poolsData } = useQuery<PoolsResponse>({
-    queryKey: ["pools"],
-    queryFn: async () => request(GTX_GRAPHQL_URL, poolsQuery),
+  const { data: poolsData, error: poolsError } = useQuery<PoolsResponse>({
+    queryKey: ["pools", String(chainId ?? defaultChain)],
+    queryFn: async () => {
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request(url, poolsQuery)
+    },
     staleTime: 60000, // 1 minute - pools don't change often
   })
 
+  const { quoteDecimals } = useMarketStore()
+
   // Fetch trades data
   const { data: tradesData } = useQuery<TradesResponse>({
-    queryKey: ["trades"],
-    queryFn: async () => request(GTX_GRAPHQL_URL, tradesQuery),
+    queryKey: ["trades", String(chainId ?? defaultChain)],
+    queryFn: async () => {
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request(url, tradesQuery)
+    },
     refetchInterval: 30000, // 30 seconds
     staleTime: 0,
   })
@@ -192,7 +209,7 @@ export default function MarketList() {
         const sortedTrades = [...poolTrades].sort((a, b) => b.timestamp - a.timestamp)
 
         // Calculate various metrics
-        const latestPrice = sortedTrades.length > 0 ? Number(formatUnits(BigInt(sortedTrades[0].price), 12)) : 0
+        const latestPrice = sortedTrades.length > 0 ? Number(formatUnits(BigInt(sortedTrades[0].price), quoteDecimals)) : 0
 
         // Calculate volumes
         let volume = BigInt(0)
@@ -218,7 +235,7 @@ export default function MarketList() {
           iconInfo: iconInfo,
           age: calculateAge(pool.timestamp),
           timestamp: pool.timestamp,
-          price: latestPrice.toFixed(4),
+          price: latestPrice.toFixed(2),
           volume: formatNumber(volume),
           liquidity: formatNumber(BigInt(pool.maxOrderAmount || "0")),
         }

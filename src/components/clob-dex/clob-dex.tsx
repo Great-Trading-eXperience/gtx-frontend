@@ -120,13 +120,6 @@ export default function ClobDex() {
         }
     }, [isConnected, previousConnectionState, mounted]);
 
-    // Debug effect to monitor selectedPoolId changes
-    useEffect(() => {
-        if (mounted) {
-            console.log(`selectedPoolId changed to: ${selectedPoolId || 'null'}`);
-        }
-    }, [selectedPoolId, mounted]);
-
     const isClient = useIsClient();
 
     if (!isClient) {

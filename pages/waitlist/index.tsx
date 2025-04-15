@@ -42,8 +42,6 @@ export default function WaitlistPage() {
     try {
       // Get the current email value from the ref
       const currentEmail = emailRef.current?.value || ""
-
-      console.log("currentEmail", currentEmail)
       
       // Mailchimp integration
       const response = await fetch("/api/subscribe", {
@@ -80,8 +78,6 @@ export default function WaitlistPage() {
     try {
       // Get the current email value from the ref
       const currentEmail = emailCTARef.current?.value || ""
-
-      console.log("currentEmail", currentEmail)
       
       // Mailchimp integration
       const response = await fetch("/api/subscribe", {

@@ -2,6 +2,8 @@
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { tradesQuery } from "@/graphql/gtx/gtx.query"
+import { useMarketStore } from "@/store/market-store"
+import { getGraphQLUrl } from "@/utils/env"
 // import { tradesQuery } from "@/graphql/liquidbook/liquidbook.query" // Updated import
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
@@ -9,6 +11,7 @@ import { type CandlestickData, ColorType, createChart, type IChartApi, ISeriesAp
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
+import { useChainId } from "wagmi"
 
 // Define interfaces for the trades query response
 interface TradeItem {
@@ -85,7 +88,7 @@ interface VolumeData {
   color: string
 }
 
-function processTradeData(data: TradeItem[], selectedPoolId: string | null): {
+function processTradeData(data: TradeItem[], selectedPoolId: string | null, quoteDecimal: number, baseDecimal: number): {
   candlesticks: CandlestickData<Time>[]
   volumes: VolumeData[]
 } {
@@ -93,19 +96,19 @@ function processTradeData(data: TradeItem[], selectedPoolId: string | null): {
   const volumes: VolumeData[] = []
 
   // Filter trades for the selected pool
-  const filteredTrades = selectedPoolId 
+  const filteredTrades = selectedPoolId
     ? data.filter(trade => trade.poolId === selectedPoolId)
     : data;
-    
+
   console.log(`Filtering trades for poolId: ${selectedPoolId || 'all'}`);
   console.log(`Filtered ${filteredTrades.length} out of ${data.length} trades`);
-  
+
   if (selectedPoolId) {
     // Debug which pool IDs are actually in the data
     const uniquePoolIds = [...new Set(data.map(trade => trade.poolId))];
     console.log(`Available pool IDs in data: ${uniquePoolIds.join(', ')}`);
   }
-  
+
   if (filteredTrades.length === 0) {
     console.log("No trades found for the selected pool");
     return { candlesticks, volumes };
@@ -127,12 +130,12 @@ function processTradeData(data: TradeItem[], selectedPoolId: string | null): {
   // Group trades into 1-minute candles
   sortedTrades.forEach(trade => {
     // Convert price from string to number
-    const priceValue = Number(formatUnits(BigInt(trade.price), 12)); // Adjust decimals as needed
-    const volumeValue = Number(formatUnits(BigInt(trade.quantity), 18)); // Adjust decimals as needed
-    
+    const priceValue = Number(formatUnits(BigInt(trade.price), quoteDecimal)); // Adjust decimals as needed
+    const volumeValue = Number(formatUnits(BigInt(trade.quantity), baseDecimal)); // Adjust decimals as needed
+
     // Round timestamp to the nearest minute (60 seconds)
     const minuteTimestamp = Math.floor(trade.timestamp / 60) * 60;
-    
+
     if (ohlcMap.has(minuteTimestamp)) {
       const candle = ohlcMap.get(minuteTimestamp)!;
       // Update high/low
@@ -169,7 +172,7 @@ function processTradeData(data: TradeItem[], selectedPoolId: string | null): {
     volumes.push({
       time: timestamp as Time,
       value: candle.volume,
-      color: candle.close >= candle.open 
+      color: candle.close >= candle.open
         ? "rgba(38, 166, 154, 0.5)" // green for up candles
         : "rgba(239, 83, 80, 0.5)" // red for down candles
     });
@@ -198,26 +201,34 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
   const [currentTime, setCurrentTime] = useState("")
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
 
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
+  const { 
+    quoteDecimals,
+    baseDecimals
+   } = useMarketStore()
+
   const { data, isLoading, error } = useQuery<any>({
     queryKey: ["trades", selectedPoolId],
     queryFn: async () => {
       console.log(`Fetching trade data for poolId: ${selectedPoolId || 'all'}`);
-      
+
       // Check if we need to pass a parameter to the GraphQL query
       // If your tradesQuery accepts a poolId parameter, you would use:
       // return await request(GTX_GRAPHQL_URL, tradesQuery, { poolId: selectedPoolId })
-      
+
       // For now, we'll just fetch all trades and filter client-side
-      const response = await request(GTX_GRAPHQL_URL, tradesQuery);
-      
+      const response = await request(getGraphQLUrl(chainId), tradesQuery);
+
       // Safely handle the response as unknown type
       if (response && typeof response === 'object') {
         // Now TypeScript knows response is an object
         console.log("GraphQL response keys:", Object.keys(response));
-        
+
         // Type assertion for accessing properties
         const typedResponse = response as Record<string, any>;
-        
+
         // Check how many trades we got (handle different response structures)
         const tradesData = typedResponse.tradess || typedResponse.trades || {};
         const itemsCount = tradesData.items?.length || 0;
@@ -225,7 +236,7 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
       } else {
         console.log("Received non-object response from API");
       }
-      
+
       return response;
     },
     refetchInterval: 5000,
@@ -251,10 +262,10 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
   // Update current price from latest trade
   useEffect(() => {
     if (!data) return;
-    
+
     // Check both possible field names
     const tradesData = data.tradess || (data as any).trades;
-    
+
     if (tradesData?.items && tradesData.items.length > 0) {
       // Filter for selected pool
       const relevantTrades = selectedPoolId
@@ -264,7 +275,7 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
       if (relevantTrades.length > 0) {
         // Find the trade with the latest timestamp
         const latestTrade = [...relevantTrades].sort((a, b) => b.timestamp - a.timestamp)[0];
-        const formattedPrice = Number(formatUnits(BigInt(latestTrade.price), 12)).toLocaleString("en-US", {
+        const formattedPrice = Number(formatUnits(BigInt(latestTrade.price), quoteDecimals)).toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
@@ -329,7 +340,7 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
     })
-    
+
     candlestickSeriesRef.current = candlestickSeries
 
     const volumeSeries = chart.addHistogramSeries({
@@ -339,7 +350,7 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
       },
       priceScaleId: "volume",
     })
-    
+
     volumeSeriesRef.current = volumeSeries
 
     const volumePriceScale = chart.priceScale("volume")
@@ -380,10 +391,10 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
       console.log("No data returned from query");
       return;
     }
-    
+
     // Determine which field contains the trades data
     const tradesData = data.tradess || (data as any).trades;
-    
+
     if (!tradesData?.items || !chartRef.current || !candlestickSeriesRef.current || !volumeSeriesRef.current) {
       console.log("Missing required refs or data:", {
         hasTradesData: !!tradesData?.items,
@@ -393,19 +404,19 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
       });
       return;
     }
-    
+
     console.log(`Updating chart for poolId: ${selectedPoolId || 'all'}`);
     console.log(`Total trades before filtering: ${tradesData.items.length}`);
-    
+
     // Make sure we're processing the correct data for the selected pool
-    const { candlesticks, volumes } = processTradeData(tradesData.items, selectedPoolId);
-    
+    const { candlesticks, volumes } = processTradeData(tradesData.items, selectedPoolId, quoteDecimals, baseDecimals);
+
     console.log(`Generated ${candlesticks.length} candlesticks and ${volumes.length} volume bars`);
-    
+
     // Always update the chart data, even if empty
     candlestickSeriesRef.current.setData(candlesticks);
     volumeSeriesRef.current.setData(volumes);
-    
+
     if (candlesticks.length > 0) {
       // Fit content if we have data
       chartRef.current.timeScale().fitContent();
@@ -450,7 +461,7 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">        
+      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
         <div className="p-2">
           <div ref={chartContainerRef} className="w-full" style={{ height }} />
         </div>
