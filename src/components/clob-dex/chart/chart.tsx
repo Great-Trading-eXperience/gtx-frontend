@@ -93,7 +93,7 @@ interface ChartComponentProps {
   height?: number
 }
 
-function ChartComponent({ height = 430 }: ChartComponentProps) {
+function ChartComponent({ height = 380 }: ChartComponentProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -330,11 +330,6 @@ function ChartComponent({ height = 430 }: ChartComponentProps) {
       <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
         {/* TimeFrame Selector */}
         <div className="flex items-center justify-end space-x-2 p-2 border-b border-gray-200 dark:border-gray-700">
-          <div className="text-sm font-medium mr-2">
-            {currentPrice && (
-              <span className="text-base">Current Price: {currentPrice}</span>
-            )}
-          </div>
           <div className="flex rounded-md overflow-hidden border border-gray-300 dark:border-gray-700">
             <button
               onClick={() => handleTimeFrameChange(TimeFrame.FIVE_MINUTE)}

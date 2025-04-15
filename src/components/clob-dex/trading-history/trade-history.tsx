@@ -94,11 +94,14 @@ const TradeHistoryTable = () => {
     key: 'timestamp',
     direction: 'desc'
   });
+  
+  // Add state for the filter checkbox
+  const [filterByMyAddress, setFilterByMyAddress] = useState(false);
 
-  const { quoteDecimals, baseDecimals } = useMarketStore()
+  const { selectedPoolId, quoteDecimals, baseDecimals } = useMarketStore()
 
   const { data, isLoading, error } = useQuery<TradeHistoryResponse>({
-    queryKey: ['tradeHistory', address],
+    queryKey: ['tradeHistory', selectedPoolId],
     queryFn: async () => {
       if (!address) {
         throw new Error('Wallet address not available');
@@ -110,30 +113,20 @@ const TradeHistoryTable = () => {
 
       const response = await request<TradeHistoryResponse>(
         url,
-        tradesQuery
+        tradesQuery,
+        {
+          poolId: selectedPoolId
+        }
       );
 
       if (!response || !response.tradess) {
         throw new Error('Invalid response format');
       }
 
-      // Filter trades by the connected wallet address
-      if (address && response.tradess.items) {
-        response.tradess.items = response.tradess.items.filter(trade => {
-          // If the trade has a user field in the order object, check if it matches the address
-          if (trade.order?.user?.user) {
-            return trade.order.user.user.toLowerCase() === address.toLowerCase();
-          }
-
-          return false;
-        });
-      }
-
       return response;
     },
     enabled: !!address, // Only run query when address is available
-    staleTime: 30000,
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   const handleSort = (key: SortableKey) => {
@@ -141,6 +134,11 @@ const TradeHistoryTable = () => {
       key: key,
       direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
+  };
+
+  // Handler for the checkbox change
+  const handleFilterChange = () => {
+    setFilterByMyAddress(!filterByMyAddress);
   };
 
   if (!address) {
@@ -177,8 +175,17 @@ const TradeHistoryTable = () => {
   }
 
   const trades = data?.tradess?.items || [];
+  
+  // Filter trades based on user address when checkbox is checked
+  const filteredTrades = filterByMyAddress 
+    ? trades.filter(trade => 
+        trade.order?.user?.user?.toLowerCase() === address?.toLowerCase()
+      )
+    : trades;
 
-  const sortedTrades = [...trades].sort((a, b) => {
+  console.log(address,filteredTrades.map((trade) => trade.order?.user?.user))
+
+  const sortedTrades = [...filteredTrades].sort((a, b) => {
     const key = sortConfig.key;
 
     if (key === 'timestamp') {
@@ -202,85 +209,105 @@ const TradeHistoryTable = () => {
   });
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gray-900/20 shadow-lg">
-      {/* Header */}
-      <div className="grid grid-cols-6 gap-4 border-b border-gray-800/30 bg-gray-900/40 px-4 py-3 backdrop-blur-sm">
-        <button
-          onClick={() => handleSort('timestamp')}
-          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
-        >
-          <Clock className="h-4 w-4" />
-          <span>Time</span>
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${sortConfig.key === 'timestamp' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-              }`}
-          />
-        </button>
-        <div className="text-sm font-medium text-gray-200">Pair</div>
-        <button
-          onClick={() => handleSort('price')}
-          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
-        >
-          <span>Price</span>
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${sortConfig.key === 'price' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-              }`}
-          />
-        </button>
-        <div className="text-sm font-medium text-gray-200">Side</div>
-        <button
-          onClick={() => handleSort('quantity')}
-          className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
-        >
-          <span>Amount</span>
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${sortConfig.key === 'quantity' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-              }`}
-          />
-        </button>
-        <div className="text-sm font-medium text-gray-200">Transaction</div>
+    <div className="flex flex-col gap-3">
+      {/* Filter checkbox */}
+      <div className="flex items-center gap-2 ml-auto">
+        <input
+          type="checkbox"
+          id="filter-by-address"
+          checked={filterByMyAddress}
+          onChange={handleFilterChange}
+          className="h-4 w-4 rounded border-gray-700 bg-gray-800 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+        />
+        <label htmlFor="filter-by-address" className="text-sm font-medium text-gray-200">
+          Show only my trades
+        </label>
       </div>
 
-      {/* Table Body */}
-      <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
-        {sortedTrades.length > 0 ? (
-          sortedTrades.map((trade) => {
-            const isBuy = trade.order?.side === 'Buy';
-            const pair = trade.order?.pool?.coin || 'Unknown';
+      <div className="w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gray-900/20 shadow-lg">
+        {/* Header */}
+        <div className="grid grid-cols-6 gap-4 border-b border-gray-800/30 bg-gray-900/40 px-4 py-3 backdrop-blur-sm">
+          <button
+            onClick={() => handleSort('timestamp')}
+            className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Time</span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${sortConfig.key === 'timestamp' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+                }`}
+            />
+          </button>
+          <div className="text-sm font-medium text-gray-200">Pair</div>
+          <button
+            onClick={() => handleSort('price')}
+            className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+          >
+            <span>Price</span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${sortConfig.key === 'price' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+                }`}
+            />
+          </button>
+          <div className="text-sm font-medium text-gray-200">Side</div>
+          <button
+            onClick={() => handleSort('quantity')}
+            className="flex items-center gap-1 text-sm font-medium text-gray-200 transition-colors hover:text-gray-100"
+          >
+            <span>Amount</span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${sortConfig.key === 'quantity' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
+                }`}
+            />
+          </button>
+          <div className="text-sm font-medium text-gray-200">Transaction</div>
+        </div>
 
-            return (
-              <div
-                key={trade.id}
-                className="grid grid-cols-6 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
-              >
-                <div className="text-gray-200">{formatDate(trade.timestamp.toString())}</div>
-                <div className="text-gray-200">{pair}</div>
-                <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(trade.price), quoteDecimals))}</div>
-                <div className={isBuy ? "text-emerald-400" : "text-rose-400"}>
-                  {isBuy ? 'Buy' : 'Sell'}
+        {/* Table Body */}
+        <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
+          {sortedTrades.length > 0 ? (
+            sortedTrades.map((trade) => {
+              const isBuy = trade.order?.side === 'Buy';
+              const pair = trade.order?.pool?.coin || 'Unknown';
+
+              return (
+                <div
+                  key={trade.id}
+                  className="grid grid-cols-6 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
+                >
+                  <div className="text-gray-200">{formatDate(trade.timestamp.toString())}</div>
+                  <div className="text-gray-200">{pair}</div>
+                  <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(trade.price), quoteDecimals))}</div>
+                  <div className={isBuy ? "text-emerald-400" : "text-rose-400"}>
+                    {isBuy ? 'Buy' : 'Sell'}
+                  </div>
+                  <div className="font-medium text-white">{formatQuantity(formatUnits(BigInt(trade.quantity), baseDecimals))}</div>
+                  <div className="text-blue-400 hover:text-blue-300 transition-colors truncate">
+                    <a
+                      href={`https://testnet-explorer.riselabs.xyz/tx/${trade.transactionId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      {`${trade.transactionId.slice(0, 6)}...${trade.transactionId.slice(-4)}`} <ExternalLink className="w-4 h-4 inline" />
+                    </a>
+                  </div>
                 </div>
-                <div className="font-medium text-white">{formatQuantity(formatUnits(BigInt(trade.quantity), baseDecimals))}</div>
-                <div className="text-blue-400 hover:text-blue-300 transition-colors truncate">
-                  <a
-                    href={`https://testnet-explorer.riselabs.xyz/tx/${trade.transactionId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    {`${trade.transactionId.slice(0, 6)}...${trade.transactionId.slice(-4)}`} <ExternalLink className="w-4 h-4 inline" />
-                  </a>
-                </div>
+              );
+            })
+          ) : (
+            <div className="flex min-h-[200px] items-center justify-center p-8">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <ArrowDownUp className="h-8 w-8 text-gray-400" />
+                <p className="text-gray-200">
+                  {filterByMyAddress 
+                    ? "No trades found for your wallet" 
+                    : "No trades found for this pool"}
+                </p>
               </div>
-            );
-          })
-        ) : (
-          <div className="flex min-h-[200px] items-center justify-center p-8">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <ArrowDownUp className="h-8 w-8 text-gray-400" />
-              <p className="text-gray-200">No trades found for your wallet</p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

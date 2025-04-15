@@ -131,7 +131,7 @@ export default function MarketWidget() {
       if (!url) throw new Error('GraphQL URL not found')
       return await request(url, poolsQuery)
     },
-    staleTime: 60000, // 1 minute - pools don't change often
+    refetchInterval: 1000,
   })
 
   // Transform the pool items to include decimals before using them
@@ -211,7 +211,7 @@ export default function MarketWidget() {
       if (!url) throw new Error('GraphQL URL not found')
       return await request(url, tradesQuery)
     },
-    refetchInterval: 5000,
+    refetchInterval: 1000,
     staleTime: 0,
     refetchOnWindowFocus: true,
   })
@@ -229,6 +229,8 @@ export default function MarketWidget() {
         price: null,
         priceChange24h: null,
         priceChangePercent24h: null,
+        high24h: null,
+        low24h: null,
         volume: null,
         pair: poolsWithDecimals.find(pool => pool.id === selectedPoolId)?.coin || null
       })
@@ -254,6 +256,26 @@ export default function MarketWidget() {
     const priceChange = currentPrice - prevDayPrice
     const priceChangePercent = (priceChange / prevDayPrice) * 100
 
+    // Calculate 24h high and low
+    let high24h = 0
+    let low24h = Number.MAX_VALUE
+    
+    // Only include trades from last 24 hours
+    const trades24h = sortedItems.filter(trade => trade.timestamp >= twentyFourHoursAgo)
+    
+    if (trades24h.length > 0) {
+      // Find highest and lowest prices
+      trades24h.forEach(trade => {
+        const price = Number(trade.price)
+        if (price > high24h) high24h = price
+        if (price < low24h) low24h = price
+      })
+    } else {
+      // If no trades in last 24h, use current price
+      high24h = currentPrice
+      low24h = currentPrice
+    }
+
     // Calculate total volume
     const totalVolume = sortedItems.reduce((sum, trade) => {
       // Only include trades from last 24 hours
@@ -270,6 +292,8 @@ export default function MarketWidget() {
       price: currentPrice,
       priceChange24h: priceChange,
       priceChangePercent24h: priceChangePercent,
+      high24h: high24h,
+      low24h: low24h,
       volume: totalVolume,
       pair: pair
     })
@@ -326,27 +350,25 @@ export default function MarketWidget() {
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
-            <div className='font-semibold text-[15px] pb-1'>24h Change</div>
-            <div className={
-              marketData.priceChangePercent24h && marketData.priceChangePercent24h >= 0 
-                ? 'text-green-600 dark:text-[#5BBB6F]' 
-                : 'text-red-600 dark:text-[#FF6978]'
-            }>
-              {marketData.priceChange24h && marketData.priceChangePercent24h && (
-                <>
-                  {formatNumber(Math.abs(Number(formatUnits(BigInt(marketData.priceChange24h ?? 0), quoteDecimals))), { 
-                    prefix: marketData.priceChange24h >= 0 ? '+$' : '-$',
-                    decimals: 2
-                  })} /{' '}
-                  {formatNumber(marketData.priceChangePercent24h, { 
-                    prefix: marketData.priceChangePercent24h >= 0 ? '+' : '', 
-                    suffix: '%',
-                    decimals: 2
-                  })}
-                </>
-              )}
+            <div className='font-semibold text-[15px] pb-1'>24h High</div>
+            <div className='text-green-600 dark:text-[#5BBB6F]'>
+              {formatNumber(Number(formatUnits(BigInt(marketData.high24h ?? 0), quoteDecimals)), { 
+                prefix: '$',
+                decimals: 2
+              })}
             </div>
           </div>
+          
+          <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
+            <div className='font-semibold text-[15px] pb-1'>24h Low</div>
+            <div className='text-red-600 dark:text-[#FF6978]'>
+              {formatNumber(Number(formatUnits(BigInt(marketData.low24h ?? 0), quoteDecimals)), { 
+                prefix: '$',
+                decimals: 2
+              })}
+            </div>
+          </div>
+          
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1'>24h Volume</div>
             <div className='text-gray-900 dark:text-white'>${formatVolume(Number(formatUnits(marketData.volume ?? BigInt(0), quoteDecimals)), 2)}</div>

@@ -1,24 +1,23 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import type { HexAddress } from "@/types/web3/general/address"
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle2, Loader2, Hexagon, Wallet, Info, Check, ChevronDown } from "lucide-react"
-import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
+import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import GradientLoader from "@/components/gradient-loader/gradient-loader"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { Button } from "@/components/ui/button"
-import { useAccount } from "wagmi"
-import GradientLoader from "@/components/gradient-loader/gradient-loader"
-import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
-import TokenSelectionDialog, { type Token } from "./token/token-selection-dialog"
-import { useQuery } from '@tanstack/react-query'
-import request from 'graphql-request'
+import { Card, CardContent } from "@/components/ui/card"
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
 import { poolsQuery } from "@/graphql/gtx/gtx.query"
+import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
+import type { HexAddress } from "@/types/web3/general/address"
+import { useQuery } from '@tanstack/react-query'
+import request from 'graphql-request'
+import { CheckCircle2, ChevronDown, Hexagon, Info, Loader2, Wallet } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { useAccount, useChainId } from "wagmi"
 import { DotPattern } from "../magicui/dot-pattern"
 import PoolCreationSkeleton from "./pool-creation-skeleton"
-
+import TokenSelectionDialog, { type Token } from "./token/token-selection-dialog"
 
 // Define interfaces for the pools query response
 interface PoolItem {
@@ -45,10 +44,6 @@ interface PoolsResponse {
   };
 }
 
-// Default values
-const DEFAULT_LOT_SIZE = "1000000000000000000" // 1 ether
-const DEFAULT_MAX_ORDER_AMOUNT = "100000000000000000000" // 100 ether
-
 // Fee tier options
 const FEE_TIERS = [
   { value: "0.01", label: "0.01%", description: "Best for very stable pairs." },
@@ -56,7 +51,6 @@ const FEE_TIERS = [
   { value: "0.3", label: "0.3%", description: "Best for most pairs." },
   { value: "1", label: "1%", description: "Best for exotic pairs." },
 ]
-
 const PoolCreation: React.FC = () => {
   // Wallet connection and loading states
   const [mounted, setMounted] = useState(false)
@@ -70,12 +64,21 @@ const PoolCreation: React.FC = () => {
   const [baseCurrencySymbol, setBaseCurrencySymbol] = useState<string>("")
   const [baseCurrencyName, setBaseCurrencyName] = useState<string>("")
   const [baseCurrencyLogo, setBaseCurrencyLogo] = useState<string>("")
+  const [baseCurrencyDecimals, setBaseCurrencyDecimals] = useState<number>(18) // Default to 18 decimals
   const [quoteCurrency, setQuoteCurrency] = useState<string>("")
   const [quoteCurrencySymbol, setQuoteCurrencySymbol] = useState<string>("USDC")
-  const [lotSize, setLotSize] = useState<string>(DEFAULT_LOT_SIZE)
-  const [maxOrderAmount, setMaxOrderAmount] = useState<string>(DEFAULT_MAX_ORDER_AMOUNT)
+
+  // Trading Rules state
+  const [minTradeAmount, setMinTradeAmount] = useState<string>("0.0001") // Default for 18 decimals
+  const [minAmountMovement, setMinAmountMovement] = useState<string>("0.00001") // Default for 18 decimals
+  const [minPriceMovement, setMinPriceMovement] = useState<string>("0.01") // Default for quote (USDC)
+  const [minOrderSize, setMinOrderSize] = useState<string>("0.01") // Default for quote (USDC)
+  const [slippageThreshold, setSlippageThreshold] = useState<string>("20") // Default for 18 decimals
+  const [usingPresetRules, setUsingPresetRules] = useState<boolean>(true)
+
   const [feeTier, setFeeTier] = useState<string>("0.05")
   const [showFeeTiers, setShowFeeTiers] = useState(false)
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
 
   // Token selection dialog
   const [showTokenDialog, setShowTokenDialog] = useState(false)
@@ -89,31 +92,40 @@ const PoolCreation: React.FC = () => {
   const [errors, setErrors] = useState<{
     baseCurrency?: string
     quoteCurrency?: string
-    lotSize?: string
-    maxOrderAmount?: string
+    minTradeAmount?: string
+    minAmountMovement?: string
+    minPriceMovement?: string
+    minOrderSize?: string
+    slippageThreshold?: string
   }>({})
+
+  const chainId = useChainId()
+  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
   // Fetch pools data from GraphQL
   const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
     queryKey: ['pools'],
     queryFn: async () => {
-      return await request(GTX_GRAPHQL_URL, poolsQuery)
+      const currentChainId = Number(chainId ?? defaultChain)
+      const url = GTX_GRAPHQL_URL(currentChainId)
+      if (!url) throw new Error('GraphQL URL not found')
+      return await request<PoolsResponse>(url, poolsQuery)
     },
     staleTime: 60000, // 1 minute - pools don't change often
   })
 
   // Extract unique tokens from pools data to populate token list
   const [tokenList, setTokenList] = useState<Token[]>([])
-  
+
   useEffect(() => {
     if (poolsData?.poolss?.items) {
       const uniqueTokenMap = new Map<string, Token>()
-      
+
       // Extract base currencies
       poolsData.poolss.items.forEach(pool => {
         // Extract token symbol from the pool.coin (e.g., "ETH/USDC" -> "ETH")
         const baseSymbol = pool.coin.split('/')[0]
-        
+
         if (!uniqueTokenMap.has(pool.baseCurrency)) {
           uniqueTokenMap.set(pool.baseCurrency, {
             symbol: baseSymbol,
@@ -123,12 +135,12 @@ const PoolCreation: React.FC = () => {
           })
         }
       })
-      
+
       // Extract quote currencies
       poolsData.poolss.items.forEach(pool => {
         // Extract token symbol from the pool.coin (e.g., "ETH/USDC" -> "USDC")
         const quoteSymbol = pool.coin.split('/')[1]
-        
+
         if (!uniqueTokenMap.has(pool.quoteCurrency)) {
           uniqueTokenMap.set(pool.quoteCurrency, {
             symbol: quoteSymbol,
@@ -138,14 +150,14 @@ const PoolCreation: React.FC = () => {
           })
         }
       })
-      
+
       // Set default quote currency if available
       const usdcToken = Array.from(uniqueTokenMap.values()).find(token => token.symbol === 'USDC')
       if (usdcToken && !quoteCurrency) {
         setQuoteCurrency(usdcToken.address)
         setQuoteCurrencySymbol(usdcToken.symbol)
       }
-      
+
       // Convert map to array
       setTokenList(Array.from(uniqueTokenMap.values()))
     }
@@ -189,19 +201,19 @@ const PoolCreation: React.FC = () => {
   // Recent tokens based on timestamp
   const getRecentTokens = (): Token[] => {
     if (!poolsData?.poolss?.items) return []
-    
+
     // Sort pools by timestamp (newest first)
     const sortedPools = [...poolsData.poolss.items].sort((a, b) => b.timestamp - a.timestamp)
-    
+
     // Take base tokens from the 3 most recent pools
     const recentTokens: Token[] = []
     const addedAddresses = new Set<string>()
-    
+
     for (const pool of sortedPools) {
       if (recentTokens.length >= 3) break
-      
+
       const baseSymbol = pool.coin.split('/')[0]
-      
+
       if (!addedAddresses.has(pool.baseCurrency)) {
         recentTokens.push({
           symbol: baseSymbol,
@@ -212,23 +224,23 @@ const PoolCreation: React.FC = () => {
         addedAddresses.add(pool.baseCurrency)
       }
     }
-    
+
     return recentTokens
   }
 
   // Popular tokens (based on most common in pools)
   const getPopularTokens = (): Token[] => {
     if (!poolsData?.poolss?.items) return []
-    
+
     // Count token occurrences
     const tokenCount = new Map<string, { count: number, token: Token }>()
-    
+
     poolsData.poolss.items.forEach(pool => {
       const baseSymbol = pool.coin.split('/')[0]
-      
+
       if (!tokenCount.has(pool.baseCurrency)) {
-        tokenCount.set(pool.baseCurrency, { 
-          count: 1, 
+        tokenCount.set(pool.baseCurrency, {
+          count: 1,
           token: {
             symbol: baseSymbol,
             name: baseSymbol,
@@ -243,7 +255,7 @@ const PoolCreation: React.FC = () => {
         }
       }
     })
-    
+
     // Sort by count and take top 2
     return Array.from(tokenCount.values())
       .sort((a, b) => b.count - a.count)
@@ -254,7 +266,7 @@ const PoolCreation: React.FC = () => {
   // Helper to get coin logo from local token directory
   const getCoinLogo = (symbol: string): string | undefined => {
     const lowerSymbol = symbol.toLowerCase()
-    
+
     // Check for available tokens in our directory
     if (lowerSymbol.includes("eth") || lowerSymbol.includes("weth")) {
       return "/tokens/eth.png"
@@ -275,7 +287,7 @@ const PoolCreation: React.FC = () => {
     } else if (lowerSymbol.includes("trump")) {
       return "/tokens/trump.png"
     }
-    
+
     // Return undefined for tokens without matching icons
     return undefined
   }
@@ -284,8 +296,11 @@ const PoolCreation: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: {
       baseCurrency?: string
-      lotSize?: string
-      maxOrderAmount?: string
+      minTradeAmount?: string
+      minAmountMovement?: string
+      minPriceMovement?: string
+      minOrderSize?: string
+      slippageThreshold?: string
     } = {}
 
     // Validate base currency
@@ -295,20 +310,39 @@ const PoolCreation: React.FC = () => {
       newErrors.baseCurrency = "Invalid address format"
     }
 
-    // Validate lot size
-    if (!lotSize) {
-      newErrors.lotSize = "Lot size is required"
-    } else if (isNaN(Number(lotSize)) || Number(lotSize) <= 0) {
-      newErrors.lotSize = "Lot size must be a positive number"
+    // Validate minTradeAmount
+    if (!minTradeAmount) {
+      newErrors.minTradeAmount = "Minimum trade amount is required"
+    } else if (isNaN(Number(minTradeAmount)) || Number(minTradeAmount) <= 0) {
+      newErrors.minTradeAmount = "Minimum trade amount must be a positive number"
     }
 
-    // Validate max order amount
-    if (!maxOrderAmount) {
-      newErrors.maxOrderAmount = "Max order amount is required"
-    } else if (isNaN(Number(maxOrderAmount)) || Number(maxOrderAmount) <= 0) {
-      newErrors.maxOrderAmount = "Max order amount must be a positive number"
-    } else if (Number(maxOrderAmount) < Number(lotSize)) {
-      newErrors.maxOrderAmount = "Max order amount must be greater than lot size"
+    // Validate minAmountMovement
+    if (!minAmountMovement) {
+      newErrors.minAmountMovement = "Minimum amount movement is required"
+    } else if (isNaN(Number(minAmountMovement)) || Number(minAmountMovement) <= 0) {
+      newErrors.minAmountMovement = "Minimum amount movement must be a positive number"
+    }
+
+    // Validate minPriceMovement
+    if (!minPriceMovement) {
+      newErrors.minPriceMovement = "Minimum price movement is required"
+    } else if (isNaN(Number(minPriceMovement)) || Number(minPriceMovement) <= 0) {
+      newErrors.minPriceMovement = "Minimum price movement must be a positive number"
+    }
+
+    // Validate minOrderSize
+    if (!minOrderSize) {
+      newErrors.minOrderSize = "Minimum order size is required"
+    } else if (isNaN(Number(minOrderSize)) || Number(minOrderSize) <= 0) {
+      newErrors.minOrderSize = "Minimum order size must be a positive number"
+    }
+
+    // Validate slippageThreshold
+    if (!slippageThreshold) {
+      newErrors.slippageThreshold = "Slippage threshold is required"
+    } else if (isNaN(Number(slippageThreshold)) || Number(slippageThreshold) < 0 || Number(slippageThreshold) > 100) {
+      newErrors.slippageThreshold = "Slippage threshold must be between 0 and 100"
     }
 
     setErrors(newErrors)
@@ -325,23 +359,57 @@ const PoolCreation: React.FC = () => {
     const baseAddress = baseCurrency as HexAddress
     const quoteAddress = quoteCurrency as HexAddress
 
-    // Ensure numeric conversion works correctly with scientific notation
-    const lotSizeValue = Number(lotSize)
-    const maxOrderAmountValue = Number(maxOrderAmount)
+    // Convert trading rules to BigInt values based on token decimals
+    let minTradeAmountBigInt: bigint
+    let minAmountMovementBigInt: bigint
+    let minPriceMovementBigInt: bigint
+    let minOrderSizeBigInt: bigint
 
-    const lotSizeBigInt = BigInt(Math.floor(lotSizeValue))
-    const maxOrderAmountBigInt = BigInt(Math.floor(maxOrderAmountValue))
+    // Convert based on the proper decimal precision
+    if (baseCurrencyDecimals === 8) {
+      // For 8 decimal tokens (like BTC)
+      minTradeAmountBigInt = BigInt(Math.floor(Number(minTradeAmount) * 10 ** 8)) // 8 decimals
+      minAmountMovementBigInt = BigInt(Math.floor(Number(minAmountMovement) * 10 ** 8)) // 8 decimals
+
+      // Quote currency (USDC) typically has 6 decimals
+      minOrderSizeBigInt = BigInt(Math.floor(Number(minOrderSize) * 10 ** 6)) // 6 decimals
+      minPriceMovementBigInt = BigInt(Math.floor(Number(minPriceMovement) * 10 ** 6)) // 6 decimals
+    } else {
+      // For 18 decimal tokens (like ETH)
+      minTradeAmountBigInt = BigInt(Math.floor(Number(minTradeAmount) * 10 ** 18)) // 18 decimals
+      minAmountMovementBigInt = BigInt(Math.floor(Number(minAmountMovement) * 10 ** 18)) // 18 decimals
+
+      // Quote currency (USDC) typically has 6 decimals
+      minOrderSizeBigInt = BigInt(Math.floor(Number(minOrderSize) * 10 ** 6)) // 6 decimals
+      minPriceMovementBigInt = BigInt(Math.floor(Number(minPriceMovement) * 10 ** 6)) // 6 decimals
+    }
+
+    const slippageThresholdValue = parseInt(slippageThreshold)
+
+    // Create trading rules object
+    const tradingRules = {
+      minTradeAmount: minTradeAmountBigInt,
+      minAmountMovement: minAmountMovementBigInt,
+      minPriceMovement: minPriceMovementBigInt,
+      minOrderSize: minOrderSizeBigInt,
+      slippageTreshold: slippageThresholdValue
+    }
 
     console.log("Creating pool with parameters:", {
       baseAddress,
       quoteAddress,
-      lotSizeBigInt: lotSizeBigInt.toString(),
-      maxOrderAmountBigInt: maxOrderAmountBigInt.toString(),
-      feeTier,
+      tradingRules: {
+        minTradeAmount: minTradeAmountBigInt.toString(),
+        minAmountMovement: minAmountMovementBigInt.toString(),
+        minPriceMovement: minPriceMovementBigInt.toString(),
+        minOrderSize: minOrderSizeBigInt.toString(),
+        slippageTreshold: slippageThresholdValue
+      },
+      baseCurrencyDecimals
     })
 
     // Call the create pool function
-    handleCreatePool(baseAddress, quoteAddress, lotSizeBigInt, maxOrderAmountBigInt)
+    handleCreatePool(baseAddress, quoteAddress, tradingRules)
   }
 
   // Handle pool creation notifications
@@ -382,6 +450,10 @@ const PoolCreation: React.FC = () => {
     setShowFeeTiers(!showFeeTiers)
   }
 
+  const toggleAdvancedOptions = () => {
+    setShowAdvancedOptions(!showAdvancedOptions)
+  }
+
   const selectFeeTier = (value: string) => {
     setFeeTier(value)
   }
@@ -399,20 +471,106 @@ const PoolCreation: React.FC = () => {
     setBaseCurrencySymbol(token.symbol)
     setBaseCurrencyName(token.name)
     setBaseCurrencyLogo(token.logo || "")
+
+    // Determine token decimals and set appropriate trading rules
+    const tokenDecimals = determineTokenDecimals(token.symbol)
+    setBaseCurrencyDecimals(tokenDecimals)
+
+    // Apply preset trading rules if enabled
+    if (usingPresetRules) {
+      applyPresetTradingRules(tokenDecimals)
+    }
+
     closeTokenDialog()
+  }
+
+  // Determine token decimals based on symbol
+  const determineTokenDecimals = (symbol: string): number => {
+    const lowerSymbol = symbol.toLowerCase()
+
+    // Check for BTC and DOGE which typically have 8 decimals
+    if (lowerSymbol.includes("btc") || lowerSymbol.includes("wbtc") || lowerSymbol.includes("doge")) {
+      return 8
+    }
+
+    // USDC typically has 6 decimals
+    if (lowerSymbol.includes("usdc") || lowerSymbol.includes("usdt")) {
+      return 6
+    }
+
+    // Default for ETH, LINK, TRUMP, etc. (18 decimals)
+    return 18
+  }
+
+  // Apply preset trading rules based on token decimals
+  const applyPresetTradingRules = (decimals: number) => {
+    if (decimals === 8) {
+      // Rules for 8 decimal tokens (BTC, DOGE)
+      setMinTradeAmount("0.00001") // 0.00001 BTC (1e3 in contract)
+      setMinAmountMovement("0.000001") // 0.000001 BTC (1e2 in contract)
+      setMinOrderSize("0.02") // 0.02 USDC (2e4 in contract)
+      setMinPriceMovement("0.1") // 0.1 USDC (1e5 in contract)
+      setSlippageThreshold("15") // 15%
+      console.log("Applied 8 decimal trading rules")
+    } else {
+      // Default rules for 18 decimal tokens (ETH, LINK, TRUMP)
+      setMinTradeAmount("0.0001") // 0.0001 ETH (1e14 in contract)
+      setMinAmountMovement("0.00001") // 0.00001 ETH (1e13 in contract)
+      setMinOrderSize("0.01") // 0.01 USDC (1e4 in contract)
+      setMinPriceMovement("0.01") // 0.01 USDC (1e4 in contract)
+      setSlippageThreshold("20") // 20%
+      console.log("Applied 18 decimal trading rules")
+    }
   }
 
   // Check if available pools exist with this token pair
   const doesPoolExist = (): boolean => {
     if (!poolsData?.poolss?.items || !baseCurrency || !quoteCurrency) return false
-    
-    return poolsData.poolss.items.some(pool => 
+
+    return poolsData.poolss.items.some(pool =>
       (pool.baseCurrency === baseCurrency && pool.quoteCurrency === quoteCurrency) ||
       (pool.baseCurrency === quoteCurrency && pool.quoteCurrency === baseCurrency)
     )
   }
 
   const selectedTier = FEE_TIERS.find((tier) => tier.value === feeTier)
+
+  // Input field component for trading rules
+  const TradingRuleInputField = ({
+    label,
+    description,
+    value,
+    onChange,
+    error,
+    placeholder = "0.0",
+    disabled = false
+  }: {
+    label: string,
+    description: string,
+    value: string,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    error?: string,
+    placeholder?: string,
+    disabled?: boolean
+  }) => (
+    <div>
+      <div className="flex flex-col gap-1 mb-2">
+        <label className="text-sm font-medium text-slate-300">{label}</label>
+        <p className="text-xs text-slate-400">{description}</p>
+      </div>
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`w-full bg-[#0A0A0A] border border-white/20 text-white rounded-md h-12 px-4 
+          ${!disabled ? "hover:border-white/30" : "opacity-70 cursor-not-allowed"} 
+          transition-colors focus:outline-none focus:border-blue-500`}
+      />
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
@@ -435,7 +593,7 @@ const PoolCreation: React.FC = () => {
           <div className="space-y-6 w-full max-w-6xl mx-auto">
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
-              <h1 className="text-4xl font-bold text-white">New position</h1>
+              <h1 className="text-4xl font-bold text-white">New Pool</h1>
               {poolsLoading && <div className="text-white">Loading pools data...</div>}
             </div>
 
@@ -447,8 +605,7 @@ const PoolCreation: React.FC = () => {
                     <div>
                       <h2 className="text-2xl font-bold text-white mb-2">Select pair</h2>
                       <p className="text-slate-400">
-                        Choose the tokens you want to provide liquidity for. You can select tokens on all supported
-                        networks.
+                        Choose the tokens you want.
                       </p>
                     </div>
 
@@ -484,10 +641,10 @@ const PoolCreation: React.FC = () => {
                         <div className="w-full flex items-center justify-between bg-[#0A0A0A] border border-white/20 text-white rounded-md h-14 px-4 opacity-75">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center overflow-hidden mr-2">
-                              <img 
-                                src="/tokens/usdc.png" 
-                                alt="USDC" 
-                                className="w-full h-full" 
+                              <img
+                                src="/tokens/usdc.png"
+                                alt="USDC"
+                                className="w-full h-full"
                               />
                             </div>
                             <span>USDC</span>
@@ -508,12 +665,8 @@ const PoolCreation: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 text-slate-400">
-                      <Info className="w-4 h-4" />
-                      <span className="text-sm">Add a Hook (Advanced)</span>
-                    </div>
-
-                    <div className="space-y-4">
+                    {/* Fee tier section */}
+                    {/* <div className="space-y-4">
                       <div>
                         <h3 className="text-xl font-bold text-white mb-2">Fee tier</h3>
                         <p className="text-slate-400">
@@ -609,6 +762,122 @@ const PoolCreation: React.FC = () => {
                           </div>
                         </div>
                       )}
+                    </div> */}
+
+                    {/* Trading Rules Section */}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="text-xl font-bold text-white mb-2">Trading Rules</h3>
+                          <p className="text-slate-400">
+                            Configure the trading parameters for your pool.
+                          </p>
+                        </div>
+                        <Button variant="ghost" className="text-slate-400" onClick={toggleAdvancedOptions}>
+                          {showAdvancedOptions ? (
+                            <>
+                              Less{" "}
+                              <svg
+                                className="w-5 h-5 ml-1"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M18 15L12 9L6 15"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              More{" "}
+                              <svg
+                                className="w-5 h-5 ml-1"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M6 9L12 15L18 9"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {!showAdvancedOptions ? (
+                        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h4 className="text-lg font-bold text-white">Basic Trading Parameters</h4>
+                              <p className="text-slate-400">Set the minimum order size and slippage threshold</p>
+                            </div>
+                          </div>
+                          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TradingRuleInputField
+                              label="Minimum Order Size"
+                              description="Smallest order that can be placed on this pool"
+                              value={minOrderSize}
+                              onChange={(e) => setMinOrderSize(e.target.value)}
+                              error={errors.minOrderSize}
+                            />
+                            <TradingRuleInputField
+                              label="Slippage Threshold (%)"
+                              description="Maximum allowed price slippage percentage"
+                              value={slippageThreshold}
+                              onChange={(e) => setSlippageThreshold(e.target.value)}
+                              error={errors.slippageThreshold}
+                              placeholder="3"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-4">
+                            <h4 className="text-lg font-bold text-white mb-4">Advanced Trading Parameters</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <TradingRuleInputField
+                                label="Minimum Amount Movement"
+                                description="Smallest amount change allowed between orders"
+                                value={minAmountMovement}
+                                onChange={(e) => setMinAmountMovement(e.target.value)}
+                                error={errors.minAmountMovement}
+                              />
+                              <TradingRuleInputField
+                                label="Minimum Price Movement"
+                                description="Smallest price step allowed between orders"
+                                value={minPriceMovement}
+                                onChange={(e) => setMinPriceMovement(e.target.value)}
+                                error={errors.minPriceMovement}
+                              />
+                              <TradingRuleInputField
+                                label="Minimum Order Size"
+                                description="Smallest order that can be placed on this pool"
+                                value={minOrderSize}
+                                onChange={(e) => setMinOrderSize(e.target.value)}
+                                error={errors.minOrderSize}
+                              />
+                              <TradingRuleInputField
+                                label="Slippage Threshold (%)"
+                                description="Maximum allowed price slippage percentage"
+                                value={slippageThreshold}
+                                onChange={(e) => setSlippageThreshold(e.target.value)}
+                                error={errors.slippageThreshold}
+                                placeholder="3"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <Button
@@ -628,7 +897,7 @@ const PoolCreation: React.FC = () => {
                       ) : !baseCurrency ? (
                         "Select tokens to continue"
                       ) : (
-                        "Create Position"
+                        "Create Pool"
                       )}
                     </Button>
 

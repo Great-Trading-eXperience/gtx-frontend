@@ -1,18 +1,23 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
-import { HexAddress } from '@/types/web3/general/address';
-import { POOL_MANAGER_ADDRESS } from '@/constants/contract-address';
 import PoolManagerABI from '@/abis/gtx/clob-dex/PoolManagerABI';
+import { POOL_MANAGER_ADDRESS } from '@/constants/contract-address';
+import { HexAddress } from '@/types/web3/general/address';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { useChainId, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 
-// Use the exact type structure expected by the ABI
-type PoolKeyStruct = {
-  baseCurrency: HexAddress;
-  quoteCurrency: HexAddress;
-};
+// Define the TradingRules type to match the smart contract structure
+type TradingRules = {
+  minTradeAmount: bigint;
+  minAmountMovement: bigint;
+  minPriceMovement: bigint;
+  minOrderSize: bigint;
+  slippageTreshold: number;
+}
 
 export const useCreatePool = () => {
   const [isCreatePoolAlertOpen, setIsCreatePoolAlertOpen] = useState(false);
+
+  const chainId = useChainId();
 
   // CreatePool transaction hooks
   const {
@@ -32,35 +37,36 @@ export const useCreatePool = () => {
   const handleCreatePool = async (
     baseCurrency: HexAddress,
     quoteCurrency: HexAddress,
-    lotSize: bigint,
-    maxOrderAmount: bigint
+    tradingRules: TradingRules
   ) => {
     try {
       console.log('============ Create Pool Parameters ============');
       console.log('Contract Details:');
-      console.log(`Address: ${POOL_MANAGER_ADDRESS}`);
+      console.log(`Address: ${POOL_MANAGER_ADDRESS(chainId)}`);
       console.log(`Function: createPool`);
       console.log('\nArguments:');
       console.log(`Base Currency: ${baseCurrency}`);
       console.log(`Quote Currency: ${quoteCurrency}`);
-      console.log(`Lot Size: ${lotSize.toString()}`);
-      console.log(`Max Order Amount: ${maxOrderAmount.toString()}`);
+      console.log('Trading Rules:');
+      console.log(`- Min Trade Amount: ${tradingRules.minTradeAmount.toString()}`);
+      console.log(`- Min Amount Movement: ${tradingRules.minAmountMovement.toString()}`);
+      console.log(`- Min Price Movement: ${tradingRules.minPriceMovement.toString()}`);
+      console.log(`- Min Order Size: ${tradingRules.minOrderSize.toString()}`);
+      console.log(`- Slippage Threshold: ${tradingRules.slippageTreshold}%`);
       console.log('===============================================');
-
-      const poolKey = {
-        baseCurrency,
-        quoteCurrency
-      };
 
       // Execute the contract write directly without simulation
       writeCreatePool({
-        address: POOL_MANAGER_ADDRESS as HexAddress,
+        address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
         abi: PoolManagerABI,
         functionName: 'createPool',
         args: [
-          poolKey,
-          lotSize,
-          maxOrderAmount
+          {
+            baseCurrency,
+            quoteCurrency
+          },
+          tradingRules.minTradeAmount,
+          tradingRules.minOrderSize
         ]
       });
       

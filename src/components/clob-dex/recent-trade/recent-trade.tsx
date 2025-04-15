@@ -47,7 +47,7 @@ interface TradesResponse {
 interface Trade {
   price: number
   time: string
-  size: number
+  size: bigint
   side: "Buy" | "Sell" // We'll use heuristics to determine side
   total?: number
 }
@@ -70,7 +70,7 @@ const RecentTradesComponent = () => {
   const chainId = useChainId()
   const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
-  const { baseDecimals } = useMarketStore()
+  const { selectedPoolId, baseDecimals, quoteDecimals } = useMarketStore()
 
   // Query for trade events
   const { data, isLoading, error } = useQuery<TradesResponse>({
@@ -79,9 +79,11 @@ const RecentTradesComponent = () => {
       const currentChainId = Number(chainId ?? defaultChain)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request<TradesResponse>(url, tradesQuery)
+      return await request<TradesResponse>(url, tradesQuery, {
+        poolId: selectedPoolId,
+      })
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 1000,
     staleTime: 0,
   })
 
@@ -109,7 +111,7 @@ const RecentTradesComponent = () => {
 
       return {
         price: priceNum,
-        size: Number(trade.quantity) * priceNum / (10 ** (baseDecimals)), // Assuming quantity is in wei (18 decimals)
+        size: BigInt(trade.quantity),
         side: side,
         time: formatTime(trade.timestamp),
       }
@@ -119,7 +121,7 @@ const RecentTradesComponent = () => {
   const calculateTotal = (trades: Trade[]): Trade[] => {
     let runningTotal = 0
     return trades.map((trade) => {
-      runningTotal += trade.size
+      runningTotal += Number(trade.size)
       return { ...trade, total: runningTotal }
     })
   }
@@ -195,11 +197,11 @@ const RecentTradesComponent = () => {
                         <ArrowDown className="h-3.5 w-3.5 text-rose-400" />
                       )}
                       <span className={`font-medium ${trade.side === "Buy" ? "text-emerald-400" : "text-rose-400"}`}>
-                        {formatPrice(trade.price)}
+                        {formatPrice(Number(formatUnits(BigInt(Math.floor(trade.price)), quoteDecimals)))}
                       </span>
                     </div>
                     <div className="text-center font-medium text-gray-200">{trade.time}</div>
-                    <div className="text-right font-medium text-gray-200">{formatPrice(trade.size)}</div>
+                    <div className="text-right font-medium text-gray-200">{formatPrice(Number(formatUnits(BigInt(trade.size), baseDecimals)))}</div>
                   </div>
                 </div>
               )
