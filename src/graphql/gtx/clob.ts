@@ -1,10 +1,11 @@
+import { HexAddress } from "@/types/general/address";
 import { gql } from "graphql-request";
 
 export const poolsQuery = gql`
   query GetPools {
     poolss {
       items {
-        baseCurrency
+      baseCurrency
         coin
         id
         orderBook
@@ -22,6 +23,29 @@ export const poolsQuery = gql`
   }
 `;
 
+export type PoolItem = {
+  baseCurrency: string
+  coin: string
+  id: string
+  lotSize: string
+  maxOrderAmount: string
+  orderBook: string
+  quoteCurrency: string
+  timestamp: number
+}
+
+export type PoolsResponse = {
+  poolss: {
+    items: PoolItem[]
+    totalCount: number
+    pageInfo: {
+      endCursor: string
+      hasNextPage: boolean
+      hasPreviousPage: boolean
+      startCursor: string
+    }
+  }
+}
 
 export const tradesQuery = gql`
   query GetTrades($poolId: String) {
@@ -71,50 +95,66 @@ export const tradesQuery = gql`
         timestamp
         transactionId
       }
-      totalCount
-      pageInfo {
-        startCursor
-        hasPreviousPage
-        hasNextPage
-        endCursor
-      }
     }
   }
 `;
+
+export type TradeItem = {
+  id: string;
+  orderId: string;
+  poolId: string;
+  price: string;
+  quantity: string;
+  timestamp: number;
+  transactionId: string;
+  order: {
+    expiry: number;
+    filled: string;
+    id: string;
+    orderId: string;
+    poolId: string;
+    price: string;
+    type: string;
+    timestamp: number;
+    status: string;
+    side: 'Buy' | 'Sell';
+    quantity: string;
+    user: {
+      amount: string;
+      currency: string;
+      lockedAmount: string;
+      name: string;
+      symbol: string;
+      user: HexAddress;
+    };
+    pool: {
+      baseCurrency: string;
+      coin: string;
+      id: string;
+      lotSize: string;
+      maxOrderAmount: string;
+      orderBook: string;
+      quoteCurrency: string;
+      timestamp: number;
+    };
+  };
+}
+
+export type TradesResponse = {
+  tradess: {
+    items: TradeItem[]
+    pageInfo: {
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+    totalCount: number;
+  }
+}
 
 export const ordersQuery = gql`
-  query GetOrders {
-    orderss {
-      items {
-        expiry
-        filled
-        id
-        orderId
-        poolId
-        price
-        quantity
-        side
-        status
-        timestamp
-        type
-        pool {
-          baseCurrency
-          coin
-          id
-          lotSize
-          maxOrderAmount
-          orderBook
-          quoteCurrency
-          timestamp
-        }
-      }
-      totalCount
-    }
-  }
-`;
-
-export const orderHistorysQuery = gql`
-  query GetOrderHistory($userAddress: String!, $poolId: String) {
+  query GetOrders($userAddress: String!, $poolId: String) {
     orderss(
       where: { user: $userAddress, poolId: $poolId }
     ) {
@@ -139,17 +179,44 @@ export const orderHistorysQuery = gql`
           user
         }
       }
-      totalCount
-      pageInfo {
-        startCursor
-        hasPreviousPage
-        hasNextPage
-        endCursor
-      }
     }
   }
 `;
 
+export type OrderItem = {
+  expiry: string
+  filled: string
+  id: string
+  orderId: string
+  poolId: string
+  price: string
+  quantity: string
+  side: string
+  status: string
+  timestamp: number
+  type: string
+  user: {
+    amount: string
+    currency: string
+    lockedAmount: string
+    name: string
+    symbol: string
+    user: string
+  }
+}
+
+export type OrdersResponse = {
+  orderss: {
+    items: OrderItem[]
+    pageInfo: {
+      endCursor: string
+      hasNextPage: boolean
+      hasPreviousPage: boolean
+      startCursor: string
+    }
+    totalCount: number
+  }
+}
 
 export const balancesQuery = gql`
   query GetBalances($userAddress: String!) {
@@ -173,11 +240,25 @@ export const balancesQuery = gql`
   }
 `;
 
-// Export the GraphQL queries
+export type BalanceItem = {
+  amount: string
+  currency: string
+  lockedAmount: string
+  name: string
+  symbol: string
+  user: string
+}
+
+export type BalancesResponse = {
+  balancess: {
+    items: BalanceItem[]
+  }
+}
+
 export const minuteCandleStickQuery = gql`
-  query GetMinuteCandleStick {
+  query GetMinuteCandleStick($poolId: String!) {
     minuteBucketss(
-      where: { poolId: "0x4c1e6bcdca3644b245081ff512e3a3c79cd18391" }
+      where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "asc"
       limit: 1000
@@ -215,6 +296,7 @@ export const fiveMinuteCandleStickQuery = gql`
     }
   }
 `;
+
 
 export const hourCandleStickQuery = gql`
   query GetHourCandleStick($poolId: String!) {
@@ -258,117 +340,36 @@ export const dailyCandleStickQuery = gql`
   }
 `;
 
-export const getCuratorVaultsQuery = gql`
-  query GetCuratorVaults {
-    assetVaults {
-      items {
-        asset
-        blockNumber
-        id
-        name
-        tvl
-        token
-        timestamp
-        tokenName
-        tokenSymbol
-        transactionHash
-        curator {
-          blockNumber
-          contractAddress
-          curator
-          id
-          name
-          timestamp
-          transactionHash
-          uri
-        }
-        allocations {
-          items {
-            allocation
-            blockNumber
-            curator
-            id
-            marketToken
-            timestamp
-            transactionHash
-          }
-        }
-      }
-    }
-  }
-`;
+export type CandleStickItem = {
+  open: string
+  close: string
+  low: string
+  high: string
+  average: string
+  count: string
+  timestamp: string
+}
 
-export const getCuratorVaultQuery = gql`
-  query GetCuratorAssetVaultQuery($assetVault: String!) {
-    assetVault(id: $assetVault) {
-      asset
-      blockNumber
-      timestamp
-      id
-      name
-      token
-      tokenName
-      transactionHash
-      tokenSymbol
-      tvl
-      curator {
-        blockNumber
-        contractAddress
-        curator
-        id
-        name
-        timestamp
-        transactionHash
-        uri
-      }
-    }
+export type MinuteCandleStickResponse = {
+  minuteBucketss: {
+    items: CandleStickItem[]
   }
-`;
+}
 
-export const getAllocationsQuery = gql`
-  query GetAllocations($assetVault: String!) {
-    allocations(where: {assetVault: $assetVault}) {
-      items {
-        allocation
-        blockNumber
-        curator
-        id
-        marketToken
-        timestamp
-        transactionHash
-      }
-    }
+export type FiveMinuteCandleStickResponse = {
+  fiveMinuteBucketss: {
+    items: CandleStickItem[]
   }
-`;
+}
 
-export const getCuratorVaultDepositQuerys = gql`
-  query GetCuratorVaultDeposits($assetVault: String!)  {
-    curatorVaultDeposits(where: {assetVault: $assetVault}) {
-      items {
-        blockNumber
-        id
-        timestamp
-        shares
-        transactionHash
-        user
-        amount
-      }
-    }
+export type HourCandleStickResponse = {
+  hourBucketss: {
+    items: CandleStickItem[]
   }
-`;
+}
 
-export const getCuratorVaultWithdrawQuerys = gql`
-  query GetcuratorVaultWithdrawals($assetVault: String!)  {
-    curatorVaultWithdrawals(where: {assetVault: $assetVault}) {
-      items {
-        blockNumber
-        id
-        timestamp
-        shares
-        transactionHash
-        user
-        amount
-      }
-    }
+export type DailyCandleStickResponse = {
+  dailyBucketss: {
+    items: CandleStickItem[]
   }
-`;
+}

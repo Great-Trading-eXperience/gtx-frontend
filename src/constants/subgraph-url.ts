@@ -11,5 +11,3 @@ export const GTX_GRAPHQL_URL = (chainId?: number): string => {
 }
 
 export const PERPETUAL_GRAPHQL_URL = "https://gtx-monad-perpetual-indexer.bobbyfiando.com";
-
-console.log('NEXT_PUBLIC_CLOB_31338_INDEXER_URL:', process.env.NEXT_PUBLIC_CLOB_31338_INDEXER_URL)

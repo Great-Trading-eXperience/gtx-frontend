@@ -6,9 +6,9 @@ import { NotificationDialog } from "@/components/notification-dialog/notificatio
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { poolsQuery } from "@/graphql/gtx/gtx.query"
+import { poolsQuery } from "@/graphql/gtx/clob"
 import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
-import type { HexAddress } from "@/types/web3/general/address"
+import type { HexAddress } from "@/types/general/address"
 import { useQuery } from '@tanstack/react-query'
 import request from 'graphql-request'
 import { CheckCircle2, ChevronDown, Hexagon, Info, Loader2, Wallet } from "lucide-react"

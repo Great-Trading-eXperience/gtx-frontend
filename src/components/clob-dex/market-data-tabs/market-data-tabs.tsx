@@ -1,11 +1,19 @@
 "use client"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PoolsResponse } from "@/graphql/gtx/clob"
 import { BarChart2, LineChart } from "lucide-react"
-import RecentTradesComponent from "../recent-trade/recent-trade"
+import { ClobDexComponentProps } from "../clob-dex"
 import EnhancedOrderBookDex from "../orderbook-dex/orderbook-dex"
+import RecentTradesComponent from "../recent-trade/recent-trade"
 
-const MarketDataTabs = () => {
+export type MarketDataTabsProps = ClobDexComponentProps & {
+  poolsData?: PoolsResponse;
+  poolsLoading?: boolean;
+  poolsError?: Error | null;
+}
+
+const MarketDataTabs = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsError }: MarketDataTabsProps) => {
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
       {/* Decorative Elements */}
@@ -39,14 +47,14 @@ const MarketDataTabs = () => {
             value="orderbook"
             className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
           >
-            <EnhancedOrderBookDex />
+            <EnhancedOrderBookDex chainId={chainId} defaultChainId={defaultChainId} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} />
           </TabsContent>
 
           <TabsContent
             value="trades"
             className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
           >
-            <RecentTradesComponent />
+            <RecentTradesComponent chainId={chainId} defaultChainId={defaultChainId} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} />
           </TabsContent>
         </div>
       </Tabs>

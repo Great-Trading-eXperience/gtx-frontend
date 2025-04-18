@@ -1,133 +1,35 @@
 "use client"
 
-import React, { useState } from 'react';
-import { ArrowDownUp, ChevronDown, Clock, ExternalLink, Loader2, Wallet2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { useAccount, useChainId } from 'wagmi';
-import request from 'graphql-request';
-import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { tradesQuery } from '@/graphql/gtx/gtx.query';
-import { formatDate } from '../../../../helper';
-import { formatUnits } from 'viem';
-import type { HexAddress } from '@/types/web3/general/address';
+import { EXPLORER_URL } from '@/constants/explorer-url';
+import { TradesResponse } from '@/graphql/gtx/clob';
+import { formatPrice, formatQuantity } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
+import { ArrowDownUp, ChevronDown, Clock, ExternalLink, Loader2, Wallet2 } from 'lucide-react';
+import { useState } from 'react';
+import { formatUnits } from 'viem';
+import { useAccount } from 'wagmi';
+import { formatDate } from '../../../../helper';
+import { ClobDexComponentProps } from '../clob-dex';
 
-// Updated interface for trade items based on the new query structure
-interface TradeItem {
-  id: string;
-  orderId: string;
-  poolId: string;
-  price: string;
-  quantity: string;
-  timestamp: number;
-  transactionId: string;
-  order: {
-    expiry: number;
-    filled: string;
-    id: string;
-    orderId: string;
-    poolId: string;
-    price: string;
-    type: string;
-    timestamp: number;
-    status: string;
-    side: 'Buy' | 'Sell';
-    quantity: string;
-    user: {
-      amount: string;
-      currency: string;
-      lockedAmount: string;
-      name: string;
-      symbol: string;
-      user: HexAddress;
-    };
-    pool: {
-      baseCurrency: string;
-      coin: string;
-      id: string;
-      lotSize: string;
-      maxOrderAmount: string;
-      orderBook: string;
-      quoteCurrency: string;
-      timestamp: number;
-    };
-  };
+export type TradesProps = ClobDexComponentProps & {
+  tradesData?: TradesResponse;
+  tradesLoading?: boolean;
+  tradesError?: Error | null;
 }
 
-// Updated response interface for tradesQuery
-interface TradeHistoryResponse {
-  tradess: {
-    items: TradeItem[];
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-    totalCount: number;
-  };
-}
-
-const formatPrice = (price: string): string => {
-  return Number(price).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const formatQuantity = (quantity: string): string => {
-  return Number(quantity).toLocaleString('en-US', {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
-  });
-};
-
-const TradeHistoryTable = () => {
+const TradeHistoryTable = ({chainId, defaultChainId, tradesData, tradesLoading, tradesError}: TradesProps) => {
   const { address } = useAccount();
   type SortDirection = 'asc' | 'desc';
   type SortableKey = 'timestamp' | 'quantity' | 'price';
-
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: SortDirection }>({
     key: 'timestamp',
     direction: 'desc'
   });
   
-  // Add state for the filter checkbox
   const [filterByMyAddress, setFilterByMyAddress] = useState(false);
 
-  const { selectedPoolId, quoteDecimals, baseDecimals } = useMarketStore()
-
-  const { data, isLoading, error } = useQuery<TradeHistoryResponse>({
-    queryKey: ['tradeHistory', selectedPoolId],
-    queryFn: async () => {
-      if (!address) {
-        throw new Error('Wallet address not available');
-      }
-
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-
-      const response = await request<TradeHistoryResponse>(
-        url,
-        tradesQuery,
-        {
-          poolId: selectedPoolId
-        }
-      );
-
-      if (!response || !response.tradess) {
-        throw new Error('Invalid response format');
-      }
-
-      return response;
-    },
-    enabled: !!address, // Only run query when address is available
-    refetchInterval: 10000,
-  });
+  const { baseDecimals, quoteDecimals } = useMarketStore()
 
   const handleSort = (key: SortableKey) => {
     setSortConfig(prevConfig => ({
@@ -152,7 +54,7 @@ const TradeHistoryTable = () => {
     );
   }
 
-  if (isLoading) {
+  if (tradesLoading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -163,27 +65,24 @@ const TradeHistoryTable = () => {
     );
   }
 
-  if (error) {
+  if (tradesError) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-rose-800/30 bg-rose-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-          <p className="text-lg text-rose-200">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-lg text-rose-200">{tradesError instanceof Error ? tradesError.message : 'Unknown error'}</p>
         </div>
       </div>
     );
   }
 
-  const trades = data?.tradess?.items || [];
+  const trades = tradesData?.tradess?.items || [];
   
-  // Filter trades based on user address when checkbox is checked
   const filteredTrades = filterByMyAddress 
     ? trades.filter(trade => 
         trade.order?.user?.user?.toLowerCase() === address?.toLowerCase()
       )
     : trades;
-
-  console.log(address,filteredTrades.map((trade) => trade.order?.user?.user))
 
   const sortedTrades = [...filteredTrades].sort((a, b) => {
     const key = sortConfig.key;
@@ -284,7 +183,7 @@ const TradeHistoryTable = () => {
                   <div className="font-medium text-white">{formatQuantity(formatUnits(BigInt(trade.quantity), baseDecimals))}</div>
                   <div className="text-blue-400 hover:text-blue-300 transition-colors truncate">
                     <a
-                      href={`https://testnet-explorer.riselabs.xyz/tx/${trade.transactionId}`}
+                      href={`${EXPLORER_URL(chainId ?? defaultChainId)}/tx/${trade.transactionId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline"

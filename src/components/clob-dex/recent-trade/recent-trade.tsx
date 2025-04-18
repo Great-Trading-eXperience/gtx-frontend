@@ -1,91 +1,34 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { request } from "graphql-request"
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { formatUnits } from "viem"
-import { tradesQuery } from "@/graphql/gtx/gtx.query"
-import { ArrowDown, ArrowUp, BarChart2, Clock, RefreshCw } from "lucide-react"
-import { useChainId } from "wagmi"
+import { PoolsResponse, TradeItem, TradesResponse } from "@/graphql/gtx/clob"
+import { formatPrice, formatTime } from "@/lib/utils"
 import { useMarketStore } from "@/store/market-store"
-
-// Define interface for the trades response based on the example data
-interface TradeItem {
-  id: string
-  orderId: string
-  poolId: string
-  price: string
-  quantity: string
-  timestamp: number
-  transactionId: string
-  pool: {
-    baseCurrency: string
-    coin: string
-    id: string
-    lotSize: string
-    maxOrderAmount: string
-    orderBook: string
-    quoteCurrency: string
-    timestamp: number
-  }
-}
-
-interface TradesResponse {
-  tradess: {
-    items: TradeItem[]
-    pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-    totalCount: number
-  }
-}
+import { ArrowDown, ArrowUp, Clock } from "lucide-react"
+import { useEffect, useState } from "react"
+import { formatUnits } from "viem"
+import { ClobDexComponentProps } from "../clob-dex"
 
 interface Trade {
   price: number
   time: string
   size: bigint
-  side: "Buy" | "Sell" // We'll use heuristics to determine side
+  side: "Buy" | "Sell" 
   total?: number
 }
 
-const formatTime = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000)
-  return date.toLocaleTimeString("en-US", { hour12: false })
+export type RecentTradesComponentProps = ClobDexComponentProps & {
+  poolsData?: PoolsResponse;
+  poolsLoading?: boolean;
+  poolsError?: Error | null;
+  tradesData?: TradesResponse;
+  tradesLoading?: boolean;
+  tradesError?: Error | null;
 }
 
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price)
-}
-
-const RecentTradesComponent = () => {
+const RecentTradesComponent = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsError, tradesData, tradesLoading, tradesError }: RecentTradesComponentProps) => {
   const [mounted, setMounted] = useState(false)
 
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
-
-  const { selectedPoolId, baseDecimals, quoteDecimals } = useMarketStore()
-
-  // Query for trade events
-  const { data, isLoading, error } = useQuery<TradesResponse>({
-    queryKey: ["trades"],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request<TradesResponse>(url, tradesQuery, {
-        poolId: selectedPoolId,
-      })
-    },
-    refetchInterval: 1000,
-    staleTime: 0,
-  })
+  const { baseDecimals, quoteDecimals } = useMarketStore()
 
   useEffect(() => {
     setMounted(true)
@@ -126,23 +69,23 @@ const RecentTradesComponent = () => {
     })
   }
 
-  if (!mounted || isLoading) {
+  if (!mounted || tradesLoading) {
     return <RecentTradesSkeleton />
   }
 
-  if (error) {
+  if (tradesError) {
     return (
       <div className="w-full rounded-xl border border-gray-800/30 bg-gray-950 p-4 text-white">
         <div className="flex items-center gap-2 text-rose-400">
           <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
           <span>Error loading trades</span>
         </div>
-        <p className="mt-2 text-sm text-gray-300">{error.toString()}</p>
+        <p className="mt-2 text-sm text-gray-300">{tradesError.toString()}</p>
       </div>
     )
   }
 
-  const trades = calculateTotal(processTrades(data?.tradess.items || []))
+  const trades = calculateTotal(processTrades(tradesData?.tradess.items || []))
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
@@ -197,11 +140,11 @@ const RecentTradesComponent = () => {
                         <ArrowDown className="h-3.5 w-3.5 text-rose-400" />
                       )}
                       <span className={`font-medium ${trade.side === "Buy" ? "text-emerald-400" : "text-rose-400"}`}>
-                        {formatPrice(Number(formatUnits(BigInt(Math.floor(trade.price)), quoteDecimals)))}
+                        {formatPrice(formatUnits(BigInt(Math.floor(trade.price)), quoteDecimals))}
                       </span>
                     </div>
                     <div className="text-center font-medium text-gray-200">{trade.time}</div>
-                    <div className="text-right font-medium text-gray-200">{formatPrice(Number(formatUnits(BigInt(trade.size), baseDecimals)))}</div>
+                    <div className="text-right font-medium text-gray-200">{formatPrice(formatUnits(BigInt(trade.size), baseDecimals))}</div>
                   </div>
                 </div>
               )

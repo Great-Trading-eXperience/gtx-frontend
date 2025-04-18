@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAccount } from 'wagmi';
 import { readContract } from '@wagmi/core';
 import { wagmiConfig } from '@/configs/wagmi';
-import type { HexAddress } from '@/types/web3/general/address';
+import type { HexAddress } from '@/types/general/address';
 import HyperlaneABI from "@/abis/espresso/HyperlaneABI";
 
 /**

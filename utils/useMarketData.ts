@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
 import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { marketsQuery } from "@/graphql/gtx/perpetual.query"
-import type { HexAddress } from "@/types/web3/general/address"
+import { marketsQuery } from "@/graphql/gtx/perpetual"
+import type { HexAddress } from "@/types/general/address"
 
 // Interfaces
 interface Market {

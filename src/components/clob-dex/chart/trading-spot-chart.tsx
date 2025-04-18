@@ -1,7 +1,6 @@
 "use client"
 
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { tradesQuery } from "@/graphql/gtx/gtx.query"
+import { tradesQuery } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { getGraphQLUrl } from "@/utils/env"
 // import { tradesQuery } from "@/graphql/liquidbook/liquidbook.query" // Updated import
@@ -11,7 +10,7 @@ import { type CandlestickData, ColorType, createChart, type IChartApi, ISeriesAp
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
-import { useChainId } from "wagmi"
+import { ClobDexComponentProps } from "../clob-dex"
 
 // Define interfaces for the trades query response
 interface TradeItem {
@@ -185,12 +184,12 @@ function processTradeData(data: TradeItem[], selectedPoolId: string | null, quot
   return { candlesticks, volumes };
 }
 
-interface TradingSpotChartProps {
+export type TradingSpotChartProps = ClobDexComponentProps & {
   height?: number;
   selectedPoolId?: string | null;
 }
 
-function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotChartProps) {
+function TradingSpotChart({ chainId, height = 500, selectedPoolId = null }: TradingSpotChartProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -201,9 +200,6 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
   const [currentTime, setCurrentTime] = useState("")
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
 
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
-
   const { 
     quoteDecimals,
     baseDecimals
@@ -212,24 +208,11 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
   const { data, isLoading, error } = useQuery<any>({
     queryKey: ["trades", selectedPoolId],
     queryFn: async () => {
-      console.log(`Fetching trade data for poolId: ${selectedPoolId || 'all'}`);
-
-      // Check if we need to pass a parameter to the GraphQL query
-      // If your tradesQuery accepts a poolId parameter, you would use:
-      // return await request(GTX_GRAPHQL_URL, tradesQuery, { poolId: selectedPoolId })
-
-      // For now, we'll just fetch all trades and filter client-side
       const response = await request(getGraphQLUrl(chainId), tradesQuery);
 
-      // Safely handle the response as unknown type
       if (response && typeof response === 'object') {
-        // Now TypeScript knows response is an object
-        console.log("GraphQL response keys:", Object.keys(response));
-
-        // Type assertion for accessing properties
         const typedResponse = response as Record<string, any>;
 
-        // Check how many trades we got (handle different response structures)
         const tradesData = typedResponse.tradess || typedResponse.trades || {};
         const itemsCount = tradesData.items?.length || 0;
         console.log(`Fetched ${itemsCount} trades from API`);
@@ -242,7 +225,6 @@ function TradingSpotChart({ height = 500, selectedPoolId = null }: TradingSpotCh
     refetchInterval: 5000,
     staleTime: 0,
     refetchOnWindowFocus: true,
-    // Ensure query reruns when selectedPoolId changes
     refetchOnMount: true,
   })
 

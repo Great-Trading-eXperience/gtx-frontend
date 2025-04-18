@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/tooltip"
 import { PerpetualPairDropdown } from './perpetual-pair-dropdown'
 import { PERPETUAL_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { fundingFeesQuery, openInterestsQuery, pricesQuery } from '@/graphql/gtx/perpetual.query'
+import { fundingFeesQuery, openInterestsQuery, pricesQuery } from '@/graphql/gtx/perpetual'
 import { usePerpetualMarketStore, Market as StoreMarket } from '@/store/perpetual-market-store'
 
 // Define the markets query

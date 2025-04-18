@@ -7,8 +7,8 @@ import { parseUnits, formatUnits, erc20Abi, keccak256, encodeAbiParameters, pars
 import { wagmiConfig } from '@/configs/wagmi';
 
 import HyperlaneABI from '@/abis/espresso/HyperlaneABI';
-import type { HexAddress } from '@/types/web3/general/address';
-import OrderEncoder from '@/types/web3/espresso/OrderEncoder';
+import type { HexAddress } from '@/types/general/address';
+import OrderEncoder from '@/types/espresso/OrderEncoder';
 
 export enum OrderAction {
   Transfer = 0,

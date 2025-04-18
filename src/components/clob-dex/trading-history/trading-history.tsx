@@ -1,15 +1,18 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { useAccount } from "wagmi"
-import OrderHistoryTable from "./order-history"
-import TradeHistoryTable from "./trade-history"
 import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
-import BalancesHistoryTable from "./balances-history"
+import { Card } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, History, Wallet } from "lucide-react"
+import { useAccount } from "wagmi"
+import { ClobDexComponentProps } from "../clob-dex"
+import BalancesHistoryTable, { BalancesHistoryTableProps } from "./balances"
+import OrderHistoryTable, { OrderHistoryTableProps } from "./orders"
+import TradeHistoryTable, { TradesProps } from "./trades"
 
-export default function TradingHistory() {
+export type TradingHistoryProps = ClobDexComponentProps & BalancesHistoryTableProps & OrderHistoryTableProps & TradesProps
+
+export default function TradingHistory({ address, chainId, defaultChainId, balancesResponse, balancesLoading, balancesError, ordersData, ordersLoading, ordersError, poolsData, poolsLoading, poolsError, tradesData, tradesLoading, tradesError }: TradingHistoryProps) {
   const { isConnected } = useAccount()
 
   const solidColorConfig = {
@@ -21,7 +24,6 @@ export default function TradingHistory() {
 
   return (
     <div className="relative mt-1">
-      {/* Decorative Elements */}
       <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
       <div className="absolute -right-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
 
@@ -62,7 +64,7 @@ export default function TradingHistory() {
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <OrderHistoryTable />
+                <OrderHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} ordersData={ordersData} ordersLoading={ordersLoading} ordersError={ordersError} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
@@ -82,7 +84,7 @@ export default function TradingHistory() {
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <TradeHistoryTable />
+                <TradeHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} tradesData={tradesData} tradesLoading={tradesLoading} tradesError={tradesError} />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
@@ -102,7 +104,7 @@ export default function TradingHistory() {
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <BalancesHistoryTable />
+                <BalancesHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} balancesResponse={balancesResponse} balancesLoading={balancesLoading} balancesError={balancesError} />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">

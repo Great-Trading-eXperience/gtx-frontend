@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 
 // Types
-import type { HexAddress } from '@/types/web3/general/address';
+import type { HexAddress } from '@/types/general/address';
 
 export type Position = {
   key: string;

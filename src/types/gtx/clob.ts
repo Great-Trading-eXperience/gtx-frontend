@@ -1,8 +1,4 @@
-// Enum for order side (buy/sell)
-export enum Side {
-  BUY = 0,
-  SELL = 1
-}
+import { OrderSideEnum } from "../../../lib/enums/clob.enum"
 
 // Enum for asset type (base/quote)
 export enum AssetType {
@@ -29,7 +25,7 @@ export interface Market {
 // Interface for order
 export interface Order {
   id: string
-  side: Side
+  side: OrderSideEnum
   price: bigint
   size: bigint
   trader: string
@@ -43,3 +39,10 @@ export interface PriceLevel {
 
 // Utility type for handling blockchain-related operations
 export type HexAddress = `0x${string}` 
+
+export type PoolKey = {
+  baseToken: Token;
+  quoteToken: Token;
+  chainId: number;
+};
+

@@ -1,6 +1,6 @@
 // utils/OrderEncoder.ts
 import { keccak256, encodeAbiParameters, parseAbiParameters } from 'viem';
-import type { HexAddress } from '@/types/web3/general/address';
+import type { HexAddress } from '@/types/general/address';
 
 // Define the OrderData type to match the contract's structure
 export interface OrderData {

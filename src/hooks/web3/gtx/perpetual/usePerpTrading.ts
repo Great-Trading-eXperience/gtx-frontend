@@ -9,7 +9,7 @@ import { wagmiConfig } from '@/configs/wagmi';
 import RouterABI from "@/abis/gtx/perpetual/RouterABI";
 
 // Types
-import type { HexAddress } from '@/types/web3/general/address';
+import type { HexAddress } from '@/types/general/address';
 
 /**
  * Market types enum matching OrderHandler.OrderType from the contract

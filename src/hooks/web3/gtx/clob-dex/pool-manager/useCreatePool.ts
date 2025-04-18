@@ -1,6 +1,6 @@
-import PoolManagerABI from '@/abis/gtx/clob-dex/PoolManagerABI';
+import PoolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
 import { POOL_MANAGER_ADDRESS } from '@/constants/contract-address';
-import { HexAddress } from '@/types/web3/general/address';
+import { HexAddress } from '@/types/general/address';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useChainId, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';

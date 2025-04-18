@@ -1,20 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, CheckCircle, Hexagon, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import MarketSearchDialog from "./market-search-dialog"
-import { MarketListSkeleton } from "./market-list-skeleton"
+import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
+import { poolsQuery, tradesQuery } from "@/graphql/gtx/clob"
+import { useMarketStore } from "@/store/market-store"
 import { useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { poolsQuery, tradesQuery } from "@/graphql/gtx/gtx.query"
-import { formatUnits } from "viem"
-import { DotPattern } from "../magicui/dot-pattern"
+import { CheckCircle, Clock, Hexagon, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { formatUnits } from "viem"
 import { useChainId } from "wagmi"
-import { useMarketStore } from "@/store/market-store"
+import { DotPattern } from "../magicui/dot-pattern"
+import { MarketListSkeleton } from "./market-list-skeleton"
+import MarketSearchDialog from "./market-search-dialog"
 
 // Define interfaces for the data
 interface PoolItem {
@@ -110,7 +110,6 @@ export default function MarketList() {
   const [filteredData, setFilteredData] = useState<MarketData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false)
-  const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null)
   const [copiedToken, setCopiedToken] = useState<{ id: string; name: string } | null>(null)
 
   const chainId = useChainId()
@@ -391,7 +390,6 @@ export default function MarketList() {
 
   // Handle market selection from the dialog
   const handleMarketSelect = (marketId: string) => {
-    setSelectedMarketId(marketId)
     const selectedMarket = marketData.find((m) => m.id === marketId)
     if (selectedMarket) {
       console.log(`Selected market: ${selectedMarket.name}/${selectedMarket.pair}`)

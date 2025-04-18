@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { AllocationRow } from "@/components/earn/allocation-row"
+import { DotPattern } from "@/components/magicui/dot-pattern"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,17 +14,16 @@ import {
   getCuratorVaultDepositQuerys,
   getCuratorVaultQuery,
   getCuratorVaultWithdrawQuerys,
-} from "@/graphql/gtx/gtx.query"
+} from "@/graphql/gtx/perpetual"
 import { useAssetVaultDeposit } from "@/hooks/web3/gtx/perpetual/useDepositCuratorVault"
-import type { HexAddress } from "@/types/web3/general/address"
+import type { HexAddress } from "@/types/general/address"
 import { useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
-import { Database, TrendingUp, ArrowUpRight, Wallet, LucideLineChart, ArrowRight, ArrowLeft } from "lucide-react"
+import { ArrowLeft, Database, TrendingUp } from "lucide-react"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
-import { CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, LineChart } from "recharts"
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useAccount } from "wagmi"
-import { DotPattern } from "@/components/magicui/dot-pattern"
 
 // Types for the curator information
 interface Curator {

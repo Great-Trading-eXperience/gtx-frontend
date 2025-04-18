@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useSimulateContract, useWaitForTransactionReceipt, useWriteContract, useAccount } from 'wagmi';
-import OrderBookABI from '@/abis/gtx/clob-dex/OrderBookABI';
-import { HexAddress } from '@/types/web3/general/address';
+import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
+import { HexAddress } from '@/types/general/address';
 
 // Define types
 type Side = 0 | 1; // 0 = BUY, 1 = SELL

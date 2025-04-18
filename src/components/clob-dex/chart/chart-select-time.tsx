@@ -1,7 +1,7 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery } from "@/graphql/gtx/gtx.query"
+import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"

@@ -5,7 +5,7 @@ import { Search, X } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import type { HexAddress } from '@/types/web3/general/address'
+import type { HexAddress } from '@/types/general/address'
 
 // Define TypeScript interfaces
 export interface Network {

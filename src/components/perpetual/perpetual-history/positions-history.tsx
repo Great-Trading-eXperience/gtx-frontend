@@ -7,9 +7,9 @@ import { useAccount } from "wagmi"
 import request from "graphql-request"
 import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { formatUnits } from "viem"
-import type { HexAddress } from "@/types/web3/general/address"
+import type { HexAddress } from "@/types/general/address"
 import { useMarketData } from "../../../../utils/useMarketData"
-import { positionsQuery } from "@/graphql/gtx/perpetual.query"
+import { positionsQuery } from "@/graphql/gtx/perpetual"
 import { formatDate } from "../../../../helper"
 
 // Interfaces

@@ -11,8 +11,6 @@ export interface Pool {
   orderBook: string
   quoteCurrency: string
   timestamp: number
-  baseDecimals: number
-  quoteDecimals: number
 }
 
 export interface MarketData {
