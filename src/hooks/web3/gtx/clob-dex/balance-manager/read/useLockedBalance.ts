@@ -2,8 +2,8 @@ import { readContract } from '@wagmi/core';
 import { useCallback, useState } from 'react';
 import { wagmiConfig } from '@/configs/wagmi';
 import { BALANCE_MANAGER_ADDRESS } from '@/constants/contract-address';
-import BalanceManagerABI from '@/abis/gtx/clob-dex/BalanceManagerABI';
-import { HexAddress } from '@/types/web3/general/address';
+import BalanceManagerABI from '@/abis/gtx/clob/BalanceManagerABI';
+import { HexAddress } from '@/types/general/address';
 
 // Get locked balance hook
 interface LockedBalanceParams {

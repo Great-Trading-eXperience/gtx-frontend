@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import usePerpetualCreateMarket, { type OracleSource } from "@/hooks/web3/gtx/perpetual/usePerpetualCreateMarket"
-import type { HexAddress } from "@/types/web3/general/address"
+import type { HexAddress } from "@/types/general/address"
 import { toast } from "sonner"
 
 // shadcn/ui components

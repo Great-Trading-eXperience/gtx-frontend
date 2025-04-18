@@ -1,43 +1,12 @@
 "use client"
 
+import TokenABI from "@/abis/tokens/TokenABI"
 import { Input } from "@/components/ui/input"
 import { wagmiConfig } from "@/configs/wagmi"
 import { readContract } from "@wagmi/core"
 import { Clock, Hexagon, Search, Star, Wallet, X } from "lucide-react"
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
-
-// Token ABI for interacting with ERC20 tokens
-// We only need the functions we're going to call
-const TokenABI = [
-  {
-    constant: true,
-    inputs: [],
-    name: "name",
-    outputs: [{ name: "", type: "string" }],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "symbol",
-    outputs: [{ name: "", type: "string" }],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "decimals",
-    outputs: [{ name: "", type: "uint8" }],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-]
 
 // Token types
 export interface Token {

@@ -3,8 +3,8 @@ import { useCallback, useState } from 'react';
 import { wagmiConfig } from '@/configs/wagmi';
 import { TransactionReceipt } from 'viem';
 import { ORDERBOOK_ADDRESS } from '@/constants/contract-address';
-import OrderBookABI from '@/abis/gtx/clob-dex/OrderBookABI';
-import { HexAddress } from '@/types/web3/general/address';
+import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
+import { HexAddress } from '@/types/general/address';
 
 // Common types
 interface BaseOptions {

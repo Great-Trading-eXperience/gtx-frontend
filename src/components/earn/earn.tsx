@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { getCuratorVaultsQuery } from "@/graphql/gtx/gtx.query"
+import { getCuratorVaultsQuery } from "@/graphql/gtx/clob"
 import { useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
 import { ChevronLeft, ChevronRight, LineChart, Wallet, ArrowUpRight } from "lucide-react"

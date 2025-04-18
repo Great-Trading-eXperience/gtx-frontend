@@ -3,8 +3,8 @@ import { useCallback, useState } from 'react';
 import { wagmiConfig } from '@/configs/wagmi';
 import { TransactionReceipt } from 'viem';
 import { POOL_MANAGER_ADDRESS } from '@/constants/contract-address';
-import PoolManagerABI from '@/abis/gtx/clob-dex/PoolManagerABI';
-import { HexAddress } from '@/types/web3/general/address';
+import PoolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
+import { HexAddress } from '@/types/general/address';
 
 // Common types
 interface BaseOptions {

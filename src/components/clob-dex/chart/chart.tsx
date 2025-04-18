@@ -1,7 +1,7 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery } from "@/graphql/gtx/gtx.query"
+import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery, minuteCandleStickQuery } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
@@ -9,9 +9,8 @@ import { type CandlestickData, ColorType, createChart, type IChartApi, type Time
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
-import { useChainId } from 'wagmi'
-
-// Define interfaces for the candlestick data response
+import { TimeFrame } from "../../../../lib/enums/clob.enum"
+import { ClobDexComponentProps } from "../clob-dex"
 interface CandleStickItem {
   open: number;
   close: number;
@@ -55,13 +54,11 @@ function processCandleStickData(data: CandleStickItem[], quoteDecimals: number):
   const volumes: VolumeData[] = [];
 
   data.forEach(candle => {
-    // Convert pricing data from raw to formatted values with proper decimal places
     const openPrice = Number(formatUnits(BigInt(candle.open), quoteDecimals));
     const closePrice = Number(formatUnits(BigInt(candle.close), quoteDecimals));
     const lowPrice = Number(formatUnits(BigInt(candle.low), quoteDecimals));
     const highPrice = Number(formatUnits(BigInt(candle.high), quoteDecimals));
 
-    // Create candlestick data point
     candlesticks.push({
       time: candle.timestamp as Time,
       open: openPrice,
@@ -70,30 +67,23 @@ function processCandleStickData(data: CandleStickItem[], quoteDecimals: number):
       close: closePrice,
     });
 
-    // Volume can be represented by the count
     volumes.push({
       time: candle.timestamp as Time,
       value: candle.count,
-      color: closePrice >= openPrice 
-        ? "rgba(38, 166, 154, 0.5)" // green for up candles
-        : "rgba(239, 83, 80, 0.5)" // red for down candles
+      color: closePrice >= openPrice
+        ? "rgba(38, 166, 154, 0.5)"
+        : "rgba(239, 83, 80, 0.5)"
     });
   });
 
   return { candlesticks, volumes };
 }
 
-enum TimeFrame {
-  DAILY = "daily",
-  FIVE_MINUTE = "fiveMinute",
-  HOURLY = "hourly",
-}
-
-interface ChartComponentProps {
+export type ChartComponentProps = ClobDexComponentProps & {
   height?: number
 }
 
-function ChartComponent({ height = 380 }: ChartComponentProps) {
+function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponentProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -101,24 +91,22 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
   const { theme } = useTheme()
   const [currentTime, setCurrentTime] = useState("")
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
-
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>(TimeFrame.HOURLY)
 
   const { selectedPoolId, quoteDecimals } = useMarketStore()
 
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
-
   const { data, isLoading, error } = useQuery<CandleStickResponse>({
-    queryKey: [selectedTimeFrame, String(chainId ?? defaultChain)],
+    queryKey: [selectedTimeFrame, String(chainId ?? defaultChainId)],
     queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
+      const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
 
       switch (selectedTimeFrame) {
         case TimeFrame.DAILY:
           return await request(url, dailyCandleStickQuery, { poolId: selectedPoolId })
+        case TimeFrame.MINUTE:
+          return await request(url, minuteCandleStickQuery, { poolId: selectedPoolId })
         case TimeFrame.FIVE_MINUTE:
           return await request(url, fiveMinuteCandleStickQuery, { poolId: selectedPoolId })
         case TimeFrame.HOURLY:
@@ -130,7 +118,6 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
     refetchOnWindowFocus: true,
   })
 
-  // Update UTC time every second
   useEffect(() => {
     const updateTime = () => {
       const now = new Date()
@@ -143,18 +130,16 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
     return () => clearInterval(timer)
   }, [])
 
-  // Update current price from latest candle
   useEffect(() => {
     if (!data) return;
-    
+
     const items = selectedTimeFrame === TimeFrame.DAILY
       ? data.dailyBucketss?.items
       : selectedTimeFrame === TimeFrame.HOURLY
         ? data.hourBucketss?.items
         : data.fiveMinuteBucketss?.items;
-    
+
     if (items && items.length > 0) {
-      // Find the candle with the latest timestamp
       const latestCandle = [...items].sort((a, b) => b.timestamp - a.timestamp)[0];
       setCurrentPrice(formatPrice(latestCandle.close, quoteDecimals));
     }
@@ -163,7 +148,6 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
   useEffect(() => {
     if (!chartContainerRef.current || isLoading || !data) return
 
-    // Clean up any existing chart - but safely
     try {
       if (chartRef.current) {
         chartRef.current.remove();
@@ -171,7 +155,6 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
       }
     } catch (e) {
       console.error("Error removing chart:", e);
-      // Chart was already disposed, just null the reference
       chartRef.current = null;
     }
 
@@ -247,7 +230,6 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
       })
     }
 
-    // Get the daily data items
     const items = selectedTimeFrame === TimeFrame.DAILY
       ? data.dailyBucketss?.items
       : selectedTimeFrame === TimeFrame.HOURLY
@@ -287,7 +269,6 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
     }
   }, [data, isLoading, theme, height])
 
-  // Apply theme changes to existing chart
   useEffect(() => {
     if (chartRef.current) {
       const isDarkMode = theme === "dark"
@@ -304,7 +285,6 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
     }
   }, [theme])
 
-  // Handle timeframe selection
   const handleTimeFrameChange = (timeFrame: TimeFrame) => {
     setSelectedTimeFrame(timeFrame);
   };
@@ -328,42 +308,38 @@ function ChartComponent({ height = 380 }: ChartComponentProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
-        {/* TimeFrame Selector */}
         <div className="flex items-center justify-end space-x-2 p-2 border-b border-gray-200 dark:border-gray-700">
           <div className="flex rounded-md overflow-hidden border border-gray-300 dark:border-gray-700">
             <button
               onClick={() => handleTimeFrameChange(TimeFrame.FIVE_MINUTE)}
-              className={`px-3 py-1 text-xs ${
-                selectedTimeFrame === TimeFrame.FIVE_MINUTE
+              className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.FIVE_MINUTE
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-              }`}
+                }`}
             >
               5M
             </button>
             <button
               onClick={() => handleTimeFrameChange(TimeFrame.HOURLY)}
-              className={`px-3 py-1 text-xs ${
-                selectedTimeFrame === TimeFrame.HOURLY
+              className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.HOURLY
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-              }`}
+                }`}
             >
               1H
             </button>
             <button
               onClick={() => handleTimeFrameChange(TimeFrame.DAILY)}
-              className={`px-3 py-1 text-xs ${
-                selectedTimeFrame === TimeFrame.DAILY
+              className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.DAILY
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-              }`}
+                }`}
             >
               1D
             </button>
           </div>
         </div>
-        
+
         <div className="p-2">
           <div ref={chartContainerRef} className="w-full" style={{ height }} />
         </div>

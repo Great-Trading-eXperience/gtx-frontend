@@ -1,99 +1,13 @@
 'use client'
 
-import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { poolsQuery, tradesQuery } from '@/graphql/gtx/gtx.query'
-import { useMarketStore } from '@/store/market-store'
-import { useQuery } from '@tanstack/react-query'
-import request from 'graphql-request'
+import { PoolsResponse, TradesResponse } from '@/graphql/gtx/clob'
+import { Pool, useMarketStore } from '@/store/market-store'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
+import { ClobDexComponentProps } from '../clob-dex'
 import { PairDropdown } from './pair-dropdown'
-import { useChainId } from 'wagmi'
-import React from 'react'
-import { Pool } from '@/store/market-store'
-
-// Define interfaces for the trades query response
-interface TradeItem {
-  id: string;
-  orderId: string;
-  poolId: string;
-  price: string;
-  quantity: string;
-  timestamp: number;
-  transactionId: string;
-  pool: {
-    baseCurrency: string;
-    coin: string;
-    id: string;
-    lotSize: string;
-    maxOrderAmount: string;
-    orderBook: string;
-    quoteCurrency: string;
-    timestamp: number;
-  };
-}
-
-interface TradesResponse {
-  tradess: {
-    items: TradeItem[];
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-    totalCount: number;
-  };
-}
-
-// Define interfaces for the pools query response
-interface PoolItem {
-  baseCurrency: string
-  coin: string
-  id: string
-  lotSize: string
-  maxOrderAmount: string
-  orderBook: string
-  quoteCurrency: string
-  timestamp: number
-}
-
-interface PoolsResponse {
-  poolss: {
-    items: PoolItem[]
-    totalCount: number
-    pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-  }
-}
-
-const formatVolume = (value: number, decimals: number = 6) => {
-  const num = parseFloat(value.toString())
-  
-  const config = {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }
-  
-  if (num >= 1e9) {
-    return (num / 1e9).toLocaleString('en-US', config) + 'B'
-  } else if (num >= 1e6) {
-    return (num / 1e6).toLocaleString('en-US', config) + 'M'
-  } else if (num >= 1e3) {
-    return (num / 1e3).toLocaleString('en-US', config) + 'K'
-  } else {
-    // More precise for smaller numbers
-    return num.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6
-    })
-  }
-}
+import { formatVolume } from '@/lib/utils'
 
 const SkeletonLoader = () => (
   <div className="w-full h-16 bg-gray-100 dark:bg-[#1B2028] rounded-t-lg animate-pulse flex items-center px-4 space-x-8">
@@ -103,48 +17,42 @@ const SkeletonLoader = () => (
   </div>
 )
 
-export default function MarketWidget() {
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+export type MarketWidgetProps = ClobDexComponentProps & {
+  poolId?: string | null;
+  poolsData?: PoolsResponse;
+  poolsLoading?: boolean;
+  tradesData?: TradesResponse;
+  tradesLoading?: boolean;
+}
+
+export default function MarketWidget({ chainId, defaultChainId, poolId, poolsData, poolsLoading, tradesData, tradesLoading }: MarketWidgetProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [lastPathname, setLastPathname] = useState<string | null>(null)
 
   const {
     selectedPoolId,
+    marketData,
+    quoteDecimals,
+    baseDecimals,
     setSelectedPoolId,
     setSelectedPool,
-    marketData,
     setMarketData,
     syncWithUrl,
     getUrlFromPool,
     setBaseDecimals,
     setQuoteDecimals,
-    quoteDecimals
   } = useMarketStore()
 
-  const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
-    queryKey: ['pools', String(chainId ?? defaultChain)],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, poolsQuery)
-    },
-    refetchInterval: 1000,
-  })
-
-  // Transform the pool items to include decimals before using them
   const poolsWithDecimals = useMemo<Pool[]>(() => {
     if (!poolsData?.poolss?.items) return []
     return poolsData.poolss.items.map(pool => ({
       ...pool,
-      baseDecimals: 18, // Default ERC20 decimals
-      quoteDecimals: 6, // Default USDC decimals
+      baseDecimals: 18, 
+      quoteDecimals: 6,
     }))
   }, [poolsData])
 
-  // Track URL changes and update pool selection
   useEffect(() => {
     if (pathname !== lastPathname) {
       setLastPathname(pathname)
@@ -160,16 +68,15 @@ export default function MarketWidget() {
             const poolObject = poolsWithDecimals.find(pool => pool.id === poolIdFromUrl)
             if (poolObject) {
               setSelectedPool(poolObject)
-              setBaseDecimals(poolObject.baseDecimals)
-              setQuoteDecimals(poolObject.quoteDecimals)
+              setBaseDecimals(baseDecimals)
+              setQuoteDecimals(quoteDecimals)
             }
           }
         }
       }
     }
-  }, [pathname, lastPathname, poolsWithDecimals, selectedPoolId, setSelectedPoolId, setSelectedPool, setBaseDecimals, setQuoteDecimals])
+  }, [pathname, lastPathname, poolsWithDecimals, baseDecimals, quoteDecimals, selectedPoolId, setSelectedPoolId, setSelectedPool, setBaseDecimals, setQuoteDecimals])
 
-  // Initial sync with URL
   useEffect(() => {
     if (poolsWithDecimals.length > 0) {
       const poolId = syncWithUrl(pathname, poolsWithDecimals)
@@ -177,54 +84,34 @@ export default function MarketWidget() {
         const pool = poolsWithDecimals.find((p) => p.id === poolId)
         if (pool) {
           setSelectedPool(pool)
-          setBaseDecimals(pool.baseDecimals)
-          setQuoteDecimals(pool.quoteDecimals)
+          setBaseDecimals(baseDecimals)
+          setQuoteDecimals(quoteDecimals)
         }
       }
     }
-  }, [pathname, poolsWithDecimals, syncWithUrl, setSelectedPool, setBaseDecimals, setQuoteDecimals])
+  }, [pathname, poolsWithDecimals, baseDecimals, quoteDecimals, syncWithUrl, setSelectedPool, setBaseDecimals, setQuoteDecimals])
 
-  // Handle pool change from dropdown
   const handlePoolChange = (poolId: string) => {
     setSelectedPoolId(poolId)
     
-    // Set the selected pool object
     if (poolsWithDecimals) {
       const selectedPoolObject = poolsWithDecimals.find(pool => pool.id === poolId)
       if (selectedPoolObject) {
         setSelectedPool(selectedPoolObject)
-        setBaseDecimals(selectedPoolObject.baseDecimals)
-        setQuoteDecimals(selectedPoolObject.quoteDecimals)
+        setBaseDecimals(baseDecimals)
+        setQuoteDecimals(quoteDecimals)
       }
     }
     
-    // Update URL
     router.push(getUrlFromPool(poolId))
   }
 
-  // Fetch trades data
-  const { data: tradesData, isLoading: tradesLoading } = useQuery<TradesResponse>({
-    queryKey: ['trades', String(chainId ?? defaultChain)],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, tradesQuery)
-    },
-    refetchInterval: 1000,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
-
-  // Process trade data to calculate market statistics
   useEffect(() => {
     if (!tradesData?.tradess?.items || tradesData.tradess.items.length === 0 || !selectedPoolId) return
     
-    // Filter trades for selected pool
     const filteredTrades = tradesData.tradess.items.filter(trade => trade.poolId === selectedPoolId)
     
     if (filteredTrades.length === 0) {
-      // Reset market data if no trades for selected pool
       setMarketData({
         price: null,
         priceChange24h: null,
@@ -237,55 +124,45 @@ export default function MarketWidget() {
       return
     }
     
-    // Sort trades by timestamp (newest first)
     const sortedItems = [...filteredTrades].sort(
       (a, b) => b.timestamp - a.timestamp
     )
 
-    // Get current price from the most recent trade
     const currentTrade = sortedItems[0]
-    const currentPrice = Number(currentTrade.price) // Adjust decimals as needed
+    const currentPrice = Number(currentTrade.price)
     
-    // Find trade from 24 hours ago
     const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
     const prevDayTrade = sortedItems.find(trade => 
       trade.timestamp <= twentyFourHoursAgo
-    ) || sortedItems[sortedItems.length - 1] // Use oldest trade if none from 24h ago
+    ) || sortedItems[sortedItems.length - 1] 
     
-    const prevDayPrice = Number(prevDayTrade.price) // Adjust decimals as needed
+    const prevDayPrice = Number(prevDayTrade.price)
     const priceChange = currentPrice - prevDayPrice
     const priceChangePercent = (priceChange / prevDayPrice) * 100
 
-    // Calculate 24h high and low
     let high24h = 0
     let low24h = Number.MAX_VALUE
     
-    // Only include trades from last 24 hours
     const trades24h = sortedItems.filter(trade => trade.timestamp >= twentyFourHoursAgo)
     
     if (trades24h.length > 0) {
-      // Find highest and lowest prices
       trades24h.forEach(trade => {
         const price = Number(trade.price)
         if (price > high24h) high24h = price
         if (price < low24h) low24h = price
       })
     } else {
-      // If no trades in last 24h, use current price
       high24h = currentPrice
       low24h = currentPrice
     }
 
-    // Calculate total volume
     const totalVolume = sortedItems.reduce((sum, trade) => {
-      // Only include trades from last 24 hours
       if (trade.timestamp >= twentyFourHoursAgo) {
         return sum + BigInt(trade.quantity)
       }
       return sum
     }, BigInt(0))
 
-    // Get trading pair
     const pair = poolsWithDecimals.find(pool => pool.id === selectedPoolId)?.coin || 'Unknown Pair'
 
     setMarketData({

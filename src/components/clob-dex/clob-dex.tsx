@@ -1,21 +1,25 @@
 'use client'
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { useMarketStore } from "@/store/market-store"
+import { AssetType, HexAddress } from "@/types/gtx/clob"
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
+import { readContract } from "@wagmi/core"
+import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useAccount, useChainId } from "wagmi"
+import GradientLoader from "../gradient-loader/gradient-loader"
 import ChartComponent from "./chart/chart"
+import MarketDataTabs from "./market-data-tabs/market-data-tabs"
 import MarketDataWidget from "./market-widget/market-widget"
 import PlaceOrder from "./place-order/place-order"
-import MarketDataTabs from "./market-data-tabs/market-data-tabs"
 import TradingHistory from "./trading-history/trading-history"
-import { useAccount } from "wagmi"
-import GradientLoader from "../gradient-loader/gradient-loader"
-import { useMarketStore } from "@/store/market-store"
-import { usePathname } from "next/navigation"
-import { AssetType, HexAddress } from "@/types/web3/gtx/gtx"
-import { readContract } from "@wagmi/core"
 
-import { wagmiConfig } from "@/configs/wagmi"
 import TokenABI from "@/abis/tokens/TokenABI"
+import { wagmiConfig } from "@/configs/wagmi"
+import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
+import { balancesQuery, BalancesResponse, ordersQuery, OrdersResponse, poolsQuery, PoolsResponse, tradesQuery, TradesResponse } from "@/graphql/gtx/clob"
+import request from "graphql-request"
+
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
 
@@ -26,29 +30,106 @@ const useIsClient = () => {
     return isClient;
 };
 
+export type ClobDexComponentProps = {
+    address?: HexAddress;
+    chainId: number;
+    defaultChainId: number;
+}
+
 export default function ClobDex() {
-    // Create QueryClient instance inside component to ensure it's 
-    // created on the client side, not during server-side rendering
+    const { address } = useAccount();
+    const chainId = useChainId()
+    const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
+    const pathname = usePathname();
+    const { isConnected } = useAccount();
+    const { selectedPoolId, selectedPool, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();
+    const [mounted, setMounted] = useState(false);
+    const [showConnectionLoader, setShowConnectionLoader] = useState(false);
+    const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
+
     const [queryClient] = useState(() => new QueryClient({
         defaultOptions: {
             queries: {
-                // Add default options that might help with reactivity
                 refetchOnWindowFocus: true,
                 staleTime: 5000,
             },
         },
     }));
 
-    const pathname = usePathname();
-    const { selectedPoolId, selectedPool, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();
-    const [mounted, setMounted] = useState(false);
-    const [showConnectionLoader, setShowConnectionLoader] = useState(false);
-    const { isConnected } = useAccount();
-    const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
+    const { data: poolsData, isLoading: poolsLoading, error: poolsError } = useQuery<PoolsResponse>({
+        queryKey: ['pools', String(chainId ?? defaultChainId)],
+        queryFn: async () => {
+            const currentChainId = Number(chainId ?? defaultChainId)
+            const url = GTX_GRAPHQL_URL(currentChainId)
+            if (!url) throw new Error('GraphQL URL not found')
+            return await request(url, poolsQuery)
+        },
+        refetchInterval: 1000,
+    })
 
-    // Extract pool ID from URL when the component mounts or URL changes
+    const { data: tradesData, isLoading: tradesLoading, error: tradesError } = useQuery<TradesResponse>({
+        queryKey: ['trades', String(chainId ?? defaultChainId)],
+        queryFn: async () => {
+            const currentChainId = Number(chainId ?? defaultChainId)
+            const url = GTX_GRAPHQL_URL(currentChainId)
+            if (!url) throw new Error('GraphQL URL not found')
+            return await request(url, tradesQuery)
+        },
+        refetchInterval: 1000,
+        staleTime: 1000,
+        refetchOnWindowFocus: true,
+    })
+
+    const { data: balancesResponse, isLoading: balancesLoading, error: balancesError } = useQuery<BalancesResponse>({
+        queryKey: ['balances', address],
+        queryFn: async () => {
+            if (!address) {
+                throw new Error('Wallet address not available');
+            }
+
+            const userAddress = address.toLowerCase() as HexAddress;
+
+            const currentChainId = Number(chainId ?? defaultChainId)
+            const url = GTX_GRAPHQL_URL(currentChainId)
+            if (!url) throw new Error('GraphQL URL not found')
+
+            const response = await request<BalancesResponse>(
+                url,
+                balancesQuery,
+                { userAddress }
+            );
+
+            if (!response || !response.balancess) {
+                throw new Error('Invalid response format');
+            }
+
+            return response;
+        },
+        enabled: !!address,
+        staleTime: 60000,
+        refetchInterval: 30000,
+    });
+
+    const { data: ordersData, isLoading: ordersLoading, error: ordersError } = useQuery<OrdersResponse>({
+        queryKey: ["orderHistory", address],
+        queryFn: async () => {
+            if (!address) {
+                throw new Error("Wallet address not available")
+            }
+
+            const userAddress = address.toLowerCase() as HexAddress
+            const currentChainId = Number(chainId ?? defaultChainId)
+            const url = GTX_GRAPHQL_URL(currentChainId)
+            if (!url) throw new Error('GraphQL URL not found')
+            return await request<OrdersResponse>(url, ordersQuery, { userAddress, poolId: selectedPoolId })
+        },
+        enabled: !!address,
+        staleTime: 1000,
+        refetchInterval: 1000,
+    })
+
     useEffect(() => {
-        // Wait until the component is mounted to access the pathname
         if (!mounted) return;
 
         if (pathname) {
@@ -56,7 +137,6 @@ export default function ClobDex() {
             if (urlParts.length >= 3) {
                 const poolIdFromUrl = urlParts[2];
 
-                // Only update the store if the pool ID has changed
                 if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
                     console.log(`Setting pool ID from URL: ${poolIdFromUrl}`);
                     setSelectedPoolId(poolIdFromUrl);
@@ -91,29 +171,18 @@ export default function ClobDex() {
         fetchDecimals(AssetType.QUOTE, selectedPool.quoteCurrency as HexAddress)
     }, [selectedPool])
 
-
-    useEffect(() => {
-        if (selectedPool) {
-            setBaseDecimals(selectedPool.baseDecimals);
-            setQuoteDecimals(selectedPool.quoteDecimals);
-        }
-    }, [selectedPool, setBaseDecimals, setQuoteDecimals]);
-
-    // Handle component mounting
     useEffect(() => {
         setMounted(true);
         return () => setMounted(false);
     }, []);
 
-    // Handle wallet connection state changes
     useEffect(() => {
         if (mounted) {
-            // Only handle connection changes after mounting
             if (isConnected && !previousConnectionState) {
                 setShowConnectionLoader(true);
                 const timer = setTimeout(() => {
                     setShowConnectionLoader(false);
-                }, 2000); // Show for 2 seconds as specified
+                }, 2000);
                 return () => clearTimeout(timer);
             }
             setPreviousConnectionState(isConnected);
@@ -126,7 +195,6 @@ export default function ClobDex() {
         return null;
     }
 
-    // Show connection loading state only when transitioning from disconnected to connected
     if (showConnectionLoader) {
         return <GradientLoader />;
     }
@@ -135,20 +203,20 @@ export default function ClobDex() {
         <QueryClientProvider client={queryClient}>
             <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px]">
                 <div className="shadow-lg rounded-lg border border-gray-700/20">
-                    <MarketDataWidget />
-                    <ChartComponent />
+                    <MarketDataWidget address={address} chainId={chainId} defaultChainId={defaultChainId} poolId={selectedPoolId} poolsData={poolsData} poolsLoading={poolsLoading} tradesData={tradesData} tradesLoading={tradesLoading} />
+                    <ChartComponent address={address} chainId={chainId} defaultChainId={defaultChainId} />
                 </div>
 
                 <div className="space-y-[6px]">
-                    <MarketDataTabs />
+                    <MarketDataTabs address={address} chainId={chainId} defaultChainId={defaultChainId} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} />
                 </div>
 
                 <div className="space-y-2">
-                    <PlaceOrder />
+                    <PlaceOrder address={address} chainId={chainId} defaultChainId={defaultChainId} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} tradesData={tradesData} tradesLoading={tradesLoading} />
                 </div>
             </div>
 
-            <TradingHistory />
+            <TradingHistory address={address} chainId={chainId} defaultChainId={defaultChainId} balancesResponse={balancesResponse} balancesLoading={balancesLoading} balancesError={balancesError} ordersData={ordersData} ordersLoading={ordersLoading} ordersError={ordersError} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} tradesData={tradesData} tradesLoading={tradesLoading} tradesError={tradesError} />
         </QueryClientProvider>
     )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import OrderBookABI from '@/abis/gtx/clob-dex/OrderBookABI';
-import { HexAddress } from '@/types/web3/general/address';
+import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
+import { HexAddress } from '@/types/general/address';
 import { useReadContract } from 'wagmi';
 import { readContract } from '@wagmi/core';
 import { wagmiConfig } from '@/configs/wagmi';
@@ -94,28 +94,6 @@ export const useOrderBook = (orderBookAddress: HexAddress) => {
     }
   };
 
-  // Function to get order queue at a specific price level
-  const getOrderQueue = async (side: Side, price: bigint) => {
-    if (!isValidAddress) return { orderCount: BigInt(0), totalVolume: BigInt(0) };
-    
-    try {
-      const result = await readContract(wagmiConfig, {
-        address: orderBookAddress,
-        abi: OrderBookABI,
-        functionName: 'getOrderQueue',
-        args: [side, price],
-      });
-      return {
-        orderCount: result[0],
-        totalVolume: result[1],
-      };
-    } catch (err) {
-      console.error('Error fetching order queue:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch order queue'));
-      throw err;
-    }
-  };
-
   // Function to refresh all data
   const refreshOrderBook = () => {
     refetchBestPriceBuy();
@@ -131,7 +109,6 @@ export const useOrderBook = (orderBookAddress: HexAddress) => {
     // Functions
     getNextBestPrices,
     getUserActiveOrders,
-    getOrderQueue,
     refreshOrderBook,
     
     // Error handling

@@ -1,82 +1,27 @@
 "use client"
 
-import React, { useState } from 'react';
-import { ArrowDownUp, ChevronDown, Loader2, Wallet2, CreditCard, ExternalLink } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { useAccount } from 'wagmi';
-import request from 'graphql-request';
-import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
+import { BalancesResponse } from '@/graphql/gtx/clob';
+import { formatAmount } from '@/lib/utils';
+import { ChevronDown, CreditCard, ExternalLink, Loader2, Wallet2 } from 'lucide-react';
+import { useState } from 'react';
 import { formatAddress } from '../../../../helper';
+import { ClobDexComponentProps } from '../clob-dex';
+import { EXPLORER_URL } from '@/constants/explorer-url';
 import { formatUnits } from 'viem';
-import { balancesQuery } from '@/graphql/gtx/gtx.query';
-import { HexAddress } from '@/types/web3/general/address';
 
-// Interface for balance items from the balancesQuery
-interface BalanceItem {
-  amount: string;
-  currency: HexAddress;
-  lockedAmount: string;
-  name: string;
-  symbol: string;
-  user: HexAddress;
+export type BalancesHistoryTableProps = ClobDexComponentProps & {
+  balancesResponse?: BalancesResponse;
+  balancesLoading?: boolean;
+  balancesError?: Error | null;
 }
 
-// Response interface for balancesQuery
-interface BalancesResponse {
-  balancess?: {
-    items?: BalanceItem[];
-    pageInfo?: {
-      startCursor: string;
-      hasPreviousPage: boolean;
-      endCursor: string;
-      hasNextPage: boolean;
-    };
-    totalCount?: number;
-  };
-}
-
-const formatAmount = (amount: string, decimals: number = 18): string => {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6
-  }).format(Number(formatUnits(BigInt(amount), decimals)));
-};
-
-const BalancesHistoryTable = () => {
-  const { address } = useAccount();
+const BalancesHistoryTable = ({ address, chainId, defaultChainId, balancesResponse, balancesLoading, balancesError }: BalancesHistoryTableProps) => {
   type SortDirection = 'asc' | 'desc';
   type SortableKey = 'amount' | 'symbol';
 
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: SortDirection }>({
     key: 'amount',
     direction: 'desc'
-  });
-
-  // Use the updated query with user filtering
-  const { data, isLoading, error } = useQuery<BalancesResponse>({
-    queryKey: ['balances', address],
-    queryFn: async () => {
-      if (!address) {
-        throw new Error('Wallet address not available');
-      }
-
-      const userAddress = address.toLowerCase() as HexAddress;
-
-      const response = await request<BalancesResponse>(
-        GTX_GRAPHQL_URL,
-        balancesQuery,
-        { userAddress }
-      );
-
-      if (!response || !response.balancess) {
-        throw new Error('Invalid response format');
-      }
-
-      return response;
-    },
-    enabled: !!address, // Only run query when address is available
-    staleTime: 60000,
-    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const handleSort = (key: SortableKey) => {
@@ -97,7 +42,7 @@ const BalancesHistoryTable = () => {
     );
   }
 
-  if (isLoading) {
+  if (balancesLoading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -108,18 +53,18 @@ const BalancesHistoryTable = () => {
     );
   }
 
-  if (error) {
+  if (balancesError) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-rose-800/30 bg-rose-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-          <p className="text-lg text-rose-200">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-lg text-rose-200">{balancesError instanceof Error ? balancesError.message : 'Unknown error'}</p>
         </div>
       </div>
     );
   }
 
-  const balances = data?.balancess?.items || [];
+  const balances = balancesResponse?.balancess?.items || [];
 
   const sortedBalances = [...balances].sort((a, b) => {
     const key = sortConfig.key;
@@ -140,7 +85,11 @@ const BalancesHistoryTable = () => {
   });
 
   // Function to determine the appropriate decimals for a token
-  const getTokenDecimals = (symbol: string): number => {
+  const getTokenDecimals = (symbol?: string): number => {
+    if (!symbol) {
+      return 18;
+    }
+
     // Common token decimals
     switch (symbol.toUpperCase()) {
       case 'USDC':
@@ -186,12 +135,11 @@ const BalancesHistoryTable = () => {
       <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
         {sortedBalances.length > 0 ? (
           sortedBalances.map((balance) => {
-            const decimals = getTokenDecimals(balance.symbol);
-            const available = formatAmount(balance.amount, decimals);
-            const locked = formatAmount(balance.lockedAmount, decimals);
+            const decimals = getTokenDecimals(balance.symbol) ?? 18;
+            const available = formatAmount(balance.amount);
+            const locked = formatAmount(balance.lockedAmount);
             const total = formatAmount(
-              (BigInt(balance.amount) + BigInt(balance.lockedAmount)).toString(),
-              decimals
+              (BigInt(balance.amount) + BigInt(balance.lockedAmount)).toString()
             );
 
             return (
@@ -201,19 +149,19 @@ const BalancesHistoryTable = () => {
               >
                 <div className="flex items-center">
                   <div className="w-8 h-8 rounded-full bg-gray-800 mr-3 flex items-center justify-center text-xs text-gray-200">
-                    {balance.symbol.charAt(0)}
+                    {balance.symbol?.charAt(0) ?? 'ETH'}
                   </div>
                   <div>
                     <div className="text-gray-100 font-medium">{balance.symbol}</div>
                     <div className="text-gray-400 text-xs">{balance.name}</div>
                   </div>
                 </div>
-                <div className="font-medium text-white self-center">{available}</div>
-                <div className="text-amber-400 self-center">{locked}</div>
-                <div className="text-white font-medium self-center">{total}</div>
+                <div className="font-medium text-white self-center">{formatUnits(BigInt(balance.amount), decimals)}</div>
+                <div className="text-amber-400 self-center">{formatUnits(BigInt(balance.lockedAmount), decimals)}</div>
+                <div className="text-white font-medium self-center">{formatUnits(BigInt(balance.amount) + BigInt(balance.lockedAmount), decimals)}</div>
                 <div className="text-blue-400 hover:text-blue-300 transition-colors truncate self-center">
                   <a
-                    href={`https://testnet-explorer.riselabs.xyz/address/${balance.currency}`}
+                    href={`${EXPLORER_URL(chainId ?? defaultChainId)}/address/${balance.currency}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={balance.currency}

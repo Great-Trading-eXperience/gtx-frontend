@@ -1,72 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2 } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
-import { useAccount, useChainId } from "wagmi"
-import request from "graphql-request"
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { formatDate } from "../../../../helper"
-import { formatUnits } from "viem"
-import { orderHistorysQuery, poolsQuery } from "@/graphql/gtx/gtx.query"
-import type { HexAddress } from "@/types/web3/general/address"
+import { OrdersResponse, PoolsResponse } from "@/graphql/gtx/clob"
+import { formatPrice } from "@/lib/utils"
 import { useMarketStore } from "@/store/market-store"
-
-// Interfaces remain the same...
-interface UserInfo {
-  amount: string
-  currency: HexAddress
-  lockedAmount: string
-  name: string
-  symbol: string
-  user: HexAddress
-}
-
-interface OrderItem {
-  expiry: number
-  filled: string
-  id: string
-  orderId: string
-  poolId: string
-  price: string
-  quantity: string
-  side: string
-  status: string
-  timestamp: number
-  type: string
-  user: UserInfo
-}
-
-interface Pool {
-  id: string
-  coin: string
-}
-
-interface OrdersResponse {
-  orderss?: {
-    items?: OrderItem[]
-    pageInfo?: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-    totalCount?: number
-  }
-}
-
-interface PoolsResponse {
-  poolss?: {
-    items?: Pool[]
-  }
-}
-
-const formatPrice = (price: string): string => {
-  return Number(price).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2 } from "lucide-react"
+import { useState } from "react"
+import { formatUnits } from "viem"
+import { formatDate } from "../../../../helper"
+import { ClobDexComponentProps } from "../clob-dex"
 
 const calculateFillPercentage = (filled: string, quantity: string): string => {
   if (!filled || !quantity || filled === "0" || quantity === "0") return "0"
@@ -80,8 +21,16 @@ const calculateFillPercentage = (filled: string, quantity: string): string => {
   return (Number(percentage) / 100).toFixed(2)
 }
 
-const OrderHistoryTable = () => {
-  const { address } = useAccount()
+export type OrderHistoryTableProps = ClobDexComponentProps & {
+  ordersData?: OrdersResponse;
+  ordersLoading?: boolean;
+  ordersError?: Error | null;
+  poolsData?: PoolsResponse;
+  poolsLoading?: boolean;
+  poolsError?: Error | null;
+}
+
+const OrderHistoryTable = ({ address, ordersData, ordersLoading, ordersError, poolsData, poolsLoading, poolsError }: OrderHistoryTableProps) => {
   type SortDirection = "asc" | "desc"
   type SortableKey = "timestamp" | "filled" | "orderId" | "price"
 
@@ -89,40 +38,7 @@ const OrderHistoryTable = () => {
     key: "timestamp",
     direction: "desc",
   })
-
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
-
-  const { selectedPoolId, quoteDecimals } = useMarketStore()
-
-  const { data: poolsData } = useQuery<PoolsResponse>({
-    queryKey: ["pools"],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request<PoolsResponse>(url, poolsQuery)
-    },
-    staleTime: 60000,
-  })
-
-  const { data, isLoading, error } = useQuery<OrdersResponse>({
-    queryKey: ["orderHistory", address],
-    queryFn: async () => {
-      if (!address) {
-        throw new Error("Wallet address not available")
-      }
-
-      const userAddress = address.toLowerCase() as HexAddress
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request<OrdersResponse>(url, orderHistorysQuery, { userAddress, poolId: selectedPoolId })
-    },
-    enabled: !!address,
-    staleTime: 1000,
-    refetchInterval: 1000,
-  })
+  const { quoteDecimals } = useMarketStore()
 
   const handleSort = (key: SortableKey) => {
     setSortConfig((prevConfig) => ({
@@ -142,7 +58,7 @@ const OrderHistoryTable = () => {
     )
   }
 
-  if (isLoading) {
+  if (ordersLoading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -153,18 +69,18 @@ const OrderHistoryTable = () => {
     )
   }
 
-  if (error) {
+  if (ordersError) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-rose-800/30 bg-rose-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-          <p className="text-lg text-rose-200">{error instanceof Error ? error.message : "Unknown error"}</p>
+          <p className="text-lg text-rose-200">{ordersError instanceof Error ? ordersError.message : "Unknown error"}</p>
         </div>
       </div>
     )
   }
 
-  const orders = data?.orderss?.items || []
+  const orders = ordersData?.orderss?.items || []
 
   const getPoolName = (poolId: string): string => {
     if (!poolsData?.poolss?.items) return "Unknown"

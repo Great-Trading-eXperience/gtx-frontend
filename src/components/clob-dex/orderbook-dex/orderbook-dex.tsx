@@ -1,34 +1,18 @@
 "use client"
 
-import GTXRouterABI from "@/abis/gtx/clob-dex/GTXRouterABI"
-import OrderBookABI from "@/abis/gtx/clob-dex/OrderBookABI"
+import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI"
+import OrderBookABI from "@/abis/gtx/clob/OrderBookABI"
 import { wagmiConfig } from "@/configs/wagmi"
 import { GTX_ROUTER_ADDRESS } from "@/constants/contract-address"
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { poolsQuery } from "@/graphql/gtx/gtx.query"
-import { Pool, useMarketStore } from "@/store/market-store"
-import { Side } from "@/types/web3/gtx/gtx"
-import { useQuery } from "@tanstack/react-query"
+import { PoolsResponse } from "@/graphql/gtx/clob"
+import { useMarketStore } from "@/store/market-store"
 import { readContract } from "@wagmi/core"
-import request from "graphql-request"
 import { ArrowDown, ArrowUp, Menu, RefreshCw } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { useCallback, useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
-import { useChainId } from 'wagmi'
-
-interface PoolsResponse {
-  poolss: {
-    items: Pool[]
-    totalCount: number
-    pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-  }
-}
+import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
+import { ClobDexComponentProps } from "../clob-dex"
 
 interface Order {
   price: number
@@ -53,10 +37,16 @@ type ViewType = "both" | "bids" | "asks"
 type DecimalPrecision = "0.01" | "0.1" | "1"
 
 const STANDARD_ORDER_COUNT = 6
-const PRICE_MATCH_THRESHOLD = 0.07 // Consider orders within 0.1 as matched
+const PRICE_MATCH_THRESHOLD = 0.07 
 const TOTAL_MATCH_THRESHOLD = 4
 
-const EnhancedOrderBookDex = () => {
+export type OrderBookDexProps = ClobDexComponentProps & {
+  poolsData?: PoolsResponse;
+  poolsLoading?: boolean;
+  poolsError?: Error | null;
+}
+
+const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsError }: OrderBookDexProps) => {
   const [mounted, setMounted] = useState(false)
   const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>("0.01")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -64,8 +54,6 @@ const EnhancedOrderBookDex = () => {
   const previousOrderBook = useRef<OrderBook | null>(null)
   const previousPrice = useRef<number | null>(null)
   const priceDirection = useRef<'up' | 'down' | null>(null)
-
-  const { selectedPool, selectedPoolId, marketData, quoteDecimals, baseDecimals, setSelectedPool } = useMarketStore()
 
   // Get the current URL to detect changes
   const pathname = usePathname()
@@ -79,23 +67,7 @@ const EnhancedOrderBookDex = () => {
   })
 
   const [viewType, setViewType] = useState<ViewType>("both")
-
-  const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
-
-  const {
-    data: poolsData,
-    isLoading: isLoadingPools,
-    error: poolsError,
-  } = useQuery<PoolsResponse>({
-    queryKey: ["pools", String(chainId ?? defaultChain)],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request<PoolsResponse>(url, poolsQuery)
-    },
-  })
+  const { selectedPool, selectedPoolId, marketData, quoteDecimals, baseDecimals, setSelectedPool } = useMarketStore()
 
   // When URL or selectedPoolId changes, ensure selectedPool is updated
   useEffect(() => {
@@ -129,7 +101,7 @@ const EnhancedOrderBookDex = () => {
   }, [pathname, selectedPoolId, selectedPool, poolsData, mounted, setSelectedPool])
 
   // Custom functions to handle dynamic orderbook addresses
-  const getBestPrice = async ({ side }: { side: Side }) => {
+  const getBestPrice = async ({ side }: { side: OrderSideEnum }) => {
     if (!selectedPool) {
       throw new Error("No pool selected")
     }
@@ -156,7 +128,7 @@ const EnhancedOrderBookDex = () => {
   }: {
     baseCurrency: string
     quoteCurrency: string
-    side: Side
+    side: OrderSideEnum
     price: bigint
     count: number
   }) => {
@@ -274,17 +246,17 @@ const EnhancedOrderBookDex = () => {
     const fetchOrderBook = async () => {
       try {
         const askBestPrice = await getBestPrice({
-          side: Side.SELL,
+          side: OrderSideEnum.SELL,
         })
 
         const bidBestPrice = await getBestPrice({
-          side: Side.BUY,
+          side: OrderSideEnum.BUY,
         })
 
         const nextAsks = await getNextBestPrices({
           baseCurrency: selectedPool.baseCurrency as `0x${string}`,
           quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
-          side: Side.SELL,
+          side: OrderSideEnum.SELL,
           price: askBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
         })
@@ -292,7 +264,7 @@ const EnhancedOrderBookDex = () => {
         const nextBids = await getNextBestPrices({
           baseCurrency: selectedPool.baseCurrency as `0x${string}`,
           quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
-          side: Side.BUY,
+          side: OrderSideEnum.BUY,
           price: bidBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
         })
@@ -363,7 +335,7 @@ const EnhancedOrderBookDex = () => {
           asks: matchedAsks,
           bids: matchedBids,
           lastPrice: BigInt(Math.round(asks[0]?.price)),
-          spread: BigInt(Math.round(spread)),
+          spread: BigInt(Math.round(Number(spread))),
           lastUpdate: now,
           previousAsks: previousOrderBook.current?.asks,
           previousBids: previousOrderBook.current?.bids
@@ -395,7 +367,7 @@ const EnhancedOrderBookDex = () => {
     setViewType(views[(currentIndex + 1) % views.length])
   }, [viewType])
 
-  const isLoading = isLoadingPools
+  const isLoading = poolsLoading
 
   if (poolsError) {
     return (
@@ -430,14 +402,6 @@ const EnhancedOrderBookDex = () => {
         </div>
 
         <div className="relative">
-          {/* <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-2 rounded border border-gray-700/50 bg-gray-900/40 px-3 py-1.5 text-gray-200 transition-all duration-200 hover:bg-gray-800/50"
-          >
-            <span className="text-xs">Precision: {selectedDecimal}</span>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button> */}
-
           {isDropdownOpen && (
             <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">
               {priceOptions.map((option) => (
@@ -531,7 +495,7 @@ const EnhancedOrderBookDex = () => {
                             ? "text-rose-400" 
                             : "text-emerald-400"
                         }`}>
-                          {formatPrice(marketData.price)}
+                          {formatPrice(Number(formatUnits(BigInt(marketData.price), quoteDecimals)))}
                           {priceDirection.current && (
                             priceDirection.current === 'up' 
                               ? <ArrowUp className="h-3 w-3 ml-1" /> 

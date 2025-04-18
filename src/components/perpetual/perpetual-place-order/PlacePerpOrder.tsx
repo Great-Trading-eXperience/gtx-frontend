@@ -8,7 +8,7 @@ import { NotificationDialog } from "@/components/notification-dialog/notificatio
 import { ArrowDown, ArrowUp, ChevronDown, RefreshCw, Wallet, Layers, BarChart3 } from "lucide-react"
 
 // Types
-import type { HexAddress } from "@/types/web3/general/address"
+import type { HexAddress } from "@/types/general/address"
 import { usePerpTrading } from "@/hooks/web3/gtx/perpetual/usePerpTrading"
 import PercentageSlider from "./percentage-slider"
 import { LeverageDialog } from "./leverage-dialog"

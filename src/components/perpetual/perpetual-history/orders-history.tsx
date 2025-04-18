@@ -8,8 +8,8 @@ import request from "graphql-request"
 import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { formatDate } from "../../../../helper"
 import { formatUnits } from "viem"
-import { ordersQuery } from "@/graphql/gtx/perpetual.query"
-import type { HexAddress } from "@/types/web3/general/address"
+import { ordersQuery } from "@/graphql/gtx/perpetual"
+import type { HexAddress } from "@/types/general/address"
 import { useMarketData } from "../../../../utils/useMarketData"
 
 // Interfaces

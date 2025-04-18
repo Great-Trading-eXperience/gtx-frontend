@@ -2,7 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "./column-header";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
-import RequestToken from "@/types/web3/faucet/request-token";
+import RequestToken from "@/types/faucet/request-token";
 
 export type TransactionHistoryRow = RequestToken;
 

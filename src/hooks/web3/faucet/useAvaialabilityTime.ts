@@ -1,6 +1,6 @@
 import FaucetABI from "@/abis/faucet/FaucetABI";
 import { wagmiConfig } from "@/configs/wagmi";
-import { HexAddress } from "@/types/web3/general/address";
+import { HexAddress } from "@/types/general/address";
 import { readContract } from "@wagmi/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 

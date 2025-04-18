@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { formatUnits, parseUnits } from 'viem';
 
 // import TokenNetworkSelector from './TokenNetworkSelector';
-import type { HexAddress } from '@/types/web3/general/address';
+import type { HexAddress } from '@/types/general/address';
 import { useCrossChain } from '@/hooks/web3/espresso/useCrossChain';
 import { useCrossChainOrder } from '@/hooks/web3/espresso/useCrossChainOrder';
 import TokenNetworkSelector from './token-network-selector';

@@ -1,4 +1,4 @@
-import { HexAddress } from '@/types/web3/general/address';
+import { HexAddress } from '@/types/general/address';
 import { useState, useEffect } from 'react';
 import { useChainId } from 'wagmi';
 

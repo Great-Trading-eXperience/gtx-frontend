@@ -16,6 +16,14 @@ export const getGraphQLUrl = (chainId?: number): string => {
     return url
 } 
 
+export const getExplorerUrl = (chainId?: number): string => {
+    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
+    const envVarName = chainId 
+        ? `NEXT_PUBLIC_EXPLORER_${chainId}`
+        : `NEXT_PUBLIC_EXPLORER_${defaultChain}`
+    return publicRuntimeConfig[envVarName]
+}
+
 export const getBalanceManagerAddress = (chainId?: number): string => {
     const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
     const envVarName = chainId 

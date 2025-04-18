@@ -6,10 +6,10 @@ import { encodeFunctionData, erc20Abi } from 'viem';
 import { wagmiConfig } from '@/configs/wagmi';
 
 // Import required ABIs
-import BalanceManagerABI from '@/abis/gtx/clob-dex/BalanceManagerABI';
+import BalanceManagerABI from '@/abis/gtx/clob/BalanceManagerABI';
 
 // Types
-import { HexAddress } from '@/types/web3/general/address';
+import { HexAddress } from '@/types/general/address';
 
 /**
  * Simplified hook for trading balances that focuses on wallet balances

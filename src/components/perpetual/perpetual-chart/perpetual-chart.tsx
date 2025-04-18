@@ -1,7 +1,7 @@
 "use client"
 
 import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { pricesQuery } from "@/graphql/gtx/perpetual.query"
+import { pricesQuery } from "@/graphql/gtx/perpetual"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
 import { formatUnits } from "viem"
