@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useAccount, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { ArrowDown, ArrowUp, ChevronDown, RefreshCw, Wallet, Layers, BarChart3 } from "lucide-react"
 
@@ -12,6 +12,7 @@ import type { HexAddress } from "@/types/general/address"
 import { usePerpTrading } from "@/hooks/web3/gtx/perpetual/usePerpTrading"
 import PercentageSlider from "./percentage-slider"
 import { LeverageDialog } from "./leverage-dialog"
+import { EXPLORER_URL } from "@/constants/explorer-url"
 
 // Mock market data - replace with your actual data fetching
 const MARKETS = [
@@ -47,6 +48,9 @@ const ORDER_VAULT_ADDRESS = process.env.NEXT_PUBLIC_ORDER_VAULT_ADDRESS as HexAd
 
 const PlacePerpOrder = () => {
   const { address, isConnected } = useAccount()
+
+  const chainId = useChainId()
+  const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
   // State for order form
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0])
@@ -553,6 +557,7 @@ const PlacePerpOrder = () => {
         message={notificationMessage}
         isSuccess={notificationSuccess}
         txHash={notificationTxHash}
+        explorerBaseUrl={EXPLORER_URL(chainId ?? defaultChainId)}
       />
     </div>
   )

@@ -61,12 +61,9 @@ export const useCreatePool = () => {
         abi: PoolManagerABI,
         functionName: 'createPool',
         args: [
-          {
-            baseCurrency,
-            quoteCurrency
-          },
-          tradingRules.minTradeAmount,
-          tradingRules.minOrderSize
+          baseCurrency,
+          quoteCurrency,
+          tradingRules
         ]
       });
       

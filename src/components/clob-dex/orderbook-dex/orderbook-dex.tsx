@@ -75,7 +75,6 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
 
     // If we have a selectedPoolId but no selectedPool, find the pool in the data
     if (selectedPoolId && (!selectedPool || selectedPool.id !== selectedPoolId)) {
-      console.log(`OrderBook: Updating selectedPool for ID ${selectedPoolId}`)
       const pool = poolsData.poolss.items.find(p => p.id === selectedPoolId)
       if (pool) {
         setSelectedPool(pool)
@@ -208,11 +207,6 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
         ? Math.abs((existingOrderAtSamePrice.total || 0) - (newOrder.total || 0)) / (existingOrderAtSamePrice.total || 1) > TOTAL_MATCH_THRESHOLD / 100
         : false;
 
-      if (isMatched) {
-        console.log("existingOrderAtSamePrice.total", existingOrderAtSamePrice?.total, newOrder.total)
-        console.log("Matched order:", newOrder, existingOrderAtSamePrice)
-      }
-
       return {
         ...newOrder,
         key: isMatched ? `${newOrder.price}-${now}` : existingOrderAtSamePrice?.key || `${newOrder.price}-${now}`,
@@ -334,7 +328,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
         const newOrderBook = {
           asks: matchedAsks,
           bids: matchedBids,
-          lastPrice: BigInt(Math.round(asks[0]?.price)),
+          lastPrice: asks.length > 0 ? BigInt(Math.round(asks[0]?.price)) : BigInt(0),
           spread: BigInt(Math.round(Number(spread))),
           lastUpdate: now,
           previousAsks: previousOrderBook.current?.asks,
@@ -423,7 +417,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
 
       <div className="py-2">
         {/* Loading state */}
-        {isLoading || !selectedPool || (orderBook.asks.length === 0 && orderBook.bids.length === 0) ? (
+        {isLoading || !selectedPool ? (
           <div className="flex justify-center py-8">
             <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
           </div>

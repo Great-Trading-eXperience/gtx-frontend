@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { useSimulateContract, useWaitForTransactionReceipt, useWriteContract, useAccount } from 'wagmi';
 import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
 import { HexAddress } from '@/types/general/address';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { useAccount, useSimulateContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 
 // Define types
 type Side = 0 | 1; // 0 = BUY, 1 = SELL
@@ -36,9 +36,7 @@ export const useCancelOrder = () => {
         abi: OrderBookABI,
         functionName: 'cancelOrder',
         args: cancelParams && address ? [
-            cancelParams.side,  // uint8 -> number
-            cancelParams.price, // uint64 -> bigint
-            Number(cancelParams.orderId), // Convert to number for uint48
+            cancelParams.orderId, // uint48 -> number
             address,
         ] : undefined,
     });
