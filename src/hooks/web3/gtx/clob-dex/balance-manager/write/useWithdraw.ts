@@ -1,6 +1,6 @@
 import BalanceManagerABI from '@/abis/gtx/clob/BalanceManagerABI';
 import { wagmiConfig } from '@/configs/wagmi';
-import { BALANCE_MANAGER_ADDRESS } from '@/constants/contract-address';
+import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { HexAddress } from '@/types/general/address';
 import { waitForTransaction, writeContract } from '@wagmi/core';
 import { useCallback, useState } from 'react';
@@ -40,7 +40,7 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
       try {
         if (user) {
           const hash = await writeContract(wagmiConfig, {
-            address: BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
             abi: BalanceManagerABI,
             functionName: 'withdraw',
             args: [currency, amount, user] as const,
@@ -54,7 +54,7 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
           return receipt;
         } else {
           const hash = await writeContract(wagmiConfig, {
-            address: BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
             abi: BalanceManagerABI,
             functionName: 'withdraw',
             args: [currency, amount] as const,

@@ -25,7 +25,7 @@ import {
   SHIBA_ADDRESS,
   BONK_ADDRESS,
   FLOKI_ADDRESS,
-} from "@/constants/contract-address"
+} from "@/constants/address"
 
 // Pre-defined tokens from the environment variables
 const PREDEFINED_TOKENS = [

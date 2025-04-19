@@ -1,3 +1,4 @@
+import { HexAddress } from "@/types/general/address";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 

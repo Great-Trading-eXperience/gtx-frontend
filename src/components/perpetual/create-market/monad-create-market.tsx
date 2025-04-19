@@ -19,7 +19,7 @@ import {
   WBTC_ADDRESS,
   USDC_ADDRESS,
   ROUTER_ADDRESS
-} from "@/constants/contract-address"
+} from "@/constants/address"
 
 // RouterABI with createMarket function
 const RouterABI = [

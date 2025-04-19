@@ -20,7 +20,7 @@ import OracleSources from './OracleSources';
 import { useAccount } from 'wagmi';
 import ButtonConnectWallet from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import GradientLoader from '@/components/gradient-loader/gradient-loader';
-import { USDC_ADDRESS } from '@/constants/contract-address';
+import { USDC_ADDRESS } from '@/constants/address';
 
 const MarketCreationPage: React.FC = () => {
   // Wallet connection and loading states

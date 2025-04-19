@@ -1,5 +1,5 @@
 import PoolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
-import { POOL_MANAGER_ADDRESS } from '@/constants/contract-address';
+import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { HexAddress } from '@/types/general/address';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -40,24 +40,9 @@ export const useCreatePool = () => {
     tradingRules: TradingRules
   ) => {
     try {
-      console.log('============ Create Pool Parameters ============');
-      console.log('Contract Details:');
-      console.log(`Address: ${POOL_MANAGER_ADDRESS(chainId)}`);
-      console.log(`Function: createPool`);
-      console.log('\nArguments:');
-      console.log(`Base Currency: ${baseCurrency}`);
-      console.log(`Quote Currency: ${quoteCurrency}`);
-      console.log('Trading Rules:');
-      console.log(`- Min Trade Amount: ${tradingRules.minTradeAmount.toString()}`);
-      console.log(`- Min Amount Movement: ${tradingRules.minAmountMovement.toString()}`);
-      console.log(`- Min Price Movement: ${tradingRules.minPriceMovement.toString()}`);
-      console.log(`- Min Order Size: ${tradingRules.minOrderSize.toString()}`);
-      console.log(`- Slippage Threshold: ${tradingRules.slippageTreshold}%`);
-      console.log('===============================================');
-
       // Execute the contract write directly without simulation
       writeCreatePool({
-        address: POOL_MANAGER_ADDRESS(chainId) as `0x${string}`,
+        address: getContractAddress(chainId, ContractName.clobPoolManager) as `0x${string}`,
         abi: PoolManagerABI,
         functionName: 'createPool',
         args: [

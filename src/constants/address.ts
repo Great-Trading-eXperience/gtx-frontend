@@ -41,19 +41,6 @@ export const ORDER_ADDRESS = "0x6b3f090fb979e59ee95c14e07d8a8e3b0ffce582"
 export const ORDER_TX = "0x599d8c7c65c32584c96a9d135eb6ff48a3f0beb7cb4869dc3ae8c9e1760a1d41"
 export const ORDER_BLOCK = "115276393"
 
-// CLOB DEX
-export const BALANCE_MANAGER_ADDRESS = (chainId: number) => {
-    return getBalanceManagerAddress(chainId)
-}
-
-export const POOL_MANAGER_ADDRESS = (chainId: number) => {
-    return getPoolManagerAddress(chainId)
-}
-
-export const GTX_ROUTER_ADDRESS = (chainId: number) => {
-    return getGTXRouterAddress(chainId)
-}
-
 export const MOCK_USDC_ADDRESS = "0x02950119C4CCD1993f7938A55B8Ab8384C3CcE4F"
 export const MOCK_WETH_ADDRESS = "0xb2e9Eabb827b78e2aC66bE17327603778D117d18"
 export const MOCK_WBTC_ADDRESS = "0xc2CC2835219A55a27c5184EaAcD9b8fCceF00F85"
@@ -164,49 +151,3 @@ export const ROUTER_ADDRESS = requireEnvAddress(
     process.env.NEXT_PUBLIC_ROUTER_ADDRESS,
     'NEXT_PUBLIC_ROUTER_ADDRESS'
 );
-
-// Curator Contracts
-// export const CURATOR_REGISTRY_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_CURATOR_REGISTRY_ADDRESS,
-//     'NEXT_PUBLIC_CURATOR_REGISTRY_ADDRESS'
-// );
-
-// export const CURATOR_FACTORY_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_CURATOR_FACTORY_ADDRESS,
-//     'NEXT_PUBLIC_CURATOR_FACTORY_ADDRESS'
-// );
-
-// export const VAULT_FACTORY_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_VAULT_FACTORY_ADDRESS,
-//     'NEXT_PUBLIC_VAULT_FACTORY_ADDRESS'
-// );
-
-// export const WETH_USDC_MARKET_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_WETH_USDC_MARKET_ADDRESS,
-//     'NEXT_PUBLIC_WETH_USDC_MARKET_ADDRESS'
-// );
-
-// export const WBTC_USDC_MARKET_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_WBTC_USDC_MARKET_ADDRESS,
-//     'NEXT_PUBLIC_WBTC_USDC_MARKET_ADDRESS'
-// );
-
-// export const PEPE_USDC_MARKET_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_PEPE_USDC_MARKET_ADDRESS,
-//     'NEXT_PUBLIC_PEPE_USDC_MARKET_ADDRESS'
-// );
-
-// export const TRUMP_USDC_MARKET_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_TRUMP_USDC_MARKET_ADDRESS,
-//     'NEXT_PUBLIC_TRUMP_USDC_MARKET_ADDRESS'
-// );
-
-// export const DOGE_USDC_MARKET_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_DOGE_USDC_MARKET_ADDRESS,
-//     'NEXT_PUBLIC_DOGE_USDC_MARKET_ADDRESS'
-// );
-
-// export const LINK_USDC_MARKET_ADDRESS = requireEnvAddress(
-//     process.env.NEXT_PUBLIC_LINK_USDC_MARKET_ADDRESS,
-//     'NEXT_PUBLIC_LINK_USDC_MARKET_ADDRESS'
-// );
