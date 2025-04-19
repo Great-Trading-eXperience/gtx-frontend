@@ -1,6 +1,6 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
-import { BALANCE_MANAGER_ADDRESS, GTX_ROUTER_ADDRESS } from "@/constants/contract-address";
+import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -89,7 +89,7 @@ export const usePlaceOrder = () => {
               address: requiredToken,
               abi: erc20Abi,
               functionName: 'allowance',
-              args: [address as `0x${string}`, BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`],
+              args: [address as `0x${string}`, getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`],
             });
             
             console.log(`Allowance: ${allowance}, Required: ${requiredAmount}`);
@@ -97,7 +97,7 @@ export const usePlaceOrder = () => {
             // If allowance is insufficient, trigger approval transaction
             if (allowance < requiredAmount) {
               toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${BALANCE_MANAGER_ADDRESS(chainId)}`);
+              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
               
               try {
                 // Execute the approval transaction
@@ -106,7 +106,7 @@ export const usePlaceOrder = () => {
                   address: requiredToken,
                   abi: erc20Abi,
                   functionName: 'approve',
-                  args: [BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`, requiredAmount],
+                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, requiredAmount],
                 });
                 
                 console.log('Approval transaction hash:', approvalHash);
@@ -135,7 +135,7 @@ export const usePlaceOrder = () => {
           
             // First simulate the transaction
             const simulation = await simulateContract(wagmiConfig, {
-              address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeOrderWithDeposit',
               args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
@@ -145,7 +145,7 @@ export const usePlaceOrder = () => {
             
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
-              address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeOrderWithDeposit',
               args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
@@ -209,7 +209,7 @@ export const usePlaceOrder = () => {
               address: requiredToken,
               abi: erc20Abi,
               functionName: 'allowance',
-              args: [address as `0x${string}`, BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`],
+              args: [address as `0x${string}`, getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`],
             });
             
             console.log(`Allowance: ${allowance}, Required: ${requiredAmount}`);
@@ -217,7 +217,7 @@ export const usePlaceOrder = () => {
             // If allowance is insufficient, trigger approval transaction
             if (allowance < requiredAmount) {
               toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${BALANCE_MANAGER_ADDRESS(chainId)}`);
+              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
               
               try {
                 // Execute the approval transaction
@@ -226,7 +226,7 @@ export const usePlaceOrder = () => {
                   address: requiredToken,
                   abi: erc20Abi,
                   functionName: 'approve',
-                  args: [BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`, requiredAmount],
+                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, requiredAmount],
                 });
                 
                 console.log('Approval transaction hash:', approvalHash);
@@ -255,7 +255,7 @@ export const usePlaceOrder = () => {
           
             // First simulate the transaction
             const simulation = await simulateContract(wagmiConfig, {
-              address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeOrder',
               args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
@@ -265,7 +265,7 @@ export const usePlaceOrder = () => {
             
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
-              address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeOrder',
               args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
@@ -381,7 +381,7 @@ export const usePlaceOrder = () => {
               address: requiredToken,
               abi: erc20Abi,
               functionName: 'allowance',
-              args: [address as `0x${string}`, BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`],
+              args: [address as `0x${string}`, getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`],
             });
             
             console.log(`Allowance: ${allowance}, Required: ${requiredAmount}`);
@@ -389,7 +389,7 @@ export const usePlaceOrder = () => {
             // If allowance is insufficient, trigger approval transaction
             if (allowance < requiredAmount) {
               toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${GTX_ROUTER_ADDRESS(chainId)}`);
+              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
               
               try {
                 // Execute the approval transaction
@@ -399,7 +399,7 @@ export const usePlaceOrder = () => {
                   abi: erc20Abi,
                   functionName: 'approve',
                   // TODO: Remove the * 2
-                  args: [BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`, BigInt(Number(requiredAmount) * 2)  ],
+                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, BigInt(Number(requiredAmount) * 2)  ],
                 });
                 
                 console.log('Approval transaction hash:', approvalHash);
@@ -428,7 +428,7 @@ export const usePlaceOrder = () => {
             
             // First simulate the transaction
             const simulation = await simulateContract(wagmiConfig, {
-              address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeMarketOrderWithDeposit',
               args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, BigInt(quantity), side, address as `0x${string}` ] as const,
@@ -438,7 +438,7 @@ export const usePlaceOrder = () => {
             
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
-              address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeMarketOrderWithDeposit',
               args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, BigInt(quantity), side, address as `0x${string}` ] as const,
@@ -458,7 +458,7 @@ export const usePlaceOrder = () => {
         } else {
           // First simulate the transaction
           const simulation = await simulateContract(wagmiConfig, {
-            address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
             args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, quantity, side, address as `0x${string}` ] as const,
@@ -468,7 +468,7 @@ export const usePlaceOrder = () => {
           
           // If simulation succeeds, execute the transaction
           hash = await writeContract(wagmiConfig, {
-            address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
             args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, quantity, side, address as `0x${string}` ] as const,

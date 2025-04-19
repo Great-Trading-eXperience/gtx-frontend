@@ -3,7 +3,6 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI"
 import OrderBookABI from "@/abis/gtx/clob/OrderBookABI"
 import { wagmiConfig } from "@/configs/wagmi"
-import { GTX_ROUTER_ADDRESS } from "@/constants/contract-address"
 import { PoolsResponse } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { readContract } from "@wagmi/core"
@@ -13,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
+import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
 
 interface Order {
   price: number
@@ -137,7 +137,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
 
     try {
       const prices = await readContract(wagmiConfig, {
-        address: GTX_ROUTER_ADDRESS(chainId) as `0x${string}`,
+        address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
         abi: GTXRouterABI,
         functionName: "getNextBestPrices",
         args: [selectedPool.baseCurrency as `0x${string}`, selectedPool.quoteCurrency as `0x${string}`, side, price, count] as const,

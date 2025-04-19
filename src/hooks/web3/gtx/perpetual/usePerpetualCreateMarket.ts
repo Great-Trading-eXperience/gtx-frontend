@@ -4,7 +4,7 @@ import {
   MARKET_FACTORY_ADDRESS, 
   ROUTER_ADDRESS, 
   USDC_ADDRESS 
-} from "@/constants/contract-address";
+} from "@/constants/address";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";

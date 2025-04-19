@@ -1,7 +1,8 @@
 "use client"
 
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
-import { BALANCE_MANAGER_ADDRESS } from "@/constants/contract-address"
+import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
+import { EXPLORER_URL } from "@/constants/explorer-url"
 import { PoolsResponse, TradesResponse } from "@/graphql/gtx/clob"
 import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances"
 import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder"
@@ -16,7 +17,6 @@ import { formatUnits, parseUnits } from "viem"
 import { useAccount } from "wagmi"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
-import { EXPLORER_URL } from "@/constants/explorer-url"
 
 // Define the expected data structure from the GraphQL query
 interface PoolsData {
@@ -134,7 +134,7 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
-  } = useTradingBalances(BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`)
+  } = useTradingBalances(getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`)
 
   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
     return {

@@ -1,7 +1,7 @@
 import faucetABI from '@/abis/faucet/FaucetABI';
 import TokenABI from '@/abis/tokens/TokenABI';
 import { wagmiConfig } from '@/configs/wagmi';
-import { FAUCET_ADDRESS } from '@/constants/contract-address';
+import { FAUCET_ADDRESS } from '@/constants/address';
 import { HexAddress } from '@/types/general/address';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
