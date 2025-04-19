@@ -15,6 +15,7 @@ import { useCrossChain } from '@/hooks/web3/espresso/useCrossChain';
 import { useCrossChainOrder } from '@/hooks/web3/espresso/useCrossChainOrder';
 import TokenNetworkSelector from './token-network-selector';
 import { SwapProgressDialog } from '../ui/swap-progress-dialog';
+import { DotPattern } from '../magicui/dot-pattern';
 
 // Types for token and network selection
 export interface Network {
@@ -545,7 +546,8 @@ const CrossChainOrderForm: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md">
+      <DotPattern />
+      <div className="w-full max-w-md relative z-10">
         <Card className="border-white/20 bg-[#121212] p-4">
           <div className="mb-2 text-3xl font-bold text-white">Cross-Chain Swap</div>
           {sourceToken && destToken && (
@@ -736,10 +738,10 @@ const CrossChainOrderForm: React.FC = () => {
                 <span className="text-gray-400">Network fee</span>
                 <span className="text-white">{gasFeesEth} ETH</span>
               </div>
-              <div className="flex justify-between text-sm">
+              {/* <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Source Router</span>
                 <span className="text-white text-xs">{sourceNetworkRouter.slice(0, 6)}...{sourceNetworkRouter.slice(-4)}</span>
-              </div>
+              </div> */}
             </div>
           </div>
 
