@@ -1,18 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import CreatePoolComponent from "@/components/clob-dex/create-pool/create-pool";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Hexagon, ArrowLeftRight, TrendingUp } from "lucide-react";
-import MarketCreationPage from '@/components/perpetual/MarketCreationPage/MarketCreationPage';
-import CreateMarketComponent from '@/components/perpetual/create-market/create-market';
 import CreateMarketForm from '@/components/perpetual/MarketCreationPage/Test';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeftRight, Hexagon, TrendingUp } from "lucide-react";
+import { useState } from 'react';
 
 const CreatePairFormPage = () => {
     const [activeTab, setActiveTab] = useState<'spot' | 'perpetual'>('spot');
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/40 to-slate-950 relative overflow-hidden">
+        <div className="min-h-screpen bg-gradient-to-b from-slate-950 via-blue-950/40 to-slate-950 relative overflow-hidden">
             {/* Hexagonal Grid Pattern */}
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI1IDJMMi42OCAxMy41djI1TDI1IDUwbDIyLjMyLTExLjV2LTI1eiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDU2LCAxODksIDI0OCwgMC4wMykpIiBzdHJva2Utd2lkdGg9IjAuNSIvPjwvc3ZnPg==')] opacity-50"></div>
 
@@ -65,7 +62,7 @@ const CreatePairFormPage = () => {
 
             {/* Render the selected component based on active tab */}
             {activeTab === 'spot' ? (
-                <CreatePoolComponent />
+                <></>
             ) : (
                 <CreateMarketForm />
             )}

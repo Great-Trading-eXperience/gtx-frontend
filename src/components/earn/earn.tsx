@@ -1,19 +1,18 @@
 "use client"
 
+import { DotPattern } from "@/components/magicui/dot-pattern"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PERPETUAL_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { getCuratorVaultsQuery } from "@/graphql/gtx/clob"
+import { getCuratorVaultsQuery } from "@/graphql/gtx/perpetual"
 import { useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
-import { ChevronLeft, ChevronRight, LineChart, Wallet, ArrowUpRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useAccount } from "wagmi"
 import GradientLoader from "../gradient-loader/gradient-loader"
 import { VaultRow } from "./vault-row"
-import { DotPattern } from "@/components/magicui/dot-pattern"
-import { ArrowLeft, ArrowRight, CornerRightDown, Users, BarChart2, Coins } from "lucide-react"
 
 // Allocation model
 interface Allocation {

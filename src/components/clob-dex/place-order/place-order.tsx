@@ -16,6 +16,7 @@ import { formatUnits, parseUnits } from "viem"
 import { useAccount } from "wagmi"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
+import { EXPLORER_URL } from "@/constants/explorer-url"
 
 // Define the expected data structure from the GraphQL query
 interface PoolsData {
@@ -581,6 +582,7 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
         message={notificationMessage}
         isSuccess={notificationSuccess}
         txHash={notificationTxHash}
+        explorerBaseUrl={EXPLORER_URL(chainId ?? defaultChainId)}
       />
     </div>
   )

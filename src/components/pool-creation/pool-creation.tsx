@@ -18,6 +18,7 @@ import { useAccount, useChainId } from "wagmi"
 import { DotPattern } from "../magicui/dot-pattern"
 import PoolCreationSkeleton from "./pool-creation-skeleton"
 import TokenSelectionDialog, { type Token } from "./token/token-selection-dialog"
+import { EXPLORER_URL } from "@/constants/explorer-url"
 
 // Define interfaces for the pools query response
 interface PoolItem {
@@ -100,18 +101,18 @@ const PoolCreation: React.FC = () => {
   }>({})
 
   const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+  const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
   // Fetch pools data from GraphQL
   const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
     queryKey: ['pools'],
     queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
+      const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
       return await request<PoolsResponse>(url, poolsQuery)
     },
-    staleTime: 60000, // 1 minute - pools don't change often
+    staleTime: 60000, 
   })
 
   // Extract unique tokens from pools data to populate token list
@@ -909,7 +910,7 @@ const PoolCreation: React.FC = () => {
                             <p className="font-medium text-green-400">Pool created successfully!</p>
                             {createPoolHash && (
                               <a
-                                href={`https://testnet-explorer.riselabs.xyz/tx/${createPoolHash}`}
+                                href={`${EXPLORER_URL(chainId ?? defaultChainId)}/tx/${createPoolHash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -950,6 +951,7 @@ const PoolCreation: React.FC = () => {
         message={notificationMessage}
         isSuccess={isNotificationSuccess}
         txHash={createPoolHash}
+        explorerBaseUrl={EXPLORER_URL(chainId ?? defaultChainId)}
       />
     </div>
   )

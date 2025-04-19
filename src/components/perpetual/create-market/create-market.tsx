@@ -10,9 +10,10 @@ import { CheckCircle2, Loader2, Hexagon, Wallet, Settings, History, Database } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { Button } from "@/components/ui/button"
-import { useAccount } from "wagmi"
+import { useAccount, useChainId } from "wagmi"
 import GradientLoader from "@/components/gradient-loader/gradient-loader"
 import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { EXPLORER_URL } from "@/constants/explorer-url"
 
 // Token addresses from example data
 const TOKENS = {
@@ -48,6 +49,9 @@ const TOKEN_NETWORKS = {
 }
 
 const CreateMarketComponent: React.FC = () => {
+    const chainId = useChainId()
+    const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+
     // Wallet connection and loading states
     const [mounted, setMounted] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
@@ -520,6 +524,7 @@ const CreateMarketComponent: React.FC = () => {
                 message={notificationMessage}
                 isSuccess={isNotificationSuccess}
                 txHash={createMarketHash}
+                explorerBaseUrl={EXPLORER_URL(chainId ?? defaultChainId)}
             />
         </div>
     )

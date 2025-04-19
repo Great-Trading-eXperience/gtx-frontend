@@ -12,7 +12,7 @@ interface NotificationDialogProps {
   message: string
   isSuccess: boolean
   txHash?: string
-  explorerBaseUrl?: string // New prop for customizable explorer URL
+  explorerBaseUrl: string
 }
 
 // Component for displaying transaction hash with copy functionality
@@ -163,7 +163,7 @@ export function NotificationDialog({
   message, 
   isSuccess, 
   txHash,
-  explorerBaseUrl = "https://etherscan.io/tx/" // Default value for backward compatibility
+  explorerBaseUrl
 }: NotificationDialogProps) {
   const [open, setOpen] = useState(isOpen)
   const [copied, setCopied] = useState(false)

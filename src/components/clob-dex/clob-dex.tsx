@@ -70,11 +70,11 @@ export default function ClobDex() {
 
     const { data: tradesData, isLoading: tradesLoading, error: tradesError } = useQuery<TradesResponse>({
         queryKey: ['trades', String(chainId ?? defaultChainId)],
-        queryFn: async () => {
+        queryFn: async (): Promise<TradesResponse> => {
             const currentChainId = Number(chainId ?? defaultChainId)
             const url = GTX_GRAPHQL_URL(currentChainId)
             if (!url) throw new Error('GraphQL URL not found')
-            return await request(url, tradesQuery)
+            return await request<TradesResponse>(url, tradesQuery, { poolId: selectedPoolId })
         },
         refetchInterval: 1000,
         staleTime: 1000,
@@ -138,7 +138,6 @@ export default function ClobDex() {
                 const poolIdFromUrl = urlParts[2];
 
                 if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
-                    console.log(`Setting pool ID from URL: ${poolIdFromUrl}`);
                     setSelectedPoolId(poolIdFromUrl);
                 }
             }

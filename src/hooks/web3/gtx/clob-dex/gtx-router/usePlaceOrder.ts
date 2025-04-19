@@ -398,6 +398,7 @@ export const usePlaceOrder = () => {
                   address: requiredToken,
                   abi: erc20Abi,
                   functionName: 'approve',
+                  // TODO: Remove the * 2
                   args: [BALANCE_MANAGER_ADDRESS(chainId) as `0x${string}`, BigInt(Number(requiredAmount) * 2)  ],
                 });
                 
