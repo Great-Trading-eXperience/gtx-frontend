@@ -72,7 +72,7 @@ const LandingHeader = () => {
                     ease: "easeInOut",
                   }}
                 />
-                <img src="/logo/gtx-update.png" alt="GTX Logo" className="h-9 w-9 relative z-10" />
+                <img src="/logo/gtx.png" alt="GTX Logo" className="h-9 w-9 relative z-10" />
               </motion.div>
               <div className="ml-3 flex flex-col">
                 <motion.span 

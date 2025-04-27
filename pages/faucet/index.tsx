@@ -38,7 +38,7 @@ const Faucet = () => {
                                 <div className="relative inline-block mb-8">
                                     <div className="absolute inset-0 bg-cyan-500/10 blur-[24px] rounded-full"></div>
                                     <img 
-                                        src="/logo/gtx-update.png" 
+                                        src="/logo/gtx.png" 
                                         className="w-24 h-24 relative z-10" 
                                         alt="GTX Logo"
                                         width={96}

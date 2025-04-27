@@ -66,7 +66,7 @@ const Footer = () => {
           {/* Logo Section */}
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2">
-              <img src={"/logo/gtx-update.png"} className="h-10" alt="GTX Logo" />
+              <img src={"/logo/gtx.png"} className="h-10" alt="GTX Logo" />
               <span className="text-3xl font-bold text-white">GTX</span>
             </Link>
             <p className="mt-4 text-gray-400 text-sm leading-relaxed">
