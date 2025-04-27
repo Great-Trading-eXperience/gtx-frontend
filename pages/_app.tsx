@@ -16,6 +16,7 @@ import { Toaster } from "@/components/ui/toaster";
 import LandingHeader from "@/components/header/landing-header";
 import { useRouter } from "next/router";
 import { arbitrumSepolia } from "wagmi/chains"
+import VeGTXHeader from "@/components/header/vegtx-header";
 
 const queryClient = new QueryClient();
 
@@ -37,12 +38,16 @@ type AppPropsWithLayout = AppProps & {
 
 function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const isHomePage = router.pathname === "/";
+  const [loading, setLoading] = useState(false);
+  const [prevPath, setPrevPath] = useState("");
+  const isHomePage = router.pathname === "/" && !router.pathname.includes("/vegtx");
+  const isVeGTXPage = router.pathname.includes("/vegtx");
   const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true'
 
   return (
     <>
-      {isHomePage ? <LandingHeader /> : <Header />}
+      {loading && <CustomLoader />}
+      {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header />}
       {children}
       {isHomePage || isWaitlistMode && <Footer />}
       <Toaster />
@@ -65,7 +70,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
           <Head>
             <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
             <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
-            <link rel="icon" type="image/png" href="/logo/gtx-update-dark.webp" />
+            <link rel="icon" type="image/png" href="/logo/gtx.png" />
           </Head>
           <ThemeProvider
             disableTransitionOnChange
