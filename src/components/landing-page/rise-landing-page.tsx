@@ -937,7 +937,7 @@ export function RiseLandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto bg-[#0a0a0a] border border-blue-900/30 rounded-xl p-12 shadow-xl shadow-blue-900/20 relative overflow-hidden"
+            className="max-w-3xl mx-auto bg-[#0a0a0a] border border-blue-900/30 rounded-xl p-12 shadow-md shadow-blue-900/20 relative overflow-hidden"
           >
             {/* Glowing border effect */}
             <motion.div
@@ -952,38 +952,10 @@ export function RiseLandingPage() {
               }}
             />
 
-            {/* Animated background elements */}
-            <motion.div
-              className="absolute inset-0 opacity-10"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.1 }}
-              transition={{ duration: 1 }}
-            >
-              <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <motion.path
-                  d="M0,50 Q25,30 50,50 T100,50"
-                  fill="none"
-                  stroke="url(#gradient)"
-                  strokeWidth="0.5"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 2 }}
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#3b82f6" />
-                    <stop offset="100%" stopColor="#8b5cf6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </motion.div>
 
             <div className="relative z-10 text-center">
               <motion.h2
-                className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600"
-                animate={{
-                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                }}
+                className="text-3xl md:text-4xl font-bold mb-6"
                 transition={{
                   duration: 5,
                   repeat: Infinity,
@@ -991,10 +963,10 @@ export function RiseLandingPage() {
                 }}
                 style={{ backgroundSize: "200% auto" }}
               >
-                Ready to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Start Trading</span>?
+                Ready to <span className="text-transparent bg-clip-text bg-gray-200">Start Trading</span>?
               </motion.h2>
               <motion.p
-                className="text-xl text-gray-300 mb-8"
+                className="text-xl text-gray-200 mb-8"
                 initial={{ opacity: 0.7 }}
                 whileHover={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
