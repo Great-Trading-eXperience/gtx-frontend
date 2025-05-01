@@ -44,22 +44,16 @@ export function RiseLandingPage() {
       step: 1,
     },
     {
-      title: "Deposit Funds",
-      description: "Fund your account with multiple cryptocurrencies for immediate trading",
-      icon: ArrowUpRight,
-      step: 2,
-    },
-    {
       title: "Start Trading",
-      description: "Access perpetual futures with up to 30x leverage or spot markets with deep liquidity",
+      description: "Access spot markets with deep liquidity and competitive fees",
       icon: LineChart,
-      step: 3,
+      step: 2,
     },
     {
       title: "Manage Positions",
       description: "Monitor your portfolio and manage risk with advanced trading tools",
       icon: BarChart2,
-      step: 4,
+      step: 3,
     },
   ]
 
@@ -112,14 +106,14 @@ export function RiseLandingPage() {
   // Generate random positions only on client side after mount
   useEffect(() => {
     setMounted(true)
-    
+
     // Generate random positions for nodes
     const nodePositions = Array.from({ length: 15 }, () => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
       rotate: Math.random() * 360
     }))
-    
+
     // Generate random positions for connections
     const connectionPositions = Array.from({ length: 20 }, () => ({
       left: Math.random() * 100,
@@ -127,20 +121,20 @@ export function RiseLandingPage() {
       rotate: Math.random() * 360,
       width: Math.random() * 200 + 100
     }))
-    
+
     // Generate random positions for data blocks
     const blockPositions = Array.from({ length: 10 }, () => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
       rotate: Math.random() * 360
     }))
-    
+
     // Generate random positions for orbs
     const orbPositions = Array.from({ length: 8 }, () => ({
       left: Math.random() * 100,
       top: Math.random() * 100
     }))
-    
+
     // Generate random positions for circuit paths
     const circuitPositions = Array.from({ length: 12 }, () => ({
       left: Math.random() * 100,
@@ -148,12 +142,12 @@ export function RiseLandingPage() {
       rotate: Math.random() * 360,
       width: Math.random() * 300 + 100
     }))
-    
+
     // Generate binary strings
-    const binaryStrings = Array.from({ length: 20 }, () => 
+    const binaryStrings = Array.from({ length: 20 }, () =>
       Array.from({ length: 20 }, () => Math.random() > 0.5 ? "1" : "0").join(" ")
     )
-    
+
     setRandomPositions([...nodePositions, ...connectionPositions, ...blockPositions, ...orbPositions, ...circuitPositions])
     setBinaryStrings(binaryStrings)
   }, [])
@@ -209,7 +203,7 @@ export function RiseLandingPage() {
                   />
                 </motion.span>
               </h1>
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 }}
@@ -256,7 +250,7 @@ export function RiseLandingPage() {
               <div className="relative rounded-2xl bg-[#0a0a0a] border border-blue-900/30 overflow-hidden shadow-2xl shadow-blue-900/20">
                 {/* Glowing border effect */}
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
-                
+
                 {/* Header with tabs */}
                 <div className="bg-[#111111] px-6 py-4 border-b border-blue-900/30 flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -406,7 +400,7 @@ export function RiseLandingPage() {
               >
                 {/* Glowing border effect */}
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
-                
+
                 <div className="flex justify-between items-center mb-3 relative z-15">
                   <h4 className="text-sm font-semibold text-white">Market Stats</h4>
                   <motion.div
@@ -466,28 +460,17 @@ export function RiseLandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full mb-4 relative overflow-hidden"
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-bold text-center mb-2"
             >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                animate={{
-                  x: ["-100%", "100%"],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-              Challenges in DeFi
-            </motion.div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600">Problems with Traditional AMMs</h2>
+              Common <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Issues</span> in Trading
+            </motion.h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Current decentralized exchanges face significant challenges that limit their effectiveness
+              Many trading platforms have problems that make trading difficult
             </p>
           </motion.div>
 
@@ -502,7 +485,7 @@ export function RiseLandingPage() {
                 className={`bg-[#0a0a0a] border border-blue-900/30 rounded-lg p-6 shadow-lg shadow-blue-900/10 relative overflow-hidden group hover:border-blue-500/50 transition-all duration-300`}
               >
                 {/* Glowing border effect */}
-                <motion.div 
+                <motion.div
                   className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50"
                   animate={{
                     opacity: [0.5, 0.7, 0.5],
@@ -513,63 +496,18 @@ export function RiseLandingPage() {
                     ease: "easeInOut",
                   }}
                 />
-                
-                {/* Animated background elements */}
-                <motion.div
-                  className="absolute inset-0 opacity-10"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.1 }}
-                  transition={{ duration: 1, delay: index * 0.2 }}
-                >
-                  <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <motion.path
-                      d="M0,50 Q25,30 50,50 T100,50"
-                      fill="none"
-                      stroke="url(#gradient)"
-                      strokeWidth="0.5"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 2, delay: index * 0.2 }}
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#3b82f6" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </motion.div>
-                
+
                 <div className="relative z-10">
-                  <motion.div 
-                    className="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center mb-4 relative"
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <motion.span 
-                      className="text-lg font-bold text-blue-400"
-                      animate={{ 
-                        textShadow: ["0 0 0px rgba(59,130,246,0)", "0 0 8px rgba(59,130,246,0.8)", "0 0 0px rgba(59,130,246,0)"]
-                      }}
-                      transition={{ 
-                        duration: 2, 
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      {index + 1}
-                    </motion.span>
-                  </motion.div>
-                  
-                  <motion.h3 
+
+                  <motion.h3
                     className="text-xl font-bold mb-3 relative z-10"
                     whileHover={{ x: 5 }}
                     transition={{ duration: 0.2 }}
                   >
                     {problem.title}
                   </motion.h3>
-                  
-                  <motion.p 
+
+                  <motion.p
                     className="text-gray-400 relative z-10"
                     initial={{ opacity: 0.7 }}
                     whileHover={{ opacity: 1 }}
@@ -577,41 +515,14 @@ export function RiseLandingPage() {
                   >
                     {problem.description}
                   </motion.p>
-                  
-                  
+
+
                 </div>
               </motion.div>
             ))}
           </div>
-          
-          {/* Animated connection lines between problems */}
-          <div className="hidden md:block relative h-0 mt-8">
-            {[...Array(problems.length - 1)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute h-0.5 bg-gradient-to-r from-blue-900/30 via-blue-800/50 to-blue-900/30"
-                style={{
-                  left: `${(i * 100) / (problems.length - 1)}%`,
-                  width: `${100 / (problems.length - 1)}%`,
-                  top: 0,
-                }}
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-blue-500"
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: [0, 1, 0] }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    delay: 1 + i * 0.2,
-                  }}
-                />
-              </motion.div>
-            ))}
-          </div>
+
+
         </div>
       </section>
 
@@ -624,53 +535,21 @@ export function RiseLandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full mb-4 relative overflow-hidden"
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-bold text-center mb-2"
             >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                animate={{
-                  x: ["-100%", "100%"],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-              Our Solution
-            </motion.div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600">GTX Solution</h2>
+              Why Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Platform</span> is Different
+            </motion.h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              A Central Limit Order Book (CLOB)-based DEX that solves the problems of traditional AMMs
+              We&rsquo;ve built a trading platform that addresses common trading problems
             </p>
           </motion.div>
 
           <div className="relative">
-            {/* Connection Lines */}
-            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-blue-900/30 hidden md:block" />
-
-            {/* Animated data packets */}
-            <AnimatePresence>
-              {[1, 2, 3].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ left: "0%", opacity: 0 }}
-                  animate={{ left: "100%", opacity: [0, 1, 0] }}
-                  transition={{
-                    duration: 4,
-                    delay: i * 1.5,
-                    repeat: Number.POSITIVE_INFINITY,
-                    repeatDelay: 3,
-                  }}
-                  className="absolute top-1/2 h-3 w-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.7)] hidden md:block"
-                  style={{ transform: "translateY(-50%)" }}
-                />
-              ))}
-            </AnimatePresence>
 
             <div className="grid md:grid-cols-4 gap-8 relative">
               {features.map((feature, index) => (
@@ -695,7 +574,7 @@ export function RiseLandingPage() {
                             className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center relative z-10"
                           >
                             <motion.div
-                              animate={{ 
+                              animate={{
                                 scale: hoveredFeature === feature.id ? [1, 1.2, 1] : 1,
                                 color: hoveredFeature === feature.id ? ["#3b82f6", "#60a5fa", "#3b82f6"] : "#3b82f6"
                               }}
@@ -706,110 +585,28 @@ export function RiseLandingPage() {
                           </motion.div>
                         </div>
 
-                        <motion.h3 
+                        <motion.h3
                           className="text-xl font-bold mb-3 mt-4"
-                          animate={{ 
+                          animate={{
                             color: hoveredFeature === feature.id ? ["#ffffff", "#60a5fa", "#ffffff"] : "#ffffff"
                           }}
                           transition={{ duration: 1.5, repeat: Infinity }}
                         >
                           {feature.title}
                         </motion.h3>
-                        <motion.p 
+                        <motion.p
                           className="text-gray-400 text-sm flex-grow"
-                          animate={{ 
+                          animate={{
                             opacity: hoveredFeature === feature.id ? 1 : 0.7
                           }}
                           transition={{ duration: 0.3 }}
                         >
                           {feature.description}
                         </motion.p>
-
-                        {/* Animated completion indicator */}
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: hoveredFeature === feature.id ? 1 : 0 }}
-                          transition={{ type: "spring" }}
-                          className="absolute bottom-4 right-4"
-                        >
-                          <CheckCircle2 className="h-5 w-5 text-blue-500" />
-                        </motion.div>
-
-                        {/* Animated background elements */}
-                        <motion.div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: hoveredFeature === feature.id ? 0.1 : 0 }}
-                          transition={{ duration: 0.5 }}
-                        >
-                          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <motion.path
-                              d="M0,50 Q25,30 50,50 T100,50"
-                              fill="none"
-                              stroke="url(#gradient)"
-                              strokeWidth="0.5"
-                              initial={{ pathLength: 0 }}
-                              animate={{ pathLength: hoveredFeature === feature.id ? 1 : 0 }}
-                              transition={{ duration: 1 }}
-                            />
-                            <defs>
-                              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#3b82f6" />
-                                <stop offset="100%" stopColor="#8b5cf6" />
-                              </linearGradient>
-                            </defs>
-                          </svg>
-                        </motion.div>
-
-                        {index < features.length - 1 && (
-                          <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 z-20 hidden md:block">
-                            <motion.div
-                              animate={{
-                                boxShadow:
-                                  hoveredFeature === feature.id || hoveredFeature === feature.id + 1
-                                    ? [
-                                      "0 0 0px rgba(59,130,246,0)",
-                                      "0 0 10px rgba(59,130,246,0.5)",
-                                      "0 0 0px rgba(59,130,246,0)",
-                                    ]
-                                    : "none",
-                              }}
-                              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-                              className="w-8 h-8 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center"
-                            >
-                              <motion.div
-                                animate={{ 
-                                  x: hoveredFeature === feature.id || hoveredFeature === feature.id + 1 ? [0, 3, 0] : 0,
-                                  color: hoveredFeature === feature.id || hoveredFeature === feature.id + 1 ? ["#3b82f6", "#60a5fa", "#3b82f6"] : "#3b82f6"
-                                }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                              >
-                                <ArrowRight className="h-4 w-4" />
-                              </motion.div>
-                            </motion.div>
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
 
-                  {/* Connection dots for mobile with animation */}
-                  {index < features.length - 1 && (
-                    <div className="flex justify-center mt-4 mb-4 md:hidden">
-                      <motion.div
-                        animate={{
-                          height: ["32px", "24px", "32px"],
-                          background: [
-                            "linear-gradient(to bottom, #1e3a8a, #1e40af)",
-                            "linear-gradient(to bottom, #2563eb, #3b82f6)",
-                            "linear-gradient(to bottom, #1e3a8a, #1e40af)",
-                          ],
-                        }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                        className="w-1 h-8 bg-gradient-to-b from-blue-900 to-blue-800"
-                      />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -826,27 +623,17 @@ export function RiseLandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full mb-4 relative overflow-hidden"
+
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-bold text-center mb-2"
             >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                animate={{
-                  x: ["-100%", "100%"],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-              Getting Started
-            </motion.div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600">How It Works</h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">A simple, secure process to start trading on GTX</p>
+              Start Trading in <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Three Steps</span>
+            </motion.h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">A simple process to begin trading on our platform</p>
           </motion.div>
 
           <div className="relative">
@@ -898,26 +685,26 @@ export function RiseLandingPage() {
                             className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center relative z-10"
                           >
                             <motion.div
-                              animate={{ 
+                              animate={{
                                 scale: hoveredStep === step.step ? [1, 1.2, 1] : 1,
                                 color: hoveredStep === step.step ? ["#3b82f6", "#60a5fa", "#3b82f6"] : "#3b82f6"
                               }}
                               transition={{ duration: 1.5, repeat: Infinity }}
                             >
                               <step.icon className="h-6 w-6" />
+                            </motion.div>
                           </motion.div>
-                          </motion.div>
-                          <motion.div 
+                          <motion.div
                             className={`flex items-center justify-center w-8 h-8 rounded-full bg-blue-900/30 border border-blue-800/30 ${index % 2 === 0 ? 'ml-4' : 'mr-4'}`}
-                            animate={{ 
+                            animate={{
                               scale: hoveredStep === step.step ? [1, 1.1, 1] : 1,
                               boxShadow: hoveredStep === step.step ? "0 0 10px rgba(59,130,246,0.5)" : "none"
                             }}
                             transition={{ duration: 1.5, repeat: Infinity }}
                           >
-                            <motion.span 
+                            <motion.span
                               className="text-sm font-mono text-blue-400"
-                              animate={{ 
+                              animate={{
                                 color: hoveredStep === step.step ? ["#3b82f6", "#60a5fa", "#3b82f6"] : "#3b82f6"
                               }}
                               transition={{ duration: 1.5, repeat: Infinity }}
@@ -927,18 +714,18 @@ export function RiseLandingPage() {
                           </motion.div>
                         </div>
 
-                        <motion.h3 
+                        <motion.h3
                           className="text-xl font-bold mb-3 mt-4"
-                          animate={{ 
+                          animate={{
                             color: hoveredStep === step.step ? ["#ffffff", "#60a5fa", "#ffffff"] : "#ffffff"
                           }}
                           transition={{ duration: 1.5, repeat: Infinity }}
                         >
                           {step.title}
                         </motion.h3>
-                        <motion.p 
+                        <motion.p
                           className="text-gray-400 text-sm flex-grow"
-                          animate={{ 
+                          animate={{
                             opacity: hoveredStep === step.step ? 1 : 0.7
                           }}
                           transition={{ duration: 0.3 }}
@@ -957,7 +744,7 @@ export function RiseLandingPage() {
                         </motion.div>
 
                         {/* Animated background elements */}
-                            <motion.div
+                        <motion.div
                           className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: hoveredStep === step.step ? 0.1 : 0 }}
@@ -980,7 +767,7 @@ export function RiseLandingPage() {
                               </linearGradient>
                             </defs>
                           </svg>
-                            </motion.div>
+                        </motion.div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -1018,47 +805,36 @@ export function RiseLandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full mb-4 relative overflow-hidden"
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-bold text-center mb-2"
             >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                animate={{
-                  x: ["-100%", "100%"],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-              Our Stack
-            </motion.div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600">Technology</h2>
+              Built with <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Reliable Technology</span>
+            </motion.h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Built with advanced technology for optimal performance and security
+              Our platform uses proven technology for better performance and security
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-8">
             {[
               {
-                title: "High-Performance Order Book",
-                description: "Efficient matching engine with O(log n) operations and price-time priority execution",
+                title: "Smart Order Matching",
+                description: "Our advanced system ensures you get the best prices for your trades with minimal slippage",
                 icon: Code2,
               },
               {
-                title: "Advanced Risk Management",
+                title: "Secure Trading",
                 description:
-                  "Sophisticated liquidation and margin systems to protect users and maintain market stability",
+                  "Built with industry-leading security measures to protect your assets and ensure safe trading",
                 icon: ShieldCheck,
               },
               {
-                title: "Optimized Data Structures",
-                description: "Red-Black Tree price levels and double-linked list order queues for maximum efficiency",
+                title: "Fast Execution",
+                description: "Lightning-fast trade execution with real-time market data and instant order processing",
                 icon: Terminal,
               },
               {
@@ -1076,7 +852,7 @@ export function RiseLandingPage() {
                 className="bg-[#0a0a0a] border border-blue-900/30 rounded-lg p-6 hover:border-blue-500/50 transition-all duration-300 shadow-lg shadow-blue-900/10 relative overflow-hidden group"
               >
                 {/* Glowing border effect */}
-                <motion.div 
+                <motion.div
                   className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50"
                   animate={{
                     opacity: [0.5, 0.7, 0.5],
@@ -1087,7 +863,7 @@ export function RiseLandingPage() {
                     ease: "easeInOut",
                   }}
                 />
-                
+
                 {/* Animated background elements */}
                 <motion.div
                   className="absolute inset-0 opacity-10"
@@ -1113,15 +889,15 @@ export function RiseLandingPage() {
                     </defs>
                   </svg>
                 </motion.div>
-                
+
                 <div className="flex items-center gap-4 mb-4 relative z-10">
-                  <motion.div 
+                  <motion.div
                     className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center"
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 1 }}
                   >
                     <motion.div
-                      animate={{ 
+                      animate={{
                         scale: [1, 1.2, 1],
                         color: ["#3b82f6", "#60a5fa", "#3b82f6"]
                       }}
@@ -1130,17 +906,17 @@ export function RiseLandingPage() {
                       <tech.icon className="h-6 w-6" />
                     </motion.div>
                   </motion.div>
-                  <motion.h3 
+                  <motion.h3
                     className="text-xl font-bold"
-                    animate={{ 
+                    animate={{
                       color: ["#ffffff", "#60a5fa", "#ffffff"]
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
                     {tech.title}
                   </motion.h3>
-                  </div>
-                <motion.p 
+                </div>
+                <motion.p
                   className="text-gray-400 pl-16 relative z-10"
                   initial={{ opacity: 0.7 }}
                   whileHover={{ opacity: 1 }}
@@ -1161,10 +937,10 @@ export function RiseLandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto bg-[#0a0a0a] border border-blue-900/30 rounded-xl p-12 shadow-xl shadow-blue-900/20 relative overflow-hidden"
+            className="max-w-3xl mx-auto bg-[#0a0a0a] border border-blue-900/30 rounded-xl p-12 shadow-md shadow-blue-900/20 relative overflow-hidden"
           >
             {/* Glowing border effect */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50"
               animate={{
                 opacity: [0.5, 0.7, 0.5],
@@ -1175,58 +951,30 @@ export function RiseLandingPage() {
                 ease: "easeInOut",
               }}
             />
-            
-            {/* Animated background elements */}
-            <motion.div
-              className="absolute inset-0 opacity-10"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.1 }}
-              transition={{ duration: 1 }}
-            >
-              <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <motion.path
-                  d="M0,50 Q25,30 50,50 T100,50"
-                  fill="none"
-                  stroke="url(#gradient)"
-                  strokeWidth="0.5"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 2 }}
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#3b82f6" />
-                    <stop offset="100%" stopColor="#8b5cf6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </motion.div>
-            
+
+
             <div className="relative z-10 text-center">
-              <motion.h2 
-                className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600"
-                animate={{ 
-                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                }}
-                transition={{ 
-                  duration: 5, 
+              <motion.h2
+                className="text-3xl md:text-4xl font-bold mb-6"
+                transition={{
+                  duration: 5,
                   repeat: Infinity,
                   ease: "linear"
                 }}
                 style={{ backgroundSize: "200% auto" }}
               >
-                Ready to Experience Better Trading?
+                Ready to <span className="text-transparent bg-clip-text bg-gray-200">Start Trading</span>?
               </motion.h2>
-              <motion.p 
-                className="text-xl text-gray-300 mb-8"
+              <motion.p
+                className="text-xl text-gray-200 mb-8"
                 initial={{ opacity: 0.7 }}
                 whileHover={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-              Join GTX today and discover the future of decentralized trading with our advanced order book system.
+                Join our platform today and see how easy trading can be. Start small and grow at your own pace.
               </motion.p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/markets" target="_blank">
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link href="/markets" target="_blank">
                   <Button className="bg-gradient-to-r from-blue-800 to-blue-900 text-white hover:bg-gradient-to-r hover:from-blue-900 hover:to-blue-900 px-8 py-6 text-lg font-medium rounded-xl border border-blue-800/30 relative overflow-hidden group">
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
@@ -1240,16 +988,16 @@ export function RiseLandingPage() {
                       }}
                     />
                     <div className="flex items-center gap-2 relative z-10">
-                    Launch App
-                    <ExternalLink size={20} />
-                  </div>
-                </Button>
-              </Link>
+                      Launch App
+                      <ExternalLink size={20} />
+                    </div>
+                  </Button>
+                </Link>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
-    </main>
+    </main >
   )
 }

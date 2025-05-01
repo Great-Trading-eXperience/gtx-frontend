@@ -69,9 +69,9 @@ export function BlockchainBackground() {
           className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-purple-900/30 to-blue-900/40"
           animate={{
             background: [
-              "radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.4), rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.4))",
-              "radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.4), rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.4))",
-              "radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.4), rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.4))",
+              "radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.5), rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.4))",
+              "radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.5), rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.4))",
+              "radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.5), rgba(79, 70, 229, 0.2), rgba(59, 130, 246, 0.4))",
             ],
           }}
           transition={{
@@ -82,73 +82,7 @@ export function BlockchainBackground() {
         />
       </div>
 
-      {/* Blockchain nodes and connections */}
-      <div className="absolute inset-0">
-        {randomPositions.slice(0, 15).map((pos, i) => (
-          <motion.div
-            key={`node-${i}`}
-            className="absolute w-4 h-4 rounded-full bg-blue-500/30 border border-blue-400/40"
-            style={{
-              left: `${pos.left}%`,
-              top: `${pos.top}%`,
-            }}
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.4, 0.7, 0.4],
-              boxShadow: [
-                "0 0 0px rgba(59, 130, 246, 0.6)",
-                "0 0 20px rgba(59, 130, 246, 0.9)",
-                "0 0 0px rgba(59, 130, 246, 0.6)",
-              ],
-              x: [0, Math.sin(i) * 10, 0],
-              y: [0, Math.cos(i) * 10, 0],
-            }}
-            transition={{
-              duration: 5 + i * 0.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <motion.div
-              className="absolute inset-0 rounded-full bg-blue-500/30"
-              animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.6, 0, 0.6],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: i * 0.1,
-              }}
-            />
-          </motion.div>
-        ))}
-
-        {/* Connection lines between nodes */}
-        {randomPositions.slice(15, 35).map((pos, i) => (
-          <motion.div
-            key={`connection-${i}`}
-            className="absolute h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"
-            style={{
-              left: `${pos.left}%`,
-              top: `${pos.top}%`,
-              width: `${pos.width}px`,
-              transform: `rotate(${pos.rotate}deg)`,
-            }}
-            animate={{
-              opacity: [0, 0.6, 0],
-              scaleX: [0, 1, 0],
-              x: [0, Math.sin(i * 0.5) * 5, 0],
-              y: [0, Math.cos(i * 0.5) * 5, 0],
-            }}
-            transition={{
-              duration: 4 + i * 0.2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-        ))}
-      </div>
+     
 
       {/* Data blocks with fluid motion */}
       <div className="absolute inset-0">
@@ -209,35 +143,7 @@ export function BlockchainBackground() {
         ))}
       </div>
 
-      {/* Glowing orbs with fluid motion */}
-      <div className="absolute inset-0">
-        {randomPositions.slice(45, 53).map((pos, i) => (
-          <motion.div
-            key={`orb-${i}`}
-            className="absolute w-2 h-2 rounded-full bg-blue-500/40"
-            style={{
-              left: `${pos.left}%`,
-              top: `${pos.top}%`,
-            }}
-            animate={{
-              scale: [1, 2, 1],
-              opacity: [0.4, 0.7, 0.4],
-              boxShadow: [
-                "0 0 0px rgba(59, 130, 246, 0.6)",
-                "0 0 20px rgba(59, 130, 246, 0.9)",
-                "0 0 0px rgba(59, 130, 246, 0.6)",
-              ],
-              x: [0, Math.sin(i * 0.8) * 15, 0],
-              y: [0, Math.cos(i * 0.8) * 15, 0],
-            }}
-            transition={{
-              duration: 5 + i * 0.4,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-        ))}
-      </div>
+      
 
       {/* Circuit paths with fluid motion */}
       <div className="absolute inset-0">
