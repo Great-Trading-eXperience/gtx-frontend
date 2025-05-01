@@ -18,22 +18,6 @@ import { useAccount } from "wagmi"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
 
-// Define the expected data structure from the GraphQL query
-interface PoolsData {
-  poolss: {
-    items: Array<{
-      id: string
-      coin: string
-      orderBook: string
-      baseCurrency: string
-      quoteCurrency: string
-      lotSize: string
-      maxOrderAmount: string
-      timestamp: string
-    }>
-  }
-}
-
 // Create a mapping type to convert string timestamp to number
 type PoolItemWithStringTimestamp = {
   id: string
