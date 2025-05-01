@@ -7,53 +7,33 @@ import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
 
-const Header = () => {
+const VeGTXHeader = () => {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
 
   const allLinks = [
     { 
+      destination: "/vegtx/dashboard", 
+      label: "Dashboard",
+      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX_DASHBOARD === 'true'
+    },
+    { 
+      destination: "/vegtx/lock", 
+      label: "Lock",
+      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX_LOCK === 'true'
+    },
+    { 
+      destination: "/vegtx/vote", 
+      label: "Vote",
+      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX_VOTE === 'true'
+    },
+    { 
       destination: "/markets", 
-      label: "Markets",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_MARKETS === 'true'
+      label: "App",
+      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX_APP === 'true'
     },
-    { 
-      destination: "/swap", 
-      label: "Swap",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_SWAP === 'true'
-    },
-    { 
-      destination: "/spot", 
-      label: "Spot",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_SPOT === 'true'
-    },
-    { 
-      destination: "/perpetual", 
-      label: "Perpetual",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_PERPETUAL === 'true'
-    },
-    { 
-      destination: "/pool-creation", 
-      label: "Create",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_CREATE === 'true'
-    },
-    { 
-      destination: "/faucet", 
-      label: "Faucet",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_FAUCET === 'true'
-    },
-    { 
-      destination: "/earn", 
-      label: "Earn",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_EARN === 'true'
-    },
-    { 
-      destination: "/vegtx", 
-      label: "veGTX",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX === 'true'
-    }
   ];
-  
+
   // Filter only enabled links
   const links = allLinks.filter(link => link.enabled);
 
@@ -76,7 +56,7 @@ const Header = () => {
               alt="GTX Logo"
             />
             <p className="text-xl lg:text-2xl font-bold text-white text-center">
-              GTX
+              VeGTX
             </p>
           </Link>
         </div>
@@ -161,4 +141,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default VeGTXHeader;
