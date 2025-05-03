@@ -38,15 +38,12 @@ type AppPropsWithLayout = AppProps & {
 
 function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [prevPath, setPrevPath] = useState("");
   const isHomePage = router.pathname === "/" && !router.pathname.includes("/vegtx");
   const isVeGTXPage = router.pathname.includes("/vegtx");
   const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true'
 
   return (
     <>
-      {loading && <CustomLoader />}
       {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header />}
       {children}
       {isHomePage || isWaitlistMode && <Footer />}

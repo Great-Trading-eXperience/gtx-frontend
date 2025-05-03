@@ -53,39 +53,12 @@ const LandingHeader = () => {
             className="flex-shrink-0 relative z-10"
           >
             <Link href="/" className="flex items-center group">
-              <motion.div 
-                className="relative"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <motion.div 
-                  className="absolute inset-0 bg-blue-500/20 rounded-full blur-md"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.5, 0.3],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
-                <img src="/logo/gtx.png" alt="GTX Logo" className="h-9 w-9 relative z-10" />
-              </motion.div>
-              <div className="ml-3 flex flex-col">
-                <motion.span 
-                  className="text-white text-xl font-bold tracking-wide"
-                  animate={{
-                    textShadow: ["0 0 0px rgba(59,130,246,0)", "0 0 8px rgba(59,130,246,0.5)", "0 0 0px rgba(59,130,246,0)"]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  GTX
-                </motion.span>
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500/20 rounded-[27px] lg:rounded-full blur-md" />
+                <img src="/logo/gtx.png" alt="GTX Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 relative z-10" />
+              </div>
+              <div className="ml-2 sm:ml-3 md:ml-4 flex flex-col">
+                <span className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-wide">GTX</span>
               </div>
             </Link>
           </motion.div>
