@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { ArrowUpDown, ChevronRight, ExternalLink, Wallet, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from "sonner";
-import { formatUnits, parseUnits } from 'viem';
+import { useAccount } from 'wagmi';
 
 // import TokenNetworkSelector from './TokenNetworkSelector';
-import type { HexAddress } from '@/types/general/address';
-import { useCrossChain } from '@/hooks/web3/espresso/useCrossChain';
 import { useCrossChainOrder } from '@/hooks/web3/espresso/useCrossChainOrder';
-import TokenNetworkSelector from './token-network-selector';
-import { SwapProgressDialog } from '../ui/swap-progress-dialog';
+import type { HexAddress } from '@/types/general/address';
 import { DotPattern } from '../magicui/dot-pattern';
+import { SwapProgressDialog } from '../ui/swap-progress-dialog';
+import TokenNetworkSelector from './token-network-selector';
 
 // Types for token and network selection
 export interface Network {
@@ -35,26 +33,31 @@ export interface Token {
 
 const CrossChainOrderForm: React.FC = () => {
   const { address, isConnected } = useAccount();
+
+  // Initialize cross-chain order hook first
   const {
+    createOrder,
+    getOrderStatus,
+    isProcessing,
+    txHash,
+    error,
     currentNetwork,
-    currentDomain,
-    remoteDomain,
     currentRouter,
-    remoteRouter,
     getTokens,
     getDomainId,
     getRouterAddressForNetwork,
     estimateGasPayment,
     isTokenSupportedOnNetwork,
     getEquivalentTokenOnNetwork
-  } = useCrossChain();
+  } = useCrossChainOrder(process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress);
 
   // State for networks
   const [sourceNetworkId, setSourceNetworkId] = useState<string>(currentNetwork);
+  const [sourceNetworkRouter, setSourceNetworkRouter] = useState<HexAddress>(currentRouter);
+
   const [destNetworkId, setDestNetworkId] = useState<string>(
     currentNetwork === 'arbitrum-sepolia' ? 'gtxpresso' : 'arbitrum-sepolia'
   );
-  const [sourceNetworkRouter, setSourceNetworkRouter] = useState<HexAddress>(currentRouter);
 
   // State for swap progress
   const [isSwapProgressDialogOpen, setSwapProgressDialogOpen] = useState(false)
@@ -77,15 +80,6 @@ const CrossChainOrderForm: React.FC = () => {
 
   // Client-side rendering state
   const [isClient, setIsClient] = useState(false);
-
-  // Initialize cross-chain order hook
-  const {
-    createOrder,
-    getOrderStatus,
-    isProcessing,
-    txHash,
-    error
-  } = useCrossChainOrder(sourceNetworkRouter);
 
   // Networks for the selector
   const sourceNetworks: Network[] = [
