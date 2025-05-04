@@ -194,10 +194,10 @@ const allChains = [
 
 const enabledChains = process.env.ENABLED_CHAINS
   ? allChains.filter((chain) => process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString()))
-  : [gtxChain] // Default to GTX chain if no chains are specified
+  : [riseSepolia, gtxChain]
 
 if (enabledChains.length === 0) {
-  enabledChains.push(gtxChain) // Ensure at least GTX chain is enabled
+  enabledChains.push(riseSepolia, gtxChain) // Ensure at least Rise Sepolia and GTX chain are enabled
 }
 
 const transports = enabledChains.reduce((acc, chain) => {
