@@ -19,8 +19,8 @@ export const getGraphQLUrl = (chainId?: number): string => {
 export const getExplorerUrl = (chainId?: number): string => {
     const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
     const envVarName = chainId 
-        ? `NEXT_PUBLIC_EXPLORER_${chainId}`
-        : `NEXT_PUBLIC_EXPLORER_${defaultChain}`
+        ? `NEXT_PUBLIC_EXPLORER_${chainId}_URL`
+        : `NEXT_PUBLIC_EXPLORER_${defaultChain}_URL`
     return publicRuntimeConfig[envVarName]
 }
 
