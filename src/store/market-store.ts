@@ -4,12 +4,14 @@ import { create } from 'zustand'
 // Define Pool interface to match what's used in components
 export interface Pool {
   baseCurrency: string
+  baseDecimals: number
   coin: string
   id: string
   lotSize: string
   maxOrderAmount: string
   orderBook: string
   quoteCurrency: string
+  quoteDecimals: number
   timestamp: number
 }
 

@@ -65,15 +65,3 @@ export default function CrossChainAppExample() {
         </WagmiConfig>
     );
 }
-
-const getExplorerBaseUrl = (networkId: string) => {
-  switch (networkId) {
-    case 'arbitrum-sepolia':
-      return 'https://sepolia.arbiscan.io/tx/';
-    case 'pharos':
-      return 'https://pharosscan.xyz/tx/';
-    // Add more networks as needed
-    default:
-      return '';
-  }
-};
