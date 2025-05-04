@@ -106,6 +106,32 @@ const monad: Chain = {
   testnet: true,
 };
 
+// Pharos chain
+const pharos: Chain = {
+  id: 50002,
+  name: "Pharos",
+  nativeCurrency: {
+    decimals: 18,
+    name: "PTT",
+    symbol: "PTT",
+  },
+  rpcUrls: {
+    default: {
+      http: ["/api/rpc/pharos"],
+    },
+    public: {
+      http: ["/api/rpc/pharos"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Pharos Explorer",
+      url: "https://pharosscan.xyz",
+    },
+  },
+  testnet: true,
+};
+
 // GTXpresso chain
 const gtxpresso: Chain = {
   id: 1020201,
@@ -182,23 +208,22 @@ const connectors = connectorsForWallets(
 );
 
 const allChains = [
-  riseSepolia, 
-  localChain, 
+  riseSepolia,
+  localChain,
   conduitChain,
-  arbitrumSepolia, 
-  monad, 
-  sepolia, 
+  arbitrumSepolia,
+  monad,
+  sepolia,
   gtxpresso,
   gtxChain,
+  pharos,
 ]
 
 const enabledChains = process.env.ENABLED_CHAINS
-  ? allChains.filter((chain) => process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString()))
-  : [riseSepolia, gtxChain]
-
-if (enabledChains.length === 0) {
-  enabledChains.push(riseSepolia, gtxChain) // Ensure at least Rise Sepolia and GTX chain are enabled
-}
+  ? allChains.filter((chain) =>
+    process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString())
+  )
+  : [pharos]
 
 const transports = enabledChains.reduce((acc, chain) => {
   acc[chain.id] = http(chain.rpcUrls.default.http[0])

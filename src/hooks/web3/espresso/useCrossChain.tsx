@@ -208,7 +208,7 @@ const defaultContextValue: CrossChainContextType = {
 };
 
 // Create context
-const CrossChainContext = createContext<CrossChainContextType>(defaultContextValue);
+export const CrossChainContext = createContext<CrossChainContextType>(defaultContextValue);
 
 // Provider component
 export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

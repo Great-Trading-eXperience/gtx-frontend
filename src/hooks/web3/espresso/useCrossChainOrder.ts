@@ -1,9 +1,9 @@
 // useCrossChainOrder.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAccount } from 'wagmi';
 import { writeContract, waitForTransactionReceipt, readContract, getBytecode } from '@wagmi/core';
-import { parseUnits, formatUnits, erc20Abi, keccak256, encodeAbiParameters, parseAbiParameters } from 'viem';
+import { parseUnits, formatUnits, erc20Abi } from 'viem';
 import { wagmiConfig } from '@/configs/wagmi';
 
 import HyperlaneABI from '@/abis/espresso/HyperlaneABI';
@@ -40,7 +40,160 @@ export type CreateCrossChainOrderParams = {
 const DEFAULT_DESTINATION_DOMAIN = parseInt(process.env.NEXT_PUBLIC_DESTINATION_DOMAIN || '421614');
 const DEFAULT_TARGET_DOMAIN = parseInt(process.env.NEXT_PUBLIC_TARGET_DOMAIN || '1020201');
 
+/**
+ * Network and domain configuration
+ */
+export const NETWORK = {
+  NAME: process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia',
+};
 
+/**
+ * Hyperlane configuration with router addresses
+ */
+export const HYPERLANE = {
+  MAILBOX: process.env.NEXT_PUBLIC_MAILBOX as HexAddress,
+  ROUTER: {
+    ARBITRUM_SEPOLIA: process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress,
+    GTXPRESSO: process.env.NEXT_PUBLIC_ROUTER_GTX_ADDRESS as HexAddress,
+  },
+  DOMAIN: {
+    ARBITRUM_SEPOLIA: Number(process.env.NEXT_PUBLIC_DESTINATION_DOMAIN) || 421614,
+    GTXPRESSO: Number(process.env.NEXT_PUBLIC_TARGET_DOMAIN) || 1020201,
+  },
+};
+
+/**
+ * Token addresses
+ */
+export const TOKENS = {
+  ARBITRUM_SEPOLIA: {
+    WETH: process.env.NEXT_PUBLIC_WETH_ADDRESS as HexAddress,
+    WBTC: process.env.NEXT_PUBLIC_WBTC_ADDRESS as HexAddress,
+    USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS as HexAddress,
+    TRUMP: process.env.NEXT_PUBLIC_TRUMP_ADDRESS as HexAddress,
+    PEPE: process.env.NEXT_PUBLIC_PEPE_ADDRESS as HexAddress,
+    LINK: process.env.NEXT_PUBLIC_LINK_ADDRESS as HexAddress,
+    DOGE: process.env.NEXT_PUBLIC_DOGE_ADDRESS as HexAddress,
+    NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
+  },
+  GTXPRESSO: {
+    WETH: process.env.NEXT_PUBLIC_WETH_GTX_ADDRESS as HexAddress,
+    WBTC: process.env.NEXT_PUBLIC_WBTC_GTX_ADDRESS as HexAddress,
+    USDC: process.env.NEXT_PUBLIC_USDC_GTX_ADDRESS as HexAddress,
+    TRUMP: process.env.NEXT_PUBLIC_TRUMP_GTX_ADDRESS as HexAddress,
+    LINK: process.env.NEXT_PUBLIC_LINK_GTX_ADDRESS as HexAddress,
+    DOGE: process.env.NEXT_PUBLIC_DOGE_GTX_ADDRESS as HexAddress,
+    NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
+  }
+};
+
+// Get current domain ID
+const getCurrentDomainId = async (router: HexAddress): Promise<number> => {
+  try {
+    const domain = await readContract(
+      wagmiConfig,
+      {
+        address: router,
+        abi: HyperlaneABI,
+        functionName: 'localDomain',
+      }
+    );
+    return Number(domain);
+  } catch (err) {
+    console.warn('Failed to read localDomain from contract:', err);
+    // Fallback based on router address
+    const isGtx = router.toLowerCase() === HYPERLANE.ROUTER.GTXPRESSO.toLowerCase();
+    return isGtx ? HYPERLANE.DOMAIN.GTXPRESSO : HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
+  }
+};
+
+// Get domain ID for network
+const getDomainId = (network: string): number => {
+  switch (network) {
+    case 'arbitrum-sepolia':
+      return HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
+    case 'gtxpresso':
+      return HYPERLANE.DOMAIN.GTXPRESSO;
+    default:
+      return HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
+  }
+};
+
+// Get router address for network
+const getRouterAddressForNetwork = (network: string): HexAddress => {
+  switch (network) {
+    case 'arbitrum-sepolia':
+      return HYPERLANE.ROUTER.ARBITRUM_SEPOLIA;
+    case 'gtxpresso':
+      return HYPERLANE.ROUTER.GTXPRESSO;
+    default:
+      return HYPERLANE.ROUTER.ARBITRUM_SEPOLIA;
+  }
+};
+
+// Get current router address
+const getCurrentRouterAddress = (): HexAddress => {
+  return getRouterAddressForNetwork(NETWORK.NAME);
+};
+
+// Get network tokens
+const getNetworkTokens = (network: string): Record<string, HexAddress> => {
+  switch (network) {
+    case 'arbitrum-sepolia':
+      return TOKENS.ARBITRUM_SEPOLIA;
+    case 'gtxpresso':
+      return TOKENS.GTXPRESSO;
+    default:
+      return TOKENS.ARBITRUM_SEPOLIA;
+  }
+};
+
+// Get remote network based on current network
+const getRemoteNetwork = (currentNetwork: string = NETWORK.NAME): string => {
+  switch (currentNetwork) {
+    case 'arbitrum-sepolia':
+      return 'gtxpresso';
+    case 'gtxpresso':
+      return 'arbitrum-sepolia';
+    default:
+      return 'gtxpresso';
+  }
+};
+
+// Get remote router address based on current network
+const getRemoteRouterAddress = (currentNetwork: string = NETWORK.NAME): HexAddress => {
+  return getRouterAddressForNetwork(getRemoteNetwork(currentNetwork));
+};
+
+// Get remote domain ID based on current network
+const getRemoteDomainId = (currentNetwork: string = NETWORK.NAME): number => {
+  return getDomainId(getRemoteNetwork(currentNetwork));
+};
+
+// Check if a token is supported on a network
+const isTokenSupportedOnNetwork = (token: HexAddress, network: string): boolean => {
+  const networkTokens = getNetworkTokens(network);
+  return Object.values(networkTokens).some(addr => addr.toLowerCase() === token.toLowerCase());
+};
+
+// Get equivalent token on remote network
+const getEquivalentTokenOnNetwork = (
+  token: HexAddress,
+  sourceNetwork: string,
+  targetNetwork: string
+): HexAddress | null => {
+  // Find the token symbol in source network
+  const sourceTokens = getNetworkTokens(sourceNetwork);
+  const tokenSymbol = Object.keys(sourceTokens).find(
+    symbol => sourceTokens[symbol].toLowerCase() === token.toLowerCase()
+  );
+
+  if (!tokenSymbol) return null;
+
+  // Get the equivalent token on target network
+  const targetTokens = getNetworkTokens(targetNetwork);
+  return targetTokens[tokenSymbol] || null;
+};
 
 // Helper function to convert address to bytes32
 export const addressToBytes32 = (addr: HexAddress): `0x${string}` => {
@@ -486,13 +639,53 @@ export const useCrossChainOrder = (
     }
   }, [address, localRouterAddress, getLocalDomain]);
 
+  // Get gas payment estimate for cross-chain transfer
+  const estimateGasPayment = async (sourceNetwork: string, destinationNetwork: string): Promise<string> => {
+    try {
+      const sourceRouter = getRouterAddressForNetwork(sourceNetwork);
+      const destinationDomain = getDomainId(destinationNetwork);
+
+      const gasPayment = await readContract(
+        wagmiConfig,
+        {
+          address: sourceRouter,
+          abi: HyperlaneABI,
+          functionName: 'quoteGasPayment',
+          args: [destinationDomain],
+        }
+      );
+
+      return (Number(gasPayment) / 10**18).toFixed(6);
+    } catch (error) {
+      console.warn('Failed to estimate gas payment:', error);
+      return '0.0005';
+    }
+  };
+
   return {
-    createOrder,
-    getOrderStatus,
-    getLocalDomain,
     txHash,
     isProcessing,
     error,
+    NETWORK,
+    HYPERLANE,
+    TOKENS,
+    createOrder,
+    getOrderStatus,
+    getLocalDomain,
+    getCurrentDomainId,
+    getDomainId,
+    getCurrentRouterAddress,
+    getNetworkTokens,
+    getRemoteNetwork,
+    getRemoteRouterAddress,
+    getRemoteDomainId,
+    getRouterAddressForNetwork,
+    isTokenSupportedOnNetwork,
+    getEquivalentTokenOnNetwork,
+    estimateGasPayment,
+    currentNetwork: NETWORK.NAME,
+    currentRouter: localRouterAddress,
+    getTokens: (network?: string) => getNetworkTokens(network || NETWORK.NAME)
   };
 };
 
