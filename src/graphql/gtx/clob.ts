@@ -1,7 +1,7 @@
 import { HexAddress } from "@/types/general/address";
 import { gql } from "graphql-request";
 
-export const poolsQuery = gql`
+export const poolsPonderQuery = gql`
   query GetPools {
     poolss {
       items {
@@ -23,6 +23,20 @@ export const poolsQuery = gql`
   }
 `;
 
+export const poolsQuery = gql`
+  query GetPools {
+    pools {
+      baseCurrency
+      coin
+      id
+      orderBook
+      quoteCurrency
+      timestamp
+    }
+  }
+`;
+
+
 export type PoolItem = {
   baseCurrency: string
   coin: string
@@ -32,9 +46,13 @@ export type PoolItem = {
   orderBook: string
   quoteCurrency: string
   timestamp: number
+  baseSymbol?: string
+  quoteSymbol?: string
+  baseDecimals?: number
+  quoteDecimals?: number
 }
 
-export type PoolsResponse = {
+export type PoolsPonderResponse = {
   poolss: {
     items: PoolItem[]
     totalCount: number
@@ -47,7 +65,11 @@ export type PoolsResponse = {
   }
 }
 
-export const tradesQuery = gql`
+export type PoolsResponse = {
+  pools: PoolItem[]
+}
+
+export const tradesPonderQuery = gql`
   query GetTrades($poolId: String) {
     tradess(
       where: { 
@@ -99,10 +121,41 @@ export const tradesQuery = gql`
   }
 `;
 
+export const tradesQuery = gql`
+  query GetTrades {
+    trades {
+      pool
+      price
+      quantity
+      timestamp
+      transactionId
+      order {
+        expiry
+        filled
+        id
+        orderId
+        orderValue
+        pool
+        price
+        quantity
+        side
+        status
+        timestamp
+        type
+        user
+      }
+      id
+    }
+  }
+`;
+
+
+
 export type TradeItem = {
   id: string;
   orderId: string;
   poolId: string;
+  pool: string;
   price: string;
   quantity: string;
   timestamp: number;
@@ -140,7 +193,7 @@ export type TradeItem = {
   };
 }
 
-export type TradesResponse = {
+export type TradesPonderResponse = {
   tradess: {
     items: TradeItem[]
     pageInfo: {
@@ -153,7 +206,11 @@ export type TradesResponse = {
   }
 }
 
-export const ordersQuery = gql`
+export type TradesResponse = {
+  trades: TradeItem[]
+}
+
+export const ordersPonderQuery = gql`
   query GetOrders($userAddress: String!, $poolId: String) {
     orderss(
       where: { user: $userAddress, poolId: $poolId }
@@ -183,6 +240,27 @@ export const ordersQuery = gql`
   }
 `;
 
+export const ordersQuery = gql`
+  query GetOrders($userAddress: String!, $poolId: String) {
+    orders(
+      where: { user: $userAddress, pool: $poolId }
+    ) {
+      expiry
+      filled
+      id
+      orderId
+      pool
+      price
+      quantity
+      side
+      status
+      timestamp
+      type
+      user
+    }
+  }
+`;
+
 export type OrderItem = {
   expiry: string
   filled: string
@@ -205,7 +283,7 @@ export type OrderItem = {
   }
 }
 
-export type OrdersResponse = {
+export type OrdersPonderResponse = {
   orderss: {
     items: OrderItem[]
     pageInfo: {
@@ -218,7 +296,11 @@ export type OrdersResponse = {
   }
 }
 
-export const balancesQuery = gql`
+export type OrdersResponse = {
+  orderss: OrderItem[]
+}
+
+export const balancesPonderQuery = gql`
   query GetBalances($userAddress: String!) {
     balancess(where: { user: $userAddress }) {
       items {
@@ -240,6 +322,19 @@ export const balancesQuery = gql`
   }
 `;
 
+export const balancesQuery = gql`
+  query GetBalances($userAddress: String!) {
+    balances(where: { user: $userAddress }) {
+      amount
+      currency
+      lockedAmount
+      name
+      symbol
+      user
+    }
+  }
+`;
+
 export type BalanceItem = {
   amount: string
   currency: string
@@ -249,13 +344,24 @@ export type BalanceItem = {
   user: string
 }
 
-export type BalancesResponse = {
+export type BalancesPonderResponse = {
   balancess: {
     items: BalanceItem[]
+    pageInfo: {
+      endCursor: string
+      hasNextPage: boolean
+      hasPreviousPage: boolean
+      startCursor: string
+    }
+    totalCount: number
   }
 }
 
-export const minuteCandleStickQuery = gql`
+export type BalancesResponse = {
+  balances: BalanceItem[]
+}
+
+export const minuteCandleStickPonderQuery = gql`
   query GetMinuteCandleStick($poolId: String!) {
     minuteBucketss(
       where: { poolId: $poolId }
@@ -263,20 +369,41 @@ export const minuteCandleStickQuery = gql`
       orderDirection: "asc"
       limit: 1000
     ) {
-      items {
-        open
-        close
-        low
-        high
-        average
-        count
-        timestamp
-      }
+      average
+      close
+      count
+      low
+      id
+      high
+      open
+      pool
+      timestamp
     }
   }
 `;
 
-export const fiveMinuteCandleStickQuery = gql`
+export const minuteCandleStickQuery = gql`
+  query GetMinuteCandleStick($poolId: String!) {
+    minuteBuckets(
+      where: { pool: $poolId }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+      limit: 1000
+    ) {
+      average
+      close
+      count
+      low
+      id
+      high
+      open
+      pool
+      timestamp
+    }
+  }
+`;
+
+export const fiveMinuteCandleStickPonderQuery = gql`
   query GetFiveMinuteCandleStick($poolId: String!) {
     fiveMinuteBucketss(
       where: { poolId: $poolId }
@@ -298,7 +425,28 @@ export const fiveMinuteCandleStickQuery = gql`
 `;
 
 
-export const hourCandleStickQuery = gql`
+export const fiveMinuteCandleStickQuery = gql`
+  query GetFiveMinuteCandleStick($poolId: String!) {
+    fiveMinuteBuckets(
+      where: { pool: $poolId }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+      limit: 1000
+    ) {
+      average
+      close
+      count
+      low
+      id
+      high
+      open
+      pool
+      timestamp
+    }
+  }
+`;
+
+export const hourCandleStickPonderQuery = gql`
   query GetHourCandleStick($poolId: String!) {
     hourBucketss(
       where: { poolId: $poolId }
@@ -306,20 +454,38 @@ export const hourCandleStickQuery = gql`
       orderDirection: "asc"
       limit: 1000
     ) {
-      items {
-        open
-        close
-        low
-        high
-        average
-        count
-        timestamp
-      }
+      average
+      close
+      count
+      low
+      id
+      high
+      open
+      pool
+      timestamp
     }
   }
 `;
 
-export const dailyCandleStickQuery = gql`
+export const hourCandleStickQuery = gql`
+  query GetHourCandleStick($poolId: String!) {
+    hourBuckets(
+      where: { pool: $poolId }
+    ) {
+      average
+      close
+      count
+      low
+      id
+      high
+      open
+      pool
+      timestamp
+    }
+  }
+`;
+
+export const dailyCandleStickPonderQuery = gql`
   query GetDailyCandleStick($poolId: String!) {
     dailyBucketss(
       where: { poolId: $poolId }
@@ -340,36 +506,75 @@ export const dailyCandleStickQuery = gql`
   }
 `;
 
+export const dailyCandleStickQuery = gql`
+  query GetDailyCandleStick($poolId: String!) {
+    dailyBuckets(
+      where: { pool: $poolId }
+      orderBy: "timestamp"
+      orderDirection: "asc"
+      limit: 1000
+    ) {
+      average
+      close
+      count
+      low
+      id
+      high
+      open
+      pool
+      timestamp
+    }
+  }
+`;
+
 export type CandleStickItem = {
-  open: string
-  close: string
-  low: string
-  high: string
   average: string
-  count: string
+  close: string
+  count: number
+  low: string
+  id: string
+  high: string
+  open: string
+  pool: string
   timestamp: string
 }
 
-export type MinuteCandleStickResponse = {
+export type MinuteCandleStickPonderResponse = {
   minuteBucketss: {
     items: CandleStickItem[]
   }
 }
 
-export type FiveMinuteCandleStickResponse = {
+export type MinuteCandleStickResponse = {
+  minuteBuckets: CandleStickItem[]
+}
+
+export type FiveMinuteCandleStickPonderResponse = {
   fiveMinuteBucketss: {
     items: CandleStickItem[]
   }
 }
 
-export type HourCandleStickResponse = {
+export type FiveMinuteCandleStickResponse = {
+  fiveMinuteBuckets: CandleStickItem[]
+}
+
+export type HourCandleStickPonderResponse = {
   hourBucketss: {
     items: CandleStickItem[]
   }
 }
 
-export type DailyCandleStickResponse = {
+export type HourCandleStickResponse = {
+  hourBuckets: CandleStickItem[]
+}
+
+export type DailyCandleStickPonderResponse = {
   dailyBucketss: {
     items: CandleStickItem[]
   }
+}
+
+export type DailyCandleStickResponse = {
+  dailyBuckets: CandleStickItem[]
 }

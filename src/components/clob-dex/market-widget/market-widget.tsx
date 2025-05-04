@@ -1,13 +1,13 @@
 'use client'
 
-import { PoolsResponse, TradesResponse } from '@/graphql/gtx/clob'
+import { PoolsResponse, TradesResponse, PoolItem, TradeItem } from '@/graphql/gtx/clob'
 import { Pool, useMarketStore } from '@/store/market-store'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import { ClobDexComponentProps } from '../clob-dex'
 import { PairDropdown } from './pair-dropdown'
-import { formatVolume } from '@/lib/utils'
+import { formatNumber, formatVolume } from '@/lib/utils'
 
 const SkeletonLoader = () => (
   <div className="w-full h-16 bg-gray-100 dark:bg-[#1B2028] rounded-t-lg animate-pulse flex items-center px-4 space-x-8">
@@ -17,15 +17,22 @@ const SkeletonLoader = () => (
   </div>
 )
 
-export type MarketWidgetProps = ClobDexComponentProps & {
-  poolId?: string | null;
-  poolsData?: PoolsResponse;
-  poolsLoading?: boolean;
-  tradesData?: TradesResponse;
-  tradesLoading?: boolean;
+export interface MarketDataWidgetProps extends ClobDexComponentProps {
+  poolId: string | null;
+  selectedPool: PoolItem;
+  tradesData: TradeItem[];
+  tradesLoading: boolean;
 }
 
-export default function MarketWidget({ chainId, defaultChainId, poolId, poolsData, poolsLoading, tradesData, tradesLoading }: MarketWidgetProps) {
+export default function MarketDataWidget({
+  address,
+  chainId,
+  defaultChainId,
+  poolId,
+  selectedPool,
+  tradesData,
+  tradesLoading
+}: MarketDataWidgetProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [lastPathname, setLastPathname] = useState<string | null>(null)
@@ -45,24 +52,26 @@ export default function MarketWidget({ chainId, defaultChainId, poolId, poolsDat
   } = useMarketStore()
 
   const poolsWithDecimals = useMemo<Pool[]>(() => {
-    if (!poolsData?.poolss?.items) return []
-    return poolsData.poolss.items.map(pool => ({
-      ...pool,
-      baseDecimals: 18, 
-      quoteDecimals: 6,
-    }))
-  }, [poolsData])
+    if (!selectedPool) return []
+    return [
+      {
+        ...selectedPool,
+        baseDecimals: 18,
+        quoteDecimals: 6,
+      }
+    ]
+  }, [selectedPool])
 
   useEffect(() => {
     if (pathname !== lastPathname) {
       setLastPathname(pathname)
-      
+
       if (poolsWithDecimals.length > 0) {
         const urlParts = pathname?.split('/') || []
         if (urlParts.length >= 3) {
           const poolIdFromUrl = urlParts[2]
           const poolExists = poolsWithDecimals.some(pool => pool.id === poolIdFromUrl)
-          
+
           if (poolExists && poolIdFromUrl !== selectedPoolId) {
             setSelectedPoolId(poolIdFromUrl)
             const poolObject = poolsWithDecimals.find(pool => pool.id === poolIdFromUrl)
@@ -93,7 +102,7 @@ export default function MarketWidget({ chainId, defaultChainId, poolId, poolsDat
 
   const handlePoolChange = (poolId: string) => {
     setSelectedPoolId(poolId)
-    
+
     if (poolsWithDecimals) {
       const selectedPoolObject = poolsWithDecimals.find(pool => pool.id === poolId)
       if (selectedPoolObject) {
@@ -102,49 +111,34 @@ export default function MarketWidget({ chainId, defaultChainId, poolId, poolsDat
         setQuoteDecimals(quoteDecimals)
       }
     }
-    
+
     router.push(getUrlFromPool(poolId))
   }
 
   useEffect(() => {
-    if (!tradesData?.tradess?.items || tradesData.tradess.items.length === 0 || !selectedPoolId) return
-    
-    const filteredTrades = tradesData.tradess.items.filter(trade => trade.poolId === selectedPoolId)
-    
-    if (filteredTrades.length === 0) {
-      setMarketData({
-        price: null,
-        priceChange24h: null,
-        priceChangePercent24h: null,
-        high24h: null,
-        low24h: null,
-        volume: null,
-        pair: poolsWithDecimals.find(pool => pool.id === selectedPoolId)?.coin || null
-      })
-      return
-    }
-    
-    const sortedItems = [...filteredTrades].sort(
+    if (!tradesData || tradesData.length === 0 || !selectedPoolId) return
+
+    const sortedItems = [...tradesData].sort(
       (a, b) => b.timestamp - a.timestamp
     )
 
     const currentTrade = sortedItems[0]
     const currentPrice = Number(currentTrade.price)
-    
+
     const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
-    const prevDayTrade = sortedItems.find(trade => 
+    const prevDayTrade = sortedItems.find(trade =>
       trade.timestamp <= twentyFourHoursAgo
-    ) || sortedItems[sortedItems.length - 1] 
-    
+    ) || sortedItems[sortedItems.length - 1]
+
     const prevDayPrice = Number(prevDayTrade.price)
     const priceChange = currentPrice - prevDayPrice
     const priceChangePercent = (priceChange / prevDayPrice) * 100
 
     let high24h = 0
     let low24h = Number.MAX_VALUE
-    
+
     const trades24h = sortedItems.filter(trade => trade.timestamp >= twentyFourHoursAgo)
-    
+
     if (trades24h.length > 0) {
       trades24h.forEach(trade => {
         const price = Number(trade.price)
@@ -158,7 +152,7 @@ export default function MarketWidget({ chainId, defaultChainId, poolId, poolsDat
 
     const totalVolume = sortedItems.reduce((sum, trade) => {
       if (trade.timestamp >= twentyFourHoursAgo) {
-        return sum + BigInt(trade.quantity)
+        return sum + (BigInt(trade.quantity) * BigInt(trade.price) / BigInt(10 ** baseDecimals))
       }
       return sum
     }, BigInt(0))
@@ -176,25 +170,7 @@ export default function MarketWidget({ chainId, defaultChainId, poolId, poolsDat
     })
   }, [tradesData, selectedPoolId, poolsWithDecimals, setMarketData])
 
-  const formatNumber = (value: number | null, options: {
-    decimals?: number
-    prefix?: string
-    suffix?: string
-    compact?: boolean
-  } = {}) => {
-    if (value === null) return '...'
-    const { decimals = 2, prefix = '', suffix = '', compact = false } = options
-
-    const formatter = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-      notation: compact ? 'compact' : 'standard',
-    })
-
-    return `${prefix}${formatter.format(value)}${suffix}`
-  }
-
-  if (poolsLoading || tradesLoading) return <SkeletonLoader />
+  if (tradesLoading) return <SkeletonLoader />
 
   return (
     <div className="w-full bg-gradient-to-br from-gray-950 to-gray-900 border border-gray-700/30 text-white rounded-t-lg shadow-md">
@@ -223,32 +199,26 @@ export default function MarketWidget({ chainId, defaultChainId, poolId, poolsDat
         <div className="flex-1 flex gap-4 justify-center">
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1 underline'>Price</div>
-            <div className='text-gray-900 dark:text-white'>{formatNumber(Number(formatUnits(BigInt(marketData.price ?? 0), quoteDecimals)), { prefix: '$' })}</div>
+            <div className='text-gray-900 dark:text-white'>${formatNumber(formatUnits(BigInt(marketData.price ?? 0), quoteDecimals))}</div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
             <div className='font-semibold text-[15px] pb-1'>24h High</div>
             <div className='text-green-600 dark:text-[#5BBB6F]'>
-              {formatNumber(Number(formatUnits(BigInt(marketData.high24h ?? 0), quoteDecimals)), { 
-                prefix: '$',
-                decimals: 2
-              })}
+              ${formatNumber(formatUnits(BigInt(marketData.high24h ?? 0), quoteDecimals))}
             </div>
           </div>
-          
+
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
             <div className='font-semibold text-[15px] pb-1'>24h Low</div>
             <div className='text-red-600 dark:text-[#FF6978]'>
-              {formatNumber(Number(formatUnits(BigInt(marketData.low24h ?? 0), quoteDecimals)), { 
-                prefix: '$',
-                decimals: 2
-              })}
+              ${formatNumber(formatUnits(BigInt(marketData.low24h ?? 0), quoteDecimals))}
             </div>
           </div>
-          
+
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className='font-semibold text-[15px] pb-1'>24h Volume</div>
-            <div className='text-gray-900 dark:text-white'>${formatVolume(Number(formatUnits(marketData.volume ?? BigInt(0), quoteDecimals)), 2)}</div>
+            <div className='text-gray-900 dark:text-white'>${formatNumber(formatUnits(BigInt(marketData.volume ?? 0), quoteDecimals))}</div>
           </div>
         </div>
       </div>

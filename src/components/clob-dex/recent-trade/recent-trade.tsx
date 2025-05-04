@@ -85,7 +85,7 @@ const RecentTradesComponent = ({ chainId, defaultChainId, poolsData, poolsLoadin
     )
   }
 
-  const trades = calculateTotal(processTrades(tradesData?.tradess.items || []))
+  const trades = calculateTotal(processTrades((tradesData as TradesResponse)?.trades || []))
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">

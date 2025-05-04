@@ -3,7 +3,8 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI"
 import OrderBookABI from "@/abis/gtx/clob/OrderBookABI"
 import { wagmiConfig } from "@/configs/wagmi"
-import { PoolsResponse } from "@/graphql/gtx/clob"
+import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
+import { PoolItem, PoolsResponse } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { readContract } from "@wagmi/core"
 import { ArrowDown, ArrowUp, Menu, RefreshCw } from "lucide-react"
@@ -12,7 +13,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
-import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
 
 interface Order {
   price: number
@@ -41,12 +41,21 @@ const PRICE_MATCH_THRESHOLD = 0.07
 const TOTAL_MATCH_THRESHOLD = 4
 
 export type OrderBookDexProps = ClobDexComponentProps & {
+  selectedPool: PoolItem
   poolsData?: PoolsResponse;
   poolsLoading?: boolean;
   poolsError?: Error | null;
 }
 
-const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsError }: OrderBookDexProps) => {
+interface EnhancedOrderBookDexProps {
+    selectedPool: PoolItem
+    chainId: number | undefined
+    defaultChainId: number
+    poolsLoading: boolean
+    poolsError: Error | null
+}
+
+const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoading, poolsError }: EnhancedOrderBookDexProps) => {
   const [mounted, setMounted] = useState(false)
   const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>("0.01")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -67,37 +76,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
   })
 
   const [viewType, setViewType] = useState<ViewType>("both")
-  const { selectedPool, selectedPoolId, marketData, quoteDecimals, baseDecimals, setSelectedPool } = useMarketStore()
-
-  // When URL or selectedPoolId changes, ensure selectedPool is updated
-  useEffect(() => {
-    if (!mounted || !poolsData) return
-
-    // If we have a selectedPoolId but no selectedPool, find the pool in the data
-    if (selectedPoolId && (!selectedPool || selectedPool.id !== selectedPoolId)) {
-      const pool = poolsData.poolss.items.find(p => p.id === selectedPoolId)
-      if (pool) {
-        setSelectedPool(pool)
-      }
-    }
-
-    // Extract pool ID from URL when it changes
-    if (pathname) {
-      const urlParts = pathname.split('/')
-      if (urlParts.length >= 3) {
-        const poolIdFromUrl = urlParts[2]
-
-        // If URL has a different pool ID than what's selected, update the pool
-        if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId && poolsData) {
-          const pool = poolsData.poolss.items.find(p => p.id === poolIdFromUrl)
-          if (pool) {
-            setSelectedPool(pool)
-            console.log(`OrderBook: Updated pool from URL to ${pool.coin}`)
-          }
-        }
-      }
-    }
-  }, [pathname, selectedPoolId, selectedPool, poolsData, mounted, setSelectedPool])
+  const { marketData, quoteDecimals, baseDecimals } = useMarketStore()
 
   // Custom functions to handle dynamic orderbook addresses
   const getBestPrice = async ({ side }: { side: OrderSideEnum }) => {
@@ -137,10 +116,14 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
 
     try {
       const prices = await readContract(wagmiConfig, {
-        address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
+        address: getContractAddress(chainId ?? defaultChainId, ContractName.clobRouter) as `0x${string}`,
         abi: GTXRouterABI,
         functionName: "getNextBestPrices",
-        args: [selectedPool.baseCurrency as `0x${string}`, selectedPool.quoteCurrency as `0x${string}`, side, price, count] as const,
+        args: [{
+          orderBook: selectedPool.orderBook as `0x${string}`,
+          baseCurrency: selectedPool.baseCurrency as `0x${string}`,
+          quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
+        }, side, price, count] as const,
       })
 
       return [...prices] as Array<{ price: bigint; volume: bigint }>
@@ -350,7 +333,6 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, poolsData, poolsLoading
     }
 
     const interval = setInterval(fetchOrderBook, 1000)
-    fetchOrderBook()
 
     return () => clearInterval(interval)
   }, [mounted, selectedPool, quoteDecimals, baseDecimals, getBestPrice, getNextBestPrices])
