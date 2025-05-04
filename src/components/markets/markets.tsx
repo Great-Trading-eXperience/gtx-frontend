@@ -64,6 +64,7 @@ export default function MarketList() {
   const [marketData, setMarkets] = useState<MarketData[]>([])
   const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isProcessingPools, setIsProcessingPools] = useState(true)
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false)
   const [copiedToken, setCopiedToken] = useState<{ id: string; name: string } | null>(null)
   const [processedPools, setProcessedPools] = useState<ProcessedPool[]>([])
@@ -102,6 +103,7 @@ export default function MarketList() {
 
   // Process pools data
   const processPools = async (poolsData: any) => {
+    setIsProcessingPools(true)
     if (!poolsData) return []
 
     const pools = (poolsData as PoolsPonderResponse)?.poolss?.items || (poolsData as PoolsResponse)?.pools
@@ -169,6 +171,7 @@ export default function MarketList() {
       }
     }))
 
+    setIsProcessingPools(false)
     return processedPools.sort((a, b) => {
       const aHasWETH = a.baseSymbol.toLowerCase().includes('weth') || a.baseSymbol.toLowerCase().includes('eth')
       const bHasWETH = b.baseSymbol.toLowerCase().includes('weth') || b.baseSymbol.toLowerCase().includes('eth')
@@ -422,7 +425,7 @@ export default function MarketList() {
 
         {/* Market Table */}
         <div className="overflow-x-auto bg-black/80 border border-white/20 p-2 rounded-lg z-30">
-          {isLoading ? (
+          {(isLoading || isProcessingPools) ? (
             <MarketListSkeleton rowCount={5} />
           ) : (
             <table className="w-full min-w-[800px] border-separate border-spacing-y-1">

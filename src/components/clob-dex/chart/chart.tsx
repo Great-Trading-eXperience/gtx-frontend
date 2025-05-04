@@ -90,7 +90,7 @@ export type ChartComponentProps = ClobDexComponentProps & {
   height?: number
 }
 
-function ChartComponent({ chainId, defaultChainId, poolsData, height = 380 }: ChartComponentProps) {
+function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponentProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
