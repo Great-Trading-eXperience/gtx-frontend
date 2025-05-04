@@ -42,6 +42,9 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 
+# TradingView Charting Library
+public/charting_library/
+
 # package manager locks (using pnpm)
 yarn.lock
 package-lock.json
