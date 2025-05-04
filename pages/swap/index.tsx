@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { WagmiConfig } from 'wagmi';
 import { wagmiConfig } from '@/configs/wagmi';
 import { Toaster } from 'sonner';
-import CrossChainOrderForm from '@/components/swap/swap';
-import CrossChainProvider from '@/hooks/web3/espresso/useCrossChain';
+import CrossChainOrderForm from '@/components/pharos/swap/swap';
+import CrossChainProvider from '@/hooks/web3/pharos/useCrossChain';
 
 /**
  * Main application component that sets up providers and layout
@@ -65,3 +65,15 @@ export default function CrossChainAppExample() {
         </WagmiConfig>
     );
 }
+
+const getExplorerBaseUrl = (networkId: string) => {
+  switch (networkId) {
+    case 'arbitrum-sepolia':
+      return 'https://sepolia.arbiscan.io/tx/';
+    case 'pharos':
+      return 'https://pharosscan.xyz/tx/';
+    // Add more networks as needed
+    default:
+      return '';
+  }
+};
