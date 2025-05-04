@@ -1,36 +1,30 @@
 "use client"
 
-import { OrdersResponse, PoolsResponse } from "@/graphql/gtx/clob"
+import { ClobDexComponentProps } from "../clob-dex"
+import { OrderItem, PoolItem } from "@/graphql/gtx/clob"
 import { formatPrice } from "@/lib/utils"
 import { useMarketStore } from "@/store/market-store"
-import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2 } from "lucide-react"
+import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2, BookOpen } from "lucide-react"
 import { useState } from "react"
 import { formatUnits } from "viem"
 import { formatDate } from "../../../../helper"
-import { ClobDexComponentProps } from "../clob-dex"
 
-const calculateFillPercentage = (filled: string, quantity: string): string => {
-  if (!filled || !quantity || filled === "0" || quantity === "0") return "0"
-
-  const filledBN = BigInt(filled)
-  const quantityBN = BigInt(quantity)
-
-  if (quantityBN === 0n) return "0"
-
-  const percentage = (filledBN * 10000n) / quantityBN
-  return (Number(percentage) / 100).toFixed(2)
+export interface OrderHistoryTableProps extends ClobDexComponentProps {
+  ordersData: OrderItem[];
+  ordersLoading: boolean;
+  ordersError: Error | null;
+  selectedPool: PoolItem;
 }
 
-export type OrderHistoryTableProps = ClobDexComponentProps & {
-  ordersData?: OrdersResponse;
-  ordersLoading?: boolean;
-  ordersError?: Error | null;
-  poolsData?: PoolsResponse;
-  poolsLoading?: boolean;
-  poolsError?: Error | null;
-}
-
-const OrderHistoryTable = ({ address, ordersData, ordersLoading, ordersError, poolsData, poolsLoading, poolsError }: OrderHistoryTableProps) => {
+export default function OrderHistoryTable({
+  address,
+  chainId,
+  defaultChainId,
+  ordersData,
+  ordersLoading,
+  ordersError,
+  selectedPool
+}: OrderHistoryTableProps) {
   type SortDirection = "asc" | "desc"
   type SortableKey = "timestamp" | "filled" | "orderId" | "price"
 
@@ -38,57 +32,23 @@ const OrderHistoryTable = ({ address, ordersData, ordersLoading, ordersError, po
     key: "timestamp",
     direction: "desc",
   })
-  const { quoteDecimals } = useMarketStore()
 
   const handleSort = (key: SortableKey) => {
-    setSortConfig((prevConfig) => ({
-      key: key,
-      direction: prevConfig.key === key && prevConfig.direction === "asc" ? "desc" : "asc",
+    setSortConfig((currentConfig) => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === "asc" ? "desc" : "asc",
     }))
   }
 
-  if (!address) {
-    return (
-      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Wallet2 className="h-12 w-12 text-gray-400" />
-          <p className="text-lg text-gray-200">Connect your wallet to view order history</p>
-        </div>
-      </div>
-    )
+  const calculateFillPercentage = (filled: string, quantity: string): string => {
+    if (!filled || !quantity) return "0"
+    const filledBigInt = BigInt(filled)
+    const quantityBigInt = BigInt(quantity)
+    if (quantityBigInt === 0n) return "0"
+    return ((filledBigInt * 100n) / quantityBigInt).toString()
   }
 
-  if (ordersLoading) {
-    return (
-      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          <p className="text-lg text-gray-200">Loading your order history...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (ordersError) {
-    return (
-      <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-rose-800/30 bg-rose-900/20 p-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-          <p className="text-lg text-rose-200">{ordersError instanceof Error ? ordersError.message : "Unknown error"}</p>
-        </div>
-      </div>
-    )
-  }
-
-  const orders = ordersData?.orderss?.items || []
-
-  const getPoolName = (poolId: string): string => {
-    if (!poolsData?.poolss?.items) return "Unknown"
-    const pool = poolsData.poolss.items.find((p) => p.id === poolId)
-    return pool ? pool.coin : "Unknown"
-  }
-
-  const sortedOrders = [...orders].sort((a, b) => {
+  const sortedOrders = [...(ordersData || [])].sort((a, b) => {
     const key = sortConfig.key
 
     if (key === "timestamp") {
@@ -122,9 +82,35 @@ const OrderHistoryTable = ({ address, ordersData, ordersLoading, ordersError, po
     return 0
   })
 
+  const getPoolName = (poolId: string): string => {
+    if (!selectedPool) return "Unknown"
+    return selectedPool.coin || "Unknown"
+  }
+
+  if (ordersLoading)
+    return (
+      <div className="flex items-center justify-center h-40">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
+
+  if (ordersError)
+    return (
+      <div className="p-4 bg-gradient-to-br from-red-900/40 to-red-950/40 rounded-xl border border-red-800/50 text-red-300">
+        <p>Error loading orders: {ordersError.message}</p>
+      </div>
+    )
+
+  if (!ordersData || ordersData.length === 0)
+    return (
+      <div className="flex flex-col items-center justify-center h-40 space-y-2">
+        <BookOpen className="h-8 w-8 text-gray-400" />
+        <p className="text-gray-400">No orders found</p>
+      </div>
+    )
+
   return (
-    <div className="w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gray-900/20 shadow-lg">
-      {/* Header */}
+    <div className="relative overflow-x-auto">
       <div className="grid grid-cols-6 gap-4 border-b border-gray-800/30 bg-gray-900/40 px-4 py-3 backdrop-blur-sm">
         <button
           onClick={() => handleSort("timestamp")}
@@ -161,45 +147,22 @@ const OrderHistoryTable = ({ address, ordersData, ordersLoading, ordersError, po
         </button>
         <div className="text-sm font-medium text-gray-200">Status</div>
       </div>
-
-      {/* Table Body */}
-      <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
-        {sortedOrders.length > 0 ? (
-          sortedOrders.map((order) => (
-            <div
-              key={order.id}
-              className="grid grid-cols-6 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
-            >
-              <div className="text-gray-200">{formatDate(order.timestamp.toString())}</div>
-              <div className="text-gray-200">{getPoolName(order.poolId)}</div>
-              <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(order.price), quoteDecimals))}</div>
-              <div className={order.side === "Buy" ? "text-emerald-400" : "text-rose-400"}>{order.side}</div>
-              <div className="font-medium text-white">{calculateFillPercentage(order.filled, order.quantity)}%</div>
-              <div
-                className={
-                  order.status === "FILLED"
-                    ? "text-emerald-400"
-                    : order.status === "CANCELLED"
-                      ? "text-rose-400"
-                      : "text-amber-400"
-                }
-              >
-                {order.status}
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="flex min-h-[200px] items-center justify-center p-8">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <ArrowDownUp className="h-8 w-8 text-gray-400" />
-              <p className="text-gray-200">No orders found for your wallet</p>
-            </div>
+      <div className="space-y-2 p-4">
+        {sortedOrders.map((order) => (
+          <div
+            key={order.orderId}
+            className="grid grid-cols-6 gap-4 rounded-lg bg-gray-900/20 p-4 transition-colors hover:bg-gray-900/40"
+          >
+            <div className="text-gray-200">{formatDate(order.timestamp.toString())}</div>
+            <div className="text-gray-200">{getPoolName(order.poolId)}</div>
+            <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(order.price), selectedPool?.quoteDecimals || 6))}</div>
+            <div className={order.side === "Buy" ? "text-emerald-400" : "text-rose-400"}>{order.side}</div>
+            <div className="font-medium text-white">{calculateFillPercentage(order.filled, order.quantity)}%</div>
+            <div className="text-gray-200">{order.status}</div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   )
 }
-
-export default OrderHistoryTable
 

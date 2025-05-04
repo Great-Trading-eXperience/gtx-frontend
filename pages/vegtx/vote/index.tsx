@@ -159,7 +159,7 @@ export default function VotePage() {
             </p>
             <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>Direct GTX incentives into the pool</li>
-              <li>Entitle you to earn a share of the pool's swap fees, proportional to your votes</li>
+              <li>Entitle you to earn a share of the pool swap fees, proportional to your votes</li>
             </ol>
 
             <div className="p-4 bg-muted rounded-lg">

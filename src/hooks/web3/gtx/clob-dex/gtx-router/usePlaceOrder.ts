@@ -25,6 +25,7 @@ export const usePlaceOrder = () => {
     error: limitSimulateError,
   } = useMutation({
     mutationFn: async ({
+      pool,
       baseCurrency,
       quoteCurrency,
       price,
@@ -32,8 +33,10 @@ export const usePlaceOrder = () => {
       side,
       withDeposit = false
     }: {
+      pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
       baseCurrency: HexAddress;
       quoteCurrency: HexAddress;
+      orderBook: HexAddress;
       price: bigint;
       quantity: bigint;
       side: OrderSideEnum;
@@ -138,7 +141,13 @@ export const usePlaceOrder = () => {
               address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeOrderWithDeposit',
-              args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
+              args: [
+                pool,
+                BigInt(price),
+                BigInt(quantity),
+                side === OrderSideEnum.BUY ? 0 : 1,
+                address as `0x${string}`
+              ] as const,
             });
             
             console.log("Simulation result:", simulation.result);
@@ -148,7 +157,13 @@ export const usePlaceOrder = () => {
               address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeOrderWithDeposit',
-              args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
+              args: [
+                pool,
+                BigInt(price),
+                BigInt(quantity),
+                side === OrderSideEnum.BUY ? 0 : 1,
+                address as `0x${string}`
+              ] as const,
             });
           } catch (simulationError: unknown) {
             console.error("Limit order with deposit simulation failed:", simulationError);
@@ -257,8 +272,14 @@ export const usePlaceOrder = () => {
             const simulation = await simulateContract(wagmiConfig, {
               address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
-              functionName: 'placeOrder',
-              args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
+              functionName: 'placeOrderWithDeposit',
+              args: [
+                pool,
+                BigInt(price),
+                BigInt(quantity),
+                side === OrderSideEnum.BUY ? 0 : 1,
+                address as `0x${string}`
+              ] as const,
             });
             
             console.log("Simulation result:", simulation.result);
@@ -267,8 +288,14 @@ export const usePlaceOrder = () => {
             hash = await writeContract(wagmiConfig, {
               address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
-              functionName: 'placeOrder',
-              args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, price, quantity, side, address as `0x${string}` ] as const,
+              functionName: 'placeOrderWithDeposit',
+              args: [
+                pool,
+                BigInt(price),
+                BigInt(quantity),
+                side === OrderSideEnum.BUY ? 0 : 1,
+                address as `0x${string}`
+              ] as const,
             });
           } catch (simulationError: unknown) {
             console.error("Limit order simulation failed:", simulationError);
@@ -313,15 +340,19 @@ export const usePlaceOrder = () => {
     error: marketSimulateError,
   } = useMutation({
     mutationFn: async ({
+      pool,
       baseCurrency,
       quoteCurrency,
+      orderBook,
       quantity,
       side,
       price,
       withDeposit = false
     }: {
+      pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
       baseCurrency: HexAddress;
       quoteCurrency: HexAddress;
+      orderBook: HexAddress;
       quantity: bigint;
       side: OrderSideEnum;
       price?: bigint;
@@ -398,8 +429,7 @@ export const usePlaceOrder = () => {
                   address: requiredToken,
                   abi: erc20Abi,
                   functionName: 'approve',
-                  // TODO: Remove the * 2
-                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, BigInt(Number(requiredAmount) * 2)  ],
+                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, requiredAmount],
                 });
                 
                 console.log('Approval transaction hash:', approvalHash);
@@ -431,7 +461,12 @@ export const usePlaceOrder = () => {
               address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeMarketOrderWithDeposit',
-              args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, BigInt(quantity), side, address as `0x${string}` ] as const,
+              args: [
+                pool,
+                BigInt(quantity),
+                side === OrderSideEnum.BUY ? 0 : 1,
+                address as `0x${string}`
+              ] as const,
             });
             
             console.log("Simulation result:", simulation.result);
@@ -441,7 +476,16 @@ export const usePlaceOrder = () => {
               address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
               abi: GTXRouterABI,
               functionName: 'placeMarketOrderWithDeposit',
-              args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, BigInt(quantity), side, address as `0x${string}` ] as const,
+              args: [
+                {
+                  baseCurrency,
+                  quoteCurrency,
+                  orderBook
+                },
+                BigInt(quantity),
+                side === OrderSideEnum.BUY ? 0 : 1,
+                address as `0x${string}`
+              ] as const,
             });
           } catch (simulationError: unknown) {
             console.error("Market order with deposit simulation failed:", simulationError);
@@ -461,7 +505,16 @@ export const usePlaceOrder = () => {
             address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
-            args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, quantity, side, address as `0x${string}` ] as const,
+            args: [
+              {
+                baseCurrency,
+                quoteCurrency,
+                orderBook
+              },
+              BigInt(quantity),
+              side === OrderSideEnum.BUY ? 0 : 1,
+              address as `0x${string}`
+            ] as const,
           });
           
           console.log("Simulation result:", simulation.result);
@@ -471,7 +524,16 @@ export const usePlaceOrder = () => {
             address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
-            args: [baseCurrency as `0x${string}`, quoteCurrency as `0x${string}`, quantity, side, address as `0x${string}` ] as const,
+            args: [
+              {
+                baseCurrency,
+                quoteCurrency,
+                orderBook
+              },
+              BigInt(quantity),
+              side === OrderSideEnum.BUY ? 0 : 1,
+              address as `0x${string}`
+            ] as const,
           });
         }
 
@@ -516,7 +578,7 @@ const {
 
   // Wrapper functions with validation
   const handlePlaceLimitOrder = async (
-    poolKey: { baseCurrency: HexAddress; quoteCurrency: HexAddress },
+    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
     price: bigint,
     quantity: bigint,
     side: OrderSideEnum,
@@ -538,8 +600,10 @@ const {
     }
 
     return placeLimitOrder({ 
-      baseCurrency: poolKey.baseCurrency, 
-      quoteCurrency: poolKey.quoteCurrency, 
+      pool,
+      baseCurrency: pool.baseCurrency,
+      quoteCurrency: pool.quoteCurrency,
+      orderBook: pool.orderBook,
       price, 
       quantity, 
       side, 
@@ -548,7 +612,7 @@ const {
   };
 
   const handlePlaceMarketOrder = async (
-    poolKey: { baseCurrency: HexAddress; quoteCurrency: HexAddress },
+    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
     quantity: bigint,
     side: OrderSideEnum,
     price?: bigint,
@@ -565,8 +629,10 @@ const {
     }
 
     return placeMarketOrder({ 
-      baseCurrency: poolKey.baseCurrency, 
-      quoteCurrency: poolKey.quoteCurrency, 
+      pool,
+      baseCurrency: pool.baseCurrency,
+      quoteCurrency: pool.quoteCurrency,
+      orderBook: pool.orderBook,
       quantity, 
       side, 
       price, 

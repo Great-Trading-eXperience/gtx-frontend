@@ -1,6 +1,7 @@
 import { HexAddress } from "@/types/general/address";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatUnits } from 'viem'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -52,4 +53,88 @@ export const formatVolume = (value: number, decimals: number = 6) => {
 export const formatTime = (timestamp: number): string => {
   const date = new Date(timestamp * 1000)
   return date.toLocaleTimeString("en-US", { hour12: false })
+}
+
+export const formatNumber = (
+  value: string | number,
+  options: {
+    decimals?: number;
+    compact?: boolean;
+    notation?: 'standard' | 'scientific' | 'engineering' | 'compact';
+  } = {}
+) => {
+  const {
+    decimals = 0,
+    compact = false,
+    notation = compact ? 'compact' : 'standard'
+  } = options;
+
+  const num = typeof value === 'string' ? Number(value) : value;
+  
+  if (isNaN(num)) return '0';
+
+  try {
+    const formatter = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      notation,
+    });
+
+    return formatter.format(num);
+  } catch (error) {
+    // Fallback to basic formatting if Intl.NumberFormat fails
+    if (num >= 1e9) return (num / 1e9).toFixed(decimals) + "B";
+    if (num >= 1e6) return (num / 1e6).toFixed(decimals) + "M";
+    return num.toFixed(decimals);
+  }
+}
+
+export const calculateAge = (timestamp: number) => {
+  const now = Math.floor(Date.now() / 1000)
+  const ageInSeconds = now - timestamp
+
+  // Convert to appropriate time unit
+  if (ageInSeconds < 60) {
+    return `${ageInSeconds}s`
+  } else if (ageInSeconds < 3600) {
+    return `${Math.floor(ageInSeconds / 60)}m`
+  } else if (ageInSeconds < 86400) {
+    return `${Math.floor(ageInSeconds / 3600)}h`
+  } else {
+    return `${Math.floor(ageInSeconds / 86400)}d`
+  }
+}
+
+interface IconInfo {
+  icon: string;
+  bgColor: string;
+}
+
+export const getIconInfo = (tokenName: string): IconInfo => {
+  const defaultIcon = '💎'
+  const defaultBgColor = 'bg-blue-500'
+
+  // Common token mappings
+  const tokenMappings: Record<string, IconInfo> = {
+    'WETH': { icon: '⚡', bgColor: 'bg-purple-500' },
+    'ETH': { icon: '⚡', bgColor: 'bg-purple-500' },
+    'USDC': { icon: '💵', bgColor: 'bg-green-500' },
+    'USDT': { icon: '💵', bgColor: 'bg-green-500' },
+    'BTC': { icon: '₿', bgColor: 'bg-orange-500' },
+    'WBTC': { icon: '₿', bgColor: 'bg-orange-500' },
+  }
+
+  // Check for exact matches first
+  if (tokenName in tokenMappings) {
+    return tokenMappings[tokenName]
+  }
+
+  // Check for partial matches
+  for (const [key, value] of Object.entries(tokenMappings)) {
+    if (tokenName.toUpperCase().includes(key)) {
+      return value
+    }
+  }
+
+  return { icon: defaultIcon, bgColor: defaultBgColor }
 }

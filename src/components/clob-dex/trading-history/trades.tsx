@@ -1,24 +1,33 @@
 "use client"
 
 import { EXPLORER_URL } from '@/constants/explorer-url';
-import { TradesResponse } from '@/graphql/gtx/clob';
+import { PoolItem, TradeItem } from '@/graphql/gtx/clob';
 import { formatPrice, formatQuantity } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
-import { ArrowDownUp, ChevronDown, Clock, ExternalLink, Loader2, Wallet2 } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, Clock, ExternalLink, Loader2, Wallet2, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { formatDate } from '../../../../helper';
-import { ClobDexComponentProps } from '../clob-dex';
+import { ClobDexComponentProps } from "../clob-dex";
 
-export type TradesProps = ClobDexComponentProps & {
-  tradesData?: TradesResponse;
-  tradesLoading?: boolean;
-  tradesError?: Error | null;
+export interface TradesProps extends ClobDexComponentProps {
+  tradesData: TradeItem[];
+  tradesLoading: boolean;
+  tradesError: Error | null;
+  selectedPool: PoolItem;
 }
 
-const TradeHistoryTable = ({chainId, defaultChainId, tradesData, tradesLoading, tradesError}: TradesProps) => {
-  const { address } = useAccount();
+const TradeHistoryTable = ({
+  address,
+  chainId,
+  defaultChainId,
+  tradesData,
+  tradesLoading,
+  tradesError,
+  selectedPool
+}: TradesProps) => {
+  const { address: accountAddress } = useAccount();
   type SortDirection = 'asc' | 'desc';
   type SortableKey = 'timestamp' | 'quantity' | 'price';
 
@@ -76,11 +85,11 @@ const TradeHistoryTable = ({chainId, defaultChainId, tradesData, tradesLoading, 
     );
   }
 
-  const trades = tradesData?.tradess?.items || [];
+  const trades = tradesData || [];
   
   const filteredTrades = filterByMyAddress 
     ? trades.filter(trade => 
-        trade.order?.user?.user?.toLowerCase() === address?.toLowerCase()
+        trade.order?.user?.user?.toLowerCase() === accountAddress?.toLowerCase()
       )
     : trades;
 
@@ -167,7 +176,7 @@ const TradeHistoryTable = ({chainId, defaultChainId, tradesData, tradesLoading, 
           {sortedTrades.length > 0 ? (
             sortedTrades.map((trade) => {
               const isBuy = trade.order?.side === 'Buy';
-              const pair = trade.order?.pool?.coin || 'Unknown';
+              const pair = selectedPool.coin;
 
               return (
                 <div
@@ -197,7 +206,7 @@ const TradeHistoryTable = ({chainId, defaultChainId, tradesData, tradesLoading, 
           ) : (
             <div className="flex min-h-[200px] items-center justify-center p-8">
               <div className="flex flex-col items-center gap-3 text-center">
-                <ArrowDownUp className="h-8 w-8 text-gray-400" />
+                <BookOpen className="h-8 w-8 text-gray-400" />
                 <p className="text-gray-200">
                   {filterByMyAddress 
                     ? "No trades found for your wallet" 

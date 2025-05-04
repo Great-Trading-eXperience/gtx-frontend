@@ -3,16 +3,43 @@
 import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ClobDexComponentProps } from "../clob-dex"
+import { BalanceItem, OrderItem, PoolItem, TradeItem } from "@/graphql/gtx/clob"
+import { HexAddress } from "@/types/general/address"
 import { BookOpen, History, Wallet } from "lucide-react"
 import { useAccount } from "wagmi"
-import { ClobDexComponentProps } from "../clob-dex"
-import BalancesHistoryTable, { BalancesHistoryTableProps } from "./balances"
-import OrderHistoryTable, { OrderHistoryTableProps } from "./orders"
-import TradeHistoryTable, { TradesProps } from "./trades"
+import BalancesHistoryTable from "./balances"
+import OrderHistoryTable from "./orders"
+import TradeHistoryTable from "./trades"
 
-export type TradingHistoryProps = ClobDexComponentProps & BalancesHistoryTableProps & OrderHistoryTableProps & TradesProps
+export interface TradingHistoryProps extends ClobDexComponentProps {
+  balanceData: BalanceItem[];
+  balancesLoading: boolean;
+  balancesError: Error | null;
+  ordersData: OrderItem[];
+  ordersLoading: boolean;
+  ordersError: Error | null;
+  selectedPool: PoolItem;
+  tradesData: TradeItem[];
+  tradesLoading: boolean;
+  tradesError: Error | null;
+}
 
-export default function TradingHistory({ address, chainId, defaultChainId, balancesResponse, balancesLoading, balancesError, ordersData, ordersLoading, ordersError, poolsData, poolsLoading, poolsError, tradesData, tradesLoading, tradesError }: TradingHistoryProps) {
+export default function TradingHistory({
+    address,
+    chainId,
+    defaultChainId,
+    balanceData,
+    balancesLoading,
+    balancesError,
+    ordersData,
+    ordersLoading,
+    ordersError,
+    selectedPool,
+    tradesData,
+    tradesLoading,
+    tradesError
+}: TradingHistoryProps) {
   const { isConnected } = useAccount()
 
   const solidColorConfig = {
@@ -64,7 +91,7 @@ export default function TradingHistory({ address, chainId, defaultChainId, balan
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <OrderHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} ordersData={ordersData} ordersLoading={ordersLoading} ordersError={ordersError} poolsData={poolsData} poolsLoading={poolsLoading} poolsError={poolsError} />
+                <OrderHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} ordersData={ordersData} ordersLoading={ordersLoading} ordersError={ordersError} selectedPool={selectedPool} />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
@@ -84,7 +111,7 @@ export default function TradingHistory({ address, chainId, defaultChainId, balan
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <TradeHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} tradesData={tradesData} tradesLoading={tradesLoading} tradesError={tradesError} />
+                <TradeHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} tradesData={tradesData} tradesLoading={tradesLoading} tradesError={tradesError} selectedPool={selectedPool} />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
@@ -104,7 +131,7 @@ export default function TradingHistory({ address, chainId, defaultChainId, balan
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <BalancesHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} balancesResponse={balancesResponse} balancesLoading={balancesLoading} balancesError={balancesError} />
+                <BalancesHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} balancesResponse={balanceData} balancesLoading={balancesLoading} balancesError={balancesError} selectedPool={selectedPool} />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
