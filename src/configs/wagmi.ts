@@ -223,7 +223,7 @@ const enabledChains = process.env.ENABLED_CHAINS
   ? allChains.filter((chain) =>
     process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString())
   )
-  : [pharos, arbitrumSepolia]
+  : [localChain, pharos, arbitrumSepolia]
 
 const transports = enabledChains.reduce((acc, chain) => {
   acc[chain.id] = http(chain.rpcUrls.default.http[0])
