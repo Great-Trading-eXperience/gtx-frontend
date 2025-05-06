@@ -6,7 +6,7 @@ import { NotificationDialog } from "@/components/notification-dialog/notificatio
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { poolsQuery } from "@/graphql/gtx/clob"
+import { PoolItem, poolsPonderQuery, PoolsPonderResponse, poolsQuery, PoolsResponse } from "@/graphql/gtx/clob"
 import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
 import type { HexAddress } from "@/types/general/address"
 import { useQuery } from '@tanstack/react-query'
@@ -19,30 +19,23 @@ import { DotPattern } from "../magicui/dot-pattern"
 import PoolCreationSkeleton from "./pool-creation-skeleton"
 import TokenSelectionDialog, { type Token } from "./token/token-selection-dialog"
 import { EXPLORER_URL } from "@/constants/explorer-url"
+import TokenABI from "@/abis/tokens/TokenABI"
+import { readContract } from "@wagmi/core"
+import { wagmiConfig } from "@/configs/wagmi"
+import { getUseSubgraph } from "@/utils/env"
 
 // Define interfaces for the pools query response
-interface PoolItem {
-  baseCurrency: string;
-  coin: string;
+interface ProcessedPool {
   id: string;
-  lotSize: string;
-  maxOrderAmount: string;
+  baseToken: string;
+  quoteToken: string;
   orderBook: string;
-  quoteCurrency: string;
   timestamp: number;
-}
-
-interface PoolsResponse {
-  poolss: {
-    items: PoolItem[];
-    totalCount: number;
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-  };
+  maxOrderAmount: string;
+  baseSymbol: string;
+  quoteSymbol: string;
+  baseDecimals: number;
+  quoteDecimals: number;
 }
 
 // Fee tier options
@@ -103,68 +96,133 @@ const PoolCreation: React.FC = () => {
   const chainId = useChainId()
   const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
-  // Fetch pools data from GraphQL
-  const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse>({
+  const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse | PoolsPonderResponse>({
     queryKey: ['pools'],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request<PoolsResponse>(url, poolsQuery)
+      return await request<PoolsResponse | PoolsPonderResponse>(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery)
     },
-    staleTime: 60000, 
+    staleTime: 60000,
   })
 
-  // Extract unique tokens from pools data to populate token list
   const [tokenList, setTokenList] = useState<Token[]>([])
 
+  const processPools = async (poolsData: PoolsResponse | null) => {
+    if (!poolsData) return []
+
+    const pools = ((poolsData as unknown) as PoolsPonderResponse)?.poolss?.items || ((poolsData as unknown) as PoolsResponse)?.pools
+    if (!pools?.length) return []
+
+    const processedPools = await Promise.all(pools.map(async (pool: PoolItem) => {
+      const [baseTokenAddress, quoteTokenAddress] = [pool.baseCurrency, pool.quoteCurrency]
+
+      let baseSymbol = baseTokenAddress
+      let quoteSymbol = quoteTokenAddress
+      let baseDecimals = 18
+      let quoteDecimals = 6
+
+      if (baseTokenAddress !== 'Unknown') {
+        try {
+          const symbol = await readContract(wagmiConfig, {
+            address: baseTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "symbol",
+          })
+          const decimals = await readContract(wagmiConfig, {
+            address: baseTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "decimals",
+          })
+          baseSymbol = symbol as string
+          baseDecimals = decimals as number
+        } catch (error) {
+          console.error(`Error fetching base token info for ${baseTokenAddress}:`, error)
+        }
+      }
+
+      if (quoteTokenAddress !== 'USDC') {
+        try {
+          const symbol = await readContract(wagmiConfig, {
+            address: quoteTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "symbol",
+          })
+          const decimals = await readContract(wagmiConfig, {
+            address: quoteTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "decimals",
+          })
+          quoteSymbol = symbol as string
+          quoteDecimals = decimals as number
+        } catch (error) {
+          console.error(`Error fetching quote token info for ${quoteTokenAddress}:`, error)
+        }
+      }
+
+      return {
+        id: pool.id,
+        baseToken: baseTokenAddress,
+        quoteToken: quoteTokenAddress,
+        orderBook: pool.orderBook,
+        baseSymbol,
+        quoteSymbol,
+        baseDecimals,
+        quoteDecimals,
+        timestamp: pool.timestamp,
+        maxOrderAmount: pool.maxOrderAmount || '0'
+      }
+    }))
+
+    return processedPools.sort((a: ProcessedPool, b: ProcessedPool) => {
+      const aHasWETH = a.baseSymbol.toLowerCase().includes('weth') || a.baseSymbol.toLowerCase().includes('eth')
+      const bHasWETH = b.baseSymbol.toLowerCase().includes('weth') || b.baseSymbol.toLowerCase().includes('eth')
+      if (aHasWETH && !bHasWETH) return -1
+      if (!aHasWETH && bHasWETH) return 1
+      return b.timestamp - a.timestamp
+    })
+  }
+
   useEffect(() => {
-    if (poolsData?.poolss?.items) {
+    const processData = async () => {
+      const pools = await processPools(poolsData as PoolsResponse)
       const uniqueTokenMap = new Map<string, Token>()
 
-      // Extract base currencies
-      poolsData.poolss.items.forEach(pool => {
-        // Extract token symbol from the pool.coin (e.g., "ETH/USDC" -> "ETH")
-        const baseSymbol = pool.coin.split('/')[0]
-
-        if (!uniqueTokenMap.has(pool.baseCurrency)) {
-          uniqueTokenMap.set(pool.baseCurrency, {
-            symbol: baseSymbol,
-            name: baseSymbol,
-            address: pool.baseCurrency,
-            logo: getCoinLogo(baseSymbol)
+      pools.forEach((pool: ProcessedPool) => {
+        if (!uniqueTokenMap.has(pool.baseToken)) {
+          uniqueTokenMap.set(pool.baseToken, {
+            symbol: pool.baseSymbol,
+            name: pool.baseSymbol,
+            address: pool.baseToken,
+            logo: getCoinLogo(pool.baseSymbol)
           })
         }
       })
 
-      // Extract quote currencies
-      poolsData.poolss.items.forEach(pool => {
-        // Extract token symbol from the pool.coin (e.g., "ETH/USDC" -> "USDC")
-        const quoteSymbol = pool.coin.split('/')[1]
-
-        if (!uniqueTokenMap.has(pool.quoteCurrency)) {
-          uniqueTokenMap.set(pool.quoteCurrency, {
-            symbol: quoteSymbol,
-            name: quoteSymbol,
-            address: pool.quoteCurrency,
-            logo: getCoinLogo(quoteSymbol)
+      pools.forEach((pool: ProcessedPool) => {
+        if (!uniqueTokenMap.has(pool.quoteToken)) {
+          uniqueTokenMap.set(pool.quoteToken, {
+            symbol: pool.quoteSymbol,
+            name: pool.quoteSymbol,
+            address: pool.quoteToken,
+            logo: getCoinLogo(pool.quoteSymbol)
           })
         }
       })
 
-      // Set default quote currency if available
-      const usdcToken = Array.from(uniqueTokenMap.values()).find(token => token.symbol === 'USDC')
+      const usdcToken = Array.from(uniqueTokenMap.values()).find(token => token.symbol.includes('USDC'))
       if (usdcToken && !quoteCurrency) {
         setQuoteCurrency(usdcToken.address)
         setQuoteCurrencySymbol(usdcToken.symbol)
       }
 
-      // Convert map to array
       setTokenList(Array.from(uniqueTokenMap.values()))
     }
+
+    processData()
   }, [poolsData, quoteCurrency])
 
-  // Pool creation hook
   const {
     handleCreatePool,
     isCreatePoolPending,
@@ -174,7 +232,6 @@ const PoolCreation: React.FC = () => {
     createPoolHash,
   } = useCreatePool()
 
-  // Handle initial mounting
   useEffect(() => {
     const timer = setTimeout(() => {
       setMounted(true)
@@ -184,10 +241,8 @@ const PoolCreation: React.FC = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  // Handle wallet connection state changes
   useEffect(() => {
     if (mounted) {
-      // Only handle connection changes after mounting
       if (isConnected && !previousConnectionState) {
         setShowConnectionLoader(true)
         const timer = setTimeout(() => {
@@ -199,14 +254,11 @@ const PoolCreation: React.FC = () => {
     }
   }, [isConnected, previousConnectionState, mounted])
 
-  // Recent tokens based on timestamp
   const getRecentTokens = (): Token[] => {
-    if (!poolsData?.poolss?.items) return []
+    if (!(poolsData as PoolsPonderResponse)?.poolss?.items) return []
 
-    // Sort pools by timestamp (newest first)
-    const sortedPools = [...poolsData.poolss.items].sort((a, b) => b.timestamp - a.timestamp)
+    const sortedPools = [...((poolsData as PoolsPonderResponse).poolss.items || (poolsData as PoolsResponse).pools)].sort((a, b) => b.timestamp - a.timestamp)
 
-    // Take base tokens from the 3 most recent pools
     const recentTokens: Token[] = []
     const addedAddresses = new Set<string>()
 
@@ -231,12 +283,14 @@ const PoolCreation: React.FC = () => {
 
   // Popular tokens (based on most common in pools)
   const getPopularTokens = (): Token[] => {
-    if (!poolsData?.poolss?.items) return []
+    if (!(poolsData as PoolsPonderResponse)?.poolss?.items || !(poolsData as PoolsResponse).pools) return []
 
     // Count token occurrences
-    const tokenCount = new Map<string, { count: number, token: Token }>()
+    const tokenCount = new Map<string, { count: number; token: Token }>()
 
-    poolsData.poolss.items.forEach(pool => {
+    const poolItems = ((poolsData as unknown) as PoolsPonderResponse)?.poolss?.items || ((poolsData as unknown) as PoolsResponse)?.pools || []
+    
+    poolItems.forEach((pool: { coin: string; baseCurrency: string }) => {
       const baseSymbol = pool.coin.split('/')[0]
 
       if (!tokenCount.has(pool.baseCurrency)) {
@@ -257,18 +311,15 @@ const PoolCreation: React.FC = () => {
       }
     })
 
-    // Sort by count and take top 2
     return Array.from(tokenCount.values())
-      .sort((a, b) => b.count - a.count)
+      .sort((a: { count: number }, b: { count: number }) => b.count - a.count)
       .slice(0, 2)
-      .map(item => item.token)
+      .map((item: { token: Token }) => item.token)
   }
 
-  // Helper to get coin logo from local token directory
   const getCoinLogo = (symbol: string): string | undefined => {
     const lowerSymbol = symbol.toLowerCase()
 
-    // Check for available tokens in our directory
     if (lowerSymbol.includes("eth") || lowerSymbol.includes("weth")) {
       return "/tokens/eth.png"
     } else if (lowerSymbol.includes("btc") || lowerSymbol.includes("wbtc")) {
@@ -289,11 +340,9 @@ const PoolCreation: React.FC = () => {
       return "/tokens/trump.png"
     }
 
-    // Return undefined for tokens without matching icons
     return undefined
   }
 
-  // Form validation
   const validateForm = (): boolean => {
     const newErrors: {
       baseCurrency?: string
@@ -304,7 +353,6 @@ const PoolCreation: React.FC = () => {
       slippageThreshold?: string
     } = {}
 
-    // Validate base currency
     if (!baseCurrency) {
       newErrors.baseCurrency = "Base currency is required"
     } else if (!baseCurrency.startsWith("0x") || baseCurrency.length !== 42) {
@@ -447,16 +495,8 @@ const PoolCreation: React.FC = () => {
     return <GradientLoader />
   }
 
-  const toggleFeeTiers = () => {
-    setShowFeeTiers(!showFeeTiers)
-  }
-
   const toggleAdvancedOptions = () => {
     setShowAdvancedOptions(!showAdvancedOptions)
-  }
-
-  const selectFeeTier = (value: string) => {
-    setFeeTier(value)
   }
 
   const openTokenDialog = () => {
@@ -506,7 +546,6 @@ const PoolCreation: React.FC = () => {
   // Apply preset trading rules based on token decimals
   const applyPresetTradingRules = (decimals: number) => {
     if (decimals === 8) {
-      // Rules for 8 decimal tokens (BTC, DOGE)
       setMinTradeAmount("0.00001") // 0.00001 BTC (1e3 in contract)
       setMinAmountMovement("0.000001") // 0.000001 BTC (1e2 in contract)
       setMinOrderSize("0.02") // 0.02 USDC (2e4 in contract)
@@ -665,107 +704,6 @@ const PoolCreation: React.FC = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Fee tier section */}
-                    {/* <div className="space-y-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Fee tier</h3>
-                        <p className="text-slate-400">
-                          The amount earned providing liquidity. Choose an amount that suits your risk tolerance and
-                          strategy.
-                        </p>
-                      </div>
-
-                      {!showFeeTiers ? (
-                        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-lg font-bold text-white">{selectedTier?.label} fee tier</h4>
-                                {selectedTier?.tag && (
-                                  <span className="px-3 py-1 bg-[#1a1a1a] text-white text-xs rounded-full">
-                                    {selectedTier.tag}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-slate-400">The % you will earn in fees</p>
-                            </div>
-                            <Button variant="ghost" className="text-slate-400" onClick={toggleFeeTiers}>
-                              More{" "}
-                              <svg
-                                className="w-5 h-5 ml-1"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M6 9L12 15L18 9"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-4">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-lg font-bold text-white">{selectedTier?.label} fee tier</h4>
-                                  {selectedTier?.tag && (
-                                    <span className="px-3 py-1 bg-[#1a1a1a] text-white text-xs rounded-full">
-                                      {selectedTier.tag}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-slate-400">The % you will earn in fees</p>
-                              </div>
-                              <Button variant="ghost" className="text-slate-400" onClick={toggleFeeTiers}>
-                                Less{" "}
-                                <svg
-                                  className="w-5 h-5 ml-1"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M18 15L12 9L6 15"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                            {FEE_TIERS.map((tier) => (
-                              <div
-                                key={tier.value}
-                                className={`bg-[#0A0A0A] border border-white/10 rounded-lg p-4 cursor-pointer hover:border-white/30 transition-all ${
-                                  feeTier === tier.value ? "border-blue-500" : ""
-                                }`}
-                                onClick={() => selectFeeTier(tier.value)}
-                              >
-                                <div className="flex justify-between items-center mb-2">
-                                  <h4 className="text-lg font-bold text-white">{tier.label}</h4>
-                                  {feeTier === tier.value && <Check className="w-5 h-5 text-blue-500" />}
-                                </div>
-                                <p className="text-sm text-slate-400">{tier.description}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div> */}
-
-                    {/* Trading Rules Section */}
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <div>
@@ -880,7 +818,6 @@ const PoolCreation: React.FC = () => {
                         </div>
                       )}
                     </div>
-
                     <Button
                       className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-6 rounded-lg text-lg font-medium"
                       onClick={handleSubmit}

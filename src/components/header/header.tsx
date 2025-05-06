@@ -46,9 +46,14 @@ const Header = () => {
       destination: "/earn", 
       label: "Earn",
       enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_EARN === 'true'
+    },
+    { 
+      destination: "/vegtx", 
+      label: "veGTX",
+      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX === 'true'
     }
   ];
-
+  
   // Filter only enabled links
   const links = allLinks.filter(link => link.enabled);
 
@@ -66,7 +71,7 @@ const Header = () => {
         <div className="flex flex-row gap-4 items-center">
           <Link href="/" className="flex flex-row items-center gap-2">
             <img
-              src={"/logo/gtx-update.png"}
+              src={"/logo/gtx.png"}
               className="h-9"
               alt="GTX Logo"
             />
@@ -114,7 +119,7 @@ const Header = () => {
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-8 pt-4">
                     <img
-                      src={"/logo/gtx-update.png"}
+                      src={"/logo/gtx.png"}
                       className="h-8"
                       alt="GTX Logo"
                     />

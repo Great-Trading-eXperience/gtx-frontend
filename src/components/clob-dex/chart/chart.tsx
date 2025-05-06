@@ -1,7 +1,7 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery, minuteCandleStickQuery } from "@/graphql/gtx/clob"
+import { dailyCandleStickPonderQuery, DailyCandleStickPonderResponse, dailyCandleStickQuery, DailyCandleStickResponse, FiveMinuteCandleStickPonderResponse, fiveMinuteCandleStickQuery, FiveMinuteCandleStickResponse, hourCandleStickPonderQuery, HourCandleStickPonderResponse, hourCandleStickQuery, HourCandleStickResponse, MinuteCandleStickPonderResponse, MinuteCandleStickResponse } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
@@ -11,17 +11,47 @@ import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
 import { TimeFrame } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
-interface CandleStickItem {
+import TradingViewChartContainer from "@/components/trading-view-chart/trading-view-chart"
+import { getUseSubgraph } from "@/utils/env"
+
+// Updated interface to match the new Binance-compatible bucket format
+interface BucketData {
+  id: string;
+  openTime: number;      // Renamed from timestamp
+  closeTime: number;     // New field
+  timestamp: number;
   open: number;
-  close: number;
-  low: number;
   high: number;
+  low: number;
+  close: number;
+  volume: number;        // New field
+  quoteVolume: number;   // New field
   average: number;
   count: number;
-  timestamp: number;
+  takerBuyBaseVolume: number; // New field
+  takerBuyQuoteVolume: number; // New field
+  poolId: string;
 }
 
-interface CandleStickResponse {
+// Binance kline format (as an array)
+type BinanceKlineData = [
+  number,  // Open time
+  string,  // Open price
+  string,  // High price
+  string,  // Low price
+  string,  // Close price
+  string,  // Volume (base asset)
+  number,  // Close time
+  string,  // Quote asset volume
+  number,  // Number of trades
+  string,  // Taker buy base asset volume
+  string,  // Taker buy quote asset volume
+  string   // Unused field (ignored)
+];
+
+interface CandleStickItem extends BucketData { }
+
+interface CandleStickPonderResponse {
   dailyBucketss?: {
     items: CandleStickItem[];
   };
@@ -31,6 +61,16 @@ interface CandleStickResponse {
   hourBucketss?: {
     items: CandleStickItem[];
   };
+  minuteBucketss?: {
+    items: CandleStickItem[];
+  };
+}
+
+interface CandleStickResponse {
+  dailyBuckets?: CandleStickItem[],
+  fiveMinuteBuckets?: CandleStickItem[],
+  hourBuckets?: CandleStickItem[],
+  minuteBuckets?: CandleStickItem[],
 }
 
 interface VolumeData {
@@ -60,16 +100,19 @@ function processCandleStickData(data: CandleStickItem[], quoteDecimals: number):
     const highPrice = Number(formatUnits(BigInt(candle.high), quoteDecimals));
 
     candlesticks.push({
-      time: candle.timestamp as Time,
+      time: candle.openTime as Time, // Updated from timestamp to openTime
       open: openPrice,
       high: highPrice,
       low: lowPrice,
       close: closePrice,
     });
 
+    // Use the volume field if available, otherwise fallback to count for backward compatibility
+    const volumeValue = candle.volume !== undefined ? candle.volume : candle.count;
+
     volumes.push({
-      time: candle.timestamp as Time,
-      value: candle.count,
+      time: candle.openTime as Time, // Updated from timestamp to openTime
+      value: volumeValue,
       color: closePrice >= openPrice
         ? "rgba(38, 166, 154, 0.5)"
         : "rgba(239, 83, 80, 0.5)"
@@ -83,7 +126,7 @@ export type ChartComponentProps = ClobDexComponentProps & {
   height?: number
 }
 
-function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponentProps) {
+function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }: ChartComponentProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -93,90 +136,124 @@ function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponen
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>(TimeFrame.HOURLY)
 
-  const { selectedPoolId, quoteDecimals } = useMarketStore()
+  const { quoteDecimals } = useMarketStore()
 
-  const { data, isLoading, error } = useQuery<CandleStickResponse>({
-    queryKey: [selectedTimeFrame, String(chainId ?? defaultChainId)],
+  // Map timeframe to Binance interval format
+  const getIntervalFromTimeFrame = (timeFrame: TimeFrame): string => {
+    switch (timeFrame) {
+      case TimeFrame.DAILY: return "1d";
+      case TimeFrame.HOURLY: return "1h";
+      case TimeFrame.FIVE_MINUTE: return "5m";
+      case TimeFrame.MINUTE: return "1m";
+      default: return "1h";
+    }
+  };
+
+  const { data, isLoading, error } = useQuery<CandleStickItem[]>({
+    queryKey: ['candlesticks', selectedTimeFrame, selectedPool?.orderBook, selectedPool?.coin],
     queryFn: async () => {
+      // Fallback to the original GraphQL query if the API doesn't return data
       const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
 
-      switch (selectedTimeFrame) {
-        case TimeFrame.DAILY:
-          return await request(url, dailyCandleStickQuery, { poolId: selectedPoolId })
-        case TimeFrame.MINUTE:
-          return await request(url, minuteCandleStickQuery, { poolId: selectedPoolId })
-        case TimeFrame.FIVE_MINUTE:
-          return await request(url, fiveMinuteCandleStickQuery, { poolId: selectedPoolId })
-        case TimeFrame.HOURLY:
-          return await request(url, hourCandleStickQuery, { poolId: selectedPoolId })
+      const query = selectedTimeFrame === TimeFrame.DAILY
+        ? getUseSubgraph() ? dailyCandleStickQuery : dailyCandleStickPonderQuery
+        : selectedTimeFrame === TimeFrame.HOURLY
+          ? getUseSubgraph() ? hourCandleStickQuery : hourCandleStickPonderQuery
+          : selectedTimeFrame === TimeFrame.FIVE_MINUTE
+            ? fiveMinuteCandleStickQuery
+            : selectedTimeFrame === TimeFrame.MINUTE
+              ? fiveMinuteCandleStickQuery // Replace with minute query when available
+              : fiveMinuteCandleStickQuery;
+
+      const result = await request(url, query, { poolId: selectedPool?.orderBook });
+
+      // Process the GraphQL response
+      let items;
+      if (selectedTimeFrame === TimeFrame.DAILY) {
+        if (getUseSubgraph()) {
+          items = (result as DailyCandleStickPonderResponse)?.dailyBucketss?.items;
+        } else {
+          items = (result as DailyCandleStickResponse).dailyBuckets;
+        }
+      } else if (selectedTimeFrame === TimeFrame.HOURLY) {
+        if (getUseSubgraph()) {
+          items = (result as HourCandleStickPonderResponse)?.hourBucketss?.items;
+        } else {
+          items = (result as HourCandleStickResponse).hourBuckets;
+        }
+      } else if (selectedTimeFrame === TimeFrame.FIVE_MINUTE) {
+        if (getUseSubgraph()) {
+          items = (result as FiveMinuteCandleStickPonderResponse)?.fiveMinuteBucketss?.items;
+        } else {
+          items = (result as FiveMinuteCandleStickResponse).fiveMinuteBuckets;
+        }
+      } else if (selectedTimeFrame === TimeFrame.MINUTE) {
+        if (getUseSubgraph()) {
+          items = (result as MinuteCandleStickPonderResponse)?.minuteBucketss?.items;
+        } else {
+          items = (result as MinuteCandleStickResponse).minuteBuckets;
+        }
       }
+
+      // Handle renamed fields for backward compatibility
+      return items?.map((item: any) => ({
+        ...item,
+        // Ensure we have both old and new field names for compatibility
+        openTime: item.openTime || item.timestamp,
+        timestamp: item.timestamp || item.openTime
+      })) || [];
     },
-    refetchInterval: 5000,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
+    enabled: !!selectedPool,
+    refetchInterval: 60000,
+    staleTime: 60000
+  });
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setCurrentTime(now.toUTCString())
-    }
-
-    const timer = setInterval(updateTime, 1000)
-    updateTime()
-
-    return () => clearInterval(timer)
-  }, [])
+  const [processedData, setProcessedData] = useState<{ candlesticks: CandlestickData<Time>[], volumes: VolumeData[] }>({ candlesticks: [], volumes: [] });
 
   useEffect(() => {
     if (!data) return;
 
-    const items = selectedTimeFrame === TimeFrame.DAILY
-      ? data.dailyBucketss?.items
-      : selectedTimeFrame === TimeFrame.HOURLY
-        ? data.hourBucketss?.items
-        : data.fiveMinuteBucketss?.items;
+    // Sort data by openTime/timestamp to ensure chronological order
+    const sortedData = [...data].sort((a, b) => {
+      const aTime = a.openTime || a.timestamp;
+      const bTime = b.openTime || b.timestamp;
+      return Number(aTime) - Number(bTime);
+    });
 
-    if (items && items.length > 0) {
-      const latestCandle = [...items].sort((a, b) => b.timestamp - a.timestamp)[0];
-      setCurrentPrice(formatPrice(latestCandle.close, quoteDecimals));
-    }
-  }, [data]);
+    const processed = processCandleStickData(sortedData, quoteDecimals);
+    setProcessedData(processed);
+  }, [data, quoteDecimals]);
 
   useEffect(() => {
-    if (!chartContainerRef.current || isLoading || !data) return
+    if (!processedData.candlesticks.length) return;
 
-    try {
-      if (chartRef.current) {
-        chartRef.current.remove();
-        chartRef.current = null;
-      }
-    } catch (e) {
-      console.error("Error removing chart:", e);
-      chartRef.current = null;
+    const latestCandle = [...processedData.candlesticks].sort((a, b) => Number(b.time) - Number(a.time))[0];
+    if (latestCandle) {
+      setCurrentPrice(latestCandle.close.toFixed(quoteDecimals > 8 ? 8 : quoteDecimals));
     }
+  }, [processedData, quoteDecimals]);
 
-    const isDarkMode = theme === "dark"
-    const mainHeight = height
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        textColor: isDarkMode ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
-        background: { type: ColorType.Solid, color: isDarkMode ? "#151924" : "#ffffff" },
+        textColor: theme === "dark" ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
+        background: { type: ColorType.Solid, color: theme === "dark" ? "#151924" : "#ffffff" },
       },
       grid: {
-        vertLines: { color: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
-        horzLines: { color: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
+        vertLines: { color: theme === "dark" ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
+        horzLines: { color: theme === "dark" ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
       },
       timeScale: {
-        borderColor: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)",
+        borderColor: theme === "dark" ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)",
         timeVisible: true,
         secondsVisible: false,
       },
       rightPriceScale: {
-        borderColor: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)",
+        borderColor: theme === "dark" ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)",
         scaleMargins: {
           top: 0.1,
           bottom: 0.2,
@@ -185,105 +262,101 @@ function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponen
       crosshair: {
         mode: 1,
         vertLine: {
-          color: isDarkMode ? "#758696" : "#9B9B9B",
+          color: theme === "dark" ? "#758696" : "#9B9B9B",
           width: 1,
           style: 3,
-          labelBackgroundColor: isDarkMode ? "#758696" : "#9B9B9B",
+          labelBackgroundColor: theme === "dark" ? "#758696" : "#9B9B9B",
         },
         horzLine: {
-          color: isDarkMode ? "#758696" : "#9B9B9B",
+          color: theme === "dark" ? "#758696" : "#9B9B9B",
           width: 1,
           style: 3,
-          labelBackgroundColor: isDarkMode ? "#758696" : "#9B9B9B",
+          labelBackgroundColor: theme === "dark" ? "#758696" : "#9B9B9B",
         },
       },
-      height: mainHeight,
-    })
+      height: height || chartContainerRef.current?.clientHeight || 380,
+    });
 
-    chartRef.current = chart
+    chartRef.current = chart;
 
     const candlestickSeries = chart.addCandlestickSeries({
       upColor: "#26a69a",
       downColor: "#ef5350",
       borderVisible: false,
       wickUpColor: "#26a69a",
-      wickDownColor: "#ef5350",
-    })
+      wickDownColor: "#ef5350"
+    });
 
     const volumeSeries = chart.addHistogramSeries({
       color: "#26a69a",
       priceFormat: {
         type: "volume",
       },
-      priceScaleId: "volume",
-    })
+      priceScaleId: "", // Set to empty string to create new scale
+    });
 
-    const volumePriceScale = chart.priceScale("volume")
-    if (volumePriceScale) {
-      volumePriceScale.applyOptions({
-        scaleMargins: {
-          top: 0.8,
-          bottom: 0,
-        },
-        borderVisible: false,
-        visible: true,
-      })
-    }
+    candlestickSeries.setData(processedData.candlesticks);
+    volumeSeries.setData(processedData.volumes);
 
-    const items = selectedTimeFrame === TimeFrame.DAILY
-      ? data.dailyBucketss?.items
-      : selectedTimeFrame === TimeFrame.HOURLY
-        ? data.hourBucketss?.items
-        : data.fiveMinuteBucketss?.items;
+    // Set up volume scale
+    const volumePriceScale = chart.priceScale("");
+    volumePriceScale.applyOptions({
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
+      borderVisible: false,
+    });
 
-    if (items) {
-      const { candlesticks, volumes } = processCandleStickData(items, quoteDecimals)
-
-      candlestickSeries.setData(candlesticks)
-      volumeSeries.setData(volumes)
-
-      chart.timeScale().fitContent()
-    }
+    // Fit content after data is loaded
+    chart.timeScale().fitContent();
 
     const handleResize = () => {
-      chart.applyOptions({
-        height: mainHeight,
-        width: chartContainerRef.current?.clientWidth || 800,
-      })
-    }
+      if (chartContainerRef.current) {
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: height || chartContainerRef.current.clientHeight,
+        });
+      }
+    };
 
-    window.addEventListener("resize", handleResize)
-    handleResize()
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener("resize", handleResize)
-      try {
-        if (chartRef.current) {
-          chartRef.current.remove()
-          chartRef.current = null
-        }
-      } catch (e) {
-        console.error("Error cleaning up chart:", e)
-        chartRef.current = null
-      }
-    }
-  }, [data, isLoading, theme, height])
+      window.removeEventListener("resize", handleResize);
+      chart.removeSeries(candlestickSeries);
+      chart.removeSeries(volumeSeries);
+      chart.remove();
+    };
+  }, [processedData, theme, height]);
 
   useEffect(() => {
-    if (chartRef.current) {
-      const isDarkMode = theme === "dark"
-      chartRef.current.applyOptions({
-        layout: {
-          textColor: isDarkMode ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
-          background: { type: ColorType.Solid, color: isDarkMode ? "#151924" : "#ffffff" },
-        },
-        grid: {
-          vertLines: { color: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
-          horzLines: { color: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
-        },
-      })
-    }
-  }, [theme])
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toUTCString());
+    };
+
+    const timer = setInterval(updateTime, 1000);
+    updateTime();
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    const isDarkMode = theme === "dark";
+    chartRef.current.applyOptions({
+      layout: {
+        textColor: isDarkMode ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
+        background: { type: ColorType.Solid, color: isDarkMode ? "#151924" : "#ffffff" },
+      },
+      grid: {
+        vertLines: { color: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
+        horzLines: { color: isDarkMode ? "rgba(42, 46, 57, 0.6)" : "rgba(42, 46, 57, 0.2)" },
+      },
+    });
+  }, [theme]);
 
   const handleTimeFrameChange = (timeFrame: TimeFrame) => {
     setSelectedTimeFrame(timeFrame);
@@ -294,7 +367,7 @@ function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponen
       <div className="w-full h-[300px] bg-white dark:bg-[#151924] rounded-b-lg text-gray-900 dark:text-white flex items-center justify-center">
         Loading...
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -302,46 +375,62 @@ function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponen
       <div className="w-full h-[300px] bg-white dark:bg-[#151924] text-gray-900 dark:text-white flex items-center justify-center">
         Error: {error.toString()}
       </div>
-    )
+    );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
-        <div className="flex items-center justify-end space-x-2 p-2 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex rounded-md overflow-hidden border border-gray-300 dark:border-gray-700">
-            <button
-              onClick={() => handleTimeFrameChange(TimeFrame.FIVE_MINUTE)}
-              className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.FIVE_MINUTE
+        {
+          !selectedPool?.coin && <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="text-lg font-semibold">
+              {currentPrice && <span>{currentPrice}</span>}
+            </div>
+            <div className="flex rounded-md overflow-hidden border border-gray-300 dark:border-gray-700">
+              <button
+                onClick={() => handleTimeFrameChange(TimeFrame.MINUTE)}
+                className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.MINUTE
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-                }`}
-            >
-              5M
-            </button>
-            <button
-              onClick={() => handleTimeFrameChange(TimeFrame.HOURLY)}
-              className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.HOURLY
+                  }`}
+              >
+                1M
+              </button>
+              <button
+                onClick={() => handleTimeFrameChange(TimeFrame.FIVE_MINUTE)}
+                className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.FIVE_MINUTE
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-                }`}
-            >
-              1H
-            </button>
-            <button
-              onClick={() => handleTimeFrameChange(TimeFrame.DAILY)}
-              className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.DAILY
+                  }`}
+              >
+                5M
+              </button>
+              <button
+                onClick={() => handleTimeFrameChange(TimeFrame.HOURLY)}
+                className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.HOURLY
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-                }`}
-            >
-              1D
-            </button>
+                  }`}
+              >
+                1H
+              </button>
+              <button
+                onClick={() => handleTimeFrameChange(TimeFrame.DAILY)}
+                className={`px-3 py-1 text-xs ${selectedTimeFrame === TimeFrame.DAILY
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+                  }`}
+              >
+                1D
+              </button>
+            </div>
           </div>
-        </div>
+        }
 
         <div className="p-2">
-          <div ref={chartContainerRef} className="w-full" style={{ height }} />
+          {
+            selectedPool?.coin ? <TradingViewChartContainer chainId={chainId} symbol={selectedPool?.coin} />
+              : <div ref={chartContainerRef} className="w-full" style={{ height }} />}
         </div>
       </div>
       <div
@@ -351,7 +440,7 @@ function ChartComponent({ chainId, defaultChainId, height = 380 }: ChartComponen
         {currentTime}
       </div>
     </QueryClientProvider>
-  )
+  );
 }
 
-export default ChartComponent
+export default ChartComponent;

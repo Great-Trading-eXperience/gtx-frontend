@@ -1,11 +1,15 @@
 "use client"
 
+import TokenABI from "@/abis/tokens/TokenABI"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { wagmiConfig } from "@/configs/wagmi"
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { poolsQuery, tradesQuery } from "@/graphql/gtx/clob"
-import { useMarketStore } from "@/store/market-store"
+import { poolsPonderQuery, PoolsPonderResponse, poolsQuery, PoolsResponse, tradesPonderQuery, TradesPonderResponse, tradesQuery, TradesResponse } from "@/graphql/gtx/clob"
+import { calculateAge, formatNumber } from '@/lib/utils'
+import { getUseSubgraph } from "@/utils/env"
 import { useQuery } from "@tanstack/react-query"
+import { readContract } from "@wagmi/core"
 import request from "graphql-request"
 import { CheckCircle, Clock, Hexagon, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -15,76 +19,6 @@ import { useChainId } from "wagmi"
 import { DotPattern } from "../magicui/dot-pattern"
 import { MarketListSkeleton } from "./market-list-skeleton"
 import MarketSearchDialog from "./market-search-dialog"
-
-// Define interfaces for the data
-interface PoolItem {
-  baseCurrency: string
-  coin: string
-  id: string
-  lotSize: string
-  maxOrderAmount: string
-  orderBook: string
-  quoteCurrency: string
-  timestamp: number
-}
-
-interface TradeItem {
-  id: string
-  orderId: string
-  poolId: string
-  price: string
-  quantity: string
-  timestamp: number
-  transactionId: string
-  order?: {
-    expiry: number
-    filled: string
-    id: string
-    orderId: string
-    poolId: string
-    price: string
-    type: string
-    timestamp: number
-    status: string
-    side: string
-    quantity: string
-    user: {
-      amount: string
-      currency: string
-      lockedAmount: string
-      name: string
-      symbol: string
-      user: string
-    }
-    pool: PoolItem
-  }
-}
-
-interface PoolsResponse {
-  poolss: {
-    items: PoolItem[]
-    totalCount: number
-    pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-  }
-}
-
-interface TradesResponse {
-  tradess: {
-    items: TradeItem[]
-    pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-    totalCount: number
-  }
-}
 
 interface MarketData {
   id: string
@@ -103,146 +37,232 @@ interface MarketData {
   liquidity: string
 }
 
+interface ProcessedPool {
+  id: string
+  baseToken: string
+  quoteToken: string
+  orderBook: string
+  timestamp: number
+  maxOrderAmount: string
+  baseSymbol: string
+  quoteSymbol: string
+  baseDecimals: number
+  quoteDecimals: number
+}
+
+interface ProcessedTrade {
+  poolId: string
+  pool: string
+  price: string
+  quantity: string
+  timestamp: number
+}
+
 export default function MarketList() {
   const router = useRouter() // Add the router
-  const [marketData, setMarketData] = useState<MarketData[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredData, setFilteredData] = useState<MarketData[]>([])
+  const [markets, setMarkets] = useState<MarketData[]>([])
+  const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isProcessingPools, setIsProcessingPools] = useState(true)
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false)
   const [copiedToken, setCopiedToken] = useState<{ id: string; name: string } | null>(null)
+  const [processedPools, setProcessedPools] = useState<ProcessedPool[]>([])
+  const [processedTrades, setProcessedTrades] = useState<ProcessedTrade[]>([])
 
   const chainId = useChainId()
   const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
   // Fetch pools data
-  const { data: poolsData, error: poolsError } = useQuery<PoolsResponse>({
+  const { data: poolsData, error: poolsError } = useQuery<PoolsPonderResponse | PoolsResponse>({
     queryKey: ["pools", String(chainId ?? defaultChain)],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChain)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, poolsQuery)
+      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery)
     },
-    staleTime: 60000, // 1 minute - pools don't change often
+    refetchInterval: 30000,
+    staleTime: 60000, 
   })
 
-  const { quoteDecimals } = useMarketStore()
-
   // Fetch trades data
-  const { data: tradesData } = useQuery<TradesResponse>({
+  const { data: tradesData } = useQuery<TradesPonderResponse | TradesResponse>({
     queryKey: ["trades", String(chainId ?? defaultChain)],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChain)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, tradesQuery)
+      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery)
     },
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0,
+    refetchInterval: 30000,
+    staleTime: 60000,
   })
 
-  // Format large numbers with K, M, B suffixes
-  const formatNumber = (value: bigint | number, decimals = 6) => {
-    const num = typeof value === "bigint" ? Number(formatUnits(value, decimals)) : value
+  // Process pools data
+  const processPools = async (poolsData: any) => {
+    setIsProcessingPools(true)
+    if (!poolsData) return []
 
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B"
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M"
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K"
-    return num.toFixed(decimals).replace(/\.?0+$/, "") // Remove trailing zeros
+    const pools = (poolsData as PoolsPonderResponse)?.poolss?.items || (poolsData as PoolsResponse)?.pools
+    if (!pools) return []
+
+    const processedPools = await Promise.all(pools.map(async pool => {
+      const [baseTokenAddress, quoteTokenAddress] = [pool.baseCurrency, pool.quoteCurrency]
+      
+      let baseSymbol = baseTokenAddress
+      let quoteSymbol = quoteTokenAddress
+      let baseDecimals = 18
+      let quoteDecimals = 6
+
+      // Get base token info
+      if (baseTokenAddress !== 'Unknown') {
+        try {
+          const symbol = await readContract(wagmiConfig, {
+            address: baseTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "symbol",
+          })
+          const decimals = await readContract(wagmiConfig, {
+            address: baseTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "decimals",
+          })
+          baseSymbol = symbol as string
+          baseDecimals = decimals as number
+        } catch (error) {
+          console.error(`Error fetching base token info for ${baseTokenAddress}:`, error)
+        }
+      }
+
+      // Get quote token info
+      if (quoteTokenAddress !== 'USDC') {
+        try {
+          const symbol = await readContract(wagmiConfig, {
+            address: quoteTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "symbol",
+          })
+          const decimals = await readContract(wagmiConfig, {
+            address: quoteTokenAddress as `0x${string}`,
+            abi: TokenABI,
+            functionName: "decimals",
+          })
+          quoteSymbol = symbol as string
+          quoteDecimals = decimals as number
+        } catch (error) {
+          console.error(`Error fetching quote token info for ${quoteTokenAddress}:`, error)
+        }
+      }
+
+      return {
+        id: pool.id,
+        baseToken: baseTokenAddress,
+        quoteToken: quoteTokenAddress,
+        orderBook: pool.orderBook,
+        baseSymbol,
+        quoteSymbol,
+        baseDecimals,
+        quoteDecimals,
+        timestamp: pool.timestamp,
+        maxOrderAmount: pool.maxOrderAmount || '0'
+      }
+    }))
+
+    setIsProcessingPools(false)
+    return processedPools.sort((a, b) => {
+      const aHasWETH = a.baseSymbol.toLowerCase().includes('weth') || a.baseSymbol.toLowerCase().includes('eth')
+      const bHasWETH = b.baseSymbol.toLowerCase().includes('weth') || b.baseSymbol.toLowerCase().includes('eth')
+      if (aHasWETH && !bHasWETH) return -1
+      if (!aHasWETH && bHasWETH) return 1
+      return b.timestamp - a.timestamp
+    })
   }
 
-  // Calculate age directly from timestamp
-  const calculateAge = (timestamp: number) => {
-    const now = Math.floor(Date.now() / 1000)
-    const ageInSeconds = now - timestamp
+  // Process trades data
+  const processTrades = (tradesData: any) => {
+    if (!tradesData) return []
 
-    // Convert to appropriate time unit
-    if (ageInSeconds < 60) {
-      return `${ageInSeconds}s`
-    } else if (ageInSeconds < 3600) {
-      return `${Math.floor(ageInSeconds / 60)}m`
-    } else if (ageInSeconds < 86400) {
-      return `${Math.floor(ageInSeconds / 3600)}h`
-    } else {
-      return `${Math.floor(ageInSeconds / 86400)}d`
+    const trades = (tradesData as TradesPonderResponse)?.tradess?.items || (tradesData as TradesResponse)?.trades
+    if (!trades) return []
+
+    return trades.map(trade => ({
+      poolId: trade.poolId,
+      pool: trade.pool,
+      price: trade.price,
+      quantity: trade.quantity,
+      timestamp: trade.timestamp
+    }))
+  }
+
+  // Calculate market metrics for a pool
+  const calculatePoolMetrics = (pool: ProcessedPool, trades: ProcessedTrade[]) => {
+    const poolTrades = trades.filter(trade => trade.pool === pool.orderBook || trade.poolId === pool.orderBook)
+    const sortedTrades = [...poolTrades].sort((a, b) => b.timestamp - a.timestamp)
+    
+    const latestPrice = sortedTrades.length > 0 
+      ? Number(formatUnits(BigInt(sortedTrades[0].price), pool.quoteDecimals)) 
+      : 0
+
+    let volume = BigInt(0)
+    const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
+
+    sortedTrades.forEach(trade => {
+      console.log(trade.timestamp, '-', twentyFourHoursAgo)
+      if (trade.timestamp >= twentyFourHoursAgo) {
+        volume += BigInt(trade.quantity) * BigInt(trade.price) / BigInt(10 ** pool.baseDecimals)
+      }
+    })
+
+    return {
+      latestPrice,
+      volume
     }
   }
 
-  // Process data from API to display format
+  // First effect to process raw data
+  useEffect(() => {
+    const processData = async () => {
+      const pools = await processPools(poolsData)
+      const trades = processTrades(tradesData)
+      setProcessedPools(pools)
+      setProcessedTrades(trades)
+    }
+
+    processData()
+  }, [poolsData, tradesData])
+
+  // Second effect to create market data
   useEffect(() => {
     let timer: NodeJS.Timeout
 
-    if (poolsData?.poolss?.items && tradesData?.tradess?.items) {
-      // Sort pools by timestamp (newest first) for better user experience
-      const sortedPools = [...poolsData.poolss.items].sort((a, b) => {
-        // Check if either pool has WETH
-        const aHasWETH = a.coin?.toLowerCase().includes("weth") || a.coin?.toLowerCase().includes("eth")
-        const bHasWETH = b.coin?.toLowerCase().includes("weth") || b.coin?.toLowerCase().includes("eth")
+    if (processedPools.length > 0 && processedTrades.length > 0) {
+      const markets = processedPools.map((pool) => {
+        
+        const metrics = calculatePoolMetrics(pool, processedTrades)
+        const iconInfo = getIconInfo(pool.baseSymbol)
 
-        // If a has WETH and b doesn't, a comes first
-        if (aHasWETH && !bHasWETH) return -1
-        // If b has WETH and a doesn't, b comes first
-        if (!aHasWETH && bHasWETH) return 1
-        // Otherwise sort by timestamp (newest first)
-        return b.timestamp - a.timestamp
-      })
-
-      const processedData: MarketData[] = sortedPools.map((pool) => {
-        // Extract token name and pair from coin property
-        let tokenName = "Unknown"
-        let tokenPair = "USDC"
-
-        if (pool.coin) {
-          const parts = pool.coin.split("/")
-          if (parts.length === 2) {
-            tokenName = parts[0]
-            tokenPair = parts[1]
-          }
+        if(pool.baseSymbol.toLowerCase().includes("eth")) {
+          console.log(pool)
+          console.log(metrics)
+          console.log(processedTrades)
         }
 
-        // Filter trades for this pool
-        const poolTrades = tradesData.tradess.items.filter((trade) => trade.poolId === pool.id)
-
-        // Sort trades by timestamp (newest first)
-        const sortedTrades = [...poolTrades].sort((a, b) => b.timestamp - a.timestamp)
-
-        // Calculate various metrics
-        const latestPrice = sortedTrades.length > 0 ? Number(formatUnits(BigInt(sortedTrades[0].price), quoteDecimals)) : 0
-
-        // Calculate volumes
-        let volume = BigInt(0)
-        const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
-
-        // Go through trades to calculate volumes
-        sortedTrades.forEach((trade) => {
-          if (trade.timestamp >= twentyFourHoursAgo) {
-            // Add to 24h volume
-            volume += BigInt(trade.quantity)
-          }
-        })
-
-        // Determine icons based on token name from coin property
-        const iconInfo = getIconInfo(tokenName)
-
-        // Format the final data
         return {
           id: pool.id,
-          name: tokenName,
-          pair: tokenPair,
-          starred: false, // Could be user preference, default false
-          iconInfo: iconInfo,
+          name: pool.baseSymbol,
+          pair: pool.quoteSymbol,
+          starred: false,
+          iconInfo,
           age: calculateAge(pool.timestamp),
           timestamp: pool.timestamp,
-          price: latestPrice.toFixed(2),
-          volume: formatNumber(volume),
-          liquidity: formatNumber(BigInt(pool.maxOrderAmount || "0")),
+          price: metrics.latestPrice.toFixed(2),
+          volume: formatNumber(Number(formatUnits(metrics.volume, pool.quoteDecimals)), { decimals: 0 }),
+          liquidity: formatNumber(pool.maxOrderAmount),
         }
       })
 
-      setMarketData(processedData)
-
-      // Add a small delay to make skeleton noticeable during fast loads
+      setMarkets(markets)
       timer = setTimeout(() => {
         setIsLoading(false)
       }, 800)
@@ -251,23 +271,23 @@ export default function MarketList() {
     return () => {
       if (timer) clearTimeout(timer)
     }
-  }, [poolsData, tradesData])
+  }, [processedPools, processedTrades])
 
   // Filter data based on search query
   useEffect(() => {
-    if (marketData.length > 0) {
+    if (markets.length > 0) {
       if (!searchQuery) {
-        setFilteredData(marketData)
+        setFilteredMarkets(markets)
       } else {
         const lowercaseQuery = searchQuery.toLowerCase()
-        const filtered = marketData.filter(
+        const filtered = markets.filter(
           (item) =>
             item.name.toLowerCase().includes(lowercaseQuery) || item.pair.toLowerCase().includes(lowercaseQuery),
         )
-        setFilteredData(filtered)
+        setFilteredMarkets(filtered)
       }
     }
-  }, [searchQuery, marketData])
+  }, [searchQuery, markets])
 
   // Set loading state
   useEffect(() => {
@@ -286,20 +306,6 @@ export default function MarketList() {
       if (timer) clearTimeout(timer)
     }
   }, [poolsData, tradesData])
-  useEffect(() => {
-    if (marketData.length > 0) {
-      if (!searchQuery) {
-        setFilteredData(marketData)
-      } else {
-        const lowercaseQuery = searchQuery.toLowerCase()
-        const filtered = marketData.filter(
-          (item) =>
-            item.name.toLowerCase().includes(lowercaseQuery) || item.pair.toLowerCase().includes(lowercaseQuery),
-        )
-        setFilteredData(filtered)
-      }
-    }
-  }, [searchQuery, marketData])
 
   // Helper to determine icon and background color based on token name
   function getIconInfo(tokenName: string) {
@@ -373,7 +379,7 @@ export default function MarketList() {
 
   // Prepare data for market search dialog
   const getSearchDialogData = () => {
-    return marketData.map((market) => ({
+    return markets.map((market) => ({
       id: market.id,
       name: market.name,
       pair: market.pair,
@@ -390,7 +396,7 @@ export default function MarketList() {
 
   // Handle market selection from the dialog
   const handleMarketSelect = (marketId: string) => {
-    const selectedMarket = marketData.find((m) => m.id === marketId)
+    const selectedMarket = markets.find((m) => m.id === marketId)
     if (selectedMarket) {
       console.log(`Selected market: ${selectedMarket.name}/${selectedMarket.pair}`)
       // Navigate to the spot page with the pool ID
@@ -425,7 +431,7 @@ export default function MarketList() {
 
         {/* Market Table */}
         <div className="overflow-x-auto bg-black/80 border border-white/20 p-2 rounded-lg z-30">
-          {isLoading ? (
+          {(isLoading || isProcessingPools) ? (
             <MarketListSkeleton rowCount={5} />
           ) : (
             <table className="w-full min-w-[800px] border-separate border-spacing-y-1">
@@ -435,12 +441,12 @@ export default function MarketList() {
                   <th className="text-left p-3 font-medium underline text-base">Age</th>
                   <th className="text-left p-3 font-medium underline text-base">Price</th>
                   <th className="text-left p-3 font-medium underline text-base">Volume</th>
-                  <th className="text-left p-3 font-medium underline text-base">Liquidity</th>
+                  {/* <th className="text-left p-3 font-medium underline text-base">Liquidity</th> */}
                 </tr>
               </thead>
               <tbody>
-                {filteredData.length > 0 ? (
-                  filteredData.map((item, index) => (
+                {filteredMarkets.length > 0 ? (
+                  filteredMarkets.map((item, index) => (
                     <tr 
                       key={index} 
                       className="hover:bg-[#1A1A1A] cursor-pointer rounded-lg" 
@@ -508,7 +514,7 @@ export default function MarketList() {
                       </td>
                       <td className="p-2">{item.price}</td>
                       <td className="p-2">{item.volume}</td>
-                      <td className="p-2">{item.liquidity}</td>
+                      {/* <td className="p-2">{item.liquidity}</td> */}
                     </tr>
                   ))
                 ) : (

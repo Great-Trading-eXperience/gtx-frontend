@@ -3,7 +3,7 @@
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
 import { EXPLORER_URL } from "@/constants/explorer-url"
-import { PoolsResponse, TradesResponse } from "@/graphql/gtx/clob"
+import { PoolItem, TradeItem } from "@/graphql/gtx/clob"
 import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances"
 import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder"
 import { useOrderBook } from "@/hooks/web3/gtx/clob-dex/orderbook/useOrderBook"
@@ -14,25 +14,11 @@ import { usePathname } from "next/navigation"
 import type React from "react"
 import { useEffect, useState } from "react"
 import { formatUnits, parseUnits } from "viem"
-import { useAccount } from "wagmi"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
-
-// Define the expected data structure from the GraphQL query
-interface PoolsData {
-  poolss: {
-    items: Array<{
-      id: string
-      coin: string
-      orderBook: string
-      baseCurrency: string
-      quoteCurrency: string
-      lotSize: string
-      maxOrderAmount: string
-      timestamp: string
-    }>
-  }
-}
+import { useContractRead, useChainId, useAccount } from "wagmi"
+import { toast } from "sonner"
+import poolManagerABI from "@/abis/gtx/clob/PoolManagerABI"
 
 // Create a mapping type to convert string timestamp to number
 type PoolItemWithStringTimestamp = {
@@ -46,26 +32,57 @@ type PoolItemWithStringTimestamp = {
   timestamp: number
 }
 
-export type PlaceOrderProps = ClobDexComponentProps & {
-  poolId?: string | null;
-  poolsData?: PoolsResponse;
-  poolsLoading?: boolean;
-  poolsError?: Error | null;
-  tradesData?: TradesResponse;
-  tradesLoading?: boolean;
+export interface PlaceOrderProps extends ClobDexComponentProps {
+  selectedPool: PoolItem;
+  tradesData: TradeItem[];
+  tradesLoading: boolean;
 }
 
-const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsError, tradesData, tradesLoading }: PlaceOrderProps) => {
-  const { address, isConnected } = useAccount()
+const PlaceOrder = ({
+  address,
+  chainId,
+  defaultChainId,
+  selectedPool,
+  tradesData,
+  tradesLoading
+}: PlaceOrderProps) => {
+  const { isConnected } = useAccount()
+  const { selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } = useMarketStore()
   const pathname = usePathname()
-  const { selectedPool, selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } = useMarketStore()
+
+  const currentChainId = useChainId();
+  const poolManagerAddress = getContractAddress(currentChainId, ContractName.clobPoolManager) as `0x${string}`;
+
+  // 1. Create the Pool struct with orderBook
+  const poolStruct = {
+    baseCurrency: selectedPool?.baseCurrency as `0x${string}`,
+    quoteCurrency: selectedPool?.quoteCurrency as `0x${string}`,
+    orderBook: selectedPool?.orderBook as `0x${string}`
+  };
+
+  // 2. Get the pool using poolManager
+  const { data: pool } = useContractRead({
+    address: poolManagerAddress,
+    abi: poolManagerABI,
+    functionName: 'getPool',
+    args: [
+      {
+        baseCurrency: selectedPool?.baseCurrency as `0x${string}`,
+        quoteCurrency: selectedPool?.quoteCurrency as `0x${string}`
+      }
+    ],
+    chainId: currentChainId
+  }) as { data: { 
+    baseCurrency: `0x${string}`, 
+    quoteCurrency: `0x${string}`, 
+    orderBook: `0x${string}` 
+  } | undefined };
 
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
   const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY) // Default to BUY
   const [price, setPrice] = useState<string>("")
   const [quantity, setQuantity] = useState<string>("")
   const [total, setTotal] = useState<string>("0")
-  const [orderBookAddress, setOrderBookAddress] = useState<HexAddress | undefined>()
 
   // Balance states
   const [availableBalance, setAvailableBalance] = useState<string>("0")
@@ -79,23 +96,6 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
 
   // Component mounted state
   const [mounted, setMounted] = useState(false)
-
-  const formatNumberWithCommas = (value: number | string) => {
-    // Parse the number and format it with thousands separators and 4 decimal places
-    if (typeof value === "string") {
-      value = Number.parseFloat(value)
-    }
-
-    if (isNaN(value)) {
-      return "0.0000"
-    }
-
-    // Format with commas and 4 decimal places
-    return value.toLocaleString("en-US", {
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
-    })
-  }
 
   const inputStyles = `
   /* Chrome, Safari, Edge, Opera */
@@ -126,7 +126,7 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
   } = usePlaceOrder()
 
   const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBook(
-    (orderBookAddress as HexAddress) || "0x0000000000000000000000000000000000000000",
+    (pool?.orderBook as HexAddress) || "0x0000000000000000000000000000000000000000",
   )
 
   const {
@@ -134,7 +134,7 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
-  } = useTradingBalances(getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`)
+  } = useTradingBalances(getContractAddress(chainId ?? defaultChainId, ContractName.clobBalanceManager) as `0x${string}`)
 
   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
     return {
@@ -148,33 +148,28 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
   }, [])
 
   useEffect(() => {
-    if (!mounted || !poolsData?.poolss?.items) return
+    if (!mounted || !selectedPool) return
 
-    // Watch for URL changes that might indicate a pool change from another component
     if (pathname) {
       const urlParts = pathname.split('/')
       if (urlParts.length >= 3) {
         const poolIdFromUrl = urlParts[2]
 
-        // If URL has a different pool ID than what's selected, check if it's a valid pool
         if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
-          const poolItem = poolsData.poolss.items.find(p => p.id === poolIdFromUrl)
+          const poolItem = selectedPool
           if (poolItem) {
             console.log(`PlaceOrder: Detected pool change from URL to ${poolItem.coin}`)
             const pool = convertToPoolType(poolItem)
             setSelectedPool(pool)
-            setOrderBookAddress(pool.orderBook as HexAddress)
           }
         }
       }
     }
-  }, [pathname, selectedPoolId, poolsData, mounted, setSelectedPool])
+  }, [pathname, selectedPoolId, selectedPool, mounted, setSelectedPool])
 
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
       console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`)
-      setOrderBookAddress(selectedPool.orderBook as HexAddress)
-
       setPrice("")
       setQuantity("")
       setTotal("0")
@@ -183,33 +178,13 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
 
   // Fall back to first pool if selectedPool is not set
   useEffect(() => {
-    if (poolsData && poolsData.poolss.items.length > 0 && !selectedPool) {
-      // Find WETH/USDC pair with exact match
-      const wethPoolItem = poolsData.poolss.items.find(
-        (pool) =>
-          pool.coin?.toLowerCase() === "weth/usdc" ||
-          (pool.baseCurrency?.toLowerCase() === "weth" && pool.quoteCurrency?.toLowerCase() === "usdc"),
-      )
-
-      const wethFallbackPoolItem = !wethPoolItem
-        ? poolsData.poolss.items.find((pool) => pool.coin?.toLowerCase().includes("weth"))
-        : null
-
-      if (wethPoolItem) {
-        const wethPool = convertToPoolType(wethPoolItem)
-        setSelectedPool(wethPool)
-        setOrderBookAddress(wethPool.orderBook as HexAddress)
-      } else if (wethFallbackPoolItem) {
-        const wethFallbackPool = convertToPoolType(wethFallbackPoolItem)
-        setSelectedPool(wethFallbackPool)
-        setOrderBookAddress(wethFallbackPool.orderBook as HexAddress)
-      } else {
-        const firstPool = convertToPoolType(poolsData.poolss.items[0])
-        setSelectedPool(firstPool)
-        setOrderBookAddress(firstPool.orderBook as HexAddress)
-      }
+    if (selectedPool && selectedPool.orderBook) {
+      console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`)
+      setPrice("")
+      setQuantity("")
+      setTotal("0")
     }
-  }, [poolsData, selectedPool, setSelectedPool])
+  }, [selectedPool])
 
   // Update total when price or quantity changes
   useEffect(() => {
@@ -238,7 +213,7 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
 
   useEffect(() => {
     const loadBalance = async () => {
-      if (isConnected && address && selectedPool) {
+      if (address && selectedPool) {
         setIsLoadingBalance(true)
         try {
           const relevantCurrency =
@@ -264,24 +239,24 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
     }
 
     loadBalance()
-  }, [address, isConnected, selectedPool, side, getTotalAvailableBalance, getWalletBalance])
+  }, [address, selectedPool, side, getTotalAvailableBalance, getWalletBalance])
 
   // Refresh order book on regular intervals
   useEffect(() => {
-    if (orderBookAddress) {
+    if (pool?.orderBook) {
       const interval = setInterval(() => {
         refreshOrderBook()
       }, 1000) // Refresh every 10 seconds
 
       return () => clearInterval(interval)
     }
-  }, [orderBookAddress, refreshOrderBook])
+  }, [pool?.orderBook, refreshOrderBook])
 
   // Show error notification when there's an error
   useEffect(() => {
     if (limitSimulateError || marketSimulateError) {
       const error = limitSimulateError || marketSimulateError
-      setNotificationMessage("There was an error processing your transaction. Please try again.")
+      setNotificationMessage(`There was an error processing your transaction. ${error?.message || 'Unknown error occurred.'}`);
       setNotificationSuccess(false)
       setNotificationTxHash(undefined)
       setShowNotification(true)
@@ -298,85 +273,66 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side])
 
+  // Function to handle order placement
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!selectedPool) {
-      setNotificationMessage("No trading pair selected.")
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
-      return
+      toast.error("No trading pair selected.");
+      return;
     }
 
-    // Log wallet address being used for this order
-    console.log("Placing order using wallet address:", address)
+    if (!pool) {
+      toast.error("Pool data not available.");
+      return;
+    }
 
     try {
       // Enhanced parameter validation
-      const quantityBigInt = parseUnits(quantity, baseDecimals)
-      const priceBigInt = parseUnits(price, quoteDecimals)
+      const quantityBigInt = parseUnits(quantity, baseDecimals);
+      const priceBigInt = parseUnits(price, quoteDecimals);
 
       // Additional checks before contract call
       if (quantityBigInt <= 0n) {
-        throw new Error("Quantity must be positive")
+        throw new Error("Quantity must be positive");
       }
 
       if (priceBigInt <= 0n) {
-        throw new Error("Price must be positive")
+        throw new Error("Price must be positive");
       }
-
-      // Log detailed transaction parameters for debugging
-      console.log("Order Parameters:", {
-        walletAddress: address, // Added wallet address to the parameters log
-        baseCurrency: selectedPool.baseCurrency,
-        quoteCurrency: selectedPool.quoteCurrency,
-        price: priceBigInt.toString(),
-        quantity: quantityBigInt.toString(),
-        side,
-      })
 
       if (orderType === "limit") {
         await handlePlaceLimitOrder(
-          {
-            baseCurrency: selectedPool.baseCurrency as HexAddress,
-            quoteCurrency: selectedPool.quoteCurrency as HexAddress,
-          },
+          pool,
           priceBigInt,
           quantityBigInt,
-          side,
-        )
+          side
+        );
       } else {
         await handlePlaceMarketOrder(
-          {
-            baseCurrency: selectedPool.baseCurrency as HexAddress,
-            quoteCurrency: selectedPool.quoteCurrency as HexAddress,
-          },
+          pool,
           quantityBigInt,
           side,
           priceBigInt,
-          true,
-        )
+          true
+        );
       }
-    } catch (error) {
-      console.error("Detailed Order Placement Error:", error)
-
-      // More informative error handling
-      if (error instanceof Error) {
-        setNotificationMessage("There was an error processing your transaction. Please try again.")
-        setNotificationSuccess(false)
-        setNotificationTxHash(undefined)
-        setShowNotification(true)
+    } catch (err) {
+      let errorMessage = "Failed to place order";
+      if (err) {
+        errorMessage = err instanceof Error ? err.message : String(err);
       }
+      console.error("Order placement error:", errorMessage);
+      toast.error(errorMessage);
     }
-  }
+  };
 
   const isPending = isLimitOrderPending || isMarketOrderPending
   const isConfirming = isLimitOrderConfirming || isMarketOrderConfirming
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed
   const orderError = limitSimulateError || marketSimulateError
 
-  if (poolsLoading || !mounted)
+  if (tradesLoading || !mounted)
     return (
       <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
         <div className="flex items-center gap-2 text-gray-300">
@@ -386,14 +342,7 @@ const PlaceOrder = ({ chainId, defaultChainId, poolsData, poolsLoading, poolsErr
       </div>
     )
 
-  if (poolsError)
     return (
-      <div className="p-4 bg-gradient-to-br from-red-900/40 to-red-950/40 rounded-xl border border-red-800/50 text-red-300">
-        <p>Error loading trading pairs: {(poolsError as Error).message}</p>
-      </div>
-    )
-
-  return (
     <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
       <style jsx global>
         {inputStyles}

@@ -1,9 +1,13 @@
 "use client"
 
-import { DotPattern } from "@/components/magicui/dot-pattern"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import {
+  ArrowRight,
   BarChart2,
+  LineChart,
+  Wallet,
+  ArrowUpRight,
+  CheckCircle2,
   ShieldCheck,
   Code2,
   Terminal,
@@ -11,375 +15,408 @@ import {
   Layers,
   Users,
   TrendingUp,
-  Wallet,
-  ArrowUpRight,
-  LineChart,
   ArrowRightCircle,
+  ExternalLink,
 } from "lucide-react"
-import Head from "next/head"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
+import { BlockchainBackground } from "./blockchain-background"
+import BlurText from "@/blocks/TextAnimations/BlurText/BlurText"
 
 export function RiseLandingPage() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const tradingSteps = [
+    {
+      title: "Create Account",
+      description: "Connect your wallet and access all features instantly with no KYC required",
+      icon: Wallet,
+      step: 1,
+    },
+    {
+      title: "Start Trading",
+      description: "Access spot markets with deep liquidity and competitive fees",
+      icon: LineChart,
+      step: 2,
+    },
+    {
+      title: "Manage Positions",
+      description: "Monitor your portfolio and manage risk with advanced trading tools",
+      icon: BarChart2,
+      step: 3,
+    },
+  ]
+
+  const features = [
+    {
+      title: "Spot Trading",
+      description: "Fully decentralized order book-based exchange with no gatekeepers",
+      icon: ArrowUpRight,
+      id: 1,
+    },
+    {
+      title: "Permissionless Markets",
+      description: "Anyone can list a new market without requiring approval",
+      icon: Users,
+      id: 2,
+    },
+    {
+      title: "Fair Pricing",
+      description: "Transparent price discovery without reliance on external oracles",
+      icon: LineChart,
+      id: 3,
+    },
+    {
+      title: "Capital Efficiency",
+      description: "Optimized liquidity utilization compared to traditional AMMs",
+      icon: Layers,
+      id: 4,
+    },
+  ]
+
+  const problems = [
+    {
+      title: "Inefficient Capital Utilization",
+      description: "AMMs require deep liquidity to minimize slippage, leading to inefficient capital allocation",
+    },
+    {
+      title: "High Impermanent Loss",
+      description: "Liquidity providers often suffer from impermanent loss due to volatile price movements",
+    },
+    {
+      title: "Price Manipulation",
+      description: "AMMs are vulnerable to front-running and sandwich attacks, harming traders",
+    },
+    {
+      title: "Restricted Market Listings",
+      description: "Centralized exchanges limit listings, making it difficult for emerging assets to gain liquidity",
+    },
+  ]
+
   return (
-    <main className="relative bg-black min-h-screen text-white">
-      <DotPattern />
-      <Head>
-        <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
-        <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <main className="text-white min-h-screen overflow-hidden bg-black">
+      {mounted && <BlockchainBackground />}
 
-      {/* Hero Section - New Clean Design */}
-      <section className="w-full mx-auto pt-20 pb-32">
-        <div className="max-w-screen-xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <div className="w-full lg:w-1/2 space-y-8">
-              <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full z-60">
-                Next-Gen Trading Platform
+      {/* Hero Section */}
+      <section className="relative w-full py-20 md:py-32 overflow-hidden">
+        <div className="max-w-screen-xl mx-auto px-4 relative z-10">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-1">
+              <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full z-60 relative overflow-hidden mb-5">
+                Decentralized Trading Platform
               </div>
-
-              <h1 className="text-5xl md:text-6xl font-bold leading-tight">
-                <span className="block mb-2">Great Trading</span>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-600">eXperience</span>
-              </h1>
-
-              <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Experience the power of permissionless perpetual spot.
+              <BlurText
+                text="Great Trading"
+                delay={150}
+                animateBy="words"
+                direction="top"
+                className="text-5xl md:text-6xl font-bold"
+              />
+              <BlurText
+                text="Xperience"
+                delay={150}
+                animateBy="words"
+                direction="top"
+                className="text-5xl md:text-6xl font-bold text-blue-600/80"
+              />
+              <p className="text-xl text-gray-300 pt-5">
+                A decentralized finance protocol enabling permissionless spot trading with plans to expand into
+                perpetual markets.
               </p>
-
-              <div className="flex flex-wrap gap-5 pt-6">
-                <Link href="/perpetual">
-                  <Button className="relative bg-black text-white border border-white/20 px-6 py-5 text-base font-bold rounded-md shadow-md hover:shadow-lg transition-all duration-300 hover:bg-[#1A1A1A]">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={20} />
-                      Start Perpetual Trading
-                    </div>
-                  </Button>
-                </Link>
-
-                <Link href="/spot">
-                  <Button className="relative bg-[#1A1A1A] border border-white/20 hover:border-white/30 text-white px-6 py-5 text-base font-bold rounded-md transition-all duration-300 hover:bg-[#2A2A2A]">
-                    <div className="flex items-center gap-2">
-                      <BarChart2 size={20} />
-                      Explore Spot Markets
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Link href="/markets" target="_blank">
+                  <Button className="bg-gradient-to-r from-blue-800 to-blue-900 text-white hover:bg-gradient-to-r hover:from-blue-900 hover:to-blue-900 px-6 py-6 text-lg font-medium rounded-xl border border-gray-300/40 relative overflow-hidden group">
+                    <div className="flex items-center gap-2 relative z-10">
+                      Launch App
+                      <ExternalLink size={20} />
                     </div>
                   </Button>
                 </Link>
               </div>
             </div>
 
-            <div className="w-full lg:w-1/2">
-              <div className="relative">
-                {/* Abstract background elements */}
-                <div className="absolute -inset-4 bg-gradient-to-br from-blue-500/10 to-blue-400/10 rounded-3xl blur-2xl"></div>
+            <div className="relative">
+              {/* Trading dashboard mockup */}
+              <div className="relative rounded-2xl bg-[#0a0a0a] border border-blue-900/30 overflow-hidden shadow-2xl shadow-blue-900/20">
+                {/* Glowing border effect */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
 
-                {/* Trading dashboard mockup */}
-                <div className="relative rounded-2xl bg-[#121212]/90 border border-white/20 overflow-hidden shadow-xl">
-                  {/* Header with tabs */}
-                  <div className="bg-[#0A0A0A] px-6 py-4 border-b border-white/10 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-400"></div>
-                      <span className="font-bold text-white">BTC/USD</span>
-                      <span className="text-green-400">$89,324.50</span>
-                      <span className="text-green-400 text-sm">+2.4%</span>
-                    </div>
-                    <div className="flex text-sm">
-                      <div className="px-3 py-1 bg-blue-500/80 text-white rounded-l-md">1H</div>
-                      <div className="px-3 py-1 bg-blue-500/30 text-blue-300 rounded-r-md">1D</div>
-                    </div>
+                {/* Header with tabs */}
+                <div className="bg-[#111111] px-6 py-4 border-b border-blue-900/30 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <span className="font-bold text-white">BTC/USD</span>
+                    <span className="text-green-400">$89,324.50</span>
+                    <span className="text-green-400 text-sm">+2.4%</span>
                   </div>
-
-                  {/* Chart area */}
-                  <div className="px-6 py-8">
-                    {/* Simplified chart */}
-                    <div className="h-60 w-full relative">
-                      {/* Price grid lines */}
-                      {[...Array(5)].map((_, i) => (
-                        <div key={i} className="absolute w-full h-px bg-blue-500/10" style={{ top: `${i * 25}%` }}>
-                          <span className="absolute right-0 transform -translate-y-1/2 text-xs text-gray-400">
-                            ${Math.round(89324 - i * 1000)}
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Chart line - static SVG */}
-                      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                        <path
-                          d="M0,120 C40,100 80,140 120,80 C160,20 200,60 240,40 C280,20 320,50 360,30"
-                          fill="none"
-                          stroke="#FFFFFF"
-                          strokeWidth="3"
-                        />
-                        <path
-                          d="M0,120 C40,100 80,140 120,80 C160,20 200,60 240,40 C280,20 320,50 360,30 L360,180 L0,180 Z"
-                          fill="url(#white-gradient)"
-                          opacity="0.1"
-                        />
-                        <defs>
-                          <linearGradient id="white-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#FFFFFF" />
-                            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-
-                      {/* Price indicator dot */}
-                      <div className="absolute top-[30px] right-[40px] w-4 h-4 rounded-full bg-white border-2 border-gray-800 shadow-lg"></div>
-                    </div>
-                  </div>
-
-                  {/* Trading controls */}
-                  <div className="px-6 pb-6 grid grid-cols-2 gap-4">
-                    <button className="py-3 px-5 bg-green-500/80 text-white font-bold rounded-lg hover:bg-green-600/80 transition-colors">
-                      BUY / LONG
-                    </button>
-                    <button className="py-3 px-5 bg-red-500/80 text-white font-bold rounded-lg hover:bg-red-600/80 transition-colors">
-                      SELL / SHORT
-                    </button>
+                  <div className="flex text-sm">
+                    <div className="px-3 py-1 bg-blue-900/30 text-white rounded-l-md border border-blue-800/30">1H</div>
+                    <div className="px-3 py-1 bg-[#0a0a0a] text-gray-300 rounded-r-md border border-blue-800/30">1D</div>
                   </div>
                 </div>
 
-                {/* Stats floating card */}
-                <div className="absolute -right-4 -bottom-16 p-4 bg-[#121212] border border-white/20 rounded-xl shadow-lg w-60">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-sm font-semibold text-white">Market Stats</h4>
-                    <ArrowRightCircle size={16} className="text-white" />
+                {/* Chart area */}
+                <div className="px-6 py-8 bg-[#0a0a0a]">
+                  <div className="h-60 w-full relative">
+                    {/* Price grid lines */}
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-full h-px bg-blue-900/30"
+                        style={{ top: `${i * 25}%` }}
+                      >
+                        <span className="absolute right-0 transform -translate-y-1/2 text-xs text-gray-400">
+                          ${Math.round(89324 - i * 1000)}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* Chart line - static SVG */}
+                    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                      <path
+                        d="M0,120 C40,100 80,140 120,80 C160,20 200,60 240,40 C280,20 320,50 360,30"
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="3"
+                      />
+                      <path
+                        d="M0,120 C40,100 80,140 120,80 C160,20 200,60 240,40 C280,20 320,50 360,30 L360,180 L0,180 Z"
+                        fill="url(#gradient)"
+                      />
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#3b82f6" />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+
+                    {/* Price indicator dot */}
+                    <div className="absolute top-[30px] right-[40px] w-4 h-4 rounded-full bg-blue-500 border-2 border-[#0a0a0a] shadow-lg shadow-blue-500/50" />
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-400">24h Volume</span>
-                      <span className="text-xs font-medium">$1.2B</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-400">Open Interest</span>
-                      <span className="text-xs font-medium">$840M</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-400">Funding Rate</span>
-                      <span className="text-xs font-medium text-green-400">+0.01%</span>
-                    </div>
+                </div>
+
+                {/* Trading controls */}
+                <div className="px-6 pb-6 grid grid-cols-2 gap-4 bg-[#0a0a0a]">
+                  <button className="py-3 px-5 bg-green-600/80 text-white font-bold rounded-lg hover:bg-green-600 transition-colors relative overflow-hidden group border border-green-500/30">
+                    <span className="relative z-10">BUY / LONG</span>
+                  </button>
+                  <button className="py-3 px-5 bg-red-600/80 text-white font-bold rounded-lg hover:bg-red-600 transition-colors relative overflow-hidden group border border-red-500/30">
+                    <span className="relative">SELL / SHORT</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats floating card */}
+              <div className="absolute -right-4 -bottom-16 p-4 bg-[#0a0a0a] border border-blue-900/30 rounded-xl shadow-md shadow-blue-900/20 w-60">
+                {/* Glowing border effect */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
+
+                <div className="flex justify-between items-center mb-3 relative z-15">
+                  <h4 className="text-sm font-semibold text-white">Market Stats</h4>
+                  <ArrowRightCircle size={16} className="text-blue-500" />
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-400">24h Volume</span>
+                    <span className="text-xs font-medium text-blue-400">$1.2B</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-400">Open Interest</span>
+                    <span className="text-xs font-medium text-blue-400">$840M</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-400">Funding Rate</span>
+                    <span className="text-xs font-medium text-green-400">+0.01%</span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Problems Section */}
+      <section className="py-20 relative z-10">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">
+              Common <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Issues</span> in Trading
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Many trading platforms have problems that make trading difficult
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {problems.map((problem, index) => (
+              <div
+                key={index}
+                className="bg-[#0a0a0a] border border-blue-900/30 rounded-lg p-6 shadow-lg shadow-blue-900/10 relative overflow-hidden group hover:border-blue-500/50 transition-all duration-300"
+              >
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold mb-3">{problem.title}</h3>
+                  <p className="text-gray-400">{problem.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 relative z-10">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">
+              Why Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Platform</span> is Different
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              We&apos;ve built a trading platform that addresses common trading problems
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            {features.map((feature, index) => (
+              <div key={index} className="relative">
+                <Card className="bg-[#0a0a0a] border border-blue-900/30 h-full transition-all duration-300">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center relative z-10">
+                        <feature.icon className="h-6 w-6 text-blue-500" />
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 mt-4 text-white">{feature.title}</h3>
+                    <p className="text-gray-400 text-sm flex-grow">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Trading Steps Section */}
-      <section className="py-20 ">
-        <div className="max-w-screen-xl mx-auto">
+      <section className="py-20 relative z-10">
+        <div className="max-w-screen-xl mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 text-white">Trade with Confidence</h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              A simple, powerful process to maximize your trading potential
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">
+              Start Trading in <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Three Steps</span>
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">A simple process to begin trading on our platform</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                title: "Create Account",
-                description: "Connect your wallet and access all GTX features instantly with no KYC required",
-                icon: Wallet,
-                accent: "border-l-white",
-              },
-              {
-                title: "Deposit Funds",
-                description: "Fund your account with multiple cryptocurrencies for immediate trading",
-                icon: ArrowUpRight,
-                accent: "border-l-white",
-              },
-              {
-                title: "Start Trading",
-                description: "Access perpetual futures with up to 30x leverage or spot markets with deep liquidity",
-                icon: LineChart,
-                accent: "border-l-white",
-              },
-              {
-                title: "Manage Positions",
-                description: "Monitor your portfolio and manage risk with advanced trading tools",
-                icon: BarChart2,
-                accent: "border-l-white",
-              },
-            ].map((step, index) => (
-              <div
-                key={index}
-                className={`group bg-[#121212] rounded-lg overflow-hidden border-l-4 ${step.accent} hover:shadow-[0_0_30px_rgba(255,_255,_255,_0.1)] transition-all duration-300 z-20`}
-              >
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center mr-4">
-                      <step.icon size={20} className="text-white" />
-                    </div>
-                    <span className="text-lg font-bold">{step.title}</span>
-                  </div>
-                  <p className="text-gray-300 text-sm">{step.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Trading Ecosystem Section - Kept intact from previous design */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="max-w-screen-xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 text-white">Trading Ecosystem</h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Three powerful systems designed to give you the ultimate trading advantage
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Perpetual Trading",
-                subtitle: "30x Leverage",
-                description:
-                  "Trade with up to 30x leverage on our advanced perpetual futures platform with transparent dynamic funding rates and precision risk management",
-                color: "bg-white/10",
-                icon: Layers,
-                linkText: "Trade Perpetuals",
-                linkHref: "/perpetual",
-                highlights: ["30x max leverage", "Hourly funding rates", "Advanced risk controls"],
-              },
-              {
-                title: "Spot Trading",
-                subtitle: "Deep Liquidity",
-                description:
-                  "Experience seamless spot trading with near-zero slippage, competitive fees, and instant settlement across a wide range of cryptocurrency pairs",
-                color: "bg-white/10",
-                icon: ArrowUpRight,
-                linkText: "Explore Spot Markets",
-                linkHref: "/spot",
-                highlights: ["Minimal slippage", "Competitive fees", "Instant settlement"],
-              },
-              {
-                title: "Liquidity Provision",
-                subtitle: "Earn Passively",
-                description:
-                  "Provide liquidity to GTX markets and earn trading fees, funding payments and liquidity incentives while maintaining control of your assets",
-                color: "bg-white/10",
-                icon: Users,
-                linkText: "Provide Liquidity",
-                linkHref: "/liquidity",
-                highlights: ["Earn trading fees", "Funding payments", "Liquidity rewards"],
-              },
-            ].map((feature, index) => (
-              <div
-                key={index}
-                className="group backdrop-blur-xl bg-[#121212] rounded-2xl overflow-hidden relative border border-white/20 hover:border-white/40 hover:shadow-[0_0_30px_rgba(255,_255,_255,_0.1)] transition-all duration-500"
-              >
-                {/* Diagonal accent */}
+          <div className="relative">
+            <div className="grid md:grid-cols-2 gap-8 relative">
+              {tradingSteps.map((step, index) => (
                 <div
-                  className={`absolute -right-16 -top-16 w-32 h-32  ${feature.color} rounded-full transform rotate-12 opacity-20 group-hover:opacity-30 transition-all duration-500`}
-                ></div>
-
-                <div className="p-8 relative h-full flex flex-col">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${feature.color}`}>
-                      <feature.icon className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="px-3 py-1 bg-white/10 text-white rounded-full text-sm font-semibold">
-                      {feature.subtitle}
-                    </span>
-                  </div>
-
-                  <h3 className="text-2xl font-bold mb-3 text-white">{feature.title}</h3>
-                  <p className="text-gray-300 mb-6 flex-grow">{feature.description}</p>
-
-                  <div className="space-y-4">
-                    <div className="border-t border-white/10 pt-4">
-                      <ul className="space-y-2">
-                        {feature.highlights.map((highlight, i) => (
-                          <li key={i} className="flex items-center text-gray-300">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2"></div>
-                            {highlight}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <Link href={feature.linkHref}>
-                      <Button className="w-full bg-white/10 border border-gray-700 hover:bg-white/20 text-white font-semibold py-5 rounded-lg transition-all duration-300 mt-6">
-                        {feature.linkText}
-                      </Button>
-                    </Link>
-                  </div>
+                  key={index}
+                  className={`relative ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12 md:col-start-2'}`}
+                >
+                  <Card className="bg-[#0a0a0a] border border-blue-900/30 h-full transition-all duration-300">
+                    <CardContent className="p-6 flex flex-col h-full">
+                      <div className={`flex ${index % 2 === 0 ? 'justify-between' : 'flex-row-reverse justify-between'} items-start mb-4`}>
+                        <div className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center relative z-10">
+                          <step.icon className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-blue-900/30 border border-blue-800/30 ${index % 2 === 0 ? 'ml-4' : 'mr-4'}`}>
+                          <span className="text-sm font-mono text-blue-400">{step.step}</span>
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3 mt-4 text-white">{step.title}</h3>
+                      <p className="text-gray-400 text-sm flex-grow">{step.description}</p>
+                    </CardContent>
+                  </Card>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Technology Benefits Section */}
-      <section className="py-20 ">
-        <div className="max-w-screen-xl mx-auto">
+      {/* Technology Section */}
+      <section className="py-20 relative z-10">
+        <div className="max-w-screen-xl mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 text-white">Built for Performance</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">
+              Built with <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Reliable Technology</span>
+            </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Powered by advanced technologies that set new standards for decentralized trading
+              Our platform uses proven technology for better performance and security
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {[
               {
-                title: "High-Performance Order Book",
-                description:
-                  "Experience seamless trading with our optimized order book implementation featuring efficient matching engine and bitmap-based tick management.",
+                title: "Smart Order Matching",
+                description: "Our advanced system ensures you get the best prices for your trades with minimal slippage",
                 icon: Code2,
-                stats: ["2ms Latency", "100k Orders/sec"],
               },
               {
-                title: "Advanced Oracle System",
+                title: "Secure Trading",
                 description:
-                  "Reliable price feeds powered by zkTLS technology and multi-source validation ensure accurate and manipulation-resistant mark prices.",
-                icon: Terminal,
-                stats: ["Multi-source Validation", "Tamper-proof Design"],
-              },
-              {
-                title: "Risk Management System",
-                description:
-                  "Sophisticated liquidation and margin systems protect users while maintaining market stability and preventing cascading liquidations.",
+                  "Built with industry-leading security measures to protect your assets and ensure safe trading",
                 icon: ShieldCheck,
-                stats: ["Dynamic Liquidation", "Cross-margin Support"],
+              },
+              {
+                title: "Fast Execution",
+                description: "Lightning-fast trade execution with real-time market data and instant order processing",
+                icon: Terminal,
               },
               {
                 title: "Open Architecture",
-                description:
-                  "Fully permissionless system allowing anyone to create markets, provide liquidity, and participate in the ecosystem.",
+                description: "Fully permissionless system allowing anyone to create markets and provide liquidity",
                 icon: Puzzle,
-                stats: ["Permissionless", "Composable"],
               },
-            ].map((feature, index) => (
+            ].map((tech, index) => (
               <div
                 key={index}
-                className="bg-gradient-to-br from-[#121212] to-[#0A0A0A] rounded-xl overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-300 z-20"
+                className="bg-[#0a0a0a] border border-blue-900/30 rounded-lg p-6 hover:border-blue-500/50 transition-all duration-300 shadow-lg shadow-blue-900/10 relative overflow-hidden group"
               >
-                <div className="p-6 flex flex-col h-full">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                      <feature.icon size={24} className="text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">{feature.title}</h3>
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
+                <div className="flex items-center gap-4 mb-4 relative z-10">
+                  <div className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center">
+                    <tech.icon className="h-6 w-6 text-blue-500" />
                   </div>
-
-                  <p className="text-gray-300 text-sm mb-6 flex-grow">{feature.description}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {feature.stats.map((stat, i) => (
-                      <span key={i} className="px-3 py-1 bg-white/10 text-white rounded-full text-xs font-medium">
-                        {stat}
-                      </span>
-                    ))}
-                  </div>
+                  <h3 className="text-xl font-bold text-white">{tech.title}</h3>
                 </div>
+                <p className="text-gray-400 pl-16 relative z-10">{tech.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 relative z-10">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="max-w-3xl mx-auto bg-[#0a0a0a] border border-blue-900/30 rounded-xl p-12 shadow-md shadow-blue-900/20 relative overflow-hidden">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
+            <div className="relative z-10 text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Ready to <span className="text-transparent bg-clip-text bg-gray-200">Start Trading</span>?
+              </h2>
+              <p className="text-xl text-gray-200 mb-8">
+                Join our platform today and see how easy trading can be. Start small and grow at your own pace.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link href="/markets" target="_blank">
+                  <Button className="bg-gradient-to-r from-blue-800 to-blue-900 text-white hover:bg-gradient-to-r hover:from-blue-900 hover:to-blue-900 px-8 py-6 text-lg font-medium rounded-xl border border-blue-800/30 relative overflow-hidden group">
+                    <div className="flex items-center gap-2 relative z-10">
+                      Launch App
+                      <ExternalLink size={20} />
+                    </div>
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
