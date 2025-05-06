@@ -25,8 +25,6 @@ export const getKlineUrl = (chainId?: number): string => {
     const envVarName = chainId 
         ? `NEXT_PUBLIC_CLOB_${chainId}_KLINE_URL`
         : `NEXT_PUBLIC_CLOB_${defaultChain}_KLINE_URL`
-    console.log('envVarName', envVarName)
-    console.log('publicRuntimeConfig[envVarName]', publicRuntimeConfig[envVarName])
     return publicRuntimeConfig[envVarName]
 }
 
