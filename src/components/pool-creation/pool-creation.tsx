@@ -6,7 +6,7 @@ import { NotificationDialog } from "@/components/notification-dialog/notificatio
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { PoolsPonderResponse, poolsQuery } from "@/graphql/gtx/clob"
+import { PoolItem, poolsPonderQuery, PoolsPonderResponse, poolsQuery, PoolsResponse } from "@/graphql/gtx/clob"
 import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
 import type { HexAddress } from "@/types/general/address"
 import { useQuery } from '@tanstack/react-query'
@@ -22,32 +22,9 @@ import { EXPLORER_URL } from "@/constants/explorer-url"
 import TokenABI from "@/abis/tokens/TokenABI"
 import { readContract } from "@wagmi/core"
 import { wagmiConfig } from "@/configs/wagmi"
+import { getUseSubgraph } from "@/utils/env"
 
 // Define interfaces for the pools query response
-interface PoolItem {
-  id: string;
-  baseCurrency: string;
-  coin: string;
-  lotSize: string;
-  maxOrderAmount: string;
-  orderBook: string;
-  quoteCurrency: string;
-  timestamp: number;
-}
-
-interface PoolsResponse {
-  poolss: {
-    items: PoolItem[];
-    totalCount: number;
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-  };
-}
-
 interface ProcessedPool {
   id: string;
   baseToken: string;
@@ -116,32 +93,27 @@ const PoolCreation: React.FC = () => {
     slippageThreshold?: string
   }>({})
 
-  const [processedPools, setProcessedPools] = useState<ProcessedPool[]>([])
-
   const chainId = useChainId()
   const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
-  // Fetch pools data from GraphQL
   const { data: poolsData, isLoading: poolsLoading } = useQuery<PoolsResponse | PoolsPonderResponse>({
     queryKey: ['pools'],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request<PoolsResponse | PoolsPonderResponse>(url, poolsQuery)
+      return await request<PoolsResponse | PoolsPonderResponse>(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery)
     },
     staleTime: 60000,
   })
 
-  // Extract unique tokens from pools data to populate token list
   const [tokenList, setTokenList] = useState<Token[]>([])
 
-  // Process pools data
   const processPools = async (poolsData: PoolsResponse | null) => {
     if (!poolsData) return []
 
-    const pools = (poolsData as PoolsPonderResponse)?.poolss?.items || (poolsData as PoolsResponse)?.pools
-    if (!pools.length) return []
+    const pools = ((poolsData as unknown) as PoolsPonderResponse)?.poolss?.items || ((poolsData as unknown) as PoolsResponse)?.pools
+    if (!pools?.length) return []
 
     const processedPools = await Promise.all(pools.map(async (pool: PoolItem) => {
       const [baseTokenAddress, quoteTokenAddress] = [pool.baseCurrency, pool.quoteCurrency]
@@ -151,7 +123,6 @@ const PoolCreation: React.FC = () => {
       let baseDecimals = 18
       let quoteDecimals = 6
 
-      // Get base token info
       if (baseTokenAddress !== 'Unknown') {
         try {
           const symbol = await readContract(wagmiConfig, {
@@ -171,7 +142,6 @@ const PoolCreation: React.FC = () => {
         }
       }
 
-      // Get quote token info
       if (quoteTokenAddress !== 'USDC') {
         try {
           const symbol = await readContract(wagmiConfig, {
@@ -214,16 +184,11 @@ const PoolCreation: React.FC = () => {
     })
   }
 
-  // First effect to process raw data
   useEffect(() => {
     const processData = async () => {
       const pools = await processPools(poolsData as PoolsResponse)
-      setProcessedPools(pools)
-
-      // Extract unique tokens from processed pools
       const uniqueTokenMap = new Map<string, Token>()
 
-      // Extract base currencies
       pools.forEach((pool: ProcessedPool) => {
         if (!uniqueTokenMap.has(pool.baseToken)) {
           uniqueTokenMap.set(pool.baseToken, {
@@ -235,7 +200,6 @@ const PoolCreation: React.FC = () => {
         }
       })
 
-      // Extract quote currencies
       pools.forEach((pool: ProcessedPool) => {
         if (!uniqueTokenMap.has(pool.quoteToken)) {
           uniqueTokenMap.set(pool.quoteToken, {
@@ -247,21 +211,18 @@ const PoolCreation: React.FC = () => {
         }
       })
 
-      // Set default quote currency if available
       const usdcToken = Array.from(uniqueTokenMap.values()).find(token => token.symbol.includes('USDC'))
       if (usdcToken && !quoteCurrency) {
         setQuoteCurrency(usdcToken.address)
         setQuoteCurrencySymbol(usdcToken.symbol)
       }
 
-      // Convert map to array
       setTokenList(Array.from(uniqueTokenMap.values()))
     }
 
     processData()
   }, [poolsData, quoteCurrency])
 
-  // Pool creation hook
   const {
     handleCreatePool,
     isCreatePoolPending,
@@ -271,7 +232,6 @@ const PoolCreation: React.FC = () => {
     createPoolHash,
   } = useCreatePool()
 
-  // Handle initial mounting
   useEffect(() => {
     const timer = setTimeout(() => {
       setMounted(true)
@@ -281,10 +241,8 @@ const PoolCreation: React.FC = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  // Handle wallet connection state changes
   useEffect(() => {
     if (mounted) {
-      // Only handle connection changes after mounting
       if (isConnected && !previousConnectionState) {
         setShowConnectionLoader(true)
         const timer = setTimeout(() => {
@@ -296,14 +254,11 @@ const PoolCreation: React.FC = () => {
     }
   }, [isConnected, previousConnectionState, mounted])
 
-  // Recent tokens based on timestamp
   const getRecentTokens = (): Token[] => {
-    if (!poolsData?.poolss?.items) return []
+    if (!(poolsData as PoolsPonderResponse)?.poolss?.items) return []
 
-    // Sort pools by timestamp (newest first)
-    const sortedPools = [...poolsData.poolss.items].sort((a, b) => b.timestamp - a.timestamp)
+    const sortedPools = [...((poolsData as PoolsPonderResponse).poolss.items || (poolsData as PoolsResponse).pools)].sort((a, b) => b.timestamp - a.timestamp)
 
-    // Take base tokens from the 3 most recent pools
     const recentTokens: Token[] = []
     const addedAddresses = new Set<string>()
 
@@ -328,12 +283,14 @@ const PoolCreation: React.FC = () => {
 
   // Popular tokens (based on most common in pools)
   const getPopularTokens = (): Token[] => {
-    if (!poolsData?.poolss?.items) return []
+    if (!(poolsData as PoolsPonderResponse)?.poolss?.items || !(poolsData as PoolsResponse).pools) return []
 
     // Count token occurrences
-    const tokenCount = new Map<string, { count: number, token: Token }>()
+    const tokenCount = new Map<string, { count: number; token: Token }>()
 
-    poolsData.poolss.items.forEach(pool => {
+    const poolItems = ((poolsData as unknown) as PoolsPonderResponse)?.poolss?.items || ((poolsData as unknown) as PoolsResponse)?.pools || []
+    
+    poolItems.forEach((pool: { coin: string; baseCurrency: string }) => {
       const baseSymbol = pool.coin.split('/')[0]
 
       if (!tokenCount.has(pool.baseCurrency)) {
@@ -354,18 +311,15 @@ const PoolCreation: React.FC = () => {
       }
     })
 
-    // Sort by count and take top 2
     return Array.from(tokenCount.values())
-      .sort((a, b) => b.count - a.count)
+      .sort((a: { count: number }, b: { count: number }) => b.count - a.count)
       .slice(0, 2)
-      .map(item => item.token)
+      .map((item: { token: Token }) => item.token)
   }
 
-  // Helper to get coin logo from local token directory
   const getCoinLogo = (symbol: string): string | undefined => {
     const lowerSymbol = symbol.toLowerCase()
 
-    // Check for available tokens in our directory
     if (lowerSymbol.includes("eth") || lowerSymbol.includes("weth")) {
       return "/tokens/eth.png"
     } else if (lowerSymbol.includes("btc") || lowerSymbol.includes("wbtc")) {
@@ -386,11 +340,9 @@ const PoolCreation: React.FC = () => {
       return "/tokens/trump.png"
     }
 
-    // Return undefined for tokens without matching icons
     return undefined
   }
 
-  // Form validation
   const validateForm = (): boolean => {
     const newErrors: {
       baseCurrency?: string
@@ -401,7 +353,6 @@ const PoolCreation: React.FC = () => {
       slippageThreshold?: string
     } = {}
 
-    // Validate base currency
     if (!baseCurrency) {
       newErrors.baseCurrency = "Base currency is required"
     } else if (!baseCurrency.startsWith("0x") || baseCurrency.length !== 42) {
@@ -544,16 +495,8 @@ const PoolCreation: React.FC = () => {
     return <GradientLoader />
   }
 
-  const toggleFeeTiers = () => {
-    setShowFeeTiers(!showFeeTiers)
-  }
-
   const toggleAdvancedOptions = () => {
     setShowAdvancedOptions(!showAdvancedOptions)
-  }
-
-  const selectFeeTier = (value: string) => {
-    setFeeTier(value)
   }
 
   const openTokenDialog = () => {
@@ -603,7 +546,6 @@ const PoolCreation: React.FC = () => {
   // Apply preset trading rules based on token decimals
   const applyPresetTradingRules = (decimals: number) => {
     if (decimals === 8) {
-      // Rules for 8 decimal tokens (BTC, DOGE)
       setMinTradeAmount("0.00001") // 0.00001 BTC (1e3 in contract)
       setMinAmountMovement("0.000001") // 0.000001 BTC (1e2 in contract)
       setMinOrderSize("0.02") // 0.02 USDC (2e4 in contract)
