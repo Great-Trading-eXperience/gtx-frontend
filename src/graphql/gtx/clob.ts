@@ -429,19 +429,24 @@ export const fiveMinuteCandleStickQuery = gql`
   query GetFiveMinuteCandleStick($poolId: String!) {
     fiveMinuteBuckets(
       where: { pool: $poolId }
-      orderBy: "timestamp"
+      orderBy: "openTime"
       orderDirection: "asc"
       limit: 1000
     ) {
       average
       close
       count
-      low
       id
       high
       open
-      pool
-      timestamp
+      low
+      openTime
+      poolId
+      quoteVolume
+      takerBuyBaseVolume
+      takerBuyQuoteVolume
+      volume
+      closeTime
     }
   }
 `;
@@ -450,19 +455,26 @@ export const hourCandleStickPonderQuery = gql`
   query GetHourCandleStick($poolId: String!) {
     hourBucketss(
       where: { poolId: $poolId }
-      orderBy: "timestamp"
+      orderBy: "openTime"
       orderDirection: "asc"
       limit: 1000
     ) {
-      average
-      close
-      count
-      low
-      id
-      high
-      open
-      pool
-      timestamp
+      items {
+        average
+        close
+        count
+        id
+        high
+        open
+        low
+        openTime
+        poolId
+        quoteVolume
+        takerBuyBaseVolume
+        takerBuyQuoteVolume
+        volume
+        closeTime
+      }
     }
   }
 `;
@@ -528,15 +540,20 @@ export const dailyCandleStickQuery = gql`
 `;
 
 export type CandleStickItem = {
-  average: string
-  close: string
+  average: number
+  close: number
+  closeTime: number
   count: number
-  low: string
   id: string
-  high: string
-  open: string
-  pool: string
-  timestamp: string
+  low: number
+  high: number
+  open: number
+  openTime: number
+  poolId: string
+  quoteVolume: number
+  takerBuyBaseVolume: number
+  takerBuyQuoteVolume: number
+  volume: number
 }
 
 export type MinuteCandleStickPonderResponse = {

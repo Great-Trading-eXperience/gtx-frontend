@@ -1,24 +1,24 @@
 "use client"
 
+import TokenABI from "@/abis/tokens/TokenABI"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { wagmiConfig } from "@/configs/wagmi"
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { PoolsPonderResponse, poolsQuery, PoolsResponse, TradesPonderResponse, tradesQuery, TradesResponse } from "@/graphql/gtx/clob"
+import { poolsPonderQuery, PoolsPonderResponse, poolsQuery, PoolsResponse, tradesPonderQuery, TradesPonderResponse, tradesQuery, TradesResponse } from "@/graphql/gtx/clob"
 import { calculateAge, formatNumber } from '@/lib/utils'
-import { useMarketStore } from "@/store/market-store"
+import { getUseSubgraph } from "@/utils/env"
 import { useQuery } from "@tanstack/react-query"
+import { readContract } from "@wagmi/core"
 import request from "graphql-request"
 import { CheckCircle, Clock, Hexagon, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { formatUnits } from "viem"
 import { useChainId } from "wagmi"
-import { readContract } from "@wagmi/core"
 import { DotPattern } from "../magicui/dot-pattern"
 import { MarketListSkeleton } from "./market-list-skeleton"
 import MarketSearchDialog from "./market-search-dialog"
-import { wagmiConfig } from "@/configs/wagmi"
-import TokenABI from "@/abis/tokens/TokenABI"
 
 interface MarketData {
   id: string
@@ -61,7 +61,7 @@ interface ProcessedTrade {
 export default function MarketList() {
   const router = useRouter() // Add the router
   const [searchQuery, setSearchQuery] = useState("")
-  const [marketData, setMarkets] = useState<MarketData[]>([])
+  const [markets, setMarkets] = useState<MarketData[]>([])
   const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessingPools, setIsProcessingPools] = useState(true)
@@ -80,13 +80,11 @@ export default function MarketList() {
       const currentChainId = Number(chainId ?? defaultChain)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, poolsQuery)
+      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery)
     },
     refetchInterval: 30000,
     staleTime: 60000, 
   })
-
-  const { quoteDecimals } = useMarketStore()
 
   // Fetch trades data
   const { data: tradesData } = useQuery<TradesPonderResponse | TradesResponse>({
@@ -95,7 +93,7 @@ export default function MarketList() {
       const currentChainId = Number(chainId ?? defaultChain)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, tradesQuery)
+      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery)
     },
     refetchInterval: 30000,
     staleTime: 60000,
@@ -199,7 +197,7 @@ export default function MarketList() {
 
   // Calculate market metrics for a pool
   const calculatePoolMetrics = (pool: ProcessedPool, trades: ProcessedTrade[]) => {
-    const poolTrades = trades.filter(trade => trade.pool === pool.orderBook)
+    const poolTrades = trades.filter(trade => trade.pool === pool.orderBook || trade.poolId === pool.orderBook)
     const sortedTrades = [...poolTrades].sort((a, b) => b.timestamp - a.timestamp)
     
     const latestPrice = sortedTrades.length > 0 
@@ -210,6 +208,7 @@ export default function MarketList() {
     const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
 
     sortedTrades.forEach(trade => {
+      console.log(trade.timestamp, '-', twentyFourHoursAgo)
       if (trade.timestamp >= twentyFourHoursAgo) {
         volume += BigInt(trade.quantity) * BigInt(trade.price) / BigInt(10 ** pool.baseDecimals)
       }
@@ -239,8 +238,15 @@ export default function MarketList() {
 
     if (processedPools.length > 0 && processedTrades.length > 0) {
       const markets = processedPools.map((pool) => {
+        
         const metrics = calculatePoolMetrics(pool, processedTrades)
         const iconInfo = getIconInfo(pool.baseSymbol)
+
+        if(pool.baseSymbol.toLowerCase().includes("eth")) {
+          console.log(pool)
+          console.log(metrics)
+          console.log(processedTrades)
+        }
 
         return {
           id: pool.id,
@@ -269,19 +275,19 @@ export default function MarketList() {
 
   // Filter data based on search query
   useEffect(() => {
-    if (marketData.length > 0) {
+    if (markets.length > 0) {
       if (!searchQuery) {
-        setFilteredMarkets(marketData)
+        setFilteredMarkets(markets)
       } else {
         const lowercaseQuery = searchQuery.toLowerCase()
-        const filtered = marketData.filter(
+        const filtered = markets.filter(
           (item) =>
             item.name.toLowerCase().includes(lowercaseQuery) || item.pair.toLowerCase().includes(lowercaseQuery),
         )
         setFilteredMarkets(filtered)
       }
     }
-  }, [searchQuery, marketData])
+  }, [searchQuery, markets])
 
   // Set loading state
   useEffect(() => {
@@ -373,7 +379,7 @@ export default function MarketList() {
 
   // Prepare data for market search dialog
   const getSearchDialogData = () => {
-    return marketData.map((market) => ({
+    return markets.map((market) => ({
       id: market.id,
       name: market.name,
       pair: market.pair,
@@ -390,7 +396,7 @@ export default function MarketList() {
 
   // Handle market selection from the dialog
   const handleMarketSelect = (marketId: string) => {
-    const selectedMarket = marketData.find((m) => m.id === marketId)
+    const selectedMarket = markets.find((m) => m.id === marketId)
     if (selectedMarket) {
       console.log(`Selected market: ${selectedMarket.name}/${selectedMarket.pair}`)
       // Navigate to the spot page with the pool ID

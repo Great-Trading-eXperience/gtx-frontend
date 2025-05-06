@@ -1,6 +1,6 @@
 'use client'
 
-import { BalancesPonderResponse, BalancesResponse, OrdersPonderResponse, OrdersResponse, PoolItem, PoolsPonderResponse, PoolsResponse, TradesPonderResponse, TradesResponse } from "@/graphql/gtx/clob"
+import { balancesPonderQuery, BalancesPonderResponse, BalancesResponse, ordersPonderQuery, OrdersPonderResponse, OrdersResponse, PoolItem, poolsPonderQuery, PoolsPonderResponse, PoolsResponse, tradesPonderQuery, TradesPonderResponse, TradesResponse } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { HexAddress } from "@/types/gtx/clob"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
@@ -21,6 +21,7 @@ import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
 import { balancesQuery, ordersQuery, poolsQuery, tradesQuery } from "@/graphql/gtx/clob"
 import { transformBalancesData, transformOrdersData, transformTradesData } from '@/lib/transform-data'
 import request from "graphql-request"
+import { getUseSubgraph } from "@/utils/env"
 
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
@@ -68,7 +69,7 @@ export default function ClobDex() {
             const currentChainId = Number(chainId ?? defaultChainId)
             const url = GTX_GRAPHQL_URL(currentChainId)
             if (!url) throw new Error('GraphQL URL not found')
-            return await request(url, poolsQuery)
+            return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery)
         },
         refetchInterval: 60000,
         staleTime: 60000,
@@ -175,7 +176,7 @@ export default function ClobDex() {
             const currentChainId = Number(chainId ?? defaultChainId)
             const url = GTX_GRAPHQL_URL(currentChainId)
             if (!url) throw new Error('GraphQL URL not found')
-            return await request<TradesResponse>(url, tradesQuery, { poolId: selectedPoolId })
+            return await request<TradesResponse>(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery, { poolId: selectedPoolId })
         },
         refetchInterval: 60000,
         staleTime: 60000,
@@ -199,7 +200,7 @@ export default function ClobDex() {
 
             const response = await request<BalancesResponse | BalancesPonderResponse>(
                 url,
-                balancesQuery,
+                getUseSubgraph() ? balancesQuery : balancesPonderQuery,
                 { userAddress }
             );
 
@@ -223,7 +224,7 @@ export default function ClobDex() {
             const currentChainId = Number(chainId ?? defaultChainId)
             const url = GTX_GRAPHQL_URL(currentChainId)
             if (!url) throw new Error('GraphQL URL not found')
-            return await request<OrdersResponse>(url, ordersQuery, { userAddress, poolId: selectedPoolId })
+            return await request<OrdersResponse>(url, getUseSubgraph() ? ordersQuery : ordersPonderQuery, { userAddress, poolId: selectedPoolId })
         },
         enabled: !!address,
         staleTime: 60000,
@@ -281,6 +282,7 @@ export default function ClobDex() {
                         address={address} 
                         chainId={chainId} 
                         defaultChainId={defaultChainId} 
+                        selectedPool={processedPool}
                     />
                 </div>
 
