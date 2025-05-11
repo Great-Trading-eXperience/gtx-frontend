@@ -13,13 +13,11 @@ import { writeContract, waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/configs/wagmi"
 import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
 
-// Import token addresses directly
-import {
-  WETH_ADDRESS,
-  WBTC_ADDRESS,
-  USDC_ADDRESS,
-  ROUTER_ADDRESS
-} from "@/constants/address"
+
+import { getTokenAddresses } from "@/helper/token-helper"
+import { ROUTER_ADDRESS } from "@/constants/contract/contract-address"
+
+
 
 // RouterABI with createMarket function
 const RouterABI = [
@@ -63,16 +61,16 @@ const MonadCreateMarket: React.FC = () => {
   const TOKEN_PAIRS: TokenPair[] = [
     {
       longSymbol: "WETH",
-      longAddress: WETH_ADDRESS,
+      longAddress: getTokenAddresses().WETH,
       shortSymbol: "USDC",
-      shortAddress: USDC_ADDRESS,
+      shortAddress: getTokenAddresses().USDC,
       pairName: "WETH/USDC"
     },
     {
       longSymbol: "WBTC",
-      longAddress: WBTC_ADDRESS,
+      longAddress: getTokenAddresses().WBTC,
       shortSymbol: "USDC",
-      shortAddress: USDC_ADDRESS,
+      shortAddress: getTokenAddresses().USDC,
       pairName: "WBTC/USDC"
     }
   ]

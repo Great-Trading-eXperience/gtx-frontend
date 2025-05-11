@@ -1,10 +1,7 @@
 import RouterABI from "@/abis/gtx/perpetual/RouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
-import { 
-  MARKET_FACTORY_ADDRESS, 
-  ROUTER_ADDRESS, 
-  USDC_ADDRESS 
-} from "@/constants/address";
+import { MARKET_FACTORY_ADDRESS, ROUTER_ADDRESS } from "@/constants/contract/contract-address";
+import { getTokenAddresses } from "@/helper/token-helper";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -47,7 +44,7 @@ export const usePerpetualCreateMarket = () => {
         // Log parameters for debugging
         console.log('Create Market Parameters:', {
           longToken: params.longToken,
-          shortToken: USDC_ADDRESS,
+          shortToken: getTokenAddresses().USDC,
           tokenPair: params.tokenPair,
           sources: params.sources
         });
@@ -65,7 +62,7 @@ export const usePerpetualCreateMarket = () => {
             // @ts-ignore - Bypass TypeScript checking for the args
             args: [
               params.longToken,
-              USDC_ADDRESS,
+              getTokenAddresses().USDC,
               params.tokenPair,
               params.sources
             ]
@@ -80,7 +77,7 @@ export const usePerpetualCreateMarket = () => {
             // @ts-ignore - Bypass TypeScript checking for the args
             args: [
               params.longToken,
-              USDC_ADDRESS
+              getTokenAddresses().USDC
             ]
           });
           hash = result;

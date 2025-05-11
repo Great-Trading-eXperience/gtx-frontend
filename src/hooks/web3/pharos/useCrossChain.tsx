@@ -1,34 +1,35 @@
-// CrossChainProvider.tsx
+// useCrossChain.ts - Improved Pharos version
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAccount } from 'wagmi';
 import { readContract } from '@wagmi/core';
 import { wagmiConfig } from '@/configs/wagmi';
 import type { HexAddress } from '@/types/general/address';
 import HyperlaneABI from "@/abis/pharos/HyperlaneABI";
-import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
+import { ContractName, 
+  DESTINATION_DOMAIN, 
+  NETWORK as CONFIG_NETWORK,
+  DEFAULT_CHAIN, MAILBOX_ADDRESS, getContractAddress } from '@/constants/contract/contract-address';
 
 /**
  * Network and domain configuration
  */
 const NETWORK = {
-  NAME: process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia',
-  CHAIN_ID: process.env.NEXT_PUBLIC_CHAIN_ID || '421614'
+  NAME: CONFIG_NETWORK || 'arbitrum-sepolia',
+  CHAIN_ID: DEFAULT_CHAIN || '421614'
 };
 
 /**
  * Hyperlane configuration with router addresses
  */
 const HYPERLANE = {
-  MAILBOX: process.env.NEXT_PUBLIC_MAILBOX as HexAddress,
+  MAILBOX: MAILBOX_ADDRESS as HexAddress,
   ROUTER: {
-    ARBITRUM_SEPOLIA: process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress,
-    GTXPRESSO: process.env.NEXT_PUBLIC_ROUTER_GTX_ADDRESS as HexAddress,
-    PHAROS: process.env.NEXT_PUBLIC_ROUTER_PHAROS_ADDRESS as HexAddress,
+    ARBITRUM_SEPOLIA: getContractAddress('421614', ContractName.router) as HexAddress,
+    PHAROS: getContractAddress('50002', ContractName.openIntentRouter) as HexAddress, // Using openIntentRouter for Pharos
   },
   DOMAIN: {
-    ARBITRUM_SEPOLIA: Number(process.env.NEXT_PUBLIC_DESTINATION_DOMAIN) || 421614,
-    GTXPRESSO: Number(process.env.NEXT_PUBLIC_TARGET_DOMAIN) || 1020201,
-    PHAROS: Number(process.env.NEXT_PUBLIC_PHAROS_DOMAIN) || 11155931,
+    ARBITRUM_SEPOLIA: Number(DESTINATION_DOMAIN) || 421614,
+    PHAROS: 50002, // Using Pharos chain ID from your contract-address.json
   },
 };
 
@@ -50,29 +51,17 @@ const TOKENS = {
     WETH: getTokenAddress('421614', ContractName.weth),
     WBTC: getTokenAddress('421614', ContractName.wbtc),
     USDC: getTokenAddress('421614', ContractName.usdc),
-    TRUMP: process.env.NEXT_PUBLIC_TRUMP_ADDRESS as HexAddress,
-    PEPE: process.env.NEXT_PUBLIC_PEPE_ADDRESS as HexAddress,
-    LINK: process.env.NEXT_PUBLIC_LINK_ADDRESS as HexAddress,
-    DOGE: process.env.NEXT_PUBLIC_DOGE_ADDRESS as HexAddress,
-    NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
-  },
-  GTXPRESSO: {
-    WETH: getTokenAddress('11155931', ContractName.weth),
-    WBTC: getTokenAddress('11155931', ContractName.wbtc),
-    USDC: getTokenAddress('11155931', ContractName.usdc),
-    TRUMP: process.env.NEXT_PUBLIC_TRUMP_GTX_ADDRESS as HexAddress,
-    LINK: process.env.NEXT_PUBLIC_LINK_GTX_ADDRESS as HexAddress,
-    DOGE: process.env.NEXT_PUBLIC_DOGE_GTX_ADDRESS as HexAddress,
     NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
   },
   PHAROS: {
     WETH: getTokenAddress('50002', ContractName.weth),
     WBTC: getTokenAddress('50002', ContractName.wbtc),
-    USDC: getTokenAddress('50002', ContractName.usdc)
+    USDC: getTokenAddress('50002', ContractName.usdc),
+    NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
   }
 };
 
-// Get current domain ID
+// Get current domain ID with improved GTX chain ID handling
 const getCurrentDomainId = async (router: HexAddress): Promise<number> => {
   try {
     // First try to get GTX host chain ID if available
@@ -86,10 +75,11 @@ const getCurrentDomainId = async (router: HexAddress): Promise<number> => {
         }
       );
       if (gtxChainId) {
+        console.log('Using GTX_HOST_CHAIN_ID:', gtxChainId);
         return Number(gtxChainId);
       }
     } catch (gtxError) {
-      console.warn('Failed to read GTX_HOST_CHAIN_ID:', gtxError);
+      console.warn('Failed to read GTX_HOST_CHAIN_ID, falling back to localDomain:', gtxError);
     }
 
     // Fallback to localDomain
@@ -103,27 +93,47 @@ const getCurrentDomainId = async (router: HexAddress): Promise<number> => {
     );
     return Number(domain);
   } catch (err) {
-    console.warn('Failed to read localDomain from contract:', err);
+    console.warn('Failed to read domain from contract, using fallback:', err);
     // Fallback based on router address
-    const isGtx = router.toLowerCase() === HYPERLANE.ROUTER.GTXPRESSO.toLowerCase();
-    return isGtx ? HYPERLANE.DOMAIN.GTXPRESSO : HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
+    const isPharos = router.toLowerCase() === HYPERLANE.ROUTER.PHAROS.toLowerCase();
+    return isPharos ? HYPERLANE.DOMAIN.PHAROS : HYPERLANE.DOMAIN.ARBITRUM_SEPOLIA;
   }
 };
 
-// Add new helper function to get GTX host chain ID
-const getGtxHostChainId = async (router: HexAddress): Promise<number | null> => {
+// Get GTX router address
+const getGtxRouterAddress = async (router: HexAddress): Promise<HexAddress | null> => {
   try {
-    const gtxChainId = await readContract(
+    const gtxRouter = await readContract(
       wagmiConfig,
       {
         address: router,
         abi: HyperlaneABI,
-        functionName: 'GTX_HOST_CHAIN_ID',
+        functionName: 'GTX_ROUTER_ADDRESS',
       }
-    );
-    return gtxChainId ? Number(gtxChainId) : null;
+    ) as HexAddress;
+    
+    return gtxRouter;
   } catch (error) {
-    console.warn('Failed to read GTX_HOST_CHAIN_ID:', error);
+    console.warn('Failed to read GTX_ROUTER_ADDRESS:', error);
+    return null;
+  }
+};
+
+// Get GTX balance manager
+const getGtxBalanceManager = async (router: HexAddress): Promise<HexAddress | null> => {
+  try {
+    const balanceManager = await readContract(
+      wagmiConfig,
+      {
+        address: router,
+        abi: HyperlaneABI,
+        functionName: 'GTX_BALANCE_MANAGER_ADDRESS',
+      }
+    ) as HexAddress;
+    
+    return balanceManager;
+  } catch (error) {
+    console.warn('Failed to read GTX_BALANCE_MANAGER_ADDRESS:', error);
     return null;
   }
 };
@@ -216,7 +226,7 @@ const getEquivalentTokenOnNetwork = (
   return targetTokens[tokenSymbol] || null;
 };
 
-// Context type definition
+// Enhanced type definition that includes GTX-specific properties
 interface CrossChainContextType {
   isInitialized: boolean;
   currentNetwork: string;
@@ -228,7 +238,10 @@ interface CrossChainContextType {
   isRouterEnabled: boolean;
   checkRemoteRouter: () => Promise<boolean>;
   isReadOnly: boolean;
+  // GTX-specific properties
   gtxHostChainId: number | null;
+  gtxRouterAddress: HexAddress | null;
+  gtxBalanceManager: HexAddress | null;
   // Helper functions
   getTokens: (network?: string) => Record<string, HexAddress>;
   getRemoteTokens: () => Record<string, HexAddress>;
@@ -236,10 +249,11 @@ interface CrossChainContextType {
   getRouterAddressForNetwork: (network: string) => HexAddress;
   isTokenSupportedOnNetwork: (token: HexAddress, network: string) => boolean;
   getEquivalentTokenOnNetwork: (token: HexAddress, sourceNetwork: string, targetNetwork: string) => HexAddress | null;
-  // New helper functions for gas estimation
+  // Gas estimation functions
   estimateGasPayment: (sourceNetwork: string, destinationNetwork: string) => Promise<string>;
   getNetworkGasToken: (network: string) => { symbol: string, address: HexAddress };
-  getGtxHostChainId: (router: HexAddress) => Promise<number | null>;
+  // Contract status checks
+  getContractStatus: (orderId: string) => Promise<string>;
 }
 
 // Default context values
@@ -255,6 +269,8 @@ const defaultContextValue: CrossChainContextType = {
   checkRemoteRouter: async () => false,
   isReadOnly: true,
   gtxHostChainId: null,
+  gtxRouterAddress: null,
+  gtxBalanceManager: null,
   getTokens: (network?: string) => getNetworkTokens(network || NETWORK.NAME),
   getRemoteTokens: () => getNetworkTokens(getRemoteNetwork()),
   getDomainId,
@@ -263,7 +279,7 @@ const defaultContextValue: CrossChainContextType = {
   getEquivalentTokenOnNetwork,
   estimateGasPayment: async () => '0.0005',
   getNetworkGasToken: () => ({ symbol: 'ETH', address: '0x0000000000000000000000000000000000000000' }),
-  getGtxHostChainId,
+  getContractStatus: async () => 'UNKNOWN',
 };
 
 // Create context
@@ -281,6 +297,8 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
   const [isRouterEnabled, setIsRouterEnabled] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [gtxHostChainId, setGtxHostChainId] = useState<number | null>(null);
+  const [gtxRouterAddress, setGtxRouterAddress] = useState<HexAddress | null>(null);
+  const [gtxBalanceManager, setGtxBalanceManager] = useState<HexAddress | null>(null);
   
   // Get static values
   const currentRouter = getCurrentRouterAddress();
@@ -294,21 +312,54 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
         // Try to read current domain from contract
         let domain;
         try {
-          domain = await readContract(
-            wagmiConfig,
-            {
-              address: currentRouter,
-              abi: HyperlaneABI,
-              functionName: 'localDomain',
+          // First check for GTX_HOST_CHAIN_ID
+          try {
+            const gtxChainId = await readContract(
+              wagmiConfig,
+              {
+                address: currentRouter,
+                abi: HyperlaneABI,
+                functionName: 'GTX_HOST_CHAIN_ID',
+              }
+            );
+            
+            if (gtxChainId) {
+              setGtxHostChainId(Number(gtxChainId));
+              domain = gtxChainId;
             }
-          );
+          } catch (gtxError) {
+            console.warn('No GTX_HOST_CHAIN_ID available:', gtxError);
+          }
+          
+          // If no GTX chain ID, try localDomain
+          if (!domain) {
+            domain = await readContract(
+              wagmiConfig,
+              {
+                address: currentRouter,
+                abi: HyperlaneABI,
+                functionName: 'localDomain',
+              }
+            );
+          }
         } catch (domainError) {
-          console.warn('Failed to read localDomain from contract:', domainError);
+          console.warn('Failed to read domain from contract:', domainError);
           domain = getDomainId(currentNetwork);
         }
         
         setCurrentDomain(Number(domain));
         setRemoteDomain(getRemoteDomainId(currentNetwork));
+        
+        // Get GTX-specific configuration
+        try {
+          const gtxRouter = await getGtxRouterAddress(currentRouter);
+          if (gtxRouter) setGtxRouterAddress(gtxRouter);
+          
+          const balanceManager = await getGtxBalanceManager(currentRouter);
+          if (balanceManager) setGtxBalanceManager(balanceManager);
+        } catch (gtxConfigError) {
+          console.warn('Failed to get GTX configuration:', gtxConfigError);
+        }
         
         // Read owner from contract
         let owner;
@@ -354,10 +405,6 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
         // Check if connected wallet is owner
         setIsReadOnly(isConnected ? owner.toLowerCase() !== address?.toLowerCase() : true);
         
-        // Get GTX host chain ID
-        const gtxId = await getGtxHostChainId(currentRouter);
-        setGtxHostChainId(gtxId);
-        
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize CrossChainProvider:', error);
@@ -393,26 +440,43 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
   
-  // Get gas payment estimate for cross-chain transfer
+  // Get gas payment estimate for cross-chain transfer using contract methods
   const estimateGasPayment = async (sourceNetwork: string, destinationNetwork: string): Promise<string> => {
     try {
       const sourceRouter = getRouterAddressForNetwork(sourceNetwork);
       const destinationDomain = getDomainId(destinationNetwork);
       
-      const gasPayment = await readContract(
-        wagmiConfig,
-        {
-          address: sourceRouter,
-          abi: HyperlaneABI,
-          functionName: 'quoteGasPayment',
-          args: [destinationDomain],
-        }
-      );
-      
-      // Convert to ETH string (assuming 18 decimals)
-      return (Number(gasPayment) / 10**18).toFixed(6);
+      // First try quoteGasPayment
+      try {
+        const gasPayment = await readContract(
+          wagmiConfig,
+          {
+            address: sourceRouter,
+            abi: HyperlaneABI,
+            functionName: 'quoteGasPayment',
+            args: [destinationDomain],
+          }
+        );
+        
+        return (Number(gasPayment) / 10**18).toFixed(6);
+      } catch (quoteError) {
+        console.warn('Failed to use quoteGasPayment, trying destinationGas:', quoteError);
+        
+        // Try destinationGas as fallback
+        const destinationGas = await readContract(
+          wagmiConfig,
+          {
+            address: sourceRouter,
+            abi: HyperlaneABI,
+            functionName: 'destinationGas',
+            args: [destinationDomain],
+          }
+        );
+        
+        return (Number(destinationGas) / 10**18).toFixed(6);
+      }
     } catch (error) {
-      console.warn('Failed to estimate gas payment:', error);
+      console.warn('All gas estimation methods failed:', error);
       // Return default estimate
       return '0.0005';
     }
@@ -425,6 +489,62 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
       symbol: 'ETH', 
       address: '0x0000000000000000000000000000000000000000' as HexAddress 
     };
+  };
+  
+  // Check order status directly from contract
+  const getContractStatus = async (orderId: string): Promise<string> => {
+    try {
+      // Try to get status constants
+      const OPENED = await readContract(wagmiConfig, {
+        address: currentRouter,
+        abi: HyperlaneABI,
+        functionName: 'OPENED',
+      });
+      
+      const FILLED = await readContract(wagmiConfig, {
+        address: currentRouter,
+        abi: HyperlaneABI,
+        functionName: 'FILLED',
+      });
+      
+      const SETTLED = await readContract(wagmiConfig, {
+        address: currentRouter,
+        abi: HyperlaneABI,
+        functionName: 'SETTLED',
+      });
+      
+      const REFUNDED = await readContract(wagmiConfig, {
+        address: currentRouter,
+        abi: HyperlaneABI,
+        functionName: 'REFUNDED',
+      });
+      
+      const UNKNOWN = await readContract(wagmiConfig, {
+        address: currentRouter,
+        abi: HyperlaneABI,
+        functionName: 'UNKNOWN',
+      });
+      
+      // Get actual status
+      const status = await readContract(wagmiConfig, {
+        address: currentRouter,
+        abi: HyperlaneABI,
+        functionName: 'orderStatus',
+        args: [orderId],
+      });
+      
+      // Map to status strings
+      if (status === OPENED) return 'OPENED';
+      if (status === FILLED) return 'FILLED';
+      if (status === SETTLED) return 'SETTLED';
+      if (status === REFUNDED) return 'REFUNDED';
+      if (status === UNKNOWN) return 'UNKNOWN';
+      
+      return 'PROCESSING';
+    } catch (error) {
+      console.warn('Failed to get order status:', error);
+      return 'UNKNOWN';
+    }
   };
   
   // Helper functions
@@ -444,6 +564,8 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
     checkRemoteRouter,
     isReadOnly,
     gtxHostChainId,
+    gtxRouterAddress,
+    gtxBalanceManager,
     getTokens,
     getRemoteTokens,
     getDomainId,
@@ -452,7 +574,7 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
     getEquivalentTokenOnNetwork,
     estimateGasPayment,
     getNetworkGasToken,
-    getGtxHostChainId,
+    getContractStatus,
   };
   
   return (
@@ -463,7 +585,7 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
 };
 
 // Custom hook to use the context
-export const useCrossChain = () => useContext(CrossChainContext);
+export const useCrossChainPharos = () => useContext(CrossChainContext);
 
 // Export utility functions for standalone use
 export {

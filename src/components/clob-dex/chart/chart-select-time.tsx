@@ -1,6 +1,7 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
+import { DEFAULT_CHAIN } from "@/constants/contract/contract-address"
 import { dailyCandleStickQuery, fiveMinuteCandleStickQuery, hourCandleStickQuery } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
@@ -111,7 +112,7 @@ function ChartComponent({ height = 430 }: ChartComponentProps) {
   const { selectedPoolId, quoteDecimals } = useMarketStore()
 
   const chainId = useChainId()
-  const defaultChain = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+  const defaultChain = Number(DEFAULT_CHAIN)
 
   const { data, isLoading, error } = useQuery<CandleStickResponse>({
     queryKey: [selectedTimeFrame, String(chainId ?? defaultChain)],

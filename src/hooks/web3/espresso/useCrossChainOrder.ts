@@ -9,6 +9,13 @@ import { wagmiConfig } from '@/configs/wagmi';
 import HyperlaneABI from '@/abis/espresso/HyperlaneABI';
 import type { HexAddress } from '@/types/general/address';
 import OrderEncoder from '@/types/espresso/OrderEncoder';
+import { ContractName, 
+  DESTINATION_DOMAIN, 
+  getContractAddress, 
+  TARGET_DOMAIN,
+  NETWORK as CONFIG_NETWORK,
+  MAILBOX_ADDRESS
+} from '@/constants/contract/contract-address';
 
 export enum OrderAction {
   Transfer = 0,
@@ -37,28 +44,39 @@ export type CreateCrossChainOrderParams = {
   fillDeadline?: number;
 };
 
-const DEFAULT_DESTINATION_DOMAIN = parseInt(process.env.NEXT_PUBLIC_DESTINATION_DOMAIN || '421614');
-const DEFAULT_TARGET_DOMAIN = parseInt(process.env.NEXT_PUBLIC_TARGET_DOMAIN || '1020201');
+// Helper function to get token addresses from contract-address.json
+function getTokenAddress(chainId: string, tokenName: ContractName): HexAddress {
+  try {
+    return getContractAddress(chainId, tokenName) as HexAddress;
+  } catch (error) {
+    console.warn(`Failed to get address for ${tokenName} on chain ${chainId}:`, error);
+    return '0x0000000000000000000000000000000000000000' as HexAddress;
+  }
+}
+
+
+const DEFAULT_DESTINATION_DOMAIN = parseInt(DESTINATION_DOMAIN || '421614');
+const DEFAULT_TARGET_DOMAIN = parseInt(TARGET_DOMAIN || '1020201');
 
 /**
  * Network and domain configuration
  */
 export const NETWORK = {
-  NAME: process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia',
+  NAME: CONFIG_NETWORK || 'arbitrum-sepolia',
 };
 
 /**
  * Hyperlane configuration with router addresses
  */
 export const HYPERLANE = {
-  MAILBOX: process.env.NEXT_PUBLIC_MAILBOX as HexAddress,
+  MAILBOX: MAILBOX_ADDRESS as HexAddress,
   ROUTER: {
-    ARBITRUM_SEPOLIA: process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress,
-    GTXPRESSO: process.env.NEXT_PUBLIC_ROUTER_GTX_ADDRESS as HexAddress,
+    ARBITRUM_SEPOLIA: getContractAddress('421614', ContractName.router) as HexAddress,
+    GTXPRESSO: getContractAddress('1020201', ContractName.router) as HexAddress,
   },
   DOMAIN: {
-    ARBITRUM_SEPOLIA: Number(process.env.NEXT_PUBLIC_DESTINATION_DOMAIN) || 421614,
-    GTXPRESSO: Number(process.env.NEXT_PUBLIC_TARGET_DOMAIN) || 1020201,
+    ARBITRUM_SEPOLIA: DEFAULT_DESTINATION_DOMAIN,
+    GTXPRESSO: DEFAULT_TARGET_DOMAIN,
   },
 };
 
@@ -67,22 +85,15 @@ export const HYPERLANE = {
  */
 export const TOKENS = {
   ARBITRUM_SEPOLIA: {
-    WETH: process.env.NEXT_PUBLIC_WETH_ADDRESS as HexAddress,
-    WBTC: process.env.NEXT_PUBLIC_WBTC_ADDRESS as HexAddress,
-    USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS as HexAddress,
-    TRUMP: process.env.NEXT_PUBLIC_TRUMP_ADDRESS as HexAddress,
-    PEPE: process.env.NEXT_PUBLIC_PEPE_ADDRESS as HexAddress,
-    LINK: process.env.NEXT_PUBLIC_LINK_ADDRESS as HexAddress,
-    DOGE: process.env.NEXT_PUBLIC_DOGE_ADDRESS as HexAddress,
+    WETH: getTokenAddress('421614', ContractName.weth),
+    WBTC: getTokenAddress('421614', ContractName.wbtc),
+    USDC: getTokenAddress('421614', ContractName.usdc),
     NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
   },
   GTXPRESSO: {
-    WETH: process.env.NEXT_PUBLIC_WETH_GTX_ADDRESS as HexAddress,
-    WBTC: process.env.NEXT_PUBLIC_WBTC_GTX_ADDRESS as HexAddress,
-    USDC: process.env.NEXT_PUBLIC_USDC_GTX_ADDRESS as HexAddress,
-    TRUMP: process.env.NEXT_PUBLIC_TRUMP_GTX_ADDRESS as HexAddress,
-    LINK: process.env.NEXT_PUBLIC_LINK_GTX_ADDRESS as HexAddress,
-    DOGE: process.env.NEXT_PUBLIC_DOGE_GTX_ADDRESS as HexAddress,
+    WETH: getTokenAddress('1020201', ContractName.weth),
+    WBTC: getTokenAddress('1020201', ContractName.wbtc),
+    USDC: getTokenAddress('1020201', ContractName.usdc),
     NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
   }
 };
@@ -218,7 +229,7 @@ export const useCrossChainOrder = (
       return Number(localDomain);
     } catch (err) {
       console.warn('Failed to read localDomain, using fallback:', err);
-      const isGtx = localRouterAddress.toLowerCase() === process.env.NEXT_PUBLIC_ROUTER_GTX_ADDRESS?.toLowerCase();
+      const isGtx = localRouterAddress.toLowerCase() === getContractAddress('1020201', ContractName.router)?.toLowerCase();
       return isGtx ? 1020201 : 421614;
     }
   }, [localRouterAddress]);
