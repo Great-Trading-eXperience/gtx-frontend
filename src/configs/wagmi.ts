@@ -192,11 +192,11 @@ const allChains = [
 	riseSepolia
 ];
 
-const enabledChains = ENABLED_CHAINS
-	? allChains.filter((chain) =>
-			ENABLED_CHAINS?.split(',').includes(chain.id.toString())
-	  )
-	: [pharos, localChain, arbitrumSepolia];
+const enabledChains = process.env.ENABLED_CHAINS
+  ? allChains.filter((chain) =>
+    process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString())
+  )
+  : [riseSepolia]
 
 const transports = enabledChains.reduce((acc, chain) => {
 	acc[chain.id] = http(chain.rpcUrls.default.http[0]);
