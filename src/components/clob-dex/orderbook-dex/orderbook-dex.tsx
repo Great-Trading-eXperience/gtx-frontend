@@ -422,11 +422,11 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                       0,
                     )
 
-                    // Determine if this order should be blinking
-                    const isBlinking = ask.isMatched;
+                    // Determine if this order should be highlighted
+                    const isHighlighted = ask.isMatched;
 
                     return (
-                      <div key={ask.key || `ask-${i}`} className={`group relative ${isBlinking ? 'animate-blink-bg' : ''}`}>
+                      <div key={ask.key || `ask-${i}`} className="group relative">
                         {/* Volume bar - not animated */}
                         <div
                           className="absolute bottom-0 left-0 top-0 bg-rose-500/10 transition-all group-hover:bg-rose-500/20"
@@ -435,19 +435,19 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                           }}
                         />
 
-                        {/* Full-width blinking overlay when matched */}
-                        {isBlinking && (
-                          <div className="absolute inset-0 animate-blink-highlight-ask"></div>
+                        {/* Only add the highlight animation when matched */}
+                        {isHighlighted && (
+                          <div className="absolute inset-0 animate-highlight-ask"></div>
                         )}
 
                         <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
-                          <div className={`font-medium text-rose-400 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                          <div className="font-medium text-rose-400">
                             {formatPrice(ask.price)}
                           </div>
-                          <div className={`text-center text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                          <div className="text-center text-gray-200">
                             {ask.size.toFixed(2)}
                           </div>
-                          <div className={`text-right text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                          <div className="text-right text-gray-200">
                             {(ask.total || 0).toFixed(2)}
                           </div>
                         </div>
@@ -510,11 +510,11 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                       0,
                     )
 
-                    // Determine if this order should be blinking
-                    const isBlinking = bid.isMatched;
+                    // Determine if this order should be highlighted
+                    const isHighlighted = bid.isMatched;
 
                     return (
-                      <div key={bid.key || `bid-${i}`} className={`group relative ${isBlinking ? 'animate-blink-bg' : ''}`}>
+                      <div key={bid.key || `bid-${i}`} className="group relative">
                         {/* Volume bar - not animated */}
                         <div
                           className="absolute bottom-0 left-0 top-0 bg-emerald-500/10 transition-all group-hover:bg-emerald-500/20"
@@ -523,19 +523,19 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                           }}
                         />
 
-                        {/* Full-width blinking overlay when matched */}
-                        {isBlinking && (
-                          <div className="absolute inset-0 animate-blink-highlight-bid"></div>
+                        {/* Only add the highlight animation when matched */}
+                        {isHighlighted && (
+                          <div className="absolute inset-0 animate-highlight-bid"></div>
                         )}
 
                         <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
-                          <div className={`font-medium text-emerald-400 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                          <div className="font-medium text-emerald-400">
                             {formatPrice(bid.price)}
                           </div>
-                          <div className={`text-center text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                          <div className="text-center text-gray-200">
                             {bid.size.toFixed(2)}
                           </div>
-                          <div className={`text-right text-gray-200 ${isBlinking ? 'animate-blink-text' : ''}`}>
+                          <div className="text-right text-gray-200">
                             {(bid.total || 0).toFixed(2)}
                           </div>
                         </div>
@@ -549,46 +549,26 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
         )}
       </div>
 
-      {/* Add CSS for the blinking animations with much slower animations */}
+      {/* Add CSS for the blinking animations with more subtle effects */}
       <style jsx global>{`
-        @keyframes blink-bg {
-          0% { background-color: transparent; }
-          100% { background-color: rgba(255, 255, 255, 0.1); }
+        @keyframes highlight-bid {
+          0% { background-color: rgba(16, 185, 129, 0.1); }
+          50% { background-color: rgba(16, 185, 129, 0.25); }
+          100% { background-color: rgba(16, 185, 129, 0.1); }
         }
         
-        @keyframes blink-highlight-bid {
-          0% { background-color: rgba(16, 185, 129, 0.3); }
-          100% { background-color: rgba(16, 185, 129, 1); }
+        @keyframes highlight-ask {
+          0% { background-color: rgba(239, 68, 68, 0.1); }
+          50% { background-color: rgba(239, 68, 68, 0.25); }
+          100% { background-color: rgba(239, 68, 68, 0.1); }
         }
         
-        @keyframes blink-highlight-ask {
-          0% { background-color: rgba(239, 68, 68, 0.3); }
-          100% { background-color: rgba(239, 68, 68, 1); }
+        .animate-highlight-bid {
+          animation: highlight-bid 1.2s ease-in-out;
         }
         
-        @keyframes blink-text {
-          0% { opacity: 1; }
-          20% { opacity: 0.9; font-weight: bold; }
-          40% { opacity: 1; }
-          60% { opacity: 0.95; font-weight: bold; }
-          80% { opacity: 1; }
-          100% { opacity: 1; }
-        }
-        
-        .animate-blink-bg {
-          animation: blink-bg 10s linear;
-        }
-        
-        .animate-blink-highlight-bid {
-          animation: blink-highlight-bid 10s linear;
-        }
-        
-        .animate-blink-highlight-ask {
-          animation: blink-highlight-ask 10s linear;
-        }
-        
-        .animate-blink-text {
-          animation: blink-text 10s linear;
+        .animate-highlight-ask {
+          animation: highlight-ask 1.2s ease-in-out;
         }
       `}</style>
     </div>
