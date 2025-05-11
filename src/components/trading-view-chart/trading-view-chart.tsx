@@ -66,7 +66,7 @@ export default function TradingViewChartContainer({
       tvScriptLoadingPromise = new Promise((resolve) => {
         const script = document.createElement('script');
         script.id = 'tradingview-widget-loading-script';
-        script.src = '/charting_library/charting_library/charting_library.standalone.js';
+        script.src = '/charting-library/charting_library/charting_library.standalone.js';
         script.type = 'text/javascript';
         script.onload = resolve as any;
         document.head.appendChild(script);
@@ -217,7 +217,7 @@ export default function TradingViewChartContainer({
       // Create the widget
       chartWidgetRef.current = new window.TradingView.widget({
         container: 'tv_chart_container',
-        libraryPath: '/charting_library/charting_library/',
+        library_path: '/charting_library/',
         locale: 'en',
         disabled_features: ['use_localstorage_for_settings'],
         enabled_features: ['study_templates'],
@@ -228,10 +228,9 @@ export default function TradingViewChartContainer({
         autosize: true,
         theme: 'Dark',
         symbol: symbol,
-        interval: interval, 
+        interval: interval,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         debug: true,
-        library_path: '/charting_library/charting_library/',
         loading_screen: { backgroundColor: "#131722" },
         datafeed: datafeed,
       });

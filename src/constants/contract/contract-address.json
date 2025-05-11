@@ -1,5 +1,5 @@
 {
-  "DEFAULT_CHAIN": "50002",
+  "DEFAULT_CHAIN": "11155931",
   "USE_SUBGRAPH": false,
   "FAUCET_ADDRESS": "",
   "MARKET_FACTORY_ADDRESS": "",
@@ -11,7 +11,7 @@
   "MAILBOX_ADDRESS": "0x8DF6aDE95d25855ed0FB927ECD6a1D5Bb09d2145",
   "NETWORK": "gtxpresso",
   "ROUTER_OWNER": "0x77C037fbF42e85dB1487B390b08f58C00f438812",
-  "ENABLED_CHAINS": "50002",
+  "ENABLED_CHAINS": "11155931",
   "MAILCHIMP": {
     "API_KEY": "35171d4dcec8d24ba11e28b19dbec744-us11",
     "AUDIENCE_ID": "f3c6baf97a",
@@ -30,10 +30,12 @@
     "ENABLED_TABS_PERPETUAL": false
   },
   "INDEXER_URLS": {
-    "50002": "https://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn"
+    "50002": "https://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn",
+    "11155931": "https://indexer-rise.gtxdex.xyz"
   },
   "EXPLORER_URLS": {
-    "50002": "https://pharosscan.xyz/tx/"
+    "50002": "https://pharosscan.xyz/tx/",
+    "11155931": "https://testnet-explorer.riselabs.xyz/tx/"
   },
   "31338": {
     "clobBalanceManager": "0x922D6956C99E12DFeB3224DEA977D0939758A1Fe",
@@ -63,9 +65,9 @@
     "router": "0x16102f66fd353153B5F89838d9d3AA6186B82211"
   },
   "11155931": {
-    "clobBalanceManager": "0xeD6394aE37DfBD25875606CfE30Ad6b949e3AA78",
-    "clobPoolManager": "0x580Fb9466af25774E734c2425983b1ad50dEC2C2",
-    "clobRouter": "0x0eC5B9B424AEb5a65Ef1C52f52E9f4EB6dF42d80",
+    "clobBalanceManager": "0xd3168EBb535cDFff693af02045c39BfdE230813D",
+    "clobPoolManager": "0x1358DcE94Cdc799c521524e6cC893bC55297cd18",
+    "clobRouter": "0x830B83BAb367A9f3aDa7F23Ea03a36F8aB3970e2",
     "proxyAdminOwner": "0x77C037fbF42e85dB1487B390b08f58C00f438812",
     "openIntentRouter": "0x12Ec0f9466E115F69E14A3c6BF52574512d97723",
     "usdc": "0x2E6D0aA9ca3348870c7cbbC28BF6ea90A3C1fE36",

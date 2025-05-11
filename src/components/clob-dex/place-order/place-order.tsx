@@ -19,6 +19,7 @@ import { ClobDexComponentProps } from "../clob-dex"
 import { useContractRead, useChainId, useAccount } from "wagmi"
 import { toast } from "sonner"
 import poolManagerABI from "@/abis/gtx/clob/PoolManagerABI"
+import { formatNumber } from "@/lib/utils"
 
 // Create a mapping type to convert string timestamp to number
 type PoolItemWithStringTimestamp = {
@@ -223,7 +224,7 @@ const PlaceOrder = ({
 
           try {
             const total = await getTotalAvailableBalance(relevantCurrency)
-            setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals)) // Assuming 18 decimals
+            setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals))
           } catch (error) {
             console.error("Failed to get total balance, falling back to wallet balance:", error)
             const walletBal = await getWalletBalance(relevantCurrency)
@@ -358,7 +359,7 @@ const PlaceOrder = ({
               </h3>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">{availableBalance}</span>
+              <span className="text-gray-300">{formatNumber(Number(availableBalance), { decimals: 2, compact: true })}</span>
               <span className="text-gray-400">{side === OrderSideEnum.BUY ? "USDC" : selectedPool.coin.split("/")[0]}</span>
             </div>
           </div>
