@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
+import { FEATURE_FLAGS } from "@/constants/contract/contract-address";
 
 const Header = () => {
   const { theme, setTheme } = useTheme();
@@ -15,42 +16,42 @@ const Header = () => {
     { 
       destination: "/markets", 
       label: "Markets",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_MARKETS === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_MARKETS
     },
     { 
       destination: "/swap", 
       label: "Swap",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_SWAP === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_SWAP
     },
     { 
       destination: "/spot", 
       label: "Spot",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_SPOT === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_SPOT
     },
     { 
       destination: "/perpetual", 
       label: "Perpetual",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_PERPETUAL === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_PERPETUAL 
     },
     { 
       destination: "/pool-creation", 
       label: "Create",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_CREATE === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_CREATE
     },
     { 
       destination: "/faucet", 
       label: "Faucet",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_FAUCET === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_FAUCET
     },
     { 
       destination: "/earn", 
       label: "Earn",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_EARN === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_EARN 
     },
     { 
       destination: "/vegtx", 
       label: "veGTX",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX === 'true'
+      enabled: FEATURE_FLAGS.ENABLED_TABS_VEGTX 
     }
   ];
   

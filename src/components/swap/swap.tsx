@@ -14,6 +14,7 @@ import type { HexAddress } from '@/types/general/address';
 import { DotPattern } from '../magicui/dot-pattern';
 import { SwapProgressDialog } from '../ui/swap-progress-dialog';
 import TokenNetworkSelector from './token-network-selector';
+import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 
 // Types for token and network selection
 export interface Network {
@@ -49,7 +50,7 @@ const CrossChainOrderForm: React.FC = () => {
     estimateGasPayment,
     isTokenSupportedOnNetwork,
     getEquivalentTokenOnNetwork
-  } = useCrossChainOrder(process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress);
+  } = useCrossChainOrder( getContractAddress('421614', ContractName.router) as HexAddress);
 
   // State for networks
   const [sourceNetworkId, setSourceNetworkId] = useState<string>(currentNetwork);

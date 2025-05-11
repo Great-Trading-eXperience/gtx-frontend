@@ -1,11 +1,12 @@
+import { MAILCHIMP } from "@/constants/contract/contract-address"
 import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
     // Mailchimp API configuration
-    const API_KEY = process.env.MAILCHIMP_API_KEY
-    const AUDIENCE_ID = process.env.MAILCHIMP_AUDIENCE_ID
-    const API_SERVER = process.env.MAILCHIMP_API_SERVER
+    const API_KEY = MAILCHIMP.API_KEY
+    const AUDIENCE_ID = MAILCHIMP.AUDIENCE_ID
+    const API_SERVER = MAILCHIMP.API_SERVER
 
     if (!API_KEY || !AUDIENCE_ID || !API_SERVER) {
       throw new Error("Mailchimp configuration is missing")

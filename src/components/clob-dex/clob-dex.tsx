@@ -22,7 +22,7 @@ import { balancesQuery, ordersQuery, poolsQuery, tradesQuery } from "@/graphql/g
 import { transformBalancesData, transformOrdersData, transformTradesData } from '@/lib/transform-data'
 import request from "graphql-request"
 import { getUseSubgraph } from "@/utils/env"
-
+import { DEFAULT_CHAIN } from "@/constants/contract/contract-address"
 const useIsClient = () => {
     const [isClient, setIsClient] = useState(false);
 
@@ -43,7 +43,7 @@ export type ClobDexComponentProps = {
 export default function ClobDex() {
     const { address } = useAccount();
     const chainId = useChainId()
-    const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+    const defaultChainId = Number(DEFAULT_CHAIN)
 
     const pathname = usePathname();
     const { isConnected } = useAccount();

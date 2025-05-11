@@ -1,62 +1,97 @@
 import getConfig from 'next/config'
+import { DEFAULT_CHAIN, ContractName, getContractAddress, USE_SUBGRAPH, getIndexerUrl, getExplorerUrlConfig } from '@/constants/contract/contract-address'
 
 const { publicRuntimeConfig } = getConfig()
 
+// Helper function to get chain ID string
+const getChainIdStr = (chainId?: number): string => {
+    return chainId ? chainId.toString() : DEFAULT_CHAIN
+}
+
 export const getGraphQLUrl = (chainId?: number): string => {
-    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
-    const envVarName = chainId 
-        ? `NEXT_PUBLIC_CLOB_${chainId}_INDEXER_URL`
-        : `NEXT_PUBLIC_CLOB_${defaultChain}_INDEXER_URL`
-    
-    const url = publicRuntimeConfig[envVarName]
-    if (!url) {
-        console.error(`Environment variable ${envVarName} not found`)
-        throw new Error(`GraphQL URL not found for chain ${chainId || defaultChain}`)
+    try {
+        const chainIdStr = getChainIdStr(chainId);
+        return getIndexerUrl(chainIdStr);
+    } catch (error) {
+        console.error(`GraphQL URL not found for chain ${getChainIdStr(chainId)}`);
+        throw new Error(`GraphQL URL not found for chain ${getChainIdStr(chainId)}`);
     }
-    return url
-} 
+};
 
 export const getUseSubgraph = (): boolean => {
-    return publicRuntimeConfig.NEXT_PUBLIC_USE_SUBGRAPH === 'true'
+    return USE_SUBGRAPH
 }
 
 export const getKlineUrl = (chainId?: number): string => {
-    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
-    const envVarName = chainId 
-        ? `NEXT_PUBLIC_CLOB_${chainId}_KLINE_URL`
-        : `NEXT_PUBLIC_CLOB_${defaultChain}_KLINE_URL`
+    const chainIdStr = getChainIdStr(chainId)
+    const envVarName = `NEXT_PUBLIC_CLOB_${chainIdStr}_KLINE_URL`
     return publicRuntimeConfig[envVarName]
 }
 
 export const getExplorerUrl = (chainId?: number): string => {
-    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
-    const envVarName = chainId 
-        ? `NEXT_PUBLIC_EXPLORER_${chainId}_URL`
-        : `NEXT_PUBLIC_EXPLORER_${defaultChain}_URL`
-    return publicRuntimeConfig[envVarName]
-}
+    try {
+        const chainIdStr = getChainIdStr(chainId);
+        return getExplorerUrlConfig(chainIdStr);
+    } catch (error) {
+        console.error(`Explorer URL not found for chain ${getChainIdStr(chainId)}`);
+        return '';
+    }
+};
 
+// Methods that can use contract-address.ts directly
 export const getBalanceManagerAddress = (chainId?: number): string => {
-    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
-    const envVarName = chainId 
-        ? `NEXT_PUBLIC_BALANCE_MANAGER_${chainId}_ADDRESS`
-        : `NEXT_PUBLIC_BALANCE_MANAGER_${defaultChain}_ADDRESS`
-    return publicRuntimeConfig[envVarName]
+    try {
+        // Try to get from contract addresses first
+        return getContractAddress(chainId || DEFAULT_CHAIN, ContractName.clobBalanceManager)
+    } catch (error) {
+        // Fall back to environment variables if not found in contract config
+        const chainIdStr = getChainIdStr(chainId)
+        const envVarName = `NEXT_PUBLIC_BALANCE_MANAGER_${chainIdStr}_ADDRESS`
+        const address = publicRuntimeConfig[envVarName]
+        
+        if (!address) {
+            console.error(`Balance Manager address not found for chain ${chainIdStr}`)
+            throw new Error(`Balance Manager address not found for chain ${chainIdStr}`)
+        }
+        
+        return address
+    }
 }
 
 export const getPoolManagerAddress = (chainId?: number): string => {
-    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
-    const envVarName = chainId 
-        ? `NEXT_PUBLIC_POOL_MANAGER_${chainId}_ADDRESS`
-        : `NEXT_PUBLIC_POOL_MANAGER_${defaultChain}_ADDRESS`
-    return publicRuntimeConfig[envVarName]
+    try {
+        // Try to get from contract addresses first
+        return getContractAddress(chainId || DEFAULT_CHAIN, ContractName.clobPoolManager)
+    } catch (error) {
+        // Fall back to environment variables if not found in contract config
+        const chainIdStr = getChainIdStr(chainId)
+        const envVarName = `NEXT_PUBLIC_POOL_MANAGER_${chainIdStr}_ADDRESS`
+        const address = publicRuntimeConfig[envVarName]
+        
+        if (!address) {
+            console.error(`Pool Manager address not found for chain ${chainIdStr}`)
+            throw new Error(`Pool Manager address not found for chain ${chainIdStr}`)
+        }
+        
+        return address
+    }
 }
 
 export const getGTXRouterAddress = (chainId?: number): string => {
-    const defaultChain = publicRuntimeConfig.NEXT_PUBLIC_DEFAULT_CHAIN || '31338'
-    const envVarName = chainId 
-        ? `NEXT_PUBLIC_GTX_ROUTER_${chainId}_ADDRESS`
-        : `NEXT_PUBLIC_GTX_ROUTER_${defaultChain}_ADDRESS`
-    
-    return publicRuntimeConfig[envVarName]
+    try {
+        // Try to get from contract addresses first
+        return getContractAddress(chainId || DEFAULT_CHAIN, ContractName.clobRouter)
+    } catch (error) {
+        // Fall back to environment variables if not found in contract config
+        const chainIdStr = getChainIdStr(chainId)
+        const envVarName = `NEXT_PUBLIC_GTX_ROUTER_${chainIdStr}_ADDRESS`
+        const address = publicRuntimeConfig[envVarName]
+        
+        if (!address) {
+            console.error(`GTX Router address not found for chain ${chainIdStr}`)
+            throw new Error(`GTX Router address not found for chain ${chainIdStr}`)
+        }
+        
+        return address
+    }
 }

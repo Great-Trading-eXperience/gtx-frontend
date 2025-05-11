@@ -35,7 +35,7 @@ import { toast } from 'sonner';
 import { COMMON_TOKENS } from '@/hooks/web3/gtx/perpetual/chain-id';
 import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager';
 import useCreateMarket from '@/hooks/web3/gtx/perpetual/useCreateMarket';
-import { USDC_ADDRESS } from '@/constants/address';
+import { getTokenAddresses } from '@/helper/token-helper';
 
 // Define Solana token options
 const SOLANA_TOKENS = [
@@ -74,7 +74,7 @@ const MarketCreationPage: React.FC = () => {
   const [tokenType, setTokenType] = useState<'evm' | 'solana'>('evm');
   const [evmToken, setEvmToken] = useState<string>('');
   const [solanaToken, setSolanaToken] = useState<string>('');
-  const [shortToken, setShortToken] = useState<string>(String(USDC_ADDRESS));
+  const [shortToken, setShortToken] = useState<string>(String(getTokenAddresses().USDC));
   const [tokenPair, setTokenPair] = useState<string>('');
   const [customSymbol, setCustomSymbol] = useState<string>('');
   const [useCustomSymbol, setUseCustomSymbol] = useState<boolean>(false);

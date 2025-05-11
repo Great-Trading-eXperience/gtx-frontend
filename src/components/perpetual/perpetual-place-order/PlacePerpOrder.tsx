@@ -13,44 +13,33 @@ import { usePerpTrading } from "@/hooks/web3/gtx/perpetual/usePerpTrading"
 import PercentageSlider from "./percentage-slider"
 import { LeverageDialog } from "./leverage-dialog"
 import { EXPLORER_URL } from "@/constants/explorer-url"
+import { ContractName, DEFAULT_CHAIN, getContractAddress, ORDER_VAULT_ADDRESS, ROUTER_ADDRESS } from "@/constants/contract/contract-address"
 
 // Mock market data - replace with your actual data fetching
 const MARKETS = [
   {
     id: "1",
     name: "ETH-USDC",
-    marketAddress: process.env.NEXT_PUBLIC_WETH_USDC_MARKET_ADDRESS as HexAddress,
-    collateralToken: process.env.NEXT_PUBLIC_WETH_ADDRESS as HexAddress,
+    marketAddress: getContractAddress(DEFAULT_CHAIN, ContractName.clobPoolManager) as HexAddress,
+    collateralToken: getContractAddress(DEFAULT_CHAIN, ContractName.weth) as HexAddress,
     symbol: "ETH",
     icon: "/icon/eth-usdc.png",
   },
   {
     id: "2",
     name: "BTC-USDC",
-    marketAddress: process.env.NEXT_PUBLIC_WBTC_USDC_MARKET_ADDRESS as HexAddress,
-    collateralToken: process.env.NEXT_PUBLIC_WBTC_ADDRESS as HexAddress,
+    marketAddress: getContractAddress(DEFAULT_CHAIN, ContractName.clobPoolManager) as HexAddress,
+    collateralToken: getContractAddress(DEFAULT_CHAIN, ContractName.wbtc) as HexAddress,
     symbol: "BTC",
     icon: "/icon/btc-usdc.png",
-  },
-  {
-    id: "3",
-    name: "PEPE-USDC",
-    marketAddress: process.env.NEXT_PUBLIC_PEPE_USDC_MARKET_ADDRESS as HexAddress,
-    collateralToken: process.env.NEXT_PUBLIC_PEPE_ADDRESS as HexAddress,
-    symbol: "PEPE",
-    icon: "/icon/pepe-usdc.png",
-  },
-]
-
-// Constants
-const ROUTER_ADDRESS = process.env.NEXT_PUBLIC_ROUTER_ADDRESS as HexAddress
-const ORDER_VAULT_ADDRESS = process.env.NEXT_PUBLIC_ORDER_VAULT_ADDRESS as HexAddress
+  }
+];
 
 const PlacePerpOrder = () => {
   const { address, isConnected } = useAccount()
 
   const chainId = useChainId()
-  const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
+  const defaultChainId = Number(DEFAULT_CHAIN)
 
   // State for order form
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0])

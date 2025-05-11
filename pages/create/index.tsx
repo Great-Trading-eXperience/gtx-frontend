@@ -1,6 +1,6 @@
 'use client';
 
-import CreateMarketForm from '@/components/perpetual/MarketCreationPage/Test';
+import CreateMarketForm from '@/components/perpetual/MarketCreationPage/CreateMarketForm';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeftRight, Hexagon, TrendingUp } from "lucide-react";
 import { useState } from 'react';

@@ -2,6 +2,7 @@ import { http, createConfig } from "wagmi"
 import { arbitrumSepolia, sepolia, Chain } from "wagmi/chains"
 import { bitgetWallet, coinbaseWallet, metaMaskWallet, okxWallet, rabbyWallet, rainbowWallet, walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
+import { ENABLED_CHAINS } from "@/constants/contract/contract-address";
 
 export const projectId = "c8d08053460bfe0752116d730dc6393b"
 
@@ -219,11 +220,11 @@ const allChains = [
   pharos,
 ]
 
-const enabledChains = process.env.ENABLED_CHAINS
+const enabledChains = ENABLED_CHAINS
   ? allChains.filter((chain) =>
-    process.env.ENABLED_CHAINS?.split(",").includes(chain.id.toString())
+    ENABLED_CHAINS?.split(",").includes(chain.id.toString())
   )
-  : [localChain, pharos, arbitrumSepolia]
+  : [pharos, localChain, arbitrumSepolia]
 
 const transports = enabledChains.reduce((acc, chain) => {
   acc[chain.id] = http(chain.rpcUrls.default.http[0])
