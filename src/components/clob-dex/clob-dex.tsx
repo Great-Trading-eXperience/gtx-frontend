@@ -51,9 +51,10 @@ export default function ClobDex() {
     const [mounted, setMounted] = useState(false);
     const [selectedPool, setSelectedPool] = useState<PoolItem | null>(null);
     const [processedPool, setProcessedPool] = useState<PoolItem | null>(null);
+    const [processedPools, setProcessedPools] = useState<PoolItem[] | null>(null);
     const [showConnectionLoader, setShowConnectionLoader] = useState(false);
     const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
-    
+
     const [queryClient] = useState(() => new QueryClient({
         defaultOptions: {
             queries: {
@@ -77,7 +78,7 @@ export default function ClobDex() {
 
     const processPool = async (pool: PoolItem): Promise<PoolItem> => {
         const [baseTokenAddress, quoteTokenAddress] = [pool.baseCurrency, pool.quoteCurrency]
-        
+
         let baseSymbol = baseTokenAddress
         let quoteSymbol = quoteTokenAddress
         let baseDecimals = 18
@@ -137,37 +138,43 @@ export default function ClobDex() {
     useEffect(() => {
         if (!mounted || !poolsData) return;
 
-        const process = async () => {
+        const processPools = async () => {
             const pools = 'pools' in poolsData ? poolsData.pools : poolsData.poolss.items;
-            
-            // Get pool ID from URL
+
+            const processedPoolsArray = getUseSubgraph() ? await Promise.all(pools.map(pool => processPool(pool))) : pools.map((pool) => {
+                const baseSymbol = pool.coin.split('/')[0]
+                const quoteSymbol = pool.coin.split('/')[1]
+                return {
+                    ...pool,
+                    baseSymbol,
+                    quoteSymbol,
+                }
+            });
+            setProcessedPools(processedPoolsArray);
+
             const urlParts = pathname?.split('/') || [];
             const poolIdFromUrl = urlParts.length >= 3 ? urlParts[2] : null;
-            
-            // Find the pool
-            let pool = pools.find(p => p.id === (poolIdFromUrl || selectedPoolId));
-            
-            // Fallback to WETH/USDC pair or first available pool
-            if (!pool) {
-                pool = pools.find(
+
+            let selectedPoolItem = processedPoolsArray.find(p => p.id === (poolIdFromUrl || selectedPoolId));
+
+            if (!selectedPoolItem) {
+                selectedPoolItem = processedPoolsArray.find(
                     p => p.coin?.toLowerCase() === "weth/usdc" ||
                         (p.baseCurrency?.toLowerCase() === "weth" && p.quoteCurrency?.toLowerCase() === "usdc")
-                ) || pools[0];
+                ) || processedPoolsArray[0];
             }
 
-            if (pool) {
-                setSelectedPoolId(pool.id);
-                setSelectedPool(pool);
-                const processed = await processPool(pool);
-                setProcessedPool(processed);
-                
-                // Set decimals
-                setBaseDecimals(processed.baseDecimals ?? 18);
-                setQuoteDecimals(processed.quoteDecimals ?? 6);
-            }
-        };
+            if (selectedPoolItem) {
+                setSelectedPoolId(selectedPoolItem.id);
+                setSelectedPool(selectedPoolItem);
+                setProcessedPool(selectedPoolItem);
 
-        process();
+                setBaseDecimals(selectedPoolItem.baseDecimals ?? 18);
+                setQuoteDecimals(selectedPoolItem.quoteDecimals ?? 6);
+            }
+        }
+
+        processPools();
     }, [mounted, poolsData, pathname, selectedPoolId]);
 
     const { data: tradesData, isLoading: tradesLoading, error: tradesError } = useQuery<TradesResponse | TradesPonderResponse>({
@@ -269,60 +276,63 @@ export default function ClobDex() {
         <QueryClientProvider client={queryClient}>
             <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px]">
                 <div className="shadow-lg rounded-lg border border-gray-700/20">
-                    <MarketDataWidget 
-                        address={address} 
-                        chainId={chainId} 
-                        defaultChainId={defaultChainId} 
-                        poolId={selectedPoolId} 
+                    <MarketDataWidget
+                        address={address}
+                        chainId={chainId}
+                        defaultChainId={defaultChainId}
+                        poolId={selectedPoolId}
                         selectedPool={processedPool}
-                        tradesData={trades} 
-                        tradesLoading={tradesLoading} 
+                        tradesData={trades}
+                        tradesLoading={tradesLoading}
                     />
-                    <ChartComponent 
-                        address={address} 
-                        chainId={chainId} 
-                        defaultChainId={defaultChainId} 
+                    <ChartComponent
+                        address={address}
+                        chainId={chainId}
+                        defaultChainId={defaultChainId}
                         selectedPool={processedPool}
+                        poolsData={processedPools}
+                        poolsLoading={poolsLoading}
+                        poolsError={poolsError}
                     />
                 </div>
 
                 <div className="space-y-[6px]">
-                    <MarketDataTabs 
+                    <MarketDataTabs
                         address={address}
                         chainId={chainId}
                         defaultChainId={defaultChainId}
-                        selectedPool={processedPool} 
-                        poolsLoading={poolsLoading} 
-                        poolsError={poolsError}                   
-                     />
+                        selectedPool={processedPool}
+                        poolsLoading={poolsLoading}
+                        poolsError={poolsError}
+                    />
                 </div>
 
                 <div className="space-y-2">
-                    <PlaceOrder 
-                        address={address} 
-                        chainId={chainId} 
-                        defaultChainId={defaultChainId} 
+                    <PlaceOrder
+                        address={address}
+                        chainId={chainId}
+                        defaultChainId={defaultChainId}
                         selectedPool={processedPool}
-                        tradesData={trades} 
-                        tradesLoading={tradesLoading} 
+                        tradesData={trades}
+                        tradesLoading={tradesLoading}
                     />
                 </div>
             </div>
 
-            <TradingHistory 
-                address={address} 
-                chainId={chainId} 
-                defaultChainId={defaultChainId} 
-                balanceData={balances} 
-                balancesLoading={balancesLoading} 
-                balancesError={balancesError} 
-                ordersData={orders} 
-                ordersLoading={ordersLoading} 
-                ordersError={ordersError} 
+            <TradingHistory
+                address={address}
+                chainId={chainId}
+                defaultChainId={defaultChainId}
+                balanceData={balances}
+                balancesLoading={balancesLoading}
+                balancesError={balancesError}
+                ordersData={orders}
+                ordersLoading={ordersLoading}
+                ordersError={ordersError}
                 selectedPool={processedPool}
-                tradesData={trades} 
-                tradesLoading={tradesLoading} 
-                tradesError={tradesError} 
+                tradesData={trades}
+                tradesLoading={tradesLoading}
+                tradesError={tradesError}
             />
         </QueryClientProvider>
     )

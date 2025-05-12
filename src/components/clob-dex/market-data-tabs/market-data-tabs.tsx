@@ -1,12 +1,12 @@
 "use client"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PoolsResponse, PoolItem } from "@/graphql/gtx/clob"
+import { PoolItem } from "@/graphql/gtx/clob"
+import { HexAddress } from "@/types/general/address"
 import { BarChart2, LineChart } from "lucide-react"
 import { ClobDexComponentProps } from "../clob-dex"
 import EnhancedOrderBookDex from "../orderbook-dex/orderbook-dex"
 import RecentTradesComponent from "../recent-trade/recent-trade"
-import { HexAddress } from "@/types/general/address"
 
 export interface MarketDataTabsProps extends ClobDexComponentProps {
     address: HexAddress | undefined
