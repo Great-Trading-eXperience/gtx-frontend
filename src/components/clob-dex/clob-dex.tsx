@@ -176,7 +176,7 @@ export default function ClobDex() {
             const currentChainId = Number(chainId ?? defaultChainId)
             const url = GTX_GRAPHQL_URL(currentChainId)
             if (!url) throw new Error('GraphQL URL not found')
-            return await request<TradesResponse>(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery, { poolId: selectedPoolId })
+            return await request<TradesResponse>(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery, { poolId: selectedPool?.orderBook })
         },
         refetchInterval: 60000,
         staleTime: 60000,
@@ -224,7 +224,7 @@ export default function ClobDex() {
             const currentChainId = Number(chainId ?? defaultChainId)
             const url = GTX_GRAPHQL_URL(currentChainId)
             if (!url) throw new Error('GraphQL URL not found')
-            return await request<OrdersResponse>(url, getUseSubgraph() ? ordersQuery : ordersPonderQuery, { userAddress, poolId: selectedPoolId })
+            return await request<OrdersResponse>(url, getUseSubgraph() ? ordersQuery : ordersPonderQuery, { userAddress, poolId: selectedPool?.orderBook })
         },
         enabled: !!address,
         staleTime: 60000,

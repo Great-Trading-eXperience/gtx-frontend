@@ -6,7 +6,7 @@ import { NotificationDialog } from "@/components/notification-dialog/notificatio
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url'
-import { poolsQuery } from "@/graphql/gtx/clob"
+import { poolsPonderQuery, poolsQuery } from "@/graphql/gtx/clob"
 import { useCreatePool } from "@/hooks/web3/gtx/clob-dex/pool-manager/useCreatePool"
 import type { HexAddress } from "@/types/general/address"
 import { useQuery } from '@tanstack/react-query'
@@ -20,6 +20,7 @@ import PoolCreationSkeleton from "./pool-creation-skeleton"
 import TokenSelectionDialog, { type Token } from "./token/token-selection-dialog"
 import { EXPLORER_URL } from "@/constants/explorer-url"
 import { DEFAULT_CHAIN } from "@/constants/contract/contract-address"
+import { getUseSubgraph } from "@/utils/env"
 
 // Define interfaces for the pools query response
 interface PoolItem {
@@ -111,7 +112,7 @@ const PoolCreation: React.FC = () => {
       const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
-      return await request<PoolsResponse>(url, poolsQuery)
+      return await request<PoolsResponse>(url, getUseSubgraph() ?  poolsQuery : poolsPonderQuery)
     },
     staleTime: 60000, 
   })

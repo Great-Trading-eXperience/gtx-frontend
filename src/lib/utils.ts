@@ -54,7 +54,6 @@ export const formatTime = (timestamp: number): string => {
   const date = new Date(timestamp * 1000)
   return date.toLocaleTimeString("en-US", { hour12: false })
 }
-
 export const formatNumber = (
   value: string | number,
   options: {
@@ -73,19 +72,33 @@ export const formatNumber = (
   
   if (isNaN(num)) return '0';
 
+  // Custom compact formatting with suffixes for different magnitudes
+  if (compact || notation === 'compact') {
+    const suffixes = ['', 'K', 'M', 'B', 'T', 'Q'];
+    const suffixNum = Math.floor(Math.log10(Math.abs(num)) / 3);
+    
+    if (suffixNum >= 1 && suffixNum < suffixes.length) {
+      const shortValue = (num / Math.pow(10, suffixNum * 3)).toFixed(decimals);
+      return shortValue + suffixes[suffixNum];
+    }
+    
+    // For extremely large numbers, use scientific notation
+    if (suffixNum >= suffixes.length) {
+      return num.toExponential(decimals);
+    }
+  }
+
   try {
     const formatter = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-      notation,
+      notation: notation === 'compact' ? 'standard' : notation,
     });
 
     return formatter.format(num);
   } catch (error) {
-    // Fallback to basic formatting if Intl.NumberFormat fails
-    if (num >= 1e9) return (num / 1e9).toFixed(decimals) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(decimals) + "M";
-    return num.toFixed(decimals);
+    // Fallback formatting
+    return num.toString();
   }
 }
 

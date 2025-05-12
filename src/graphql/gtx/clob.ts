@@ -97,8 +97,6 @@ export const tradesPonderQuery = gql`
             amount
             currency
             lockedAmount
-            name
-            symbol
             user
           }
           pool {
@@ -176,7 +174,6 @@ export type TradeItem = {
       amount: string;
       currency: string;
       lockedAmount: string;
-      name: string;
       symbol: string;
       user: HexAddress;
     };
@@ -231,8 +228,6 @@ export const ordersPonderQuery = gql`
           amount
           currency
           lockedAmount
-          name
-          symbol
           user
         }
       }
@@ -277,8 +272,6 @@ export type OrderItem = {
     amount: string
     currency: string
     lockedAmount: string
-    name: string
-    symbol: string
     user: string
   }
 }
@@ -307,8 +300,6 @@ export const balancesPonderQuery = gql`
         amount
         currency
         lockedAmount
-        name
-        symbol
         user
       }
       pageInfo {
@@ -328,7 +319,6 @@ export const balancesQuery = gql`
       amount
       currency
       lockedAmount
-      name
       symbol
       user
     }
@@ -339,7 +329,6 @@ export type BalanceItem = {
   amount: string
   currency: string
   lockedAmount: string
-  name: string
   symbol: string
   user: string
 }

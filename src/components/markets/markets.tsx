@@ -48,8 +48,8 @@ interface ProcessedPool {
   maxOrderAmount: string
   baseSymbol: string
   quoteSymbol: string
-  baseDecimals: number
-  quoteDecimals: number
+  baseDecimals: number | undefined
+  quoteDecimals: number | undefined
 }
 
 interface ProcessedTrade {
@@ -112,7 +112,7 @@ export default function MarketList() {
     const pools = (poolsData as PoolsPonderResponse)?.poolss?.items || (poolsData as PoolsResponse)?.pools
     if (!pools) return []
 
-    const processedPools = await Promise.all(pools.map(async pool => {
+    const processedPools = getUseSubgraph() ? await Promise.all(pools.map(async pool => {
       const [baseTokenAddress, quoteTokenAddress] = [pool.baseCurrency, pool.quoteCurrency]
       
       let baseSymbol = baseTokenAddress
@@ -172,6 +172,17 @@ export default function MarketList() {
         timestamp: pool.timestamp,
         maxOrderAmount: pool.maxOrderAmount || '0'
       }
+    })) : pools.map(pool => ({
+      id: pool.id,
+      baseToken: pool.baseCurrency,
+      quoteToken: pool.quoteCurrency,
+      orderBook: pool.orderBook,
+      baseSymbol: pool.coin.split('/')[0],
+      quoteSymbol: pool.coin.split('/')[1],
+      baseDecimals: pool.baseDecimals,
+      quoteDecimals: pool.quoteDecimals,
+      timestamp: pool.timestamp,
+      maxOrderAmount: pool.maxOrderAmount || '0'
     }))
 
     setIsProcessingPools(false)
@@ -204,9 +215,13 @@ export default function MarketList() {
   const calculatePoolMetrics = (pool: ProcessedPool, trades: ProcessedTrade[]) => {
     const poolTrades = trades.filter(trade => trade.pool === pool.orderBook || trade.poolId === pool.orderBook)
     const sortedTrades = [...poolTrades].sort((a, b) => b.timestamp - a.timestamp)
-    
+  
+    // Use a default of 6 decimals if quoteDecimals is undefined
+    const quoteDecimalsValue = pool.quoteDecimals ?? 6
+    const baseDecimalsValue = pool.baseDecimals ?? 18
+  
     const latestPrice = sortedTrades.length > 0 
-      ? Number(formatUnits(BigInt(sortedTrades[0].price), pool.quoteDecimals)) 
+      ? Number(formatUnits(BigInt(sortedTrades[0].price), quoteDecimalsValue)) 
       : 0
 
     let volume = BigInt(0)
@@ -214,7 +229,7 @@ export default function MarketList() {
 
     sortedTrades.forEach(trade => {
       if (trade.timestamp >= twentyFourHoursAgo) {
-        volume += BigInt(trade.quantity) * BigInt(trade.price) / BigInt(10 ** pool.baseDecimals)
+        volume += BigInt(trade.quantity) * BigInt(trade.price) / BigInt(10 ** baseDecimalsValue)
       }
     })
 
@@ -254,7 +269,7 @@ export default function MarketList() {
           age: calculateAge(pool.timestamp),
           timestamp: pool.timestamp,
           price: metrics.latestPrice.toFixed(2),
-          volume: formatNumber(Number(formatUnits(metrics.volume, pool.quoteDecimals)), { decimals: 0 }),
+          volume: formatNumber(Number(formatUnits(metrics.volume, pool.quoteDecimals ?? 6)), { decimals: 0 }),
           liquidity: formatNumber(pool.maxOrderAmount),
         }
       })

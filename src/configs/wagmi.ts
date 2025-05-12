@@ -56,7 +56,7 @@ const conduitChain: Chain = {
   testnet: true,
 };
 
-const riseSepolia: Chain = {
+export const riseSepolia: Chain = {
   id: 11155931,
   name: "Rise Sepolia",
   nativeCurrency: {
