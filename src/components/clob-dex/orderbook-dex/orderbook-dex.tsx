@@ -37,8 +37,8 @@ type ViewType = "both" | "bids" | "asks"
 type DecimalPrecision = "0.01" | "0.1" | "1"
 
 const STANDARD_ORDER_COUNT = 6
-const PRICE_MATCH_THRESHOLD = 0.07 
-const TOTAL_MATCH_THRESHOLD = 4
+const PRICE_MATCH_THRESHOLD = 0.1 
+const TOTAL_MATCH_THRESHOLD = 10
 
 export type OrderBookDexProps = ClobDexComponentProps & {
   selectedPool: PoolItem
@@ -332,7 +332,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
       }
     }
 
-    const interval = setInterval(fetchOrderBook, 1000)
+    const interval = setInterval(fetchOrderBook, 3000)
 
     return () => clearInterval(interval)
   }, [mounted, selectedPool, quoteDecimals, baseDecimals, getBestPrice, getNextBestPrices])
