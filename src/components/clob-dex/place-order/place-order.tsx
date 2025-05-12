@@ -53,15 +53,7 @@ const PlaceOrder = ({
 
   const currentChainId = useChainId();
   const poolManagerAddress = getContractAddress(currentChainId, ContractName.clobPoolManager) as `0x${string}`;
-
-  // 1. Create the Pool struct with orderBook
-  const poolStruct = {
-    baseCurrency: selectedPool?.baseCurrency as `0x${string}`,
-    quoteCurrency: selectedPool?.quoteCurrency as `0x${string}`,
-    orderBook: selectedPool?.orderBook as `0x${string}`
-  };
-
-  // 2. Get the pool using poolManager
+  
   const { data: pool } = useContractRead({
     address: poolManagerAddress,
     abi: poolManagerABI,
@@ -244,14 +236,16 @@ const PlaceOrder = ({
 
   // Refresh order book on regular intervals
   useEffect(() => {
-    if (pool?.orderBook) {
-      const interval = setInterval(() => {
-        refreshOrderBook()
-      }, 1000) // Refresh every 10 seconds
-
-      return () => clearInterval(interval)
+    if (!pool?.orderBook) {
+      return;
     }
-  }, [pool?.orderBook, refreshOrderBook])
+
+    const interval = setInterval(() => {
+      refreshOrderBook()
+    }, 5000) 
+
+    return () => clearInterval(interval)
+  }, [pool?.orderBook])
 
   // Show error notification when there's an error
   useEffect(() => {

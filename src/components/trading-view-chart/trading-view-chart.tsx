@@ -16,6 +16,13 @@ interface Bar {
   volume: number;
 }
 
+export interface TradingPair {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  displayName: string;
+}
+
 const RESOLUTION_MAPPING: Record<string, string> = {
   '1': '1m',
   '5': '5m',
@@ -29,12 +36,14 @@ let tvScriptLoadingPromise: Promise<void>;
 export interface TradingViewChartContainerProps {
   chainId: number;
   symbol: string;
-  interval?: string;          // TradingView resolution ('1', '5', '1D', …)
-  /** Epoch ms. If omitted, defaults to now − 7 days */
+  interval?: string;  
+  /** Epoch ms. If omitted, defaults to now − 7 days */
   startTime?: number;
-  /** Epoch ms. If omitted, defaults to now */
+  /** Epoch ms. If omitted, defaults to now */
   endTime?: number;
   onChangeInterval?: (interval: string) => void;
+  // Optional prop to provide trading pairs externally
+  availablePairs?: TradingPair[];
 }
 
 export default function TradingViewChartContainer({
@@ -43,6 +52,8 @@ export default function TradingViewChartContainer({
   interval = '1',
   startTime,
   endTime,
+  onChangeInterval,
+  availablePairs,
 }: TradingViewChartContainerProps) {
   /* --- default window: last seven days --- */
   const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -56,6 +67,9 @@ export default function TradingViewChartContainer({
   const chartWidgetRef = useRef<any>(null);
   const dataUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [lastBar, setLastBar] = useState<Bar | null>(null);
+  const [pairs, setPairs] = useState<TradingPair[]>([]);
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(symbol);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   /* Clean-up polling timer on unmount */
   useEffect(() => {
@@ -63,6 +77,53 @@ export default function TradingViewChartContainer({
       if (dataUpdateIntervalRef.current) clearInterval(dataUpdateIntervalRef.current);
     };
   }, []);
+
+  /* Fetch available pairs if not provided as props */
+  useEffect(() => {
+    if (availablePairs && availablePairs.length > 0) {
+      setPairs(availablePairs);
+      return;
+    }
+
+    // async function fetchPairs() {
+    //   try {
+    //     setIsLoading(true);
+    //     // Adjust this URL to match your backend endpoint for getting available pairs
+    //     const pairsUrl = `${getKlineUrl(chainId).replace('/klines', '/pairs')}`;
+    //     const response = await fetch(pairsUrl);
+        
+    //     if (!response.ok) {
+    //       throw new Error('Failed to fetch pairs');
+    //     }
+        
+    //     const data = await response.json();
+    //     // Transform the data as needed based on your API response format
+    //     const formattedPairs = Array.isArray(data) 
+    //       ? data.map((pair: any) => ({
+    //           symbol: pair.symbol,
+    //           baseAsset: pair.baseAsset,
+    //           quoteAsset: pair.quoteAsset,
+    //           displayName: `${pair.baseAsset}/${pair.quoteAsset}`,
+    //         }))
+    //       : [];
+        
+    //     setPairs(formattedPairs);
+    //   } catch (error) {
+    //     console.error('Error fetching trading pairs:', error);
+    //     // Set a default pair if fetch fails
+    //     setPairs([{ 
+    //       symbol: selectedSymbol, 
+    //       baseAsset: selectedSymbol.split('/')[0] || '', 
+    //       quoteAsset: selectedSymbol.split('/')[1] || '',
+    //       displayName: selectedSymbol
+    //     }]);
+    //   } finally {
+    //     setIsLoading(false);
+    //   }
+    // }
+
+    // fetchPairs();
+  }, [chainId, availablePairs, selectedSymbol]);
 
   /* Inject TradingView script once */
   useEffect(() => {
@@ -86,17 +147,39 @@ export default function TradingViewChartContainer({
     };
   }, []);
 
+  /* Update chart when symbol changes */
+  useEffect(() => {
+    if (chartWidgetRef.current && selectedSymbol !== symbol) {
+      // Clean up existing subscriptions
+      if (dataUpdateIntervalRef.current) {
+        clearInterval(dataUpdateIntervalRef.current);
+        dataUpdateIntervalRef.current = null;
+      }
+      
+      // Change the symbol on the chart
+      chartWidgetRef.current.setSymbol(selectedSymbol, interval, () => {
+        fetchLatestData();
+      });
+    }
+  }, [selectedSymbol, interval, symbol]);
+
+  /* Handle symbol change */
+  const handleSymbolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSymbol = event.target.value;
+    setSelectedSymbol(newSymbol);
+  };
+
   /* REST fetch helper */
   async function fetchKlines(
-    symbol: string,
+    symbolName: string,
     mappedInterval: string,
     fromMs: number,
     toMs: number,
   ): Promise<Bar[]> {
     try {
       const url =
-        `${getKlineUrl(chainId)}?symbol=${symbol}` +
-        `&interval=${mappedInterval}&startTime=${fromMs}&endTime=${toMs}&limit=1000`;
+        `${getKlineUrl(chainId)}?symbol=${symbolName}` +
+        `&interval=${mappedInterval}&startTime=${fromMs}&endTime=${toMs}&limit=100000`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -121,7 +204,7 @@ export default function TradingViewChartContainer({
     const fiveMinutesAgo = now - 5 * 60 * 1000;
     const mappedInterval = RESOLUTION_MAPPING[interval];
 
-    const bars = await fetchKlines(symbol, mappedInterval, fiveMinutesAgo, now);
+    const bars = await fetchKlines(selectedSymbol, mappedInterval, fiveMinutesAgo, now);
     if (!bars.length) return;
 
     const newestBar = bars[bars.length - 1];
@@ -140,13 +223,25 @@ export default function TradingViewChartContainer({
     const datafeed = {
       onReady: (cb: any) =>
         cb({
-          supported_resolutions: ['1', '5', '15', '30', '60', '1D', '1W', '1M'],
+          supported_resolutions: ['1', '5', '30', '60', '1D'],
           supports_marks: true,
           supports_timescale_marks: true,
           supports_time: true,
         }),
 
-      searchSymbols: () => {},
+      searchSymbols: (userInput: string, exchange: string, symbolType: string, onResult: any) => {
+        const filteredPairs = pairs.filter(pair => 
+          pair.displayName.toLowerCase().includes(userInput.toLowerCase())
+        );
+        onResult(filteredPairs.map(pair => ({
+          symbol: pair.symbol,
+          full_name: pair.displayName,
+          description: pair.displayName,
+          exchange: 'GTX',
+          ticker: pair.symbol,
+          type: 'crypto',
+        })));
+      },
 
       resolveSymbol: (symbolName: string, onResolve: any) =>
         onResolve({
@@ -215,8 +310,8 @@ export default function TradingViewChartContainer({
       library_path: '/charting_library/',
       locale: 'en',
       disabled_features: ['use_localstorage_for_settings'],
-      enabled_features: ['study_templates'],
-      symbol,
+      enabled_features: ['study_templates', 'symbol_search'],
+      symbol: selectedSymbol,
       interval,
       timezone: 'Asia/Jakarta',
       theme: 'Dark',
@@ -225,26 +320,42 @@ export default function TradingViewChartContainer({
       debug: true,
     });
 
-    /* scroll/zoom viewport once chart is painted */
-    // widget.onChartReady(() => {
-    //   widget
-    //     .activeChart()
-    //     .timeScale()
-    //     .setVisibleRange({
-    //       from: Math.floor(defaultStartMs / 1000),
-    //       to: Math.floor(defaultEndMs / 1000),
-    //     });
-    // });
-
     chartWidgetRef.current = widget;
     fetchLatestData(); // first poll immediately
   }
 
   return (
-    <div
-      id="tv_chart_container"
-      className="w-full"
-      style={{ height: '50vh' }}
-    />
+    <div className="w-full">
+      {/* Pairs selector dropdown */}
+      <div className="flex items-center mb-4 bg-gray-800 p-2 rounded">
+        <label htmlFor="pair-selector" className="mr-2 text-gray-300">Trading Pair:</label>
+        <select
+          id="pair-selector"
+          value={selectedSymbol}
+          onChange={handleSymbolChange}
+          className="bg-gray-700 text-white px-3 py-1 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <option>Loading pairs...</option>
+          ) : pairs.length === 0 ? (
+            <option>No pairs available</option>
+          ) : (
+            pairs.map((pair) => (
+              <option key={pair.symbol} value={pair.symbol}>
+                {pair.displayName}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
+
+      {/* TradingView chart container */}
+      <div
+        id="tv_chart_container"
+        className="w-full"
+        style={{ height: '50vh' }}
+      />
+    </div>
   );
 }

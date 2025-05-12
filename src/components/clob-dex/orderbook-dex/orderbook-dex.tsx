@@ -332,10 +332,10 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
       }
     }
 
-    const interval = setInterval(fetchOrderBook, 3000)
+    const interval = setInterval(fetchOrderBook, 5000)
 
     return () => clearInterval(interval)
-  }, [mounted, selectedPool, quoteDecimals, baseDecimals, getBestPrice, getNextBestPrices])
+  }, [mounted, selectedPool, quoteDecimals, baseDecimals])
 
   const toggleView = useCallback(() => {
     const views: ViewType[] = ["both", "bids", "asks"]
