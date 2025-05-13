@@ -1,6 +1,5 @@
 {
   "DEFAULT_CHAIN": "11155931",
-  "USE_SUBGRAPH": false,
   "FAUCET_ADDRESS": "",
   "MARKET_FACTORY_ADDRESS": "",
   "ORACLE_ADDRESS": "",
@@ -16,26 +15,6 @@
     "API_KEY": "35171d4dcec8d24ba11e28b19dbec744-us11",
     "AUDIENCE_ID": "f3c6baf97a",
     "API_SERVER": "us11"
-  },
-  "FEATURE_FLAGS": {
-    "ENABLED_TABS_MARKETS": true,
-    "ENABLED_TABS_SWAP": true,
-    "ENABLED_TABS_SPOT": true,
-    "ENABLED_TABS_CREATE": true,
-    "ENABLED_TABS_FAUCET": true,
-    "COMING_SOON_PERPETUAL": true,
-    "LANDING_PAGE_RISE": true,
-    "ENABLED_TABS_EARN": false,
-    "ENABLED_TABS_VEGTX": false,
-    "ENABLED_TABS_PERPETUAL": false
-  },
-  "INDEXER_URLS": {
-    "50002": "https://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn",
-    "11155931": "https://indexer-rise.gtxdex.xyz"
-  },
-  "EXPLORER_URLS": {
-    "50002": "https://pharosscan.xyz/tx/",
-    "11155931": "https://testnet-explorer.riselabs.xyz/tx/"
   },
   "31338": {
     "clobBalanceManager": "0x922D6956C99E12DFeB3224DEA977D0939758A1Fe",

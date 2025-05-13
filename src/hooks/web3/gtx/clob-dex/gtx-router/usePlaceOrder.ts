@@ -3,7 +3,7 @@ import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
@@ -16,6 +16,14 @@ export const usePlaceOrder = () => {
   const [marketOrderHash, setMarketOrderHash] = useState<HexAddress | undefined>(undefined);
 
   const chainId = useChainId()
+
+  const resetLimitOrderState = useCallback(() => {
+    setLimitOrderHash(undefined);
+  }, []);
+  
+  const resetMarketOrderState = useCallback(() => {
+    setMarketOrderHash(undefined);
+  }, []);
   
   // Mutation for limit orders
   const {
@@ -653,5 +661,7 @@ const {
     marketOrderHash,
     limitSimulateError,
     marketSimulateError,
+    resetLimitOrderState,
+    resetMarketOrderState,
   };
 };
