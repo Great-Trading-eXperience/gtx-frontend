@@ -192,7 +192,7 @@ const TradeHistoryTable = ({
                   <div className="font-medium text-white">{formatQuantity(formatUnits(BigInt(trade.quantity), baseDecimals))}</div>
                   <div className="text-blue-400 hover:text-blue-300 transition-colors truncate">
                     <a
-                      href={`${EXPLORER_URL(chainId ?? defaultChainId)}/tx/${trade.transactionId}`}
+                      href={`${EXPLORER_URL(chainId ?? defaultChainId)}${trade.transactionId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline"

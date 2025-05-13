@@ -1,0 +1,10 @@
+{
+    "INDEXER_URLS": {
+      "50002": "https://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn",
+      "11155931": "https://indexer-rise.gtxdex.xyz"
+    },
+    "EXPLORER_URLS": {
+      "50002": "https://pharosscan.xyz/tx/",
+      "11155931": "https://explorer.testnet.riselabs.xyz/tx/"
+    }
+  }

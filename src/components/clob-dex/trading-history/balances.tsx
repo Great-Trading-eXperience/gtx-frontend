@@ -120,9 +120,9 @@ export default function BalancesHistoryTable({
             <div className="text-gray-200">{balance.symbol}</div>
             <div className="font-medium text-white">{formatAmount(formatUnits(BigInt(balance.amount), 18))}</div>
             <div className="flex gap-2">
-              <button className="rounded bg-gray-800 px-3 py-1 text-sm text-gray-200 transition-colors hover:bg-gray-700">
+              {/* <button className="rounded bg-gray-800 px-3 py-1 text-sm text-gray-200 transition-colors hover:bg-gray-700">
                 Deposit
-              </button>
+              </button> */}
               <button className="rounded bg-gray-800 px-3 py-1 text-sm text-gray-200 transition-colors hover:bg-gray-700">
                 Withdraw
               </button>
