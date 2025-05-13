@@ -60,7 +60,7 @@ export default function TradingViewChartContainer({
   const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
   const ONE_DAY = 24 * 60 * 60 * 1000; 
   const HALF_DAY = 12 * 60 * 60 * 1000; 
-  const defaultStartMs = startTime ?? Date.now() - ONE_DAY;
+  const defaultStartMs = startTime ?? Date.now() - THREE_DAYS;
   const defaultEndMs = endTime ?? Date.now();
 
   const onLoadScriptRef = useRef<(() => void) | null>(null);

@@ -176,6 +176,9 @@ importers:
       recharts:
         specifier: ^2.15.0
         version: 2.15.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      rise-shred-client:
+        specifier: ^1.0.1
+        version: 1.0.1(ethers@6.13.5(bufferutil@4.0.8)(utf-8-validate@5.0.10))(viem@2.21.39(bufferutil@4.0.8)(typescript@5.3.3)(utf-8-validate@5.0.10)(zod@3.22.4))
       sonner:
         specifier: ^1.7.0
         version: 1.7.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -6654,6 +6657,12 @@ packages:
   rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
     hasBin: true
+
+  rise-shred-client@1.0.1:
+    resolution: {integrity: sha512-58BGzIrcjQmMDRfqlakpdeDvWyP5azp3HOAWqno/2/tNML4kgnlE4hVq+mhuLvBzListg8lMCmwazbC1rGImLQ==}
+    peerDependencies:
+      ethers: ^6.0.0
+      viem: ^2.0.0
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
@@ -15862,6 +15871,11 @@ snapshots:
   rimraf@3.0.2:
     dependencies:
       glob: 7.2.3
+
+  rise-shred-client@1.0.1(ethers@6.13.5(bufferutil@4.0.8)(utf-8-validate@5.0.10))(viem@2.21.39(bufferutil@4.0.8)(typescript@5.3.3)(utf-8-validate@5.0.10)(zod@3.22.4)):
+    dependencies:
+      ethers: 6.13.5(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      viem: 2.21.39(bufferutil@4.0.8)(typescript@5.3.3)(utf-8-validate@5.0.10)(zod@3.22.4)
 
   run-parallel@1.2.0:
     dependencies:
