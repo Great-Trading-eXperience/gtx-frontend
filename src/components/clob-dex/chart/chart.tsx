@@ -1,7 +1,7 @@
 "use client"
 
 import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { dailyCandleStickPonderQuery, DailyCandleStickPonderResponse, dailyCandleStickQuery, DailyCandleStickResponse, FiveMinuteCandleStickPonderResponse, fiveMinuteCandleStickQuery, FiveMinuteCandleStickResponse, hourCandleStickPonderQuery, HourCandleStickPonderResponse, hourCandleStickQuery, HourCandleStickResponse, MinuteCandleStickPonderResponse, MinuteCandleStickResponse } from "@/graphql/gtx/clob"
+import { dailyCandleStickPonderQuery, DailyCandleStickPonderResponse, dailyCandleStickQuery, DailyCandleStickResponse, FiveMinuteCandleStickPonderResponse, fiveMinuteCandleStickQuery, FiveMinuteCandleStickResponse, hourCandleStickPonderQuery, HourCandleStickPonderResponse, hourCandleStickQuery, HourCandleStickResponse, MinuteCandleStickPonderResponse, MinuteCandleStickResponse, PoolItem } from "@/graphql/gtx/clob"
 import { useMarketStore } from "@/store/market-store"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import request from "graphql-request"
@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
 import { TimeFrame } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
-import TradingViewChartContainer from "@/components/trading-view-chart/trading-view-chart"
+import TradingViewChartContainer, { TradingPair } from "@/components/trading-view-chart/trading-view-chart"
 import { getUseSubgraph } from "@/utils/env"
 
 // Updated interface to match the new Binance-compatible bucket format
@@ -124,9 +124,12 @@ function processCandleStickData(data: CandleStickItem[], quoteDecimals: number):
 
 export type ChartComponentProps = ClobDexComponentProps & {
   height?: number
+  poolsData?: PoolItem[] | null
+  poolsLoading?: boolean
+  poolsError?: Error | null
 }
 
-function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }: ChartComponentProps) {
+function ChartComponent({ chainId, defaultChainId, selectedPool, poolsData, poolsLoading, poolsError, height = 380 }: ChartComponentProps) {
   const [queryClient] = useState(() => new QueryClient())
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -135,24 +138,13 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }:
   const [currentTime, setCurrentTime] = useState("")
   const [currentPrice, setCurrentPrice] = useState<string | null>(null)
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>(TimeFrame.HOURLY)
+  const [availablePairs, setAvailablePairs] = useState<TradingPair[]>();
 
   const { quoteDecimals } = useMarketStore()
-
-  // Map timeframe to Binance interval format
-  const getIntervalFromTimeFrame = (timeFrame: TimeFrame): string => {
-    switch (timeFrame) {
-      case TimeFrame.DAILY: return "1d";
-      case TimeFrame.HOURLY: return "1h";
-      case TimeFrame.FIVE_MINUTE: return "5m";
-      case TimeFrame.MINUTE: return "1m";
-      default: return "1h";
-    }
-  };
 
   const { data, isLoading, error } = useQuery<CandleStickItem[]>({
     queryKey: ['candlesticks', selectedTimeFrame, selectedPool?.orderBook, selectedPool?.coin],
     queryFn: async () => {
-      // Fallback to the original GraphQL query if the API doesn't return data
       const currentChainId = Number(chainId ?? defaultChainId)
       const url = GTX_GRAPHQL_URL(currentChainId)
       if (!url) throw new Error('GraphQL URL not found')
@@ -164,7 +156,7 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }:
           : selectedTimeFrame === TimeFrame.FIVE_MINUTE
             ? fiveMinuteCandleStickQuery
             : selectedTimeFrame === TimeFrame.MINUTE
-              ? fiveMinuteCandleStickQuery // Replace with minute query when available
+              ? fiveMinuteCandleStickQuery
               : fiveMinuteCandleStickQuery;
 
       const result = await request(url, query, { poolId: selectedPool?.orderBook });
@@ -197,10 +189,8 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }:
         }
       }
 
-      // Handle renamed fields for backward compatibility
       return items?.map((item: any) => ({
         ...item,
-        // Ensure we have both old and new field names for compatibility
         openTime: item.openTime || item.timestamp,
         timestamp: item.timestamp || item.openTime
       })) || [];
@@ -213,9 +203,19 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }:
   const [processedData, setProcessedData] = useState<{ candlesticks: CandlestickData<Time>[], volumes: VolumeData[] }>({ candlesticks: [], volumes: [] });
 
   useEffect(() => {
+    if (!poolsData || poolsData.length === 0) return;
+    const pairs = poolsData.map(pool => ({
+      symbol: `${pool.baseSymbol}/${pool.quoteSymbol}`,
+      baseAsset: pool.baseSymbol,
+      quoteAsset: pool.quoteSymbol,
+      displayName: `${pool.baseSymbol}/${pool.quoteSymbol}`,
+    }));
+    setAvailablePairs(pairs);
+  }, [poolsData]);
+
+  useEffect(() => {
     if (!data) return;
 
-    // Sort data by openTime/timestamp to ensure chronological order
     const sortedData = [...data].sort((a, b) => {
       const aTime = a.openTime || a.timestamp;
       const bTime = b.openTime || b.timestamp;
@@ -292,7 +292,7 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }:
       priceFormat: {
         type: "volume",
       },
-      priceScaleId: "", // Set to empty string to create new scale
+      priceScaleId: "",
     });
 
     candlestickSeries.setData(processedData.candlesticks);
@@ -429,7 +429,7 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, height = 380 }:
 
         <div className="p-2">
           {
-            selectedPool?.coin ? <TradingViewChartContainer chainId={chainId} symbol={selectedPool?.coin} />
+            selectedPool?.coin ? <TradingViewChartContainer chainId={chainId} symbol={selectedPool?.coin} availablePairs={availablePairs}/>
               : <div ref={chartContainerRef} className="w-full" style={{ height }} />}
         </div>
       </div>
