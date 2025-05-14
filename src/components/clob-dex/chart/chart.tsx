@@ -433,12 +433,12 @@ function ChartComponent({ chainId, defaultChainId, selectedPool, poolsData, pool
               : <div ref={chartContainerRef} className="w-full" style={{ height }} />}
         </div>
       </div>
-      <div
+      {/* <div
         ref={timeDisplayRef}
         className="text-right text-sm py-1 pr-4 bg-gray-100 dark:bg-[#151924] text-gray-900 dark:text-white rounded-b-lg"
       >
         {currentTime}
-      </div>
+      </div> */}
     </QueryClientProvider>
   );
 }

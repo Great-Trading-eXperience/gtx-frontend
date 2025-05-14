@@ -1,5 +1,7 @@
 import getConfig from 'next/config'
-import { DEFAULT_CHAIN, ContractName, getContractAddress, USE_SUBGRAPH, getIndexerUrl, getExplorerUrlConfig } from '@/constants/contract/contract-address'
+import { DEFAULT_CHAIN, ContractName, getContractAddress } from '@/constants/contract/contract-address'
+import { USE_SUBGRAPH } from '@/constants/features/features-config'
+import { getIndexerUrl, getExplorerUrl as getExplorerUrlFromConfig } from '@/constants/urls/urls-config'
 
 const { publicRuntimeConfig } = getConfig()
 
@@ -31,7 +33,7 @@ export const getKlineUrl = (chainId?: number): string => {
 export const getExplorerUrl = (chainId?: number): string => {
     try {
         const chainIdStr = getChainIdStr(chainId);
-        return getExplorerUrlConfig(chainIdStr);
+        return getExplorerUrlFromConfig(chainIdStr);
     } catch (error) {
         console.error(`Explorer URL not found for chain ${getChainIdStr(chainId)}`);
         return '';

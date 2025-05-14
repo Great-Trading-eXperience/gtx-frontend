@@ -6,55 +6,56 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
-import { FEATURE_FLAGS } from "@/constants/contract/contract-address";
+
+import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
 
 const Header = () => {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
 
   const allLinks = [
-    { 
-      destination: "/markets", 
+    {
+      destination: "/markets",
       label: "Markets",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_MARKETS
+      enabled: isTabEnabled("MARKETS")
     },
-    { 
-      destination: "/swap", 
+    {
+      destination: "/swap",
       label: "Swap",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_SWAP
+      enabled: isTabEnabled("SWAP")
     },
-    { 
-      destination: "/spot", 
+    {
+      destination: "/spot",
       label: "Spot",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_SPOT
+      enabled: isTabEnabled("SPOT")
     },
-    { 
-      destination: "/perpetual", 
+    {
+      destination: "/perpetual",
       label: "Perpetual",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_PERPETUAL 
+      enabled: isTabEnabled("PERPETUAL")
     },
-    { 
-      destination: "/pool-creation", 
+    {
+      destination: "/pool-creation",
       label: "Create",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_CREATE
+      enabled: isTabEnabled("CREATE")
     },
-    { 
-      destination: "/faucet", 
+    {
+      destination: "/faucet",
       label: "Faucet",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_FAUCET
+      enabled: isTabEnabled("FAUCET")
     },
-    { 
-      destination: "/earn", 
+    {
+      destination: "/earn",
       label: "Earn",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_EARN 
+      enabled: isTabEnabled("EARN")
     },
-    { 
-      destination: "/vegtx", 
+    {
+      destination: "/vegtx",
       label: "veGTX",
-      enabled: FEATURE_FLAGS.ENABLED_TABS_VEGTX 
+      enabled: isTabEnabled("VEGTX")
     }
   ];
-  
+
   // Filter only enabled links
   const links = allLinks.filter(link => link.enabled);
 
@@ -107,7 +108,7 @@ const Header = () => {
             colors={solidColorConfig}
             className="border border-slate-500"
           />
-          
+
           {/* Mobile Menu Button - Only Visible on Mobile */}
           <div className="flex ml-4 lg:hidden">
             <Sheet>

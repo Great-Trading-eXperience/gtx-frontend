@@ -12,7 +12,7 @@ import type { HexAddress } from "@/types/general/address"
 import { RefreshCw, Wallet } from "lucide-react"
 import { usePathname } from "next/navigation"
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { formatUnits, parseUnits } from "viem"
 import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
 import { ClobDexComponentProps } from "../clob-dex"
@@ -52,24 +52,34 @@ const PlaceOrder = ({
   const pathname = usePathname()
 
   const currentChainId = useChainId();
-  const poolManagerAddress = getContractAddress(currentChainId, ContractName.clobPoolManager) as `0x${string}`;
-  
+  const poolManagerAddress = getContractAddress(currentChainId, ContractName.clobPoolManager) as HexAddress;
+
+  // 1. Create the Pool struct with orderBook
+  const poolStruct = {
+    baseCurrency: selectedPool?.baseCurrency as HexAddress,
+    quoteCurrency: selectedPool?.quoteCurrency as HexAddress,
+    orderBook: selectedPool?.orderBook as HexAddress
+  };
+
+  // 2. Get the pool using poolManager
   const { data: pool } = useContractRead({
     address: poolManagerAddress,
     abi: poolManagerABI,
     functionName: 'getPool',
     args: [
       {
-        baseCurrency: selectedPool?.baseCurrency as `0x${string}`,
-        quoteCurrency: selectedPool?.quoteCurrency as `0x${string}`
+        baseCurrency: selectedPool?.baseCurrency as HexAddress,
+        quoteCurrency: selectedPool?.quoteCurrency as HexAddress
       }
     ],
     chainId: currentChainId
-  }) as { data: { 
-    baseCurrency: `0x${string}`, 
-    quoteCurrency: `0x${string}`, 
-    orderBook: `0x${string}` 
-  } | undefined };
+  }) as {
+    data: {
+      baseCurrency: HexAddress,
+      quoteCurrency: HexAddress,
+      orderBook: HexAddress
+    } | undefined
+  };
 
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
   const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY) // Default to BUY
@@ -80,6 +90,7 @@ const PlaceOrder = ({
   // Balance states
   const [availableBalance, setAvailableBalance] = useState<string>("0")
   const [isLoadingBalance, setIsLoadingBalance] = useState(false)
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
 
   // Notification dialog states
   const [showNotification, setShowNotification] = useState(false)
@@ -116,6 +127,10 @@ const PlaceOrder = ({
     isMarketOrderConfirmed,
     limitSimulateError,
     marketSimulateError,
+    limitOrderHash,
+    marketOrderHash,
+    resetLimitOrderState,
+    resetMarketOrderState,
   } = usePlaceOrder()
 
   const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBook(
@@ -127,7 +142,7 @@ const PlaceOrder = ({
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
-  } = useTradingBalances(getContractAddress(chainId ?? defaultChainId, ContractName.clobBalanceManager) as `0x${string}`)
+  } = useTradingBalances(getContractAddress(chainId ?? defaultChainId, ContractName.clobBalanceManager) as HexAddress)
 
   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
     return {
@@ -136,137 +151,212 @@ const PlaceOrder = ({
     }
   }
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Function to refresh balance manually
+  const refreshBalance = useCallback(async () => {
+    if (!address || !selectedPool) return;
+
+    setIsManualRefreshing(true);
+    try {
+      const relevantCurrency =
+        side === OrderSideEnum.BUY
+          ? (selectedPool.quoteCurrency as HexAddress)
+          : (selectedPool.baseCurrency as HexAddress);
+
+      try {
+        const total = await getTotalAvailableBalance(relevantCurrency);
+        setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
+        toast.success("Balance refreshed");
+      } catch (error) {
+        console.error("Failed to get total balance, falling back to wallet balance:", error);
+        const walletBal = await getWalletBalance(relevantCurrency);
+        setAvailableBalance(formatUnits(walletBal, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
+        toast.info("Used wallet balance (balance manager unavailable)");
+      }
+    } catch (error) {
+      console.error("Error refreshing balance:", error);
+      toast.error("Failed to refresh balance");
+      setAvailableBalance("Error");
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [address, selectedPool, side, getTotalAvailableBalance, getWalletBalance, quoteDecimals, baseDecimals]);
+
+  // Load initial balance
+  const loadBalance = useCallback(async () => {
+    if (address && selectedPool) {
+      setIsLoadingBalance(true);
+      try {
+        const relevantCurrency =
+          side === OrderSideEnum.BUY
+            ? (selectedPool.quoteCurrency as HexAddress)
+            : (selectedPool.baseCurrency as HexAddress);
+
+        try {
+          const total = await getTotalAvailableBalance(relevantCurrency);
+          setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
+        } catch (error) {
+          console.error("Failed to get total balance, falling back to wallet balance:", error);
+          const walletBal = await getWalletBalance(relevantCurrency);
+          setAvailableBalance(formatUnits(walletBal, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
+        }
+      } catch (error) {
+        console.error("Error loading any balance:", error);
+        setAvailableBalance("Error");
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    }
+  }, [address, selectedPool, side, getTotalAvailableBalance, getWalletBalance, quoteDecimals, baseDecimals]);
 
   useEffect(() => {
-    if (!mounted || !selectedPool) return
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !selectedPool) return;
 
     if (pathname) {
-      const urlParts = pathname.split('/')
+      const urlParts = pathname.split('/');
       if (urlParts.length >= 3) {
-        const poolIdFromUrl = urlParts[2]
+        const poolIdFromUrl = urlParts[2];
 
         if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
-          const poolItem = selectedPool
+          const poolItem = selectedPool;
           if (poolItem) {
-            console.log(`PlaceOrder: Detected pool change from URL to ${poolItem.coin}`)
-            const pool = convertToPoolType(poolItem)
-            setSelectedPool(pool)
+            console.log(`PlaceOrder: Detected pool change from URL to ${poolItem.coin}`);
+            const pool = convertToPoolType(poolItem);
+            setSelectedPool(pool);
           }
         }
       }
     }
-  }, [pathname, selectedPoolId, selectedPool, mounted, setSelectedPool])
+  }, [pathname, selectedPoolId, selectedPool, mounted, setSelectedPool]);
 
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
-      console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`)
-      setPrice("")
-      setQuantity("")
-      setTotal("0")
+      console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`);
+      setPrice("");
+      setQuantity("");
+      setTotal("0");
     }
-  }, [selectedPool])
+  }, [selectedPool]);
 
   // Fall back to first pool if selectedPool is not set
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
-      console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`)
-      setPrice("")
-      setQuantity("")
-      setTotal("0")
+      console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`);
+      setPrice("");
+      setQuantity("");
+      setTotal("0");
     }
-  }, [selectedPool])
+  }, [selectedPool]);
 
   // Update total when price or quantity changes
   useEffect(() => {
     if (price && quantity) {
       try {
-        const priceValue = Number.parseFloat(price)
-        const quantityValue = Number.parseFloat(quantity)
-        setTotal((priceValue * quantityValue).toFixed(6))
+        const priceValue = Number.parseFloat(price);
+        const quantityValue = Number.parseFloat(quantity);
+        setTotal((priceValue * quantityValue).toFixed(6));
       } catch (error) {
-        setTotal("0")
+        setTotal("0");
       }
     } else {
-      setTotal("0")
+      setTotal("0");
     }
-  }, [price, quantity])
+  }, [price, quantity]);
 
   useEffect(() => {
     if (!price && orderType === "limit") {
       if (side === OrderSideEnum.BUY && bestPriceSell) {
-        setPrice(formatUnits(bestPriceSell.price, quoteDecimals))
+        setPrice(formatUnits(bestPriceSell.price, quoteDecimals));
       } else if (side === OrderSideEnum.SELL && bestPriceBuy) {
-        setPrice(formatUnits(bestPriceBuy.price, quoteDecimals))
+        setPrice(formatUnits(bestPriceBuy.price, quoteDecimals));
       }
     }
-  }, [bestPriceBuy, bestPriceSell, side, price, orderType])
+  }, [bestPriceBuy, bestPriceSell, side, price, orderType, quoteDecimals]);
 
+  // Load balance when relevant data changes
   useEffect(() => {
-    const loadBalance = async () => {
-      if (address && selectedPool) {
-        setIsLoadingBalance(true)
-        try {
-          const relevantCurrency =
-            side === OrderSideEnum.BUY
-              ? (selectedPool.quoteCurrency as HexAddress)
-              : (selectedPool.baseCurrency as HexAddress)
-
-          try {
-            const total = await getTotalAvailableBalance(relevantCurrency)
-            setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals))
-          } catch (error) {
-            console.error("Failed to get total balance, falling back to wallet balance:", error)
-            const walletBal = await getWalletBalance(relevantCurrency)
-            setAvailableBalance(formatUnits(walletBal, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals))
-          }
-        } catch (error) {
-          console.error("Error loading any balance:", error)
-          setAvailableBalance("Error")
-        } finally {
-          setIsLoadingBalance(false)
-        }
-      }
-    }
-
-    loadBalance()
-  }, [address, selectedPool, side, getTotalAvailableBalance, getWalletBalance])
+    loadBalance();
+  }, [address, selectedPool, side, loadBalance]);
 
   // Refresh order book on regular intervals
   useEffect(() => {
-    if (!pool?.orderBook) {
-      return;
+    if (pool?.orderBook) {
+      const interval = setInterval(() => {
+        refreshOrderBook();
+      }, 1000); // Refresh every second
+
+      return () => clearInterval(interval);
     }
+  }, [pool?.orderBook, refreshOrderBook]);
 
-    const interval = setInterval(() => {
-      refreshOrderBook()
-    }, 5000) 
+  // Auto refresh balance after transaction completion
+  useEffect(() => {
+    if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
+      // Add a small delay to allow blockchain to update
+      const timeoutId = setTimeout(() => {
+        refreshBalance();
+      }, 2000); // 2 seconds delay to allow transaction to propagate
 
-    return () => clearInterval(interval)
-  }, [pool?.orderBook])
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refreshBalance]);
+
+  // Reset confirmation status after 1 second
+  useEffect(() => {
+    if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
+      const timeoutId = setTimeout(() => {
+        // Reset the confirmation states after 1 second
+        if (isLimitOrderConfirmed) {
+          resetLimitOrderState();
+        }
+        if (isMarketOrderConfirmed) {
+          resetMarketOrderState();
+        }
+      }, 1000); // 1 second timeout
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, resetLimitOrderState, resetMarketOrderState]);
 
   // Show error notification when there's an error
   useEffect(() => {
     if (limitSimulateError || marketSimulateError) {
-      const error = limitSimulateError || marketSimulateError
-      setNotificationMessage(`There was an error processing your transaction. ${error?.message || 'Unknown error occurred.'}`);
-      setNotificationSuccess(false)
-      setNotificationTxHash(undefined)
-      setShowNotification(true)
+      const error = limitSimulateError || marketSimulateError;
+      setNotificationMessage(error?.message || 'Unknown error occurred.');
+      setNotificationSuccess(false);
+      setNotificationTxHash(undefined);
+      setShowNotification(true);
     }
-  }, [limitSimulateError, marketSimulateError])
+  }, [limitSimulateError, marketSimulateError]);
 
   // Show success notification when order is confirmed
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
-      setNotificationMessage(`Your ${side === OrderSideEnum.BUY ? "buy" : "sell"} order has been placed.`)
-      setNotificationSuccess(true)
-      // Assuming you have the transaction hash saved somewhere in your hooks
-      // setNotificationTxHash(txHash);
+      const txHash = limitOrderHash || marketOrderHash;
+      setNotificationMessage(`Your ${side === OrderSideEnum.BUY ? "buy" : "sell"} order has been placed.`);
+      setNotificationSuccess(true);
+      setNotificationTxHash(txHash);
+      setShowNotification(true);
     }
-  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side])
+  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side, limitOrderHash, marketOrderHash]);
+
+  // Function to handle transaction errors
+  const handleTransactionError = (error: unknown) => {
+    let errorMessage = "Failed to place order";
+    
+    if (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+    
+    console.error("Transaction error:", errorMessage);
+    setNotificationMessage(errorMessage);
+    setNotificationSuccess(false);
+    setNotificationTxHash(undefined);
+    setShowNotification(true);
+  };
 
   // Function to handle order placement
   const handleSubmit = async (e: React.FormEvent) => {
@@ -313,19 +403,15 @@ const PlaceOrder = ({
         );
       }
     } catch (err) {
-      let errorMessage = "Failed to place order";
-      if (err) {
-        errorMessage = err instanceof Error ? err.message : String(err);
-      }
-      console.error("Order placement error:", errorMessage);
-      toast.error(errorMessage);
+      console.error("Order placement error:", err);
+      handleTransactionError(err);
     }
   };
 
-  const isPending = isLimitOrderPending || isMarketOrderPending
-  const isConfirming = isLimitOrderConfirming || isMarketOrderConfirming
-  const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed
-  const orderError = limitSimulateError || marketSimulateError
+  const isPending = isLimitOrderPending || isMarketOrderPending;
+  const isConfirming = isLimitOrderConfirming || isMarketOrderConfirming;
+  const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
+  const orderError = limitSimulateError || marketSimulateError;
 
   if (tradesLoading || !mounted)
     return (
@@ -335,9 +421,9 @@ const PlaceOrder = ({
           <span>Loading trading pairs...</span>
         </div>
       </div>
-    )
+    );
 
-    return (
+  return (
     <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
       <style jsx global>
         {inputStyles}
@@ -351,9 +437,26 @@ const PlaceOrder = ({
                 <Wallet className="w-4 h-4" />
                 <span>Available Balance</span>
               </h3>
+              <button
+                onClick={refreshBalance}
+                disabled={isManualRefreshing || isLoadingBalance}
+                className="text-gray-300 hover:text-blue-400 transition-colors flex items-center gap-1.5 text-xs bg-gray-800/50 px-2 py-1 rounded border border-gray-700/40"
+              >
+                <RefreshCw className={`w-3 h-3 ${isManualRefreshing ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">{formatNumber(Number(availableBalance), { decimals: 2, compact: true })}</span>
+              <span className="text-gray-300">
+                {isLoadingBalance ? (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                ) : (
+                  formatNumber(Number(availableBalance), { decimals: 2, compact: true })
+                )}
+              </span>
               <span className="text-gray-400">{side === OrderSideEnum.BUY ? "USDC" : selectedPool.coin.split("/")[0]}</span>
             </div>
           </div>
