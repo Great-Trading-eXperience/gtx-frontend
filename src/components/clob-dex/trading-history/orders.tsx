@@ -4,8 +4,8 @@ import { ClobDexComponentProps } from "../clob-dex"
 import { OrderItem, PoolItem } from "@/graphql/gtx/clob"
 import { formatPrice } from "@/lib/utils"
 import { useMarketStore } from "@/store/market-store"
-import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2, BookOpen, X, AlertCircle } from "lucide-react"
-import { useState } from "react"
+import { ArrowDownUp, ChevronDown, Clock, Loader2, Wallet2, BookOpen, X, AlertCircle, CheckCircle } from "lucide-react"
+import { useState, useEffect } from "react"
 import { formatUnits } from "viem"
 import { formatDate } from "../../../../helper"
 import { useCancelOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/useCancelOrder"
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { HexAddress } from "@/types/general/address"
+import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
+import { getExplorerUrl } from "@/constants/urls/urls-config"
 
 export interface OrderHistoryTableProps extends ClobDexComponentProps {
   ordersData: OrderItem[];
@@ -44,6 +46,23 @@ export default function OrderHistoryTable({
   // Order cancelation state
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [isProcessingCancel, setIsProcessingCancel] = useState(false);
+
+  // Notification state
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationSuccess, setNotificationSuccess] = useState(true);
+  const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>(undefined);
+
+  // Get the explorer base URL for the current chain
+  const getExplorerBaseUrl = () => {
+    try {
+      return getExplorerUrl(chainId);
+    } catch (error) {
+      console.error("Failed to get explorer URL:", error);
+      return "";
+    }
+  };
 
   // Initialize the cancel order hook
   const {
@@ -52,12 +71,58 @@ export default function OrderHistoryTable({
     isCancelOrderConfirming,
     isCancelOrderConfirmed,
     cancelOrderError,
+    cancelOrderHash,
+    resetCancelOrderState
   } = useCancelOrder();
 
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: SortDirection }>({
     key: "timestamp",
     direction: "desc",
   })
+
+  // Watch for transaction status changes to trigger notifications
+  useEffect(() => {
+    if (cancelOrderHash && isCancelOrderConfirmed && isProcessingCancel) {
+      // Show success notification when cancellation is confirmed
+      setNotificationSuccess(true);
+      setNotificationMessage(
+        `Successfully cancelled order #${selectedOrder?.orderId} for ${selectedOrder?.side === "Buy" ? "buying" : "selling"} ${selectedPool?.coin}`
+      );
+      setNotificationTxHash(cancelOrderHash);
+      setNotificationOpen(true);
+      setIsProcessingCancel(false);
+
+      // Close the cancel dialog
+      setCancelDialogOpen(false);
+    }
+  }, [isCancelOrderConfirmed, cancelOrderHash, selectedOrder, selectedPool, isProcessingCancel]);
+
+  // Watch for errors to show in notification
+  useEffect(() => {
+    if (cancelOrderError && isProcessingCancel) {
+      // Show error notification
+      setNotificationSuccess(false);
+      setNotificationMessage(cancelOrderError instanceof Error ? cancelOrderError.message : "Failed to cancel order");
+      setNotificationTxHash(undefined);
+      setNotificationOpen(true);
+      setIsProcessingCancel(false);
+    }
+  }, [cancelOrderError, isProcessingCancel]);
+
+  // Reset notification state when dialog closes
+  useEffect(() => {
+    if (!cancelDialogOpen) {
+      // Small delay to ensure dialog is fully closed before resetting
+      const timer = setTimeout(() => {
+        if (!isProcessingCancel) {
+          resetCancelOrderState?.();
+          setSelectedOrder(null);
+        }
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [cancelDialogOpen, isProcessingCancel, resetCancelOrderState]);
 
   const handleSort = (key: SortableKey) => {
     setSortConfig((currentConfig) => ({
@@ -79,6 +144,10 @@ export default function OrderHistoryTable({
     if (!selectedOrder || !selectedPool) return;
 
     try {
+      setIsProcessingCancel(true);
+      // Reset any previous notification state
+      setNotificationOpen(false);
+
       // Create pool object for the cancel order function
       const pool = {
         baseCurrency: selectedPool.baseCurrency as HexAddress,
@@ -95,12 +164,24 @@ export default function OrderHistoryTable({
 
       await handleCancelOrder(pool, Number(selectedOrder.orderId));
 
-      // Close the dialog after successful cancellation
-      if (isCancelOrderConfirmed) {
-        setCancelDialogOpen(false);
-      }
+      // Dialog will be closed by the useEffect when confirmed
     } catch (error) {
       console.error("Error canceling order:", error);
+      setIsProcessingCancel(false);
+
+      // Show error notification
+      setNotificationSuccess(false);
+      setNotificationMessage(error instanceof Error ? error.message : "Failed to cancel order");
+      setNotificationOpen(true);
+    }
+  };
+
+  // Handler for notification close
+  const handleNotificationClose = () => {
+    setNotificationOpen(false);
+    // Reset cancellation state when notification is closed
+    if (!isProcessingCancel) {
+      resetCancelOrderState?.();
     }
   };
 
@@ -246,19 +327,33 @@ export default function OrderHistoryTable({
               <div className="font-medium text-white">${formatPrice(formatUnits(BigInt(order.price), selectedPool?.quoteDecimals || 6))}</div>
               <div className={order.side === "Buy" ? "text-emerald-400" : "text-rose-400"}>{order.side}</div>
               <div className="font-medium text-white">{calculateFillPercentage(order.filled, order.quantity)}%</div>
-              <div className="text-gray-200">{order.status}</div>
+              <div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === "OPEN"
+                    ? "bg-blue-900/30 text-blue-300"
+                    : order.status === "FILLED"
+                      ? "bg-green-900/30 text-green-300"
+                      : order.status === "PARTIALLY_FILLED"
+                        ? "bg-amber-900/30 text-amber-300"
+                        : order.status === "CANCELLED"
+                          ? "bg-gray-800/50 text-gray-400"
+                          : "bg-gray-800/30 text-gray-400"
+                  }`}>
+                  {order.status}
+                </span>
+              </div>
               <div>
                 {isOrderCancelable(order) && (
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="w-32 h-5 rounded-lg text-gray-400 bg-red-600/30 hover:bg-rose-950 hover:text-rose-300"
+                    className="h-8 rounded-md bg-rose-950/40 text-rose-200 hover:bg-rose-900/50 hover:text-rose-100 transition-colors"
                     onClick={() => {
+                      // Reset any previous notification state
+                      setNotificationOpen(false);
                       setSelectedOrder(order);
                       setCancelDialogOpen(true);
                     }}
                   >
-                    <X className="h-4 w-4" /> Cancel Order
+                    <X className="h-4 w-4 mr-1" /> Cancel
                   </Button>
                 )}
               </div>
@@ -268,7 +363,11 @@ export default function OrderHistoryTable({
       </div>
 
       {/* Cancel Order Confirmation Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+      <Dialog open={cancelDialogOpen} onOpenChange={(open) => {
+        if (!isProcessingCancel) {
+          setCancelDialogOpen(open);
+        }
+      }}>
         <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-800/30 text-gray-200">
           <DialogHeader>
             <DialogTitle>Cancel Order</DialogTitle>
@@ -278,47 +377,75 @@ export default function OrderHistoryTable({
           </DialogHeader>
 
           {selectedOrder && (
-            <div className="space-y-3 py-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-400">Order ID:</div>
-                <div className="text-gray-200">{selectedOrder.orderId}</div>
+            <div className="space-y-4 py-3">
+              <div className="rounded-lg bg-gray-800/30 p-4 border border-gray-700/30">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-gray-400">Order ID:</div>
+                  <div className="font-medium text-gray-200">#{selectedOrder.orderId}</div>
 
-                <div className="text-gray-400">Side:</div>
-                <div className={selectedOrder.side === "Buy" ? "text-emerald-400" : "text-rose-400"}>
-                  {selectedOrder.side}
-                </div>
+                  <div className="text-gray-400">Pool:</div>
+                  <div className="font-medium text-gray-200">{getPoolName(selectedOrder.poolId)}</div>
 
-                <div className="text-gray-400">Price:</div>
-                <div className="text-gray-200">
-                  ${formatPrice(formatUnits(BigInt(selectedOrder.price), selectedPool?.quoteDecimals || 6))}
-                </div>
+                  <div className="text-gray-400">Side:</div>
+                  <div className={`font-medium ${selectedOrder.side === "Buy" ? "text-emerald-400" : "text-rose-400"}`}>
+                    {selectedOrder.side}
+                  </div>
 
-                <div className="text-gray-400">Filled:</div>
-                <div className="text-gray-200">
-                  {calculateFillPercentage(selectedOrder.filled, selectedOrder.quantity)}%
+                  <div className="text-gray-400">Price:</div>
+                  <div className="font-medium text-gray-200">
+                    ${formatPrice(formatUnits(BigInt(selectedOrder.price), selectedPool?.quoteDecimals || 6))}
+                  </div>
+
+                  <div className="text-gray-400">Filled:</div>
+                  <div className="font-medium text-gray-200">
+                    {calculateFillPercentage(selectedOrder.filled, selectedOrder.quantity)}%
+                  </div>
+
+                  <div className="text-gray-400">Status:</div>
+                  <div className="font-medium">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedOrder.status === "OPEN"
+                        ? "bg-blue-900/30 text-blue-300"
+                        : selectedOrder.status === "PARTIALLY_FILLED"
+                          ? "bg-amber-900/30 text-amber-300"
+                          : "bg-gray-800/30 text-gray-400"
+                      }`}>
+                      {selectedOrder.status}
+                    </span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Cancel warning */}
+              <div className="flex items-start gap-2 rounded-md bg-amber-950/30 p-3 text-sm text-amber-300 border border-amber-900/30">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                <span>Cancelling this order will remove it from the orderbook. This action cannot be undone.</span>
               </div>
             </div>
           )}
 
-          {cancelOrderError && (
-            <div className="flex items-center gap-2 rounded-md bg-rose-950/50 p-3 text-sm text-rose-300">
-              <AlertCircle className="h-4 w-4" /> 
+          {/* {cancelOrderError && (
+            <div className="flex items-center gap-2 rounded-md bg-rose-950/50 p-3 text-sm text-rose-300 border border-rose-900/30">
+              <AlertCircle className="h-4 w-4" />
               <span>Error: {cancelOrderError instanceof Error ? cancelOrderError.message : 'Failed to cancel order'}</span>
             </div>
-          )}
+          )} */}
 
-          <DialogFooter className="flex gap-2 sm:justify-end">
+          <DialogFooter className="flex gap-2 sm:justify-end pt-2">
             <Button
               variant="outline"
-              onClick={() => setCancelDialogOpen(false)}
+              onClick={() => {
+                if (!isProcessingCancel) {
+                  setCancelDialogOpen(false);
+                }
+              }}
               className="border-gray-700 bg-transparent text-gray-200 hover:bg-gray-800 hover:text-gray-100"
+              disabled={isCancelOrderPending || isCancelOrderConfirming}
             >
-              Cancel
+              Keep Order
             </Button>
             <Button
               variant="destructive"
-              className="bg-rose-600 hover:bg-rose-700"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-medium"
               onClick={onCancelOrder}
               disabled={isCancelOrderPending || isCancelOrderConfirming}
             >
@@ -328,12 +455,22 @@ export default function OrderHistoryTable({
                   {isCancelOrderPending ? 'Confirming...' : 'Processing...'}
                 </>
               ) : (
-                'Confirm Cancellation'
+                'Cancel Order'
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Notification Dialog */}
+      <NotificationDialog
+        isOpen={notificationOpen}
+        onClose={handleNotificationClose}
+        message={notificationMessage}
+        isSuccess={notificationSuccess}
+        txHash={notificationTxHash}
+        explorerBaseUrl={getExplorerBaseUrl()}
+      />
     </>
   )
 }

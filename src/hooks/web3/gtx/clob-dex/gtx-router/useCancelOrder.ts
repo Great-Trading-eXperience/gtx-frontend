@@ -19,6 +19,7 @@ export const useCancelOrder = () => {
     isPending: isCancelOrderPending,
     isError: isCancelOrderError,
     error: cancelOrderError,
+    reset: resetMutation,
   } = useMutation({
     mutationFn: async ({
       pool,
@@ -29,7 +30,7 @@ export const useCancelOrder = () => {
     }) => {
       // Reset the error shown flag at the start of each mutation
       setErrorAlreadyShown(false);
-      
+
       try {
         if (!address) {
           toast.error('Wallet not connected');
@@ -63,7 +64,7 @@ export const useCancelOrder = () => {
             functionName: 'cancelOrder',
             args: [pool, orderId]
           });
-          
+
           const simulation = await simulateContract(wagmiConfig, {
             address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
@@ -79,12 +80,12 @@ export const useCancelOrder = () => {
         } catch (simulationError) {
           console.error("Simulation error:", simulationError);
           console.log("Simulation error details:", JSON.stringify(simulationError, null, 2));
-          
+
           // Handle simulation errors more specifically
           if (simulationError instanceof Error) {
             const errorMessage = simulationError.message;
             simulationErrorMessage = errorMessage;
-            
+
             // Check for specific error signatures
             if (errorMessage.includes('0x1d9d97a1')) {
               // Based on your logs, we'll attempt to proceed with the transaction anyway
@@ -110,7 +111,7 @@ export const useCancelOrder = () => {
             proceedDespiteSimulationError = true;
             toast.info('Attempting to cancel order...');
           }
-          
+
           if (!proceedDespiteSimulationError) {
             throw simulationError;
           }
@@ -122,7 +123,7 @@ export const useCancelOrder = () => {
           functionName: 'cancelOrder',
           args: [pool, orderId]
         });
-        
+
         let hash;
         try {
           hash = await writeContract(wagmiConfig, {
@@ -140,14 +141,14 @@ export const useCancelOrder = () => {
           toast.success('Cancel order submitted. Waiting for confirmation...');
         } catch (txError) {
           console.error("Transaction error:", txError);
-          
+
           // If we tried to proceed despite simulation errors and still failed, now we should show the original error
           if (proceedDespiteSimulationError) {
             toast.error(`Failed to cancel order: ${simulationErrorMessage || 'Unknown error'}`);
             setErrorAlreadyShown(true);
             throw new Error(simulationErrorMessage || 'Failed to cancel order');
           }
-          
+
           // Otherwise handle new transaction errors
           if (txError instanceof Error) {
             toast.error(`Transaction error: ${txError.message}`);
@@ -158,10 +159,10 @@ export const useCancelOrder = () => {
           }
           throw txError;
         }
-        
+
         const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
         console.log("Transaction receipt:", receipt);
-        
+
         if (receipt.status === 'success') {
           toast.success('Order cancelled successfully!');
         } else {
@@ -169,17 +170,17 @@ export const useCancelOrder = () => {
           setErrorAlreadyShown(true);
           throw new Error('Order cancellation failed on-chain');
         }
-        
+
         return receipt;
       } catch (error) {
         console.error('Cancel order error:', error);
-        
+
         // Only show error messages if we haven't already shown one
         if (!errorAlreadyShown) {
           if (error instanceof Error) {
             const errorMessage = error.message;
             console.log("Error message:", errorMessage);
-            
+
             // Check for specific error signatures
             if (errorMessage.includes('0x1d9d97a1')) {
               toast.error('This order cannot be cancelled. It may be already filled, expired, or cancelled.');
@@ -194,7 +195,7 @@ export const useCancelOrder = () => {
             toast.error('Failed to cancel order');
           }
         }
-        
+
         throw error;
       }
     },
@@ -208,6 +209,20 @@ export const useCancelOrder = () => {
   } = useWaitForTransactionReceipt({
     hash: cancelOrderHash,
   });
+
+  // Add reset function to clear all state values
+  const resetCancelOrderState = () => {
+    // Reset the transaction hash
+    setCancelOrderHash(undefined);
+
+    // Reset error already shown flag
+    setErrorAlreadyShown(false);
+
+    // Reset the react-query mutation state
+    resetMutation();
+
+    console.log("Cancel order state has been reset");
+  };
 
   // Wrapper function with validation
   const handleCancelOrder = async (
@@ -240,5 +255,6 @@ export const useCancelOrder = () => {
     isCancelOrderConfirmed,
     cancelOrderHash,
     cancelOrderError,
+    resetCancelOrderState, // Export the reset function
   };
 };
