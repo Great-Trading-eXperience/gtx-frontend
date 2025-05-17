@@ -1,6 +1,6 @@
-import { Input } from "@/components/ui/input";
-import { DEFAULT_CHAIN } from "@/constants/contract/contract-address";
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url";
+import { Input } from '@/components/ui/input';
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
+import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import {
   poolsPonderQuery,
   PoolsPonderResponse,
@@ -10,7 +10,7 @@ import {
   TradesPonderResponse,
   tradesQuery,
   TradesResponse,
-} from "@/graphql/gtx/clob";
+} from '@/graphql/gtx/clob';
 import {
   createMarketData,
   MarketData,
@@ -18,18 +18,18 @@ import {
   ProcessedTrade,
   processPools,
   processTrades,
-} from "@/lib/market-data";
-import { getUseSubgraph } from "@/utils/env";
-import { useQuery } from "@tanstack/react-query";
-import request from "graphql-request";
-import { CheckCircle, Clock, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useChainId } from "wagmi";
-import { DotPattern } from "../magicui/dot-pattern";
-import { MarketListSkeleton } from "./market-list-skeleton";
-import MarketSearchDialog from "./market-search-dialog";
-import Image from "next/image";
+} from '@/lib/market-data';
+import { getUseSubgraph } from '@/utils/env';
+import { useQuery } from '@tanstack/react-query';
+import request from 'graphql-request';
+import { CheckCircle, Clock, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useChainId } from 'wagmi';
+import { DotPattern } from '../magicui/dot-pattern';
+import { MarketListSkeleton } from './market-list-skeleton';
+import MarketSearchDialog from './market-search-dialog';
+import Image from 'next/image';
 
 interface MarketListProps {
   initialMarketData?: MarketData[];
@@ -37,11 +37,13 @@ interface MarketListProps {
 
 export default function MarketList({ initialMarketData = [] }: MarketListProps) {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [marketData, setMarkets] = useState<MarketData[]>(initialMarketData);
   const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>(initialMarketData);
   const [isLoading, setIsLoading] = useState(initialMarketData.length === 0);
-  const [isProcessingPools, setIsProcessingPools] = useState(initialMarketData.length === 0);
+  const [isProcessingPools, setIsProcessingPools] = useState(
+    initialMarketData.length === 0
+  );
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   const [copiedToken, setCopiedToken] = useState<{
     id: string;
@@ -61,15 +63,12 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
   const { data: poolsData, error: poolsError } = useQuery<
     PoolsPonderResponse | PoolsResponse
   >({
-    queryKey: ["pools", String(chainId ?? defaultChain)],
+    queryKey: ['pools', String(chainId ?? defaultChain)],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChain);
       const url = GTX_GRAPHQL_URL(currentChainId);
-      if (!url) throw new Error("GraphQL URL not found");
-      return await request(
-        url,
-        getUseSubgraph() ? poolsQuery : poolsPonderQuery
-      );
+      if (!url) throw new Error('GraphQL URL not found');
+      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);
     },
     refetchInterval: 30000,
     staleTime: 60000,
@@ -78,15 +77,12 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
 
   // Fetch trades data only if we don't have initial data
   const { data: tradesData } = useQuery<TradesPonderResponse | TradesResponse>({
-    queryKey: ["trades", String(chainId ?? defaultChain)],
+    queryKey: ['trades', String(chainId ?? defaultChain)],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChain);
       const url = GTX_GRAPHQL_URL(currentChainId);
-      if (!url) throw new Error("GraphQL URL not found");
-      return await request(
-        url,
-        getUseSubgraph() ? tradesQuery : tradesPonderQuery
-      );
+      if (!url) throw new Error('GraphQL URL not found');
+      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery);
     },
     refetchInterval: 30000,
     staleTime: 60000,
@@ -99,7 +95,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     if (initialMarketData.length > 0 && !poolsData && !tradesData) {
       return;
     }
-    
+
     const processData = async () => {
       setIsProcessingPools(true);
       const pools = await processPools(poolsData);
@@ -115,10 +111,14 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
   // Second effect to create market data
   useEffect(() => {
     // Skip if we're using initialMarketData and don't have processed pools/trades
-    if (initialMarketData.length > 0 && processedPools.length === 0 && processedTrades.length === 0) {
+    if (
+      initialMarketData.length > 0 &&
+      processedPools.length === 0 &&
+      processedTrades.length === 0
+    ) {
       return;
     }
-    
+
     if (processedPools.length > 0 && processedTrades.length > 0) {
       const markets = createMarketData(processedPools, processedTrades);
       setMarkets(markets);
@@ -133,14 +133,14 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
 
       // Apply watchlist filter if enabled
       if (showWatchlist) {
-        filtered = filtered.filter((item) => item.starred);
+        filtered = filtered.filter(item => item.starred);
       }
 
       // Apply search query filter
       if (searchQuery) {
         const lowercaseQuery = searchQuery.toLowerCase();
         filtered = filtered.filter(
-          (item) =>
+          item =>
             item.name.toLowerCase().includes(lowercaseQuery) ||
             item.pair.toLowerCase().includes(lowercaseQuery)
         );
@@ -157,7 +157,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
       setIsLoading(false);
       return;
     }
-    
+
     if (poolsData && tradesData) {
       setIsLoading(false);
     } else if (shouldFetchData) {
@@ -168,7 +168,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
   // Prepare data for market search dialog
   const getSearchDialogData = () => {
     // Always use the most current market data to ensure starred status is in sync
-    return marketData.map((market) => ({
+    return marketData.map(market => ({
       id: market.id,
       name: market.name,
       pair: market.pair,
@@ -177,7 +177,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
       volume: market.volume,
       liquidity: market.liquidity,
       verified: Math.random() > 0.7, // Randomize for demo
-      iconBg: "#000000", // Black background for all icons
+      iconBg: '#000000', // Black background for all icons
       hasTokenImage: market.iconInfo?.hasImage || false,
       tokenImagePath: market.iconInfo?.imagePath || null,
       starred: market.starred,
@@ -186,11 +186,9 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
 
   // Handle market selection from the dialog
   const handleMarketSelect = (marketId: string) => {
-    const selectedMarket = marketData.find((m) => m.id === marketId);
+    const selectedMarket = marketData.find(m => m.id === marketId);
     if (selectedMarket) {
-      console.log(
-        `Selected market: ${selectedMarket.name}/${selectedMarket.pair}`
-      );
+      console.log(`Selected market: ${selectedMarket.name}/${selectedMarket.pair}`);
       // Navigate to the spot page with the pool ID
       router.push(`/spot/${marketId}`);
     }
@@ -204,8 +202,8 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
   // Toggle star/favorite status for a market
   const toggleStarred = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
-    setMarkets((prev) =>
-      prev.map((market) =>
+    setMarkets(prev =>
+      prev.map(market =>
         market.id === id ? { ...market, starred: !market.starred } : market
       )
     );
@@ -213,11 +211,9 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
 
   // Add a function to handle toggling starred status from the search dialog
   const handleToggleStarredFromDialog = (marketId: string) => {
-    setMarkets((prev) =>
-      prev.map((market) =>
-        market.id === marketId
-          ? { ...market, starred: !market.starred }
-          : market
+    setMarkets(prev =>
+      prev.map(market =>
+        market.id === marketId ? { ...market, starred: !market.starred } : market
       )
     );
   };
@@ -240,8 +236,8 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
           Market Overview
           <br />
           <span className="text-white/70 text-base font-normal mt-2 block">
-            Explore the latest market data and trading activity across all
-            supported tokens.
+            Explore the latest market data and trading activity across all supported
+            tokens.
           </span>
         </h2>
 
@@ -261,8 +257,8 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
               onClick={() => setShowWatchlist(false)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 !showWatchlist
-                  ? "bg-white/10 text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
               All Markets
@@ -271,8 +267,8 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
               onClick={() => setShowWatchlist(true)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 showWatchlist
-                  ? "bg-white/10 text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
               Watchlist
@@ -315,7 +311,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                           <div className="relative group">
                             <button
                               className="w-6 h-6 flex items-center justify-center border border-white/20 rounded-md hover:bg-white/20 transition-colors"
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation(); // Prevent row click when copying address
                                 navigator.clipboard.writeText(item.id);
                                 setCopiedToken({
@@ -346,24 +342,20 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                           </div>
                           <button
                             className="text-white/50 hover:text-yellow-400 transition-colors"
-                            onClick={(e) => toggleStarred(item.id, e)}
+                            onClick={e => toggleStarred(item.id, e)}
                             aria-label={
-                              item.starred
-                                ? "Remove from watchlist"
-                                : "Add to watchlist"
+                              item.starred ? 'Remove from watchlist' : 'Add to watchlist'
                             }
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
-                              fill={item.starred ? "currentColor" : "none"}
+                              fill={item.starred ? 'currentColor' : 'none'}
                               stroke="currentColor"
                               className={`w-5 h-5 ${
-                                item.starred
-                                  ? "text-yellow-400"
-                                  : "text-white/40"
+                                item.starred ? 'text-yellow-400' : 'text-white/40'
                               }`}
-                              strokeWidth={item.starred ? "0" : "2"}
+                              strokeWidth={item.starred ? '0' : '2'}
                             >
                               <path
                                 strokeLinecap="round"
@@ -374,14 +366,11 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                           </button>
                           <div
                             className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-white/30"
-                            style={{ backgroundColor: "#000000" }}
+                            style={{ backgroundColor: '#000000' }}
                           >
-                            {item.iconInfo?.hasImage &&
-                            item.iconInfo?.imagePath ? (
+                            {item.iconInfo?.hasImage && item.iconInfo?.imagePath ? (
                               <Image
-                                src={
-                                  item.iconInfo.imagePath || "/placeholder.svg"
-                                }
+                                src={item.iconInfo.imagePath || '/placeholder.svg'}
                                 alt={item.name}
                                 className="w-full h-full object-contain"
                                 width={32}
@@ -396,9 +385,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                             )}
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-white">
-                              {item.name}
-                            </span>
+                            <span className="font-medium text-white">{item.name}</span>
                             <span className="text-white/60">/ {item.pair}</span>
                           </div>
                         </div>
@@ -406,17 +393,13 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                       <td className="px-6 py-5">
                         <div
                           className="flex items-center gap-2 text-white/80"
-                          title={new Date(
-                            item.timestamp * 1000
-                          ).toLocaleString()}
+                          title={new Date(item.timestamp * 1000).toLocaleString()}
                         >
                           <Clock className="w-4 h-4 text-white/60" />
                           {item.age}
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-white font-mono">
-                        ${item.price}
-                      </td>
+                      <td className="px-6 py-5 text-white font-mono">${item.price}</td>
                       <td className="px-6 py-5 text-white/90 font-mono">
                         ${item.volume}
                       </td>
@@ -426,8 +409,8 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                   <tr>
                     <td colSpan={5} className="text-center py-8 text-white/50">
                       {showWatchlist
-                        ? "Your watchlist is empty. Star some markets to add them here."
-                        : "No markets found"}
+                        ? 'Your watchlist is empty. Star some markets to add them here.'
+                        : 'No markets found'}
                     </td>
                   </tr>
                 )}

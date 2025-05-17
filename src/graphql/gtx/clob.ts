@@ -1,15 +1,52 @@
-import { HexAddress } from "@/types/general/address";
-import { gql } from "graphql-request";
+import { HexAddress } from '@/types/general/address';
+import { gql } from 'graphql-request';
+
+export const CurrencyFields = gql`
+  fragment CurrencyFields on currencies {
+    address
+    decimals
+    symbol
+    name
+  }
+`;
+
+export type CurrencyType = {
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+
+export const OrderFields = gql`
+  fragment OrderFields on orders {
+    side
+    price
+    quantity
+    type
+  }
+`;
+
+export type OrderType = {
+  side: 'Buy' | 'Sell';
+  price: string;
+  quantity: string;
+  type: string;
+};
 
 export const poolsPonderQuery = gql`
+  ${CurrencyFields}
   query GetPools {
     poolss {
       items {
-      baseCurrency
+        baseCurrency {
+          ...CurrencyFields
+        }
+        quoteCurrency {
+          ...CurrencyFields
+        }
         coin
         id
         orderBook
-        quoteCurrency
         timestamp
       }
       totalCount
@@ -24,57 +61,60 @@ export const poolsPonderQuery = gql`
 `;
 
 export const poolsQuery = gql`
+  ${CurrencyFields}
   query GetPools {
     pools {
-      baseCurrency
+      baseCurrency {
+        ...CurrencyFields
+      }
+      quoteCurrency {
+        ...CurrencyFields
+      }
       coin
       id
       orderBook
-      quoteCurrency
       timestamp
     }
   }
 `;
 
-
 export type PoolItem = {
-  baseCurrency: string
-  coin: string
-  id: string
-  lotSize: string
-  maxOrderAmount: string
-  orderBook: string
-  quoteCurrency: string
-  timestamp: number
-  baseSymbol?: string
-  quoteSymbol?: string
-  baseDecimals?: number
-  quoteDecimals?: number
-}
+  coin: string;
+  id: string;
+  orderBook: string;
+  timestamp: number;
+  baseCurrency: CurrencyType;
+  quoteCurrency: CurrencyType;
+  //   lotSize: string;
+  //   maxOrderAmount: string;
+  //   baseSymbol?: string;
+  //   quoteSymbol?: string;
+  //   baseDecimals?: number;
+  //   quoteDecimals?: number;
+};
 
 export type PoolsPonderResponse = {
   poolss: {
-    items: PoolItem[]
-    totalCount: number
+    items: PoolItem[];
+    totalCount: number;
     pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-  }
-}
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+  };
+};
 
 export type PoolsResponse = {
-  pools: PoolItem[]
-}
+  pools: PoolItem[];
+};
 
 export const tradesPonderQuery = gql`
+  ${CurrencyFields}
   query GetTrades($poolId: String) {
     tradess(
-      where: { 
-        poolId: $poolId
-      }
+      where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "desc"
       limit: 20
@@ -95,16 +135,22 @@ export const tradesPonderQuery = gql`
           quantity
           user {
             amount
-            currency
+            currency {
+              ...CurrencyFields
+            }
             lockedAmount
             user
           }
           pool {
-            baseCurrency
             coin
+            baseCurrency {
+              ...CurrencyFields
+            }
+            quoteCurrency {
+              ...CurrencyFields
+            }
             id
             orderBook
-            quoteCurrency
             timestamp
           }
         }
@@ -147,8 +193,6 @@ export const tradesQuery = gql`
   }
 `;
 
-
-
 export type TradeItem = {
   id: string;
   orderId: string;
@@ -172,27 +216,27 @@ export type TradeItem = {
     quantity: string;
     user: {
       amount: string;
-      currency: string;
+      currency: CurrencyType;
       lockedAmount: string;
       symbol: string;
       user: HexAddress;
     };
     pool: {
-      baseCurrency: string;
       coin: string;
       id: string;
       lotSize: string;
       maxOrderAmount: string;
       orderBook: string;
-      quoteCurrency: string;
       timestamp: number;
+      baseCurrency: CurrencyType;
+      quoteCurrency: CurrencyType;
     };
   };
-}
+};
 
 export type TradesPonderResponse = {
   tradess: {
-    items: TradeItem[]
+    items: TradeItem[];
     pageInfo: {
       endCursor: string;
       hasNextPage: boolean;
@@ -200,18 +244,79 @@ export type TradesPonderResponse = {
       startCursor: string;
     };
     totalCount: number;
-  }
-}
+  };
+};
 
 export type TradesResponse = {
-  trades: TradeItem[]
-}
+  trades: TradeItem[];
+};
+
+export const recentTradesPonderQuery = gql`
+  query GetRecentTrades($poolId: String!, $limit: Int = 50) {
+    orderBookTradess(
+      where: { poolId: $poolId }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: $limit
+    ) {
+      items {
+        chainId
+        price
+        quantity
+        timestamp
+        side
+        transactionId
+      }
+      totalCount
+    }
+  }
+`;
+
+export const recentTradesQuery = gql`
+  query GetRecentTrades($poolId: String!, $limit: Int = 50) {
+    orderBookTrades(
+      where: { poolId: $poolId }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: $limit
+    ) {
+      chainId
+      price
+      quantity
+      timestamp
+      side
+      poolId
+      transactionId
+      id
+    }
+  }
+`;
+
+export type RecentTradeItem = {
+  id: string;
+  chainId: number;
+  poolId: string;
+  price: string;
+  quantity: string;
+  timestamp: number;
+  side: 'Buy' | 'Sell';
+  transactionId: string;
+};
+
+export type RecentTradesPonderResponse = {
+  orderBookTradess: {
+    items: RecentTradeItem[];
+    totalCount: number;
+  };
+};
+
+export type RecentTradesResponse = {
+  orderBookTrades: RecentTradeItem[];
+};
 
 export const ordersPonderQuery = gql`
   query GetOrders($userAddress: String!, $poolId: String) {
-    orderss(
-      where: { user: $userAddress, poolId: $poolId }
-    ) {
+    orderss(where: { user: $userAddress, poolId: $poolId }) {
       items {
         expiry
         filled
@@ -237,9 +342,7 @@ export const ordersPonderQuery = gql`
 
 export const ordersQuery = gql`
   query GetOrders($userAddress: String!, $poolId: String) {
-    orders(
-      where: { user: $userAddress, pool: $poolId }
-    ) {
+    orders(where: { user: $userAddress, pool: $poolId }) {
       expiry
       filled
       id
@@ -257,48 +360,51 @@ export const ordersQuery = gql`
 `;
 
 export type OrderItem = {
-  expiry: string
-  filled: string
-  id: string
-  orderId: string
-  poolId: string
-  price: string
-  quantity: string
-  side: string
-  status: string
-  timestamp: number
-  type: string
+  expiry: string;
+  filled: string;
+  id: string;
+  orderId: string;
+  poolId: string;
+  price: string;
+  quantity: string;
+  side: string;
+  status: string;
+  timestamp: number;
+  type: string;
   user: {
-    amount: string
-    currency: string
-    lockedAmount: string
-    user: string
-  }
-}
+    amount: string;
+    currency: string;
+    lockedAmount: string;
+    user: string;
+  };
+};
 
 export type OrdersPonderResponse = {
   orderss: {
-    items: OrderItem[]
+    items: OrderItem[];
     pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-    totalCount: number
-  }
-}
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+    totalCount: number;
+  };
+};
 
 export type OrdersResponse = {
-  orderss: OrderItem[]
-}
+  orderss: OrderItem[];
+};
 
 export const balancesPonderQuery = gql`
+  ${CurrencyFields}
   query GetBalances($userAddress: String!) {
     balancess(where: { user: $userAddress }) {
       items {
         amount
-        currency
+        currency {
+          ...CurrencyFields
+        }
         lockedAmount
         user
       }
@@ -314,41 +420,44 @@ export const balancesPonderQuery = gql`
 `;
 
 export const balancesQuery = gql`
+  ${CurrencyFields}
   query GetBalances($userAddress: String!) {
     balances(where: { user: $userAddress }) {
+      id
       amount
-      currency
       lockedAmount
-      symbol
       user
+      currency {
+        ...CurrencyFields
+      }
     }
   }
 `;
 
 export type BalanceItem = {
-  amount: string
-  currency: string
-  lockedAmount: string
-  symbol: string
-  user: string
-}
+  id: string;
+  currency: CurrencyType;
+  amount: string;
+  lockedAmount: string;
+  user: string;
+};
 
 export type BalancesPonderResponse = {
   balancess: {
-    items: BalanceItem[]
+    items: BalanceItem[];
     pageInfo: {
-      endCursor: string
-      hasNextPage: boolean
-      hasPreviousPage: boolean
-      startCursor: string
-    }
-    totalCount: number
-  }
-}
+      endCursor: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string;
+    };
+    totalCount: number;
+  };
+};
 
 export type BalancesResponse = {
-  balances: BalanceItem[]
-}
+  balances: BalanceItem[];
+};
 
 export const minuteCandleStickPonderQuery = gql`
   query GetMinuteCandleStick($poolId: String!) {
@@ -413,7 +522,6 @@ export const fiveMinuteCandleStickPonderQuery = gql`
   }
 `;
 
-
 export const fiveMinuteCandleStickQuery = gql`
   query GetFiveMinuteCandleStick($poolId: String!) {
     fiveMinuteBuckets(
@@ -470,9 +578,7 @@ export const hourCandleStickPonderQuery = gql`
 
 export const hourCandleStickQuery = gql`
   query GetHourCandleStick($poolId: String!) {
-    hourBuckets(
-      where: { pool: $poolId }
-    ) {
+    hourBuckets(where: { pool: $poolId }) {
       average
       close
       count
@@ -529,58 +635,208 @@ export const dailyCandleStickQuery = gql`
 `;
 
 export type CandleStickItem = {
-  average: number
-  close: number
-  closeTime: number
-  count: number
-  id: string
-  low: number
-  high: number
-  open: number
-  openTime: number
-  poolId: string
-  quoteVolume: number
-  takerBuyBaseVolume: number
-  takerBuyQuoteVolume: number
-  volume: number
-}
+  average: number;
+  close: number;
+  closeTime: number;
+  count: number;
+  id: string;
+  low: number;
+  high: number;
+  open: number;
+  openTime: number;
+  poolId: string;
+  quoteVolume: number;
+  takerBuyBaseVolume: number;
+  takerBuyQuoteVolume: number;
+  volume: number;
+};
 
 export type MinuteCandleStickPonderResponse = {
   minuteBucketss: {
-    items: CandleStickItem[]
-  }
-}
+    items: CandleStickItem[];
+  };
+};
 
 export type MinuteCandleStickResponse = {
-  minuteBuckets: CandleStickItem[]
-}
+  minuteBuckets: CandleStickItem[];
+};
 
 export type FiveMinuteCandleStickPonderResponse = {
   fiveMinuteBucketss: {
-    items: CandleStickItem[]
-  }
-}
+    items: CandleStickItem[];
+  };
+};
 
 export type FiveMinuteCandleStickResponse = {
-  fiveMinuteBuckets: CandleStickItem[]
-}
+  fiveMinuteBuckets: CandleStickItem[];
+};
 
 export type HourCandleStickPonderResponse = {
   hourBucketss: {
-    items: CandleStickItem[]
-  }
-}
+    items: CandleStickItem[];
+  };
+};
 
 export type HourCandleStickResponse = {
-  hourBuckets: CandleStickItem[]
-}
+  hourBuckets: CandleStickItem[];
+};
 
 export type DailyCandleStickPonderResponse = {
   dailyBucketss: {
-    items: CandleStickItem[]
-  }
-}
+    items: CandleStickItem[];
+  };
+};
 
 export type DailyCandleStickResponse = {
-  dailyBuckets: CandleStickItem[]
-}
+  dailyBuckets: CandleStickItem[];
+};
+
+export const openOrdersPonderQuery = gql`
+  query GetUserOpenOrders($userAddress: String!, $status: String) {
+    orderss(
+      where: { user: $userAddress, status: $status }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: 50
+    ) {
+      items {
+        chainId
+        poolId
+        id
+        orderId
+        side
+        timestamp
+        transactionId
+        price
+        quantity
+        filled
+        type
+        status
+        expiry
+      }
+      totalCount
+    }
+  }
+`;
+
+export const openOrdersQuery = gql`
+  query GetOpenOrders($userAddress: String!) {
+    orders(
+      where: { user: $userAddress }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: 50
+    ) {
+      chainId
+      poolId
+      id
+      orderId
+      side
+      timestamp
+      transactionId
+      price
+      quantity
+      filled
+      type
+      status
+      expiry
+    }
+  }
+`;
+
+export type OpenOrderItem = {
+  chainId: number;
+  poolId: string;
+  orderId: bigint;
+  id: string;
+  side: string;
+  timestamp: number;
+  transactionId: string;
+  price: string;
+  quantity: string;
+  filled: string;
+  type: string;
+  status: string;
+  expiry: number;
+};
+
+export type OpenOrdersPonderResponse = {
+  orderss: {
+    items: OpenOrderItem[];
+    totalCount: number;
+  };
+};
+
+export type OpenOrdersResponse = {
+  orders: OpenOrderItem[];
+};
+
+export const tradeHistoryPonderQuery = gql`
+  ${OrderFields}
+  query GetUserTradeHistory($orderIds: [BigInt!]) {
+    orderHistorys(
+      where: { orderId_in: $orderIds }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: 100
+    ) {
+      items {
+        chainId
+        orderId
+        timestamp
+        filled
+        status
+        id
+        transactionId
+        order {
+          ...OrderFields
+        }
+      }
+      totalCount
+    }
+  }
+`;
+
+export const tradeHistoryQuery = gql`
+  ${OrderFields}
+  query GetTradeHistory($orderIds: [BigInt!]) {
+    orderHistorys(
+      where: { orderId_in: $orderIds }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+      limit: 100
+    ) {
+      chainId
+      orderId
+      timestamp
+      filled
+      status
+      id
+      transactionId
+      order {
+        ...OrderFields
+      }
+    }
+  }
+`;
+export type TradeHistoryItem = {
+  chainId: number;
+  orderId: string;
+  timestamp: number;
+  filled: string;
+  status: string;
+  transactionId: string;
+  id: string;
+  order: OrderType;
+};
+
+export type TradeHistoryPonderResponse = {
+  orderHistorys: {
+    items: TradeHistoryItem[];
+    totalCount: number;
+  };
+};
+
+export type TradeHistoryResponse = {
+  orderHistorys: TradeHistoryItem[];
+};

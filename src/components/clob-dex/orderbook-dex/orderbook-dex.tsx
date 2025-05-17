@@ -1,71 +1,78 @@
-"use client"
+'use client';
 
-import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI"
-import OrderBookABI from "@/abis/gtx/clob/OrderBookABI"
-import { wagmiConfig } from "@/configs/wagmi"
-import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
-import { PoolItem, PoolsResponse } from "@/graphql/gtx/clob"
-import { useMarketStore } from "@/store/market-store"
-import { readContract } from "@wagmi/core"
-import { ArrowDown, ArrowUp, Menu, RefreshCw } from "lucide-react"
-import { usePathname } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { formatUnits } from "viem"
-import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
-import { ClobDexComponentProps } from "../clob-dex"
+import GTXRouterABI from '@/abis/gtx/clob/GTXRouterABI';
+import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
+import { wagmiConfig } from '@/configs/wagmi';
+import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
+import { PoolItem, PoolsResponse } from '@/graphql/gtx/clob';
+import { useMarketStore } from '@/store/market-store';
+import { readContract } from '@wagmi/core';
+import { ArrowDown, ArrowUp, Menu, RefreshCw } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatUnits } from 'viem';
+import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
+import { ClobDexComponentProps } from '../clob-dex';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 interface Order {
-  price: number
-  size: number
-  total?: number
-  key?: string
-  isMatched?: boolean
-  lastUpdated?: number
+  price: number;
+  size: number;
+  total?: number;
+  key?: string;
+  isMatched?: boolean;
+  lastUpdated?: number;
 }
 
 interface OrderBook {
-  asks: Order[]
-  bids: Order[]
-  lastPrice: bigint
-  spread: bigint
-  lastUpdate?: number
-  previousAsks?: Order[]
-  previousBids?: Order[]
+  asks: Order[];
+  bids: Order[];
+  lastPrice: bigint;
+  spread: bigint;
+  lastUpdate?: number;
+  previousAsks?: Order[];
+  previousBids?: Order[];
 }
 
-type ViewType = "both" | "bids" | "asks"
-type DecimalPrecision = "0.01" | "0.1" | "1"
+type ViewType = 'both' | 'bids' | 'asks';
+type DecimalPrecision = '0.01' | '0.1' | '1';
 
-const STANDARD_ORDER_COUNT = 6
-const PRICE_MATCH_THRESHOLD = 0.1 
-const TOTAL_MATCH_THRESHOLD = 10
+const STANDARD_ORDER_COUNT = 6;
+const PRICE_MATCH_THRESHOLD = 0.1;
+const TOTAL_MATCH_THRESHOLD = 10;
 
 export type OrderBookDexProps = ClobDexComponentProps & {
-  selectedPool: PoolItem
+  selectedPool: ProcessedPoolItem;
   poolsData?: PoolsResponse;
   poolsLoading?: boolean;
   poolsError?: Error | null;
-}
+};
 
 interface EnhancedOrderBookDexProps {
-    selectedPool: PoolItem
-    chainId: number | undefined
-    defaultChainId: number
-    poolsLoading: boolean
-    poolsError: Error | null
+  selectedPool: ProcessedPoolItem;
+  chainId: number | undefined;
+  defaultChainId: number;
+  poolsLoading: boolean;
+  poolsError: Error | null;
 }
 
-const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoading, poolsError }: EnhancedOrderBookDexProps) => {
-  const [mounted, setMounted] = useState(false)
-  const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>("0.01")
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const priceOptions = ["0.01", "0.1", "1"]
-  const previousOrderBook = useRef<OrderBook | null>(null)
-  const previousPrice = useRef<number | null>(null)
-  const priceDirection = useRef<'up' | 'down' | null>(null)
+const EnhancedOrderBookDex = ({
+  chainId,
+  defaultChainId,
+  selectedPool,
+  poolsLoading,
+  poolsError,
+}: EnhancedOrderBookDexProps) => {
+  const [mounted, setMounted] = useState(false);
+  const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.01');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const priceOptions = ['0.01', '0.1', '1'];
+  const previousOrderBook = useRef<OrderBook | null>(null);
+  const previousPrice = useRef<number | null>(null);
+  const priceDirection = useRef<'up' | 'down' | null>(null);
 
   // Get the current URL to detect changes
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   const [orderBook, setOrderBook] = useState<OrderBook>({
     asks: [],
@@ -73,29 +80,35 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
     lastPrice: BigInt(0),
     spread: BigInt(0),
     lastUpdate: Date.now(),
-  })
+  });
 
-  const [viewType, setViewType] = useState<ViewType>("both")
-  const { marketData, quoteDecimals, baseDecimals } = useMarketStore()
+  const [viewType, setViewType] = useState<ViewType>('both');
+  const { marketData, quoteDecimals, baseDecimals } = useMarketStore();
 
   // Custom functions to handle dynamic orderbook addresses
-  const getBestPrice = async ({ side }: { side: OrderSideEnum }) => {
+  const getBestPrice = async ({
+    side,
+  }: {
+    side: OrderSideEnum;
+  }): Promise<{ price: bigint; volume: bigint }> => {
     if (!selectedPool) {
-      throw new Error("No pool selected")
+      throw new Error('No pool selected');
     }
 
     try {
-      return await readContract(wagmiConfig, {
+      const result = await readContract(wagmiConfig, {
         address: selectedPool.orderBook as `0x${string}`,
         abi: OrderBookABI,
-        functionName: "getBestPrice",
+        functionName: 'getBestPrice',
         args: [side] as const,
-      })
+      });
+
+      return result as { price: bigint; volume: bigint };
     } catch (error) {
-      console.error("Error getting best price:", error)
-      throw error
+      console.error('Error getting best price:', error);
+      throw error;
     }
-  }
+  };
 
   const getNextBestPrices = async ({
     baseCurrency,
@@ -104,49 +117,57 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
     price,
     count,
   }: {
-    baseCurrency: string
-    quoteCurrency: string
-    side: OrderSideEnum
-    price: bigint
-    count: number
+    baseCurrency: string;
+    quoteCurrency: string;
+    side: OrderSideEnum;
+    price: bigint;
+    count: number;
   }) => {
     if (!selectedPool) {
-      throw new Error("No pool selected")
+      throw new Error('No pool selected');
     }
 
     try {
       const prices = await readContract(wagmiConfig, {
-        address: getContractAddress(chainId ?? defaultChainId, ContractName.clobRouter) as `0x${string}`,
+        address: getContractAddress(
+          chainId ?? defaultChainId,
+          ContractName.clobRouter
+        ) as `0x${string}`,
         abi: GTXRouterABI,
-        functionName: "getNextBestPrices",
-        args: [{
-          orderBook: selectedPool.orderBook as `0x${string}`,
-          baseCurrency: selectedPool.baseCurrency as `0x${string}`,
-          quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
-        }, side, price, count] as const,
-      })
+        functionName: 'getNextBestPrices',
+        args: [
+          {
+            orderBook: selectedPool.orderBook as `0x${string}`,
+            baseCurrency: selectedPool.baseTokenAddress as `0x${string}`,
+            quoteCurrency: selectedPool.quoteTokenAddress as `0x${string}`,
+          },
+          side,
+          price,
+          count,
+        ] as const,
+      });
 
-      return [...prices] as Array<{ price: bigint; volume: bigint }>
+      return Array.from(prices as Array<{ price: bigint; volume: bigint }>);
     } catch (error) {
-      console.error("Error getting next best prices:", error)
-      throw error
+      console.error('Error getting next best prices:', error);
+      throw error;
     }
-  }
+  };
 
   const formatPrice = (price: number | bigint): string => {
-    const precision = Number.parseFloat(selectedDecimal)
-    const priceNumber = typeof price === "bigint" ? Number(price) : price
-    const roundedPrice = Math.round(priceNumber / precision) * precision
+    const precision = Number.parseFloat(selectedDecimal);
+    const priceNumber = typeof price === 'bigint' ? Number(price) : price;
+    const roundedPrice = Math.round(priceNumber / precision) * precision;
 
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(roundedPrice)
-  }
+    }).format(roundedPrice);
+  };
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   // Reset orderbook when selectedPool changes
   useEffect(() => {
@@ -157,12 +178,12 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
         lastPrice: BigInt(0),
         spread: BigInt(0),
         lastUpdate: Date.now(),
-      })
-      previousOrderBook.current = null
-      previousPrice.current = null
-      priceDirection.current = null
+      });
+      previousOrderBook.current = null;
+      previousPrice.current = null;
+      priceDirection.current = null;
     }
-  }, [selectedPool])
+  }, [selectedPool]);
 
   // Helper function to detect if an order should be highlighted (matched)
   const detectMatchedOrders = (
@@ -175,7 +196,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
         ...order,
         key: `${order.price}-${now}`,
         isMatched: false,
-        lastUpdated: now
+        lastUpdated: now,
       }));
     }
 
@@ -187,14 +208,18 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
 
       // Check if there's a size change at this price level
       const isMatched = existingOrderAtSamePrice
-        ? Math.abs((existingOrderAtSamePrice.total || 0) - (newOrder.total || 0)) / (existingOrderAtSamePrice.total || 1) > TOTAL_MATCH_THRESHOLD / 100
+        ? Math.abs((existingOrderAtSamePrice.total || 0) - (newOrder.total || 0)) /
+            (existingOrderAtSamePrice.total || 1) >
+          TOTAL_MATCH_THRESHOLD / 100
         : false;
 
       return {
         ...newOrder,
-        key: isMatched ? `${newOrder.price}-${now}` : existingOrderAtSamePrice?.key || `${newOrder.price}-${now}`,
+        key: isMatched
+          ? `${newOrder.price}-${now}`
+          : existingOrderAtSamePrice?.key || `${newOrder.price}-${now}`,
         isMatched,
-        lastUpdated: isMatched ? now : existingOrderAtSamePrice?.lastUpdated || now
+        lastUpdated: isMatched ? now : existingOrderAtSamePrice?.lastUpdated || now,
       };
     });
   };
@@ -211,50 +236,51 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
         }
         // If equal, maintain the previous direction
       }
-      
+
       // Store the current price for the next comparison
       previousPrice.current = marketData.price;
     }
   }, [marketData?.price]);
 
   useEffect(() => {
-    if (!mounted || !selectedPool) return
+    if (!mounted || !selectedPool) return;
 
     const fetchOrderBook = async () => {
       try {
         const askBestPrice = await getBestPrice({
           side: OrderSideEnum.SELL,
-        })
+        });
 
         const bidBestPrice = await getBestPrice({
           side: OrderSideEnum.BUY,
-        })
+        });
 
         const nextAsks = await getNextBestPrices({
-          baseCurrency: selectedPool.baseCurrency as `0x${string}`,
-          quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
+          baseCurrency: selectedPool.baseTokenAddress as `0x${string}`,
+          quoteCurrency: selectedPool.quoteTokenAddress as `0x${string}`,
           side: OrderSideEnum.SELL,
           price: askBestPrice.price,
           count: STANDARD_ORDER_COUNT - 1,
-        })
+        });
 
         const nextBids = await getNextBestPrices({
-          baseCurrency: selectedPool.baseCurrency as `0x${string}`,
-          quoteCurrency: selectedPool.quoteCurrency as `0x${string}`,
+          baseCurrency: selectedPool.baseTokenAddress as `0x${string}`,
+          quoteCurrency: selectedPool.quoteTokenAddress as `0x${string}`,
           side: OrderSideEnum.BUY,
           price: bidBestPrice.price,
-          count: STANDARD_ORDER_COUNT - 1,
-        })
 
-        const sortedNextAsks = nextAsks.sort((a, b) => Number(a.price) - Number(b.price))
-        const sortedNextBids = nextBids.sort((a, b) => Number(b.price) - Number(a.price))
+          count: STANDARD_ORDER_COUNT - 1,
+        });
+
+        const sortedNextAsks = nextAsks.sort((a, b) => Number(a.price) - Number(b.price));
+        const sortedNextBids = nextBids.sort((a, b) => Number(b.price) - Number(a.price));
 
         const asks = [
           {
             price: Number(formatUnits(askBestPrice.price, quoteDecimals)),
             size: Number(formatUnits(askBestPrice.volume, baseDecimals)),
           },
-          ...sortedNextAsks.map((pv) => ({
+          ...sortedNextAsks.map(pv => ({
             price: Number(formatUnits(pv.price, quoteDecimals)),
             size: Number(formatUnits(pv.volume, baseDecimals)),
           })),
@@ -267,46 +293,65 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
             }
             return unique;
           }, [] as Order[])
-          .sort((a, b) => a.price - b.price)
+          .sort((a, b) => a.price - b.price);
 
         const bids = [
           {
-            price: Number(formatUnits(bidBestPrice.price, quoteDecimals)),
-            size: Number(formatUnits(bidBestPrice.volume, baseDecimals)),
+            price: Number(
+              formatUnits((bidBestPrice as { price: bigint }).price, quoteDecimals)
+            ),
+            size: Number(
+              formatUnits((bidBestPrice as { volume: bigint }).volume, baseDecimals)
+            ),
           },
-          ...sortedNextBids.map((pv) => ({
+          ...sortedNextBids.map(pv => ({
             price: Number(formatUnits(pv.price, quoteDecimals)),
             size: Number(formatUnits(pv.volume, baseDecimals)),
           })),
-        ].filter(ask => ask.price > 0 && ask.size > 0)
+        ]
+          .filter(ask => ask.price > 0 && ask.size > 0)
           .reduce((unique, ask) => {
             const exists = unique.find(u => u.price === ask.price);
             if (!exists) {
               unique.push(ask);
             }
             return unique;
-          }, [] as Order[]).sort((a, b) => b.price - a.price)
+          }, [] as Order[])
+          .sort((a, b) => b.price - a.price);
 
-        let bidTotal = 0
-        const bidsWithTotal = bids.map((bid) => {
-          bidTotal += bid.size
-          return { ...bid, total: bidTotal }
-        })
+        let bidTotal = 0;
+        const bidsWithTotal = bids.map(bid => {
+          bidTotal += bid.size;
+          return { ...bid, total: bidTotal };
+        });
 
-        let askTotal = 0
-        const asksWithTotal = asks.map((ask) => {
-          askTotal += ask.size
-          return { ...ask, total: askTotal }
-        })
+        let askTotal = 0;
+        const asksWithTotal = asks.map(ask => {
+          askTotal += ask.size;
+          return { ...ask, total: askTotal };
+        });
 
-        const spread = asks[0]?.price && bids[0]?.price 
-          ? ((Math.abs(asks[0].price - bids[0].price) / ((asks[0].price + bids[0].price) / 2)) * 100).toFixed(2)
-          : "0"
-        const now = Date.now()
+        const spread =
+          asks[0]?.price && bids[0]?.price
+            ? (
+                (Math.abs(asks[0].price - bids[0].price) /
+                  ((asks[0].price + bids[0].price) / 2)) *
+                100
+              ).toFixed(2)
+            : '0';
+        const now = Date.now();
 
         // Detect matched orders based on previous state
-        const matchedAsks = detectMatchedOrders(asksWithTotal, previousOrderBook.current?.asks, now);
-        const matchedBids = detectMatchedOrders(bidsWithTotal, previousOrderBook.current?.bids, now);
+        const matchedAsks = detectMatchedOrders(
+          asksWithTotal,
+          previousOrderBook.current?.asks,
+          now
+        );
+        const matchedBids = detectMatchedOrders(
+          bidsWithTotal,
+          previousOrderBook.current?.bids,
+          now
+        );
 
         const newOrderBook = {
           asks: matchedAsks,
@@ -315,7 +360,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
           spread: BigInt(Math.round(Number(spread))),
           lastUpdate: now,
           previousAsks: previousOrderBook.current?.asks,
-          previousBids: previousOrderBook.current?.bids
+          previousBids: previousOrderBook.current?.bids,
         };
 
         previousOrderBook.current = {
@@ -323,27 +368,27 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
           bids: matchedBids,
           lastPrice: newOrderBook.lastPrice,
           spread: newOrderBook.spread,
-          lastUpdate: now
+          lastUpdate: now,
         };
 
         setOrderBook(newOrderBook);
       } catch (error) {
-        console.error("Error fetching order book:", error)
+        console.error('Error fetching order book:', error);
       }
-    }
+    };
 
-    const interval = setInterval(fetchOrderBook, 5000)
+    const interval = setInterval(fetchOrderBook, 5000);
 
-    return () => clearInterval(interval)
-  }, [mounted, selectedPool, quoteDecimals, baseDecimals])
+    return () => clearInterval(interval);
+  }, [mounted, selectedPool, quoteDecimals, baseDecimals]);
 
   const toggleView = useCallback(() => {
-    const views: ViewType[] = ["both", "bids", "asks"]
-    const currentIndex = views.indexOf(viewType)
-    setViewType(views[(currentIndex + 1) % views.length])
-  }, [viewType])
+    const views: ViewType[] = ['both', 'bids', 'asks'];
+    const currentIndex = views.indexOf(viewType);
+    setViewType(views[(currentIndex + 1) % views.length]);
+  }, [viewType]);
 
-  const isLoading = poolsLoading
+  const isLoading = poolsLoading;
 
   if (poolsError) {
     return (
@@ -353,14 +398,14 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
           Error loading data
         </p>
         <p className="mt-2 text-sm text-gray-300">
-          {poolsError instanceof Error ? poolsError.message : "Unknown error"}
+          {poolsError instanceof Error ? poolsError.message : 'Unknown error'}
         </p>
       </div>
-    )
+    );
   }
 
   // Get base token from selected pool
-  const baseToken = selectedPool?.coin?.split("/")[0] || "WETH"
+  const baseToken = selectedPool?.coin?.split('/')[0] || 'WETH';
 
   return (
     <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
@@ -373,20 +418,24 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
             <Menu className="h-4 w-4" />
           </button>
           <span className="text-xs text-gray-300">
-            {viewType === "both" ? "Bid/Ask" : viewType === "asks" ? "Asks Only" : "Bids Only"}
+            {viewType === 'both'
+              ? 'Bid/Ask'
+              : viewType === 'asks'
+              ? 'Asks Only'
+              : 'Bids Only'}
           </span>
         </div>
 
         <div className="relative">
           {isDropdownOpen && (
             <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">
-              {priceOptions.map((option) => (
+              {priceOptions.map(option => (
                 <button
                   key={option}
                   className="w-full px-4 py-2 text-left text-xs text-gray-200 transition-colors duration-200 hover:bg-gray-800 hover:text-white"
                   onClick={() => {
-                    setSelectedDecimal(option as DecimalPrecision)
-                    setIsDropdownOpen(false)
+                    setSelectedDecimal(option as DecimalPrecision);
+                    setIsDropdownOpen(false);
                   }}
                 >
                   {option}
@@ -405,7 +454,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
           </div>
         ) : (
           <>
-            {(viewType === "both" || viewType === "asks") && (
+            {(viewType === 'both' || viewType === 'asks') && (
               <div>
                 {/* Column Headers for Asks */}
                 <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
@@ -418,9 +467,13 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                   {orderBook.asks.slice(0, 10).map((ask, i) => {
                     const maxTotal = orderBook.asks.reduce(
                       (max, curr) =>
-                        curr.total && max ? (curr.total > max ? curr.total : max) : curr.total || max || 1,
-                      0,
-                    )
+                        curr.total && max
+                          ? curr.total > max
+                            ? curr.total
+                            : max
+                          : curr.total || max || 1,
+                      0
+                    );
 
                     // Determine if this order should be highlighted
                     const isHighlighted = ask.isMatched;
@@ -452,13 +505,13 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                           </div>
                         </div>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               </div>
             )}
 
-            {viewType === "both" && (
+            {viewType === 'both' && (
               <div className="my-2 border-y border-gray-800/30 bg-gray-900/40 px-4 py-2 text-xs">
                 {/* Single row with price (with arrow) and spread */}
                 <div className="flex justify-between text-gray-200">
@@ -466,26 +519,31 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                     {/* Price with arrow */}
                     <div className="flex items-center">
                       {marketData?.price && (
-                        <span className={`font-medium flex items-center ${
-                          priceDirection.current === 'down' 
-                            ? "text-rose-400" 
-                            : "text-emerald-400"
-                        }`}>
-                          {formatPrice(Number(formatUnits(BigInt(marketData.price), quoteDecimals)))}
-                          {priceDirection.current && (
-                            priceDirection.current === 'up' 
-                              ? <ArrowUp className="h-3 w-3 ml-1" /> 
-                              : <ArrowDown className="h-3 w-3 ml-1" />
+                        <span
+                          className={`font-medium flex items-center ${
+                            priceDirection.current === 'down'
+                              ? 'text-rose-400'
+                              : 'text-emerald-400'
+                          }`}
+                        >
+                          {formatPrice(
+                            Number(formatUnits(BigInt(marketData.price), quoteDecimals))
                           )}
+                          {priceDirection.current &&
+                            (priceDirection.current === 'up' ? (
+                              <ArrowUp className="h-3 w-3 ml-1" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3 ml-1" />
+                            ))}
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Spread */}
                     <div className="flex items-center gap-1">
                       <span>Spread: </span>
                       <span className="font-medium text-white">
-                        {(Number(orderBook.spread) / 100)}% 
+                        {Number(orderBook.spread) / 100}%
                       </span>
                     </div>
                   </div>
@@ -493,7 +551,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
               </div>
             )}
 
-            {(viewType === "both" || viewType === "bids") && (
+            {(viewType === 'both' || viewType === 'bids') && (
               <div>
                 {/* Column Headers for Bids */}
                 <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
@@ -506,9 +564,13 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                   {orderBook.bids.slice(0, 10).map((bid, i) => {
                     const maxTotal = orderBook.bids.reduce(
                       (max, curr) =>
-                        curr.total && max ? (curr.total > max ? curr.total : max) : curr.total || max || 1,
-                      0,
-                    )
+                        curr.total && max
+                          ? curr.total > max
+                            ? curr.total
+                            : max
+                          : curr.total || max || 1,
+                      0
+                    );
 
                     // Determine if this order should be highlighted
                     const isHighlighted = bid.isMatched;
@@ -540,7 +602,7 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
                           </div>
                         </div>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -552,27 +614,39 @@ const EnhancedOrderBookDex = ({ chainId, defaultChainId, selectedPool, poolsLoad
       {/* Add CSS for the blinking animations with more subtle effects */}
       <style jsx global>{`
         @keyframes highlight-bid {
-          0% { background-color: rgba(16, 185, 129, 0.1); }
-          50% { background-color: rgba(16, 185, 129, 0.25); }
-          100% { background-color: rgba(16, 185, 129, 0.1); }
+          0% {
+            background-color: rgba(16, 185, 129, 0.1);
+          }
+          50% {
+            background-color: rgba(16, 185, 129, 0.25);
+          }
+          100% {
+            background-color: rgba(16, 185, 129, 0.1);
+          }
         }
-        
+
         @keyframes highlight-ask {
-          0% { background-color: rgba(239, 68, 68, 0.1); }
-          50% { background-color: rgba(239, 68, 68, 0.25); }
-          100% { background-color: rgba(239, 68, 68, 0.1); }
+          0% {
+            background-color: rgba(239, 68, 68, 0.1);
+          }
+          50% {
+            background-color: rgba(239, 68, 68, 0.25);
+          }
+          100% {
+            background-color: rgba(239, 68, 68, 0.1);
+          }
         }
-        
+
         .animate-highlight-bid {
           animation: highlight-bid 1.2s ease-in-out;
         }
-        
+
         .animate-highlight-ask {
           animation: highlight-ask 1.2s ease-in-out;
         }
       `}</style>
     </div>
-  )
-}
+  );
+};
 
-export default EnhancedOrderBookDex
+export default EnhancedOrderBookDex;

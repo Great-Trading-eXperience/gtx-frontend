@@ -1,23 +1,36 @@
-"use client"
+'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PoolItem } from "@/graphql/gtx/clob"
-import { HexAddress } from "@/types/general/address"
-import { BarChart2, LineChart } from "lucide-react"
-import { ClobDexComponentProps } from "../clob-dex"
-import EnhancedOrderBookDex from "../orderbook-dex/orderbook-dex"
-import RecentTradesComponent from "../recent-trade/recent-trade"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PoolsResponse, PoolItem, RecentTradeItem } from '@/graphql/gtx/clob';
+import { BarChart2, LineChart } from 'lucide-react';
+import { ClobDexComponentProps } from '../clob-dex';
+import EnhancedOrderBookDex from '../orderbook-dex/orderbook-dex';
+import RecentTradesComponent from '../recent-trade/recent-trade';
+import { HexAddress } from '@/types/general/address';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 export interface MarketDataTabsProps extends ClobDexComponentProps {
-    address: HexAddress | undefined
-    chainId: number
-    defaultChainId: number
-    selectedPool: PoolItem
-    poolsLoading: boolean
-    poolsError: Error | null
+  address: HexAddress | undefined;
+  chainId: number;
+  defaultChainId: number;
+  selectedPool: ProcessedPoolItem;
+  poolsLoading: boolean;
+  poolsError: Error | null;
+  selectedTrades: RecentTradeItem[];
+  tradesLoading: boolean;
+  tradesError: Error | null;
 }
 
-const MarketDataTabs = ({ chainId, defaultChainId, selectedPool, poolsLoading, poolsError }: MarketDataTabsProps) => {
+const MarketDataTabs = ({
+  chainId,
+  defaultChainId,
+  selectedPool,
+  poolsLoading,
+  poolsError,
+  selectedTrades,
+  tradesLoading,
+  tradesError,
+}: MarketDataTabsProps) => {
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
       {/* Decorative Elements */}
@@ -51,23 +64,34 @@ const MarketDataTabs = ({ chainId, defaultChainId, selectedPool, poolsLoading, p
             value="orderbook"
             className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
           >
-            <EnhancedOrderBookDex chainId={chainId} defaultChainId={defaultChainId} selectedPool={selectedPool} poolsLoading={poolsLoading} poolsError={poolsError} />
+            <EnhancedOrderBookDex
+              chainId={chainId}
+              defaultChainId={defaultChainId}
+              selectedPool={selectedPool}
+              poolsLoading={poolsLoading}
+              poolsError={poolsError}
+            />
           </TabsContent>
 
           <TabsContent
             value="trades"
             className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
           >
-            <RecentTradesComponent chainId={chainId ?? defaultChainId} defaultChainId={defaultChainId} selectedPool={selectedPool} poolsLoading={poolsLoading} poolsError={poolsError} />
+            <RecentTradesComponent
+              chainId={chainId ?? defaultChainId}
+              defaultChainId={defaultChainId}
+              tradesData={selectedTrades}
+              tradesLoading={tradesLoading}
+              tradesError={tradesError}
+            />
           </TabsContent>
-        </div> 
+        </div>
       </Tabs>
 
       {/* Bottom Gradient */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-gray-950/50 to-transparent" />
     </div>
-  )
-}
+  );
+};
 
-export default MarketDataTabs
-
+export default MarketDataTabs;
