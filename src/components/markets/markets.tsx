@@ -1,388 +1,169 @@
-"use client"
+import { Input } from "@/components/ui/input";
+import { DEFAULT_CHAIN } from "@/constants/contract/contract-address";
+import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url";
+import {
+  poolsPonderQuery,
+  PoolsPonderResponse,
+  poolsQuery,
+  PoolsResponse,
+  tradesPonderQuery,
+  TradesPonderResponse,
+  tradesQuery,
+  TradesResponse,
+} from "@/graphql/gtx/clob";
+import {
+  createMarketData,
+  MarketData,
+  ProcessedPool,
+  ProcessedTrade,
+  processPools,
+  processTrades,
+} from "@/lib/market-data";
+import { getUseSubgraph } from "@/utils/env";
+import { useQuery } from "@tanstack/react-query";
+import request from "graphql-request";
+import { CheckCircle, Clock, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useChainId } from "wagmi";
+import { DotPattern } from "../magicui/dot-pattern";
+import { MarketListSkeleton } from "./market-list-skeleton";
+import MarketSearchDialog from "./market-search-dialog";
+import Image from "next/image";
 
-import TokenABI from "@/abis/tokens/TokenABI"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { wagmiConfig } from "@/configs/wagmi"
-import { GTX_GRAPHQL_URL } from "@/constants/subgraph-url"
-import { poolsPonderQuery, PoolsPonderResponse, poolsQuery, PoolsResponse, tradesPonderQuery, TradesPonderResponse, tradesQuery, TradesResponse } from "@/graphql/gtx/clob"
-import { calculateAge, formatNumber } from '@/lib/utils'
-import { useMarketStore } from "@/store/market-store"
-import { getUseSubgraph } from "@/utils/env"
-import { useQuery } from "@tanstack/react-query"
-import { readContract } from "@wagmi/core"
-import request from "graphql-request"
-import { CheckCircle, Clock, Search } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { formatUnits } from "viem"
-import { useChainId } from "wagmi"
-import { DotPattern } from "../magicui/dot-pattern"
-import { MarketListSkeleton } from "./market-list-skeleton"
-import MarketSearchDialog from "./market-search-dialog"
-import { DEFAULT_CHAIN } from "@/constants/contract/contract-address"
-
-interface MarketData {
-  id: string
-  name: string
-  pair: string
-  starred: boolean
-  iconInfo: {
-    hasImage: boolean
-    imagePath: string | null
-    bg: string
-  }
-  age: string
-  timestamp: number
-  price: string
-  volume: string
-  liquidity: string
+interface MarketListProps {
+  initialMarketData?: MarketData[];
 }
 
-interface ProcessedPool {
-  id: string
-  baseToken: string
-  quoteToken: string
-  orderBook: string
-  timestamp: number
-  maxOrderAmount: string
-  baseSymbol: string
-  quoteSymbol: string
-  baseDecimals: number | undefined
-  quoteDecimals: number | undefined
-}
+export default function MarketList({ initialMarketData = [] }: MarketListProps) {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [marketData, setMarkets] = useState<MarketData[]>(initialMarketData);
+  const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>(initialMarketData);
+  const [isLoading, setIsLoading] = useState(initialMarketData.length === 0);
+  const [isProcessingPools, setIsProcessingPools] = useState(initialMarketData.length === 0);
+  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [processedPools, setProcessedPools] = useState<ProcessedPool[]>([]);
+  const [processedTrades, setProcessedTrades] = useState<ProcessedTrade[]>([]);
+  const [showWatchlist, setShowWatchlist] = useState(false);
 
-interface ProcessedTrade {
-  poolId: string
-  pool: string
-  price: string
-  quantity: string
-  timestamp: number
-}
+  const chainId = useChainId();
+  const defaultChain = Number(DEFAULT_CHAIN);
 
-export default function MarketList() {
-  const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [marketData, setMarkets] = useState<MarketData[]>([])
-  const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isProcessingPools, setIsProcessingPools] = useState(true)
-  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false)
-  const [copiedToken, setCopiedToken] = useState<{ id: string; name: string } | null>(null)
-  const [processedPools, setProcessedPools] = useState<ProcessedPool[]>([])
-  const [processedTrades, setProcessedTrades] = useState<ProcessedTrade[]>([])
-  const [showWatchlist, setShowWatchlist] = useState(false)
+  // If initialMarketData is provided, we can skip the initial loading state
+  const shouldFetchData = initialMarketData.length === 0;
 
-  const chainId = useChainId()
-  const defaultChain = Number(DEFAULT_CHAIN)
-
-  const { quoteDecimals } = useMarketStore()
-
-  // Fetch pools data
-  const { data: poolsData, error: poolsError } = useQuery<PoolsPonderResponse | PoolsResponse>({
+  // Fetch pools data only if we don't have initial data
+  const { data: poolsData, error: poolsError } = useQuery<
+    PoolsPonderResponse | PoolsResponse
+  >({
     queryKey: ["pools", String(chainId ?? defaultChain)],
     queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery)
-    },
-    refetchInterval: 30000,
-    staleTime: 60000, 
-  })
-
-  // Fetch trades data
-  const { data: tradesData } = useQuery<TradesPonderResponse | TradesResponse>({
-    queryKey: ["trades", String(chainId ?? defaultChain)],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain)
-      const url = GTX_GRAPHQL_URL(currentChainId)
-      if (!url) throw new Error('GraphQL URL not found')
-      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery)
+      const currentChainId = Number(chainId ?? defaultChain);
+      const url = GTX_GRAPHQL_URL(currentChainId);
+      if (!url) throw new Error("GraphQL URL not found");
+      return await request(
+        url,
+        getUseSubgraph() ? poolsQuery : poolsPonderQuery
+      );
     },
     refetchInterval: 30000,
     staleTime: 60000,
-  })
+    enabled: shouldFetchData, // Only fetch if we don't have initial data
+  });
 
-  // Process pools data
-  const processPools = async (poolsData: any) => {
-    setIsProcessingPools(true)
-    if (!poolsData) return []
-
-    const pools = (poolsData as PoolsPonderResponse)?.poolss?.items || (poolsData as PoolsResponse)?.pools
-    if (!pools) return []
-
-    const processedPools = getUseSubgraph() ? await Promise.all(pools.map(async pool => {
-      const [baseTokenAddress, quoteTokenAddress] = [pool.baseCurrency, pool.quoteCurrency]
-      
-      let baseSymbol = baseTokenAddress
-      let quoteSymbol = quoteTokenAddress
-      let baseDecimals = 18
-      let quoteDecimals = 6
-
-      // Get base token info
-      if (baseTokenAddress !== 'Unknown') {
-        try {
-          const symbol = await readContract(wagmiConfig, {
-            address: baseTokenAddress as `0x${string}`,
-            abi: TokenABI,
-            functionName: "symbol",
-          })
-          const decimals = await readContract(wagmiConfig, {
-            address: baseTokenAddress as `0x${string}`,
-            abi: TokenABI,
-            functionName: "decimals",
-          })
-          baseSymbol = symbol as string
-          baseDecimals = decimals as number
-        } catch (error) {
-          console.error(`Error fetching base token info for ${baseTokenAddress}:`, error)
-        }
-      }
-
-      // Get quote token info
-      if (quoteTokenAddress !== 'USDC') {
-        try {
-          const symbol = await readContract(wagmiConfig, {
-            address: quoteTokenAddress as `0x${string}`,
-            abi: TokenABI,
-            functionName: "symbol",
-          })
-          const decimals = await readContract(wagmiConfig, {
-            address: quoteTokenAddress as `0x${string}`,
-            abi: TokenABI,
-            functionName: "decimals",
-          })
-          quoteSymbol = symbol as string
-          quoteDecimals = decimals as number
-        } catch (error) {
-          console.error(`Error fetching quote token info for ${quoteTokenAddress}:`, error)
-        }
-      }
-
-      return {
-        id: pool.id,
-        baseToken: baseTokenAddress,
-        quoteToken: quoteTokenAddress,
-        orderBook: pool.orderBook,
-        baseSymbol,
-        quoteSymbol,
-        baseDecimals,
-        quoteDecimals,
-        timestamp: pool.timestamp,
-        maxOrderAmount: pool.maxOrderAmount || '0'
-      }
-    })) : pools.map(pool => ({
-      id: pool.id,
-      baseToken: pool.baseCurrency,
-      quoteToken: pool.quoteCurrency,
-      orderBook: pool.orderBook,
-      baseSymbol: pool.coin.split('/')[0],
-      quoteSymbol: pool.coin.split('/')[1],
-      baseDecimals: pool.baseDecimals,
-      quoteDecimals: pool.quoteDecimals,
-      timestamp: pool.timestamp,
-      maxOrderAmount: pool.maxOrderAmount || '0'
-    }))
-
-    setIsProcessingPools(false)
-    return processedPools.sort((a, b) => {
-      const aHasWETH = a.baseSymbol.toLowerCase().includes('weth') || a.baseSymbol.toLowerCase().includes('eth')
-      const bHasWETH = b.baseSymbol.toLowerCase().includes('weth') || b.baseSymbol.toLowerCase().includes('eth')
-      if (aHasWETH && !bHasWETH) return -1
-      if (!aHasWETH && bHasWETH) return 1
-      return b.timestamp - a.timestamp
-    })
-  }
-
-  // Process trades data
-  const processTrades = (tradesData: any) => {
-    if (!tradesData) return []
-
-    const trades = (tradesData as TradesPonderResponse)?.tradess?.items || (tradesData as TradesResponse)?.trades
-    if (!trades) return []
-
-    return trades.map(trade => ({
-      poolId: trade.poolId,
-      pool: trade.pool,
-      price: trade.price,
-      quantity: trade.quantity,
-      timestamp: trade.timestamp
-    }))
-  }
-
-  // Calculate market metrics for a pool
-  const calculatePoolMetrics = (pool: ProcessedPool, trades: ProcessedTrade[]) => {
-    const poolTrades = trades.filter(trade => trade.pool === pool.orderBook || trade.poolId === pool.orderBook)
-    const sortedTrades = [...poolTrades].sort((a, b) => b.timestamp - a.timestamp)
-  
-    // Use a default of 6 decimals if quoteDecimals is undefined
-    const quoteDecimalsValue = pool.quoteDecimals ?? 6
-    const baseDecimalsValue = pool.baseDecimals ?? 18
-  
-    const latestPrice = sortedTrades.length > 0 
-      ? Number(formatUnits(BigInt(sortedTrades[0].price), quoteDecimalsValue)) 
-      : 0
-
-    let volume = BigInt(0)
-    const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60
-
-    sortedTrades.forEach(trade => {
-      if (trade.timestamp >= twentyFourHoursAgo) {
-        volume += BigInt(trade.quantity) * BigInt(trade.price) / BigInt(10 ** baseDecimalsValue)
-      }
-    })
-
-    return {
-      latestPrice,
-      volume
-    }
-  }
+  // Fetch trades data only if we don't have initial data
+  const { data: tradesData } = useQuery<TradesPonderResponse | TradesResponse>({
+    queryKey: ["trades", String(chainId ?? defaultChain)],
+    queryFn: async () => {
+      const currentChainId = Number(chainId ?? defaultChain);
+      const url = GTX_GRAPHQL_URL(currentChainId);
+      if (!url) throw new Error("GraphQL URL not found");
+      return await request(
+        url,
+        getUseSubgraph() ? tradesQuery : tradesPonderQuery
+      );
+    },
+    refetchInterval: 30000,
+    staleTime: 60000,
+    enabled: shouldFetchData, // Only fetch if we don't have initial data
+  });
 
   // First effect to process raw data
   useEffect(() => {
-    const processData = async () => {
-      const pools = await processPools(poolsData)
-      const trades = processTrades(tradesData)
-      setProcessedPools(pools)
-      setProcessedTrades(trades)
+    // Skip processing if we're using initialMarketData and don't have new data
+    if (initialMarketData.length > 0 && !poolsData && !tradesData) {
+      return;
     }
+    
+    const processData = async () => {
+      setIsProcessingPools(true);
+      const pools = await processPools(poolsData);
+      const trades = processTrades(tradesData);
+      setProcessedPools(pools);
+      setProcessedTrades(trades);
+      setIsProcessingPools(false);
+    };
 
-    processData()
-  }, [poolsData, tradesData])
+    processData();
+  }, [poolsData, tradesData, initialMarketData]);
 
   // Second effect to create market data
   useEffect(() => {
-    let timer: NodeJS.Timeout
-
+    // Skip if we're using initialMarketData and don't have processed pools/trades
+    if (initialMarketData.length > 0 && processedPools.length === 0 && processedTrades.length === 0) {
+      return;
+    }
+    
     if (processedPools.length > 0 && processedTrades.length > 0) {
-      const markets = processedPools.map((pool) => {
-        const metrics = calculatePoolMetrics(pool, processedTrades)
-        const iconInfo = getIconInfo(pool.baseSymbol)
-
-        return {
-          id: pool.id,
-          name: pool.baseSymbol,
-          pair: pool.quoteSymbol,
-          starred: false,
-          iconInfo,
-          age: calculateAge(pool.timestamp),
-          timestamp: pool.timestamp,
-          price: metrics.latestPrice.toFixed(2),
-          volume: formatNumber(Number(formatUnits(metrics.volume, pool.quoteDecimals ?? 6)), { decimals: 0 }),
-          liquidity: formatNumber(pool.maxOrderAmount),
-        }
-      })
-
-      setMarkets(markets)
-      timer = setTimeout(() => {
-        setIsLoading(false)
-      }, 800)
+      const markets = createMarketData(processedPools, processedTrades);
+      setMarkets(markets);
+      setIsLoading(false);
     }
-
-    return () => {
-      if (timer) clearTimeout(timer)
-    }
-  }, [processedPools, processedTrades])
+  }, [processedPools, processedTrades, initialMarketData]);
 
   // Filter data based on search query
   useEffect(() => {
     if (marketData.length > 0) {
-      let filtered = marketData
+      let filtered = marketData;
 
       // Apply watchlist filter if enabled
       if (showWatchlist) {
-        filtered = filtered.filter((item) => item.starred)
+        filtered = filtered.filter((item) => item.starred);
       }
 
       // Apply search query filter
       if (searchQuery) {
-        const lowercaseQuery = searchQuery.toLowerCase()
+        const lowercaseQuery = searchQuery.toLowerCase();
         filtered = filtered.filter(
           (item) =>
-            item.name.toLowerCase().includes(lowercaseQuery) || item.pair.toLowerCase().includes(lowercaseQuery),
-        )
+            item.name.toLowerCase().includes(lowercaseQuery) ||
+            item.pair.toLowerCase().includes(lowercaseQuery)
+        );
       }
 
-      setFilteredMarkets(filtered)
+      setFilteredMarkets(filtered);
     }
-  }, [searchQuery, marketData, showWatchlist])
+  }, [searchQuery, marketData, showWatchlist]);
 
   // Set loading state
   useEffect(() => {
-    let timer: NodeJS.Timeout
-
+    // Skip if we're using initialMarketData
+    if (initialMarketData.length > 0 && !poolsData && !tradesData) {
+      setIsLoading(false);
+      return;
+    }
+    
     if (poolsData && tradesData) {
-      // Add a small delay to make skeleton noticeable during fast loads
-      timer = setTimeout(() => {
-        setIsLoading(false)
-      }, 500)
-    } else {
-      setIsLoading(true)
+      setIsLoading(false);
+    } else if (shouldFetchData) {
+      setIsLoading(true);
     }
-
-    return () => {
-      if (timer) clearTimeout(timer)
-    }
-  }, [poolsData, tradesData])
-
-  // Helper to determine icon and background color based on token name
-  function getIconInfo(tokenName: string) {
-    const name = tokenName.toLowerCase()
-    const availableTokenImages = [
-      "bitcoin",
-      "btc",
-      "wbtc",
-      "doge",
-      "eth",
-      "weth",
-      "floki",
-      "link",
-      "pepe",
-      "shiba",
-      "shib",
-      "trump",
-      "usdc",
-      "usdt",
-    ]
-
-    // Determine which image file to use
-    let tokenImageName = ""
-
-    if (name.includes("btc") || name.includes("bitcoin")) {
-      tokenImageName = "bitcoin"
-    } else if (name.includes("doge")) {
-      tokenImageName = "doge"
-    } else if (name.includes("eth")) {
-      tokenImageName = "eth"
-    } else if (name.includes("floki")) {
-      tokenImageName = "floki"
-    } else if (name.includes("link")) {
-      tokenImageName = "link"
-    } else if (name.includes("pepe")) {
-      tokenImageName = "pepe"
-    } else if (name.includes("shib")) {
-      tokenImageName = "shiba"
-    } else if (name.includes("trump")) {
-      tokenImageName = "trump"
-    } else if (name.includes("usdc") || name.includes("usdt")) {
-      tokenImageName = "usdc"
-    }
-
-    // Background colors for tokens - now all black
-    const getBgColor = () => {
-      return "#000000" // All icons now have black background
-    }
-
-    // Determine if we need to use an image or the fallback Hexagon icon
-    const hasTokenImage = availableTokenImages.some((token) => name.includes(token))
-
-    return {
-      hasImage: hasTokenImage,
-      imagePath: hasTokenImage ? `/tokens/${tokenImageName}.png` : null,
-      bg: getBgColor(),
-    }
-  }
+  }, [poolsData, tradesData, initialMarketData, shouldFetchData]);
 
   // Prepare data for market search dialog
   const getSearchDialogData = () => {
@@ -400,44 +181,54 @@ export default function MarketList() {
       hasTokenImage: market.iconInfo?.hasImage || false,
       tokenImagePath: market.iconInfo?.imagePath || null,
       starred: market.starred,
-    }))
-  }
+    }));
+  };
 
   // Handle market selection from the dialog
   const handleMarketSelect = (marketId: string) => {
-    const selectedMarket = marketData.find((m) => m.id === marketId)
+    const selectedMarket = marketData.find((m) => m.id === marketId);
     if (selectedMarket) {
-      console.log(`Selected market: ${selectedMarket.name}/${selectedMarket.pair}`)
+      console.log(
+        `Selected market: ${selectedMarket.name}/${selectedMarket.pair}`
+      );
       // Navigate to the spot page with the pool ID
-      router.push(`/spot/${marketId}`)
+      router.push(`/spot/${marketId}`);
     }
-  }
+  };
 
   // Handle row click to navigate to spot trading page
   const handleRowClick = (poolId: string) => {
-    router.push(`/spot/${poolId}`)
-  }
+    router.push(`/spot/${poolId}`);
+  };
 
   // Toggle star/favorite status for a market
   const toggleStarred = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent row click
-    setMarkets((prev) => prev.map((market) => (market.id === id ? { ...market, starred: !market.starred } : market)))
-  }
+    e.stopPropagation(); // Prevent row click
+    setMarkets((prev) =>
+      prev.map((market) =>
+        market.id === id ? { ...market, starred: !market.starred } : market
+      )
+    );
+  };
 
   // Add a function to handle toggling starred status from the search dialog
   const handleToggleStarredFromDialog = (marketId: string) => {
     setMarkets((prev) =>
-      prev.map((market) => (market.id === marketId ? { ...market, starred: !market.starred } : market)),
-    )
-  }
+      prev.map((market) =>
+        market.id === marketId
+          ? { ...market, starred: !market.starred }
+          : market
+      )
+    );
+  };
 
   // Ensure search dialog data is refreshed when dialog opens
   useEffect(() => {
     if (isSearchDialogOpen) {
       // This will trigger a re-render with the latest market data
-      setFilteredMarkets([...filteredMarkets])
+      setFilteredMarkets([...filteredMarkets]);
     }
-  }, [isSearchDialogOpen])
+  }, [isSearchDialogOpen]);
 
   return (
     <div className="px-6 py-12 mx-auto bg-black max-w-7xl">
@@ -449,7 +240,8 @@ export default function MarketList() {
           Market Overview
           <br />
           <span className="text-white/70 text-base font-normal mt-2 block">
-            Explore the latest market data and trading activity across all supported tokens.
+            Explore the latest market data and trading activity across all
+            supported tokens.
           </span>
         </h2>
 
@@ -468,7 +260,9 @@ export default function MarketList() {
             <button
               onClick={() => setShowWatchlist(false)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                !showWatchlist ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                !showWatchlist
+                  ? "bg-white/10 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
               }`}
             >
               All Markets
@@ -476,7 +270,9 @@ export default function MarketList() {
             <button
               onClick={() => setShowWatchlist(true)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                showWatchlist ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                showWatchlist
+                  ? "bg-white/10 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
               }`}
             >
               Watchlist
@@ -520,10 +316,13 @@ export default function MarketList() {
                             <button
                               className="w-6 h-6 flex items-center justify-center border border-white/20 rounded-md hover:bg-white/20 transition-colors"
                               onClick={(e) => {
-                                e.stopPropagation() // Prevent row click when copying address
-                                navigator.clipboard.writeText(item.id)
-                                setCopiedToken({ id: item.id, name: item.name })
-                                setTimeout(() => setCopiedToken(null), 2000) // Clear after 2 seconds
+                                e.stopPropagation(); // Prevent row click when copying address
+                                navigator.clipboard.writeText(item.id);
+                                setCopiedToken({
+                                  id: item.id,
+                                  name: item.name,
+                                });
+                                setTimeout(() => setCopiedToken(null), 2000); // Clear after 2 seconds
                               }}
                             >
                               <svg
@@ -548,14 +347,22 @@ export default function MarketList() {
                           <button
                             className="text-white/50 hover:text-yellow-400 transition-colors"
                             onClick={(e) => toggleStarred(item.id, e)}
-                            aria-label={item.starred ? "Remove from watchlist" : "Add to watchlist"}
+                            aria-label={
+                              item.starred
+                                ? "Remove from watchlist"
+                                : "Add to watchlist"
+                            }
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
                               fill={item.starred ? "currentColor" : "none"}
                               stroke="currentColor"
-                              className={`w-5 h-5 ${item.starred ? "text-yellow-400" : "text-white/40"}`}
+                              className={`w-5 h-5 ${
+                                item.starred
+                                  ? "text-yellow-400"
+                                  : "text-white/40"
+                              }`}
                               strokeWidth={item.starred ? "0" : "2"}
                             >
                               <path
@@ -569,20 +376,29 @@ export default function MarketList() {
                             className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-white/30"
                             style={{ backgroundColor: "#000000" }}
                           >
-                            {item.iconInfo?.hasImage && item.iconInfo?.imagePath ? (
-                              <img
-                                src={item.iconInfo.imagePath || "/placeholder.svg"}
+                            {item.iconInfo?.hasImage &&
+                            item.iconInfo?.imagePath ? (
+                              <Image
+                                src={
+                                  item.iconInfo.imagePath || "/placeholder.svg"
+                                }
                                 alt={item.name}
                                 className="w-full h-full object-contain"
+                                width={32}
+                                height={32}
                               />
                             ) : (
                               <div className="flex items-center justify-center w-full h-full bg-black text-white">
-                                <span className="font-bold text-xs">{item.name.substring(0, 2).toUpperCase()}</span>
+                                <span className="font-bold text-xs">
+                                  {item.name.substring(0, 2).toUpperCase()}
+                                </span>
                               </div>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-white">{item.name}</span>
+                            <span className="font-medium text-white">
+                              {item.name}
+                            </span>
                             <span className="text-white/60">/ {item.pair}</span>
                           </div>
                         </div>
@@ -590,14 +406,20 @@ export default function MarketList() {
                       <td className="px-6 py-5">
                         <div
                           className="flex items-center gap-2 text-white/80"
-                          title={new Date(item.timestamp * 1000).toLocaleString()}
+                          title={new Date(
+                            item.timestamp * 1000
+                          ).toLocaleString()}
                         >
                           <Clock className="w-4 h-4 text-white/60" />
                           {item.age}
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-white font-mono">${item.price}</td>
-                      <td className="px-6 py-5 text-white/90 font-mono">${item.volume}</td>
+                      <td className="px-6 py-5 text-white font-mono">
+                        ${item.price}
+                      </td>
+                      <td className="px-6 py-5 text-white/90 font-mono">
+                        ${item.volume}
+                      </td>
                     </tr>
                   ))
                 ) : (
@@ -627,9 +449,11 @@ export default function MarketList() {
       {copiedToken && (
         <div className="fixed bottom-6 right-6 bg-white/15 text-white px-5 py-3 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 z-50 border border-white/30">
           <CheckCircle className="h-5 w-5 text-green-400" />
-          <span className="font-medium">Copied {copiedToken.name} token to clipboard</span>
+          <span className="font-medium">
+            Copied {copiedToken.name} token to clipboard
+          </span>
         </div>
       )}
     </div>
-  )
+  );
 }
