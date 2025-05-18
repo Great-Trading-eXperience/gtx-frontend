@@ -1,40 +1,41 @@
-"use client"
+'use client';
 
-import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
-import { ContractName, getContractAddress } from "@/constants/contract/contract-address"
-import { EXPLORER_URL } from "@/constants/explorer-url"
-import { PoolItem, TradeItem } from "@/graphql/gtx/clob"
-import { useTradingBalances } from "@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances"
-import { usePlaceOrder } from "@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder"
-import { useOrderBook } from "@/hooks/web3/gtx/clob-dex/orderbook/useOrderBook"
-import { Pool, useMarketStore } from "@/store/market-store"
-import type { HexAddress } from "@/types/general/address"
-import { RefreshCw, Wallet } from "lucide-react"
-import { usePathname } from "next/navigation"
-import type React from "react"
-import { useEffect, useState, useCallback } from "react"
-import { formatUnits, parseUnits } from "viem"
-import { OrderSideEnum } from "../../../../lib/enums/clob.enum"
-import { ClobDexComponentProps } from "../clob-dex"
-import { useContractRead, useChainId, useAccount } from "wagmi"
-import { toast } from "sonner"
-import poolManagerABI from "@/abis/gtx/clob/PoolManagerABI"
-import { formatNumber } from "@/lib/utils"
+import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
+import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
+import { EXPLORER_URL } from '@/constants/explorer-url';
+import { PoolItem, TradeItem } from '@/graphql/gtx/clob';
+import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
+import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
+import { useOrderBook } from '@/hooks/web3/gtx/clob-dex/orderbook/useOrderBook';
+import { Pool, useMarketStore } from '@/store/market-store';
+import type { HexAddress } from '@/types/general/address';
+import { RefreshCw, Wallet } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import type React from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { formatUnits, parseUnits } from 'viem';
+import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
+import { ClobDexComponentProps } from '../clob-dex';
+import { useContractRead, useChainId, useAccount } from 'wagmi';
+import { toast } from 'sonner';
+import poolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
+import { formatNumber } from '@/lib/utils';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 // Create a mapping type to convert string timestamp to number
 type PoolItemWithStringTimestamp = {
-  id: string
-  coin: string
-  orderBook: string
-  baseCurrency: string
-  quoteCurrency: string
-  lotSize: string
-  maxOrderAmount: string
-  timestamp: number
-}
+  id: string;
+  coin: string;
+  orderBook: string;
+  baseCurrency: string;
+  quoteCurrency: string;
+  lotSize: string;
+  maxOrderAmount: string;
+  timestamp: number;
+};
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
-  selectedPool: PoolItem;
+  selectedPool: ProcessedPoolItem;
   tradesData: TradeItem[];
   tradesLoading: boolean;
 }
@@ -45,20 +46,24 @@ const PlaceOrder = ({
   defaultChainId,
   selectedPool,
   tradesData,
-  tradesLoading
+  tradesLoading,
 }: PlaceOrderProps) => {
-  const { isConnected } = useAccount()
-  const { selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } = useMarketStore()
-  const pathname = usePathname()
+  const { isConnected } = useAccount();
+  const { selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } =
+    useMarketStore();
+  const pathname = usePathname();
 
   const currentChainId = useChainId();
-  const poolManagerAddress = getContractAddress(currentChainId, ContractName.clobPoolManager) as HexAddress;
+  const poolManagerAddress = getContractAddress(
+    currentChainId,
+    ContractName.clobPoolManager
+  ) as HexAddress;
 
   // 1. Create the Pool struct with orderBook
   const poolStruct = {
-    baseCurrency: selectedPool?.baseCurrency as HexAddress,
-    quoteCurrency: selectedPool?.quoteCurrency as HexAddress,
-    orderBook: selectedPool?.orderBook as HexAddress
+    baseCurrency: selectedPool?.baseTokenAddress as HexAddress,
+    quoteCurrency: selectedPool?.quoteTokenAddress as HexAddress,
+    orderBook: selectedPool?.orderBook as HexAddress,
   };
 
   // 2. Get the pool using poolManager
@@ -68,38 +73,40 @@ const PlaceOrder = ({
     functionName: 'getPool',
     args: [
       {
-        baseCurrency: selectedPool?.baseCurrency as HexAddress,
-        quoteCurrency: selectedPool?.quoteCurrency as HexAddress
-      }
+        baseCurrency: selectedPool?.baseTokenAddress as HexAddress,
+        quoteCurrency: selectedPool?.quoteTokenAddress as HexAddress,
+      },
     ],
-    chainId: currentChainId
+    chainId: currentChainId,
   }) as {
-    data: {
-      baseCurrency: HexAddress,
-      quoteCurrency: HexAddress,
-      orderBook: HexAddress
-    } | undefined
+    data:
+      | {
+          baseCurrency: HexAddress;
+          quoteCurrency: HexAddress;
+          orderBook: HexAddress;
+        }
+      | undefined;
   };
 
-  const [orderType, setOrderType] = useState<"limit" | "market">("limit")
-  const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY) // Default to BUY
-  const [price, setPrice] = useState<string>("")
-  const [quantity, setQuantity] = useState<string>("")
-  const [total, setTotal] = useState<string>("0")
+  const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
+  const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); // Default to BUY
+  const [price, setPrice] = useState<string>('');
+  const [quantity, setQuantity] = useState<string>('');
+  const [total, setTotal] = useState<string>('0');
 
   // Balance states
-  const [availableBalance, setAvailableBalance] = useState<string>("0")
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false)
-  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
+  const [availableBalance, setAvailableBalance] = useState<string>('0');
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   // Notification dialog states
-  const [showNotification, setShowNotification] = useState(false)
-  const [notificationMessage, setNotificationMessage] = useState("")
-  const [notificationSuccess, setNotificationSuccess] = useState(true)
-  const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>()
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationSuccess, setNotificationSuccess] = useState(true);
+  const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>();
 
   // Component mounted state
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
 
   const inputStyles = `
   /* Chrome, Safari, Edge, Opera */
@@ -113,7 +120,7 @@ const PlaceOrder = ({
   input[type=number] {
     appearance: textfield;
   }
-`
+`;
 
   // Use individual hooks - split for better error isolation
   const {
@@ -131,25 +138,33 @@ const PlaceOrder = ({
     marketOrderHash,
     resetLimitOrderState,
     resetMarketOrderState,
-  } = usePlaceOrder()
+  } = usePlaceOrder();
 
-  const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } = useOrderBook(
-    (pool?.orderBook as HexAddress) || "0x0000000000000000000000000000000000000000",
-  )
+  const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } =
+    useOrderBook(
+      (pool?.orderBook as HexAddress) || '0x0000000000000000000000000000000000000000'
+    );
 
   const {
     getWalletBalance,
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
-  } = useTradingBalances(getContractAddress(chainId ?? defaultChainId, ContractName.clobBalanceManager) as HexAddress)
+  } = useTradingBalances(
+    getContractAddress(
+      chainId ?? defaultChainId,
+      ContractName.clobBalanceManager
+    ) as HexAddress
+  );
 
-  const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
-    return {
-      ...poolItem,
-      timestamp: poolItem.timestamp
-    }
-  }
+  //   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
+  //     return {
+  //       baseDecimals: baseDecimals,
+  //       quoteDecimals: quoteDecimals,
+  //       ...poolItem,
+  //       timestamp: poolItem.timestamp,
+  //     };
+  //   };
 
   // Function to refresh balance manually
   const refreshBalance = useCallback(async () => {
@@ -159,27 +174,45 @@ const PlaceOrder = ({
     try {
       const relevantCurrency =
         side === OrderSideEnum.BUY
-          ? (selectedPool.quoteCurrency as HexAddress)
-          : (selectedPool.baseCurrency as HexAddress);
+          ? (selectedPool.quoteTokenAddress as HexAddress)
+          : (selectedPool.baseTokenAddress as HexAddress);
 
       try {
         const total = await getTotalAvailableBalance(relevantCurrency);
-        setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
-        toast.success("Balance refreshed");
+        setAvailableBalance(
+          formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals)
+        );
+        toast.success('Balance refreshed');
       } catch (error) {
-        console.error("Failed to get total balance, falling back to wallet balance:", error);
+        console.error(
+          'Failed to get total balance, falling back to wallet balance:',
+          error
+        );
         const walletBal = await getWalletBalance(relevantCurrency);
-        setAvailableBalance(formatUnits(walletBal, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
-        toast.info("Used wallet balance (balance manager unavailable)");
+        setAvailableBalance(
+          formatUnits(
+            walletBal,
+            side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals
+          )
+        );
+        toast.info('Used wallet balance (balance manager unavailable)');
       }
     } catch (error) {
-      console.error("Error refreshing balance:", error);
-      toast.error("Failed to refresh balance");
-      setAvailableBalance("Error");
+      console.error('Error refreshing balance:', error);
+      toast.error('Failed to refresh balance');
+      setAvailableBalance('Error');
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [address, selectedPool, side, getTotalAvailableBalance, getWalletBalance, quoteDecimals, baseDecimals]);
+  }, [
+    address,
+    selectedPool,
+    side,
+    getTotalAvailableBalance,
+    getWalletBalance,
+    quoteDecimals,
+    baseDecimals,
+  ]);
 
   // Load initial balance
   const loadBalance = useCallback(async () => {
@@ -188,25 +221,43 @@ const PlaceOrder = ({
       try {
         const relevantCurrency =
           side === OrderSideEnum.BUY
-            ? (selectedPool.quoteCurrency as HexAddress)
-            : (selectedPool.baseCurrency as HexAddress);
+            ? (selectedPool.quoteTokenAddress as HexAddress)
+            : (selectedPool.baseTokenAddress as HexAddress);
 
         try {
           const total = await getTotalAvailableBalance(relevantCurrency);
-          setAvailableBalance(formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
+          setAvailableBalance(
+            formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals)
+          );
         } catch (error) {
-          console.error("Failed to get total balance, falling back to wallet balance:", error);
+          console.error(
+            'Failed to get total balance, falling back to wallet balance:',
+            error
+          );
           const walletBal = await getWalletBalance(relevantCurrency);
-          setAvailableBalance(formatUnits(walletBal, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals));
+          setAvailableBalance(
+            formatUnits(
+              walletBal,
+              side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals
+            )
+          );
         }
       } catch (error) {
-        console.error("Error loading any balance:", error);
-        setAvailableBalance("Error");
+        console.error('Error loading any balance:', error);
+        setAvailableBalance('Error');
       } finally {
         setIsLoadingBalance(false);
       }
     }
-  }, [address, selectedPool, side, getTotalAvailableBalance, getWalletBalance, quoteDecimals, baseDecimals]);
+  }, [
+    address,
+    selectedPool,
+    side,
+    getTotalAvailableBalance,
+    getWalletBalance,
+    quoteDecimals,
+    baseDecimals,
+  ]);
 
   useEffect(() => {
     setMounted(true);
@@ -224,8 +275,8 @@ const PlaceOrder = ({
           const poolItem = selectedPool;
           if (poolItem) {
             console.log(`PlaceOrder: Detected pool change from URL to ${poolItem.coin}`);
-            const pool = convertToPoolType(poolItem);
-            setSelectedPool(pool);
+            // const pool = convertToPoolType(poolItem);
+            setSelectedPool(poolItem);
           }
         }
       }
@@ -235,9 +286,9 @@ const PlaceOrder = ({
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
       console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`);
-      setPrice("");
-      setQuantity("");
-      setTotal("0");
+      setPrice('');
+      setQuantity('');
+      setTotal('0');
     }
   }, [selectedPool]);
 
@@ -245,9 +296,9 @@ const PlaceOrder = ({
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
       console.log(`PlaceOrder: Setting orderbook address for ${selectedPool.coin}`);
-      setPrice("");
-      setQuantity("");
-      setTotal("0");
+      setPrice('');
+      setQuantity('');
+      setTotal('0');
     }
   }, [selectedPool]);
 
@@ -259,15 +310,15 @@ const PlaceOrder = ({
         const quantityValue = Number.parseFloat(quantity);
         setTotal((priceValue * quantityValue).toFixed(6));
       } catch (error) {
-        setTotal("0");
+        setTotal('0');
       }
     } else {
-      setTotal("0");
+      setTotal('0');
     }
   }, [price, quantity]);
 
   useEffect(() => {
-    if (!price && orderType === "limit") {
+    if (!price && orderType === 'limit') {
       if (side === OrderSideEnum.BUY && bestPriceSell) {
         setPrice(formatUnits(bestPriceSell.price, quoteDecimals));
       } else if (side === OrderSideEnum.SELL && bestPriceBuy) {
@@ -319,7 +370,12 @@ const PlaceOrder = ({
 
       return () => clearTimeout(timeoutId);
     }
-  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, resetLimitOrderState, resetMarketOrderState]);
+  }, [
+    isLimitOrderConfirmed,
+    isMarketOrderConfirmed,
+    resetLimitOrderState,
+    resetMarketOrderState,
+  ]);
 
   // Show error notification when there's an error
   useEffect(() => {
@@ -336,22 +392,30 @@ const PlaceOrder = ({
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
       const txHash = limitOrderHash || marketOrderHash;
-      setNotificationMessage(`Your ${side === OrderSideEnum.BUY ? "buy" : "sell"} order has been placed.`);
+      setNotificationMessage(
+        `Your ${side === OrderSideEnum.BUY ? 'buy' : 'sell'} order has been placed.`
+      );
       setNotificationSuccess(true);
       setNotificationTxHash(txHash);
       setShowNotification(true);
     }
-  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, side, limitOrderHash, marketOrderHash]);
+  }, [
+    isLimitOrderConfirmed,
+    isMarketOrderConfirmed,
+    side,
+    limitOrderHash,
+    marketOrderHash,
+  ]);
 
   // Function to handle transaction errors
   const handleTransactionError = (error: unknown) => {
-    let errorMessage = "Failed to place order";
-    
+    let errorMessage = 'Failed to place order';
+
     if (error) {
       errorMessage = error instanceof Error ? error.message : String(error);
     }
-    
-    console.error("Transaction error:", errorMessage);
+
+    console.error('Transaction error:', errorMessage);
     setNotificationMessage(errorMessage);
     setNotificationSuccess(false);
     setNotificationTxHash(undefined);
@@ -363,12 +427,12 @@ const PlaceOrder = ({
     e.preventDefault();
 
     if (!selectedPool) {
-      toast.error("No trading pair selected.");
+      toast.error('No trading pair selected.');
       return;
     }
 
     if (!pool) {
-      toast.error("Pool data not available.");
+      toast.error('Pool data not available.');
       return;
     }
 
@@ -379,31 +443,20 @@ const PlaceOrder = ({
 
       // Additional checks before contract call
       if (quantityBigInt <= 0n) {
-        throw new Error("Quantity must be positive");
+        throw new Error('Quantity must be positive');
       }
 
       if (priceBigInt <= 0n) {
-        throw new Error("Price must be positive");
+        throw new Error('Price must be positive');
       }
 
-      if (orderType === "limit") {
-        await handlePlaceLimitOrder(
-          pool,
-          priceBigInt,
-          quantityBigInt,
-          side
-        );
+      if (orderType === 'limit') {
+        await handlePlaceLimitOrder(pool, priceBigInt, quantityBigInt, side);
       } else {
-        await handlePlaceMarketOrder(
-          pool,
-          quantityBigInt,
-          side,
-          priceBigInt,
-          true
-        );
+        await handlePlaceMarketOrder(pool, quantityBigInt, side, priceBigInt, true);
       }
     } catch (err) {
-      console.error("Order placement error:", err);
+      console.error('Order placement error:', err);
       handleTransactionError(err);
     }
   };
@@ -442,7 +495,9 @@ const PlaceOrder = ({
                 disabled={isManualRefreshing || isLoadingBalance}
                 className="text-gray-300 hover:text-blue-400 transition-colors flex items-center gap-1.5 text-xs bg-gray-800/50 px-2 py-1 rounded border border-gray-700/40"
               >
-                <RefreshCw className={`w-3 h-3 ${isManualRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-3 h-3 ${isManualRefreshing ? 'animate-spin' : ''}`}
+                />
                 <span>Refresh</span>
               </button>
             </div>
@@ -454,10 +509,15 @@ const PlaceOrder = ({
                     <span>Loading...</span>
                   </div>
                 ) : (
-                  formatNumber(Number(availableBalance), { decimals: 2, compact: true })
+                  formatNumber(Number(availableBalance), {
+                    decimals: 2,
+                    compact: true,
+                  })
                 )}
               </span>
-              <span className="text-gray-400">{side === OrderSideEnum.BUY ? "USDC" : selectedPool.coin.split("/")[0]}</span>
+              <span className="text-gray-400">
+                {side === OrderSideEnum.BUY ? 'USDC' : selectedPool.coin.split('/')[0]}
+              </span>
             </div>
           </div>
         )}
@@ -465,27 +525,69 @@ const PlaceOrder = ({
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* <div className="grid grid-cols-2 gap-3"> */}
+        <div className="grid gap-3">
           {/* Order Type Selection */}
-          <div className="relative">
-            <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
+          {/* <div className="relative">
+            <div className="flex h-9 text-sm border-b border-gray-700">
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "limit" ? "bg-blue-600 text-white" : "bg-transparent text-blue-300 hover:bg-blue-800/50"
-                  }`}
-                onClick={() => setOrderType("limit")}
+                className={`flex-1 flex items-center justify-center transition-colors pb-1 border-b-2 ${
+                  orderType === 'market'
+                    ? 'border-blue-500 text-white'
+                    : 'border-transparent text-blue-300 hover:text-white'
+                }`}
+                onClick={() => setOrderType('market')}
               >
-                <span>Limit</span>
+                Market
               </button>
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${orderType === "market"
-                  ? "bg-blue-600 text-white"
-                  : "bg-transparent text-blue-300 hover:bg-blue-800/50"
-                  }`}
-                onClick={() => setOrderType("market")}
+                className={`flex-1 flex items-center justify-center transition-colors pb-1 border-b-2 ${
+                  orderType === 'limit'
+                    ? 'border-blue-500 text-white'
+                    : 'border-transparent text-blue-300 hover:text-white'
+                }`}
+                onClick={() => setOrderType('limit')}
+              >
+                Limit
+              </button>
+            </div>
+          </div> */}
+          <div className="relative">
+            <div className="flex w-full gap-6 bg-transparent">
+              <button
+                type="button"
+                className={`group relative flex flex-1 items-center justify-center gap-2 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-gray-300 transition-all hover:text-gray-200 ${
+                  orderType === 'market' ? 'text-white' : ''
+                }`}
+                onClick={() => setOrderType('market')}
               >
                 <span>Market</span>
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 w-full origin-left transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out ${
+                    orderType === 'market'
+                      ? 'scale-x-100'
+                      : 'scale-x-0 group-hover:scale-x-100'
+                  }`}
+                />
+              </button>
+
+              <button
+                type="button"
+                className={`group relative flex flex-1 items-center justify-center gap-2 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-gray-300 transition-all hover:text-gray-200 ${
+                  orderType === 'limit' ? 'text-white' : ''
+                }`}
+                onClick={() => setOrderType('limit')}
+              >
+                <span>Limit</span>
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 w-full origin-left transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out ${
+                    orderType === 'limit'
+                      ? 'scale-x-100'
+                      : 'scale-x-0 group-hover:scale-x-100'
+                  }`}
+                />
               </button>
             </div>
           </div>
@@ -495,16 +597,22 @@ const PlaceOrder = ({
             <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${side === OrderSideEnum.BUY ? "bg-emerald-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
+                  side === OrderSideEnum.BUY
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-transparent text-gray-300 hover:bg-gray-800/50'
+                }`}
                 onClick={() => setSide(OrderSideEnum.BUY)}
               >
                 <span>Buy</span>
               </button>
               <button
                 type="button"
-                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${side === OrderSideEnum.SELL ? "bg-rose-600 text-white" : "bg-transparent text-gray-300 hover:bg-gray-800/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
+                  side === OrderSideEnum.SELL
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-transparent text-gray-300 hover:bg-gray-800/50'
+                }`}
                 onClick={() => setSide(OrderSideEnum.SELL)}
               >
                 <span>Sell</span>
@@ -514,7 +622,7 @@ const PlaceOrder = ({
         </div>
 
         {/* Price - Only for Limit Orders */}
-        {orderType === "limit" && (
+        {orderType === 'limit' && (
           <div className="space-y-1">
             <label className="text-sm text-gray-300 flex items-center gap-1.5 ml-1">
               <span>Price</span>
@@ -524,14 +632,14 @@ const PlaceOrder = ({
                 type="number"
                 className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={e => setPrice(e.target.value)}
                 placeholder="Enter price"
-                step={`0.${"0".repeat(quoteDecimals - 1)}1`}
+                step={`0.${'0'.repeat(quoteDecimals - 1)}1`}
                 min="0"
                 required
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-                {selectedPool?.quoteCurrency ? selectedPool.coin.split("/")[1] : ""}
+                {selectedPool?.quoteTokenAddress ? selectedPool.coin.split('/')[1] : ''}
               </div>
             </div>
           </div>
@@ -547,14 +655,14 @@ const PlaceOrder = ({
               type="number"
               className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={e => setQuantity(e.target.value)}
               placeholder="Enter amount"
               step="0.000001"
               min="0"
               required
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-              {selectedPool?.baseCurrency ? selectedPool.coin.split("/")[0] : ""}
+              {selectedPool?.baseTokenAddress ? selectedPool.coin.split('/')[0] : ''}
             </div>
           </div>
         </div>
@@ -581,15 +689,21 @@ const PlaceOrder = ({
         {/* Submit Button with glow effect */}
         <div className="relative mt-6 group">
           <div
-            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${side === OrderSideEnum.BUY ? "bg-emerald-500/30" : "bg-rose-500/30"
-              } ${isPending || isConfirming || !isConnected ? "opacity-0" : "opacity-50"}`}
+            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
+              side === OrderSideEnum.BUY ? 'bg-emerald-500/30' : 'bg-rose-500/30'
+            } ${isPending || isConfirming || !isConnected ? 'opacity-0' : 'opacity-50'}`}
           ></div>
           <button
             type="submit"
-            className={`relative w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${side === OrderSideEnum.BUY
-              ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-              : "bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]"
-              } ${isPending || isConfirming || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`relative w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              side === OrderSideEnum.BUY
+                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                : 'bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+            } ${
+              isPending || isConfirming || !isConnected
+                ? 'opacity-50 cursor-not-allowed'
+                : ''
+            }`}
             disabled={isPending || isConfirming || !isConnected}
           >
             {isPending ? (
@@ -608,7 +722,9 @@ const PlaceOrder = ({
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                <span>{`${side === OrderSideEnum.BUY ? "Buy" : "Sell"} ${selectedPool?.coin?.split("/")[0] || ""}`}</span>
+                <span>{`${side === OrderSideEnum.BUY ? 'Buy' : 'Sell'} ${
+                  selectedPool?.coin?.split('/')[0] || ''
+                }`}</span>
               </div>
             )}
           </button>
@@ -632,7 +748,7 @@ const PlaceOrder = ({
         explorerBaseUrl={EXPLORER_URL(chainId ?? defaultChainId)}
       />
     </div>
-  )
-}
+  );
+};
 
-export default PlaceOrder
+export default PlaceOrder;

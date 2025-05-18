@@ -1,32 +1,33 @@
-"use client"
+'use client';
 
-import { ClobDexComponentProps } from "../clob-dex";
-import { BalanceItem, PoolItem } from "@/graphql/gtx/clob";
+import { ClobDexComponentProps } from '../clob-dex';
+import { BalanceItem, PoolItem } from '@/graphql/gtx/clob';
 import { formatAmount } from '@/lib/utils';
 import { ChevronDown, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'viem';
-import { useWithdraw } from "@/hooks/web3/gtx/clob-dex/gtx-router/useWithdraw";
-import { HexAddress } from "@/types/general/address";
+import { useWithdraw } from '@/hooks/web3/gtx/clob-dex/gtx-router/useWithdraw';
+import { HexAddress } from '@/types/general/address';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { NotificationDialog } from "@/components/notification-dialog/notification-dialog";
-import { getExplorerUrl } from "@/constants/urls/urls-config";
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
+import { getExplorerUrl } from '@/constants/urls/urls-config';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 export interface BalancesHistoryTableProps extends ClobDexComponentProps {
   balancesResponse: BalanceItem[];
   balancesLoading: boolean;
   balancesError: Error | null;
-  selectedPool: PoolItem;
+  selectedPool: ProcessedPoolItem;
 }
 
 export default function BalancesHistoryTable({
@@ -36,12 +37,15 @@ export default function BalancesHistoryTable({
   balancesResponse,
   balancesLoading,
   balancesError,
-  selectedPool
+  selectedPool,
 }: BalancesHistoryTableProps) {
   type SortDirection = 'asc' | 'desc';
   type SortableKey = 'amount' | 'symbol';
 
-  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: SortDirection }>({
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortableKey;
+    direction: SortDirection;
+  }>({
     key: 'amount',
     direction: 'desc',
   });
@@ -49,22 +53,24 @@ export default function BalancesHistoryTable({
   // Withdrawal state
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<BalanceItem | null>(null);
-  const [withdrawAmount, setWithdrawAmount] = useState<string>("");
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
 
   // Notification state
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationSuccess, setNotificationSuccess] = useState(true);
-  const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>(undefined);
+  const [notificationTxHash, setNotificationTxHash] = useState<string | undefined>(
+    undefined
+  );
 
   // Get the explorer base URL for the current chain
   const getExplorerBaseUrl = () => {
     try {
       return getExplorerUrl(chainId);
     } catch (error) {
-      console.error("Failed to get explorer URL:", error);
-      return "";
+      console.error('Failed to get explorer URL:', error);
+      return '';
     }
   };
 
@@ -76,7 +82,7 @@ export default function BalancesHistoryTable({
     isWithdrawalConfirmed,
     withdrawalHash,
     withdrawError,
-    resetWithdrawState
+    resetWithdrawState,
   } = useWithdraw();
 
   // Reset notification state when dialog closes
@@ -86,7 +92,7 @@ export default function BalancesHistoryTable({
       const timer = setTimeout(() => {
         if (!isProcessingWithdrawal) {
           resetWithdrawState?.();
-          setWithdrawAmount("");
+          setWithdrawAmount('');
           setSelectedBalance(null);
         }
       }, 200);
@@ -100,7 +106,11 @@ export default function BalancesHistoryTable({
     if (withdrawalHash && isWithdrawalConfirmed && isProcessingWithdrawal) {
       // Show success notification when withdrawal is confirmed
       setNotificationSuccess(true);
-      setNotificationMessage(`Successfully withdraw ${withdrawAmount} ${selectedBalance?.symbol || 'Token'}!`);
+      setNotificationMessage(
+        `Successfully withdraw ${withdrawAmount} ${
+          selectedBalance?.currency.symbol || 'Token'
+        }!`
+      );
       setNotificationTxHash(withdrawalHash);
       setNotificationOpen(true);
       setIsProcessingWithdrawal(false);
@@ -108,14 +118,22 @@ export default function BalancesHistoryTable({
       // Close the withdraw dialog
       setWithdrawDialogOpen(false);
     }
-  }, [isWithdrawalConfirmed, withdrawalHash, withdrawAmount, selectedBalance, isProcessingWithdrawal]);
+  }, [
+    isWithdrawalConfirmed,
+    withdrawalHash,
+    withdrawAmount,
+    selectedBalance,
+    isProcessingWithdrawal,
+  ]);
 
   // Watch for errors to show in notification
   useEffect(() => {
     if (withdrawError && isProcessingWithdrawal) {
       // Show error notification
       setNotificationSuccess(false);
-      setNotificationMessage(withdrawError instanceof Error ? withdrawError.message : "Failed to withdraw");
+      setNotificationMessage(
+        withdrawError instanceof Error ? withdrawError.message : 'Failed to withdraw'
+      );
       setNotificationTxHash(undefined);
       setNotificationOpen(true);
       setIsProcessingWithdrawal(false);
@@ -123,9 +141,10 @@ export default function BalancesHistoryTable({
   }, [withdrawError, isProcessingWithdrawal]);
 
   const handleSort = (key: SortableKey) => {
-    setSortConfig((currentConfig) => ({
+    setSortConfig(currentConfig => ({
       key,
-      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc',
+      direction:
+        currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
 
@@ -133,14 +152,14 @@ export default function BalancesHistoryTable({
     // Reset any previous notification state
     setNotificationOpen(false);
     setSelectedBalance(balance);
-    setWithdrawAmount("");
+    setWithdrawAmount('');
     setWithdrawDialogOpen(true);
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers and a single decimal point
     const value = e.target.value;
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setWithdrawAmount(value);
     }
   };
@@ -160,20 +179,22 @@ export default function BalancesHistoryTable({
       const amount = parseUnits(withdrawAmount, 18);
 
       await handleWithdraw(
-        selectedBalance.currency as HexAddress,
+        selectedBalance.currency.address as HexAddress,
         amount,
-        selectedBalance.symbol || "Token",
+        selectedBalance.currency.symbol || 'Token',
         18
       );
 
       // Success notification will be triggered by useEffect when confirmed
     } catch (error) {
-      console.error("Withdrawal error:", error);
+      console.error('Withdrawal error:', error);
       setIsProcessingWithdrawal(false);
 
       // Show error notification
       setNotificationSuccess(false);
-      setNotificationMessage(error instanceof Error ? error.message : "Failed to withdraw");
+      setNotificationMessage(
+        error instanceof Error ? error.message : 'Failed to withdraw'
+      );
       setNotificationOpen(true);
     }
   };
@@ -197,18 +218,20 @@ export default function BalancesHistoryTable({
         ? aValue < bValue
           ? -1
           : aValue > bValue
-            ? 1
-            : 0
+          ? 1
+          : 0
         : bValue < aValue
-          ? -1
-          : bValue > aValue
-            ? 1
-            : 0;
+        ? -1
+        : bValue > aValue
+        ? 1
+        : 0;
     }
     if (key === 'symbol') {
-      const aValue = a.symbol || '';
-      const bValue = b.symbol || '';
-      return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      const aValue = a.currency.symbol || '';
+      const bValue = b.currency.symbol || '';
+      return sortConfig.direction === 'asc'
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
     }
     return 0;
   });
@@ -245,8 +268,11 @@ export default function BalancesHistoryTable({
           >
             <span>Token</span>
             <ChevronDown
-              className={`h-4 w-4 transition-transform ${sortConfig.key === 'symbol' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-                }`}
+              className={`h-4 w-4 transition-transform ${
+                sortConfig.key === 'symbol' && sortConfig.direction === 'asc'
+                  ? 'rotate-180'
+                  : ''
+              }`}
             />
           </button>
           <button
@@ -255,20 +281,25 @@ export default function BalancesHistoryTable({
           >
             <span>Amount</span>
             <ChevronDown
-              className={`h-4 w-4 transition-transform ${sortConfig.key === 'amount' && sortConfig.direction === 'asc' ? 'rotate-180' : ''
-                }`}
+              className={`h-4 w-4 transition-transform ${
+                sortConfig.key === 'amount' && sortConfig.direction === 'asc'
+                  ? 'rotate-180'
+                  : ''
+              }`}
             />
           </button>
           <div className="text-sm font-medium text-gray-200">Actions</div>
         </div>
         <div className="space-y-2 p-4">
-          {sortedBalances.map((balance) => (
+          {sortedBalances.map(balance => (
             <div
-              key={balance.currency}
+              key={balance.currency.address}
               className="grid grid-cols-3 gap-4 rounded-lg bg-gray-900/20 p-4 transition-colors hover:bg-gray-900/40"
             >
-              <div className="text-gray-200">{balance.symbol}</div>
-              <div className="font-medium text-white">{formatAmount(formatUnits(BigInt(balance.amount), 18))}</div>
+              <div className="text-gray-200">{balance.currency.symbol}</div>
+              <div className="font-medium text-white">
+                {formatAmount(formatUnits(BigInt(balance.amount), 18))}
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleWithdrawClick(balance)}
@@ -284,14 +315,17 @@ export default function BalancesHistoryTable({
       </div>
 
       {/* Withdraw Dialog */}
-      <Dialog open={withdrawDialogOpen} onOpenChange={(open) => {
-        if (!isProcessingWithdrawal) {
-          setWithdrawDialogOpen(open);
-        }
-      }}>
+      <Dialog
+        open={withdrawDialogOpen}
+        onOpenChange={open => {
+          if (!isProcessingWithdrawal) {
+            setWithdrawDialogOpen(open);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-800/30 text-gray-200">
           <DialogHeader>
-            <DialogTitle>Withdraw {selectedBalance?.symbol}</DialogTitle>
+            <DialogTitle>Withdraw {selectedBalance?.currency.symbol}</DialogTitle>
             <DialogDescription className="text-gray-400">
               Withdraw funds from GTX to your wallet
             </DialogDescription>
@@ -301,9 +335,13 @@ export default function BalancesHistoryTable({
             <div className="space-y-4 py-3">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <Label htmlFor="withdraw-amount" className="text-gray-300">Amount</Label>
+                  <Label htmlFor="withdraw-amount" className="text-gray-300">
+                    Amount
+                  </Label>
                   <span className="text-xs text-gray-400">
-                    Available: {formatAmount(formatUnits(BigInt(selectedBalance.amount), 18))} {selectedBalance.symbol}
+                    Available:{' '}
+                    {formatAmount(formatUnits(BigInt(selectedBalance.amount), 18))}{' '}
+                    {selectedBalance.currency.symbol}
                   </span>
                 </div>
                 <div className="flex space-x-2">
@@ -344,7 +382,12 @@ export default function BalancesHistoryTable({
               variant="default"
               className="bg-blue-600 hover:bg-blue-700"
               onClick={handleWithdrawSubmit}
-              disabled={!withdrawAmount || isWithdrawPending || isWithdrawalConfirming || parseFloat(withdrawAmount) <= 0}
+              disabled={
+                !withdrawAmount ||
+                isWithdrawPending ||
+                isWithdrawalConfirming ||
+                parseFloat(withdrawAmount) <= 0
+              }
             >
               {isWithdrawPending || isWithdrawalConfirming ? (
                 <>
