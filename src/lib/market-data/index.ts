@@ -22,7 +22,6 @@ export function createMarketData(
   return processedPools.map((pool) => {
     const metrics = calculatePoolMetrics(pool, processedTrades);
     const iconInfo = getIconInfo(pool.baseSymbol);
-
     return {
       id: pool.id,
       name: pool.baseSymbol,
@@ -33,7 +32,7 @@ export function createMarketData(
       timestamp: pool.timestamp,
       price: metrics.latestPrice.toFixed(2),
       volume: formatNumber(
-        Number(formatUnits(metrics.volume, pool.quoteDecimals ?? 6)),
+        Number(formatUnits(BigInt(pool.volume), 18)),
         { decimals: 0 }
       ),
       liquidity: formatNumber(pool.maxOrderAmount),
