@@ -48,6 +48,10 @@ export const poolsPonderQuery = gql`
         id
         orderBook
         timestamp
+        volume
+        volumeInQuote
+        baseDecimals
+        quoteDecimals
       }
       totalCount
       pageInfo {
@@ -85,12 +89,13 @@ export type PoolItem = {
   timestamp: number;
   baseCurrency: CurrencyType;
   quoteCurrency: CurrencyType;
-  //   lotSize: string;
-  //   maxOrderAmount: string;
-  //   baseSymbol?: string;
-  //   quoteSymbol?: string;
-  //   baseDecimals?: number;
-  //   quoteDecimals?: number;
+  volume: string;
+  lotSize: string;
+  maxOrderAmount: string;
+  baseSymbol?: string;
+  quoteSymbol?: string;
+  baseDecimals?: number;
+  quoteDecimals?: number;
 };
 
 export type PoolsPonderResponse = {
@@ -112,12 +117,12 @@ export type PoolsResponse = {
 
 export const tradesPonderQuery = gql`
   ${CurrencyFields}
-  query GetTrades($poolId: String) {
+  query GetTrades($poolId: String, $limit: Int = 20) {
     tradess(
       where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "desc"
-      limit: 20
+      limit: $limit
     ) {
       items {
         id

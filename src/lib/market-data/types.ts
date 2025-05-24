@@ -9,6 +9,7 @@ export interface ProcessedPool {
   quoteSymbol: string;
   baseDecimals: number | undefined;
   quoteDecimals: number | undefined;
+  volume: string;
 }
 
 export interface ProcessedTrade {
@@ -21,7 +22,6 @@ export interface ProcessedTrade {
 
 export interface PoolMetrics {
   latestPrice: number;
-  volume: bigint;
 }
 
 export interface MarketData {

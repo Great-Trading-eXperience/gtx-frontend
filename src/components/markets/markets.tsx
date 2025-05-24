@@ -82,7 +82,9 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
       const currentChainId = Number(chainId ?? defaultChain);
       const url = GTX_GRAPHQL_URL(currentChainId);
       if (!url) throw new Error('GraphQL URL not found');
-      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery);
+      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery, {
+        limit: 1,
+      });
     },
     refetchInterval: 30000,
     staleTime: 60000,
