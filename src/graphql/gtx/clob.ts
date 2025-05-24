@@ -117,12 +117,12 @@ export type PoolsResponse = {
 
 export const tradesPonderQuery = gql`
   ${CurrencyFields}
-  query GetTrades($poolId: String) {
+  query GetTrades($poolId: String, $limit: Int = 20) {
     tradess(
       where: { poolId: $poolId }
       orderBy: "timestamp"
       orderDirection: "desc"
-      limit: 1
+      limit: $limit
     ) {
       items {
         id
