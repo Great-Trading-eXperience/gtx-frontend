@@ -1,14 +1,14 @@
 'use client';
 
-import { PoolsResponse, TradesResponse, PoolItem, TradeItem } from '@/graphql/gtx/clob';
+import { TradeItem } from '@/graphql/gtx/clob';
+import { formatNumber } from '@/lib/utils';
 import { Pool, useMarketStore } from '@/store/market-store';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
 import { ClobDexComponentProps } from '../clob-dex';
 import { PairDropdown } from './pair-dropdown';
-import { formatNumber, formatVolume } from '@/lib/utils';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 const SkeletonLoader = () => (
   <div className="w-full h-16 bg-gray-100 dark:bg-[#1B2028] rounded-t-lg animate-pulse flex items-center px-4 space-x-8">
@@ -20,16 +20,12 @@ const SkeletonLoader = () => (
 
 export interface MarketDataWidgetProps extends ClobDexComponentProps {
   poolId: string | null;
-  selectedPool: ProcessedPoolItem;
+  selectedPool?: ProcessedPoolItem;
   tradesData: TradeItem[];
   tradesLoading: boolean;
 }
 
 export default function MarketDataWidget({
-  address,
-  chainId,
-  defaultChainId,
-  poolId,
   selectedPool,
   tradesData,
   tradesLoading,

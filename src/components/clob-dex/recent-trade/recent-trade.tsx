@@ -2,9 +2,7 @@
 
 import {
 	PoolsResponse,
-	RecentTradeItem,
-	TradeItem,
-	TradesResponse,
+	TradeItem
 } from '@/graphql/gtx/clob';
 import { formatPrice, formatTime } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
@@ -25,20 +23,13 @@ export type RecentTradesComponentProps = ClobDexComponentProps & {
 	poolsData?: PoolsResponse;
 	poolsLoading?: boolean;
 	poolsError?: Error | null;
-	tradesData?: RecentTradeItem[];
+	tradesData?: TradeItem[];
 	tradesLoading?: boolean;
-	tradesError?: Error | null;
 };
 
 const RecentTradesComponent = ({
-	chainId,
-	defaultChainId,
-	poolsData,
-	poolsLoading,
-	poolsError,
 	tradesData,
 	tradesLoading,
-	tradesError,
 }: RecentTradesComponentProps) => {
 	const [mounted, setMounted] = useState(false);
 
@@ -48,7 +39,7 @@ const RecentTradesComponent = ({
 		setMounted(true);
 	}, []);
 
-	const processTrades = (items: RecentTradeItem[]): Trade[] => {
+	const processTrades = (items: TradeItem[]): Trade[] => {
 		// Sort trades by timestamp (newest first)
 		const sortedTrades = [...items].sort((a, b) => b.timestamp - a.timestamp);
 
@@ -67,6 +58,7 @@ const RecentTradesComponent = ({
 			}
 
 			return {
+				id: trade.id,
 				price: priceNum,
 				size: BigInt(trade.quantity),
 				side: side,
@@ -87,31 +79,15 @@ const RecentTradesComponent = ({
 		return <RecentTradesSkeleton />;
 	}
 
-	if (tradesError) {
-		return (
-			<div className="w-full rounded-xl border border-gray-800/30 bg-gray-950 p-4 text-white">
-				<div className="flex items-center gap-2 text-rose-400">
-					<span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-					<span>Error loading trades</span>
-				</div>
-				<p className="mt-2 text-sm text-gray-300">{tradesError.toString()}</p>
-			</div>
-		);
-	}
-
 	const trades = calculateTotal(
-		processTrades((tradesData as RecentTradeItem[]) || [])
+		processTrades((tradesData as TradeItem[]) || [])
 	);
+
+	console.log('trades-1', trades);
 
 	return (
 		<div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
 			{/* Header */}
-			{/* <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <BarChart2 className="h-5 w-5 text-gray-400" />
-          <h2 className="text-lg font-medium text-white">Recent Trades</h2>
-        </div>
-      </div> */}
 
 			<div className="flex h-[550px] flex-col rounded-lg">
 				{/* Column Headers */}

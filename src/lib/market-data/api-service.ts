@@ -27,6 +27,7 @@ export async function fetchPoolsData(
 ): Promise<PoolsPonderResponse | PoolsResponse> {
   try {
     const url = GTX_GRAPHQL_URL(chainId);
+    console.log('url', url);
     if (!url) throw new Error('GraphQL URL not found');
 
     return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);

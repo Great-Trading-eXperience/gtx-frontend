@@ -3,22 +3,19 @@
 import { ButtonConnectWallet } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClobDexComponentProps } from '../clob-dex';
 import {
   BalanceItem,
-  OrderItem,
-  PoolItem,
-  TradeItem,
-  TradeHistoryItem,
   OpenOrderItem,
+  TradeItem
 } from '@/graphql/gtx/clob';
-import { HexAddress } from '@/types/general/address';
+import { OrderData } from '@/lib/market-api';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BookOpen, History, Wallet } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import { ClobDexComponentProps } from '../clob-dex';
 import BalancesHistoryTable from './balances';
 import OrderHistoryTable from './orders';
 import TradeHistoryTable from './trades';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 export interface TradingHistoryProps extends ClobDexComponentProps {
   balanceData: BalanceItem[];
@@ -27,11 +24,15 @@ export interface TradingHistoryProps extends ClobDexComponentProps {
   ordersData: OpenOrderItem[];
   ordersLoading: boolean;
   ordersError: Error | null;
-  selectedPool: ProcessedPoolItem;
-  tradesData: TradeHistoryItem[];
-  // tradesData: OpenOrderItem[];
+  selectedPool?: ProcessedPoolItem;
+  userTradesData?: TradeItem[];
   tradesLoading: boolean;
   tradesError: Error | null;
+  // Market API data
+  marketOpenOrdersData?: OrderData[];
+  marketOpenOrdersLoading?: boolean;
+  marketAllOrdersData?: OrderData[];
+  marketAllOrdersLoading?: boolean;
 }
 
 export default function TradingHistory({
@@ -45,9 +46,14 @@ export default function TradingHistory({
   ordersLoading,
   ordersError,
   selectedPool,
-  tradesData,
+  userTradesData,
   tradesLoading,
   tradesError,
+  // Market API data
+  marketOpenOrdersData,
+  marketOpenOrdersLoading,
+  marketAllOrdersData,
+  marketAllOrdersLoading,
 }: TradingHistoryProps) {
   const { isConnected } = useAccount();
 
@@ -108,6 +114,10 @@ export default function TradingHistory({
                   ordersLoading={ordersLoading}
                   ordersError={ordersError}
                   selectedPool={selectedPool}
+                  marketOpenOrdersData={marketOpenOrdersData}
+                  marketOpenOrdersLoading={marketOpenOrdersLoading}
+                  marketAllOrdersData={marketAllOrdersData}
+                  marketAllOrdersLoading={marketAllOrdersLoading}
                 />
               ) : (
                 <div className="space-y-4">
@@ -134,7 +144,7 @@ export default function TradingHistory({
                   address={address}
                   chainId={chainId}
                   defaultChainId={defaultChainId}
-                  tradesData={tradesData}
+                  userTradesData={userTradesData}
                   tradesLoading={tradesLoading}
                   tradesError={tradesError}
                   selectedPool={selectedPool}

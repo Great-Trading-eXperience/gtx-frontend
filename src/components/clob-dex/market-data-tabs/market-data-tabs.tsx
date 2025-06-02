@@ -1,24 +1,25 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PoolsResponse, PoolItem, RecentTradeItem } from '@/graphql/gtx/clob';
+import { RecentTradeItem, TradeItem } from '@/graphql/gtx/clob';
+import { HexAddress } from '@/types/general/address';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BarChart2, LineChart } from 'lucide-react';
 import { ClobDexComponentProps } from '../clob-dex';
 import EnhancedOrderBookDex from '../orderbook-dex/orderbook-dex';
 import RecentTradesComponent from '../recent-trade/recent-trade';
-import { HexAddress } from '@/types/general/address';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
+import { DepthData } from '@/lib/market-api';
 
 export interface MarketDataTabsProps extends ClobDexComponentProps {
   address: HexAddress | undefined;
   chainId: number;
   defaultChainId: number;
-  selectedPool: ProcessedPoolItem;
+  selectedPool?: ProcessedPoolItem;
   poolsLoading: boolean;
   poolsError: Error | null;
-  selectedTrades: RecentTradeItem[];
+  depthData: DepthData | null;
+  trades: TradeItem[];
   tradesLoading: boolean;
-  tradesError: Error | null;
 }
 
 const MarketDataTabs = ({
@@ -27,16 +28,12 @@ const MarketDataTabs = ({
   selectedPool,
   poolsLoading,
   poolsError,
-  selectedTrades,
-  tradesLoading,
-  tradesError,
+  depthData,
+  trades,
+  tradesLoading
 }: MarketDataTabsProps) => {
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
-      {/* Decorative Elements */}
-      {/* <div className="absolute -left-24 -top-24 h-48 w-48 rounded-full bg-gray-500/10 blur-3xl" />
-      <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-gray-500/10 blur-3xl" /> */}
-
       <Tabs defaultValue="orderbook" className="w-full">
         <div className="relative border-b border-gray-800/30 backdrop-blur-sm">
           <TabsList className="flex w-full justify-start gap-1 bg-transparent px-4 py-1">
@@ -70,6 +67,7 @@ const MarketDataTabs = ({
               selectedPool={selectedPool}
               poolsLoading={poolsLoading}
               poolsError={poolsError}
+              depthData={depthData}
             />
           </TabsContent>
 
@@ -80,9 +78,8 @@ const MarketDataTabs = ({
             <RecentTradesComponent
               chainId={chainId ?? defaultChainId}
               defaultChainId={defaultChainId}
-              tradesData={selectedTrades}
+              tradesData={trades}
               tradesLoading={tradesLoading}
-              tradesError={tradesError}
             />
           </TabsContent>
         </div>

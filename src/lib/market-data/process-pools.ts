@@ -19,8 +19,6 @@ export async function processPools(
     (poolsData as PoolsPonderResponse)?.poolss?.items ||
     (poolsData as PoolsResponse)?.pools;
 
-  console.log('pools', pools);
-
   if (!pools) return [];
 
   const processedPools = getUseSubgraph()

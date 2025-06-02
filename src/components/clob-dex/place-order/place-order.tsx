@@ -1,43 +1,32 @@
 'use client';
 
+import poolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
 import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { EXPLORER_URL } from '@/constants/explorer-url';
-import { PoolItem, TradeItem } from '@/graphql/gtx/clob';
+import { TradeItem } from '@/graphql/gtx/clob';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
-import { useOrderBook } from '@/hooks/web3/gtx/clob-dex/orderbook/useOrderBook';
-import { Pool, useMarketStore } from '@/store/market-store';
+import { DepthData } from '@/lib/market-api';
+import { formatNumber } from '@/lib/utils';
+import { useMarketStore } from '@/store/market-store';
 import type { HexAddress } from '@/types/general/address';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { RefreshCw, Wallet } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import type React from 'react';
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
+import { useAccount, useChainId, useContractRead } from 'wagmi';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
-import { useContractRead, useChainId, useAccount } from 'wagmi';
-import { toast } from 'sonner';
-import poolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
-import { formatNumber } from '@/lib/utils';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
-
-// Create a mapping type to convert string timestamp to number
-type PoolItemWithStringTimestamp = {
-  id: string;
-  coin: string;
-  orderBook: string;
-  baseCurrency: string;
-  quoteCurrency: string;
-  lotSize: string;
-  maxOrderAmount: string;
-  timestamp: number;
-};
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
-  selectedPool: ProcessedPoolItem;
-  tradesData: TradeItem[];
+  selectedPool?: ProcessedPoolItem;
+  tradesData?: TradeItem[];
   tradesLoading: boolean;
+  depthData?: DepthData | null;
 }
 
 const PlaceOrder = ({
@@ -45,12 +34,9 @@ const PlaceOrder = ({
   chainId,
   defaultChainId,
   selectedPool,
-  tradesData,
-  tradesLoading,
+  depthData,
 }: PlaceOrderProps) => {
   const { isConnected } = useAccount();
-  const { selectedPoolId, baseDecimals, quoteDecimals, setSelectedPool } =
-    useMarketStore();
   const pathname = usePathname();
 
   const currentChainId = useChainId();
@@ -87,6 +73,9 @@ const PlaceOrder = ({
         }
       | undefined;
   };
+
+  console.log('poolManagerAddress', poolManagerAddress);
+  console.log('pool', pool);
 
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
   const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); // Default to BUY
@@ -140,10 +129,21 @@ const PlaceOrder = ({
     resetMarketOrderState,
   } = usePlaceOrder();
 
-  const { bestPriceBuy, bestPriceSell, isLoadingBestPrices, refreshOrderBook } =
-    useOrderBook(
-      (pool?.orderBook as HexAddress) || '0x0000000000000000000000000000000000000000'
-    );
+  const bestBidPrice = useMemo(() => {
+    if (depthData?.bids && depthData.bids.length > 0) {
+      const validBid = depthData.bids.find(bid => bid[0] !== '0');
+      return validBid ? validBid[0] : undefined;
+    }
+    return undefined;
+  }, [depthData]);
+
+  const bestAskPrice = useMemo(() => {
+    if (depthData?.asks && depthData.asks.length > 0) {
+      const validAsk = depthData.asks.find(ask => ask[0] !== '0');
+      return validAsk ? validAsk[0] : undefined;
+    }
+    return undefined;
+  }, [depthData]);
 
   const {
     getWalletBalance,
@@ -180,7 +180,7 @@ const PlaceOrder = ({
       try {
         const total = await getTotalAvailableBalance(relevantCurrency);
         setAvailableBalance(
-          formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals)
+          formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals))
         );
         toast.success('Balance refreshed');
       } catch (error) {
@@ -192,7 +192,7 @@ const PlaceOrder = ({
         setAvailableBalance(
           formatUnits(
             walletBal,
-            side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals
+            Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
           )
         );
         toast.info('Used wallet balance (balance manager unavailable)');
@@ -207,11 +207,9 @@ const PlaceOrder = ({
   }, [
     address,
     selectedPool,
-    side,
-    getTotalAvailableBalance,
-    getWalletBalance,
-    quoteDecimals,
-    baseDecimals,
+    selectedPool?.quoteDecimals,
+    selectedPool?.baseDecimals,
+    side
   ]);
 
   // Load initial balance
@@ -227,7 +225,7 @@ const PlaceOrder = ({
         try {
           const total = await getTotalAvailableBalance(relevantCurrency);
           setAvailableBalance(
-            formatUnits(total, side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals)
+            formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals))
           );
         } catch (error) {
           console.error(
@@ -238,7 +236,7 @@ const PlaceOrder = ({
           setAvailableBalance(
             formatUnits(
               walletBal,
-              side === OrderSideEnum.BUY ? quoteDecimals : baseDecimals
+              Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
             )
           );
         }
@@ -252,36 +250,14 @@ const PlaceOrder = ({
   }, [
     address,
     selectedPool,
+    selectedPool?.quoteDecimals,
+    selectedPool?.baseDecimals,
     side,
-    getTotalAvailableBalance,
-    getWalletBalance,
-    quoteDecimals,
-    baseDecimals,
   ]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!mounted || !selectedPool) return;
-
-    if (pathname) {
-      const urlParts = pathname.split('/');
-      if (urlParts.length >= 3) {
-        const poolIdFromUrl = urlParts[2];
-
-        if (poolIdFromUrl && poolIdFromUrl !== selectedPoolId) {
-          const poolItem = selectedPool;
-          if (poolItem) {
-            console.log(`PlaceOrder: Detected pool change from URL to ${poolItem.coin}`);
-            // const pool = convertToPoolType(poolItem);
-            setSelectedPool(poolItem);
-          }
-        }
-      }
-    }
-  }, [pathname, selectedPoolId, selectedPool, mounted, setSelectedPool]);
 
   useEffect(() => {
     if (selectedPool && selectedPool.orderBook) {
@@ -302,13 +278,15 @@ const PlaceOrder = ({
     }
   }, [selectedPool]);
 
+  console.log('price', price, quantity, total)
+
   // Update total when price or quantity changes
   useEffect(() => {
     if (price && quantity) {
       try {
         const priceValue = Number.parseFloat(price);
         const quantityValue = Number.parseFloat(quantity);
-        setTotal((priceValue * quantityValue).toFixed(6));
+        setTotal((priceValue * quantityValue).toFixed(2));
       } catch (error) {
         setTotal('0');
       }
@@ -319,29 +297,32 @@ const PlaceOrder = ({
 
   useEffect(() => {
     if (!price && orderType === 'limit') {
-      if (side === OrderSideEnum.BUY && bestPriceSell) {
-        setPrice(formatUnits(bestPriceSell.price, quoteDecimals));
-      } else if (side === OrderSideEnum.SELL && bestPriceBuy) {
-        setPrice(formatUnits(bestPriceBuy.price, quoteDecimals));
+      if (side === OrderSideEnum.BUY && bestAskPrice && selectedPool?.quoteDecimals !== undefined) {
+        const normalizedPrice = formatUnits(BigInt(bestAskPrice), selectedPool.quoteDecimals);
+        setPrice(normalizedPrice);
+      } else if (side === OrderSideEnum.SELL && bestBidPrice && selectedPool?.quoteDecimals !== undefined) {
+        const normalizedPrice = formatUnits(BigInt(bestBidPrice), selectedPool.quoteDecimals);
+        setPrice(normalizedPrice);
       }
     }
-  }, [bestPriceBuy, bestPriceSell, side, price, orderType, quoteDecimals]);
+  }, [bestBidPrice, bestAskPrice, side, price, orderType, selectedPool?.quoteDecimals]);
 
   // Load balance when relevant data changes
   useEffect(() => {
     loadBalance();
   }, [address, selectedPool, side, loadBalance]);
 
+  // TODO
   // Refresh order book on regular intervals
-  useEffect(() => {
-    if (pool?.orderBook) {
-      const interval = setInterval(() => {
-        refreshOrderBook();
-      }, 1000); // Refresh every second
+  // useEffect(() => {
+  //   if (pool?.orderBook) {
+  //     const interval = setInterval(() => {
+  //       refreshOrderBook();
+  //     }, 1000); // Refresh every second
 
-      return () => clearInterval(interval);
-    }
-  }, [pool?.orderBook, refreshOrderBook]);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [pool?.orderBook, refreshOrderBook]);
 
   // Auto refresh balance after transaction completion
   useEffect(() => {
@@ -424,22 +405,28 @@ const PlaceOrder = ({
 
   // Function to handle order placement
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('handleSubmit', e);
     e.preventDefault();
 
     if (!selectedPool) {
+      console.log('No trading pair selected.');
       toast.error('No trading pair selected.');
       return;
     }
 
     if (!pool) {
+      console.log('Pool data not available.');
       toast.error('Pool data not available.');
       return;
     }
 
     try {
       // Enhanced parameter validation
-      const quantityBigInt = parseUnits(quantity, baseDecimals);
-      const priceBigInt = parseUnits(price, quoteDecimals);
+      const quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
+      const priceBigInt = parseUnits(price, Number(selectedPool.quoteDecimals));
+
+      console.log('quantityBigInt', quantityBigInt);
+      console.log('priceBigInt', priceBigInt);
 
       // Additional checks before contract call
       if (quantityBigInt <= 0n) {
@@ -466,7 +453,7 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
-  if (tradesLoading || !mounted)
+  if (!mounted)
     return (
       <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
         <div className="flex items-center gap-2 text-gray-300">
@@ -634,7 +621,7 @@ const PlaceOrder = ({
                 value={price}
                 onChange={e => setPrice(e.target.value)}
                 placeholder="Enter price"
-                step={`0.${'0'.repeat(quoteDecimals - 1)}1`}
+                step={`0.${'0'.repeat(Number(selectedPool?.quoteDecimals) - 1)}1`}
                 min="0"
                 required
               />

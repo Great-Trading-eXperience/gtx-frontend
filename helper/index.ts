@@ -6,7 +6,7 @@ export const calculatePrice = (tick: string): number => {
 };
 
 export const formatDate = (timestamp: string): string => {
-  return new Date(parseInt(timestamp) * 1000).toLocaleString();
+  return new Date(parseInt(timestamp)).toLocaleString();
 };
 
 export const formatAddress = (address?: string): string => {

@@ -27,7 +27,7 @@ export interface BalancesHistoryTableProps extends ClobDexComponentProps {
   balancesResponse: BalanceItem[];
   balancesLoading: boolean;
   balancesError: Error | null;
-  selectedPool: ProcessedPoolItem;
+  selectedPool?: ProcessedPoolItem;
 }
 
 export default function BalancesHistoryTable({
@@ -258,6 +258,8 @@ export default function BalancesHistoryTable({
       </div>
     );
 
+    
+
   return (
     <>
       <div className="relative overflow-x-auto">
@@ -291,9 +293,9 @@ export default function BalancesHistoryTable({
           <div className="text-sm font-medium text-gray-200">Actions</div>
         </div>
         <div className="space-y-2 p-4">
-          {sortedBalances.map(balance => (
+          {sortedBalances.map((balance, index) => (
             <div
-              key={balance.currency.address}
+              key={`${balance.currency.address || balance.currency.symbol}-${index}`}
               className="grid grid-cols-3 gap-4 rounded-lg bg-gray-900/20 p-4 transition-colors hover:bg-gray-900/40"
             >
               <div className="text-gray-200">{balance.currency.symbol}</div>

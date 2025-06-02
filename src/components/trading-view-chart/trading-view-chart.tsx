@@ -1,3 +1,5 @@
+import { useMarketWebSocket } from '@/hooks/use-market-websocket';
+import { KlineEvent } from '@/services/market-websocket';
 import { getKlineUrl } from '@/utils/env';
 import { useEffect, useRef, useState } from 'react';
 
@@ -66,17 +68,59 @@ export default function TradingViewChartContainer({
   const onLoadScriptRef = useRef<(() => void) | null>(null);
   const chartWidgetRef = useRef<any>(null);
   const dataUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Store the onTick callback for the WebSocket updates
+  const onTickRef = useRef<((bar: Bar) => void) | null>(null);
   const [lastBar, setLastBar] = useState<Bar | null>(null);
   const [pairs, setPairs] = useState<TradingPair[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string>(symbol);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [klineInterval, setKlineInterval] = useState<string>('1m');
 
-  /* Clean-up polling timer on unmount */
+  // WebSocket connection for kline data
+  const {
+    lastMessage: klineMessage,
+    isConnected: isKlineConnected,
+    connect: connectKlineWebSocket,
+    disconnect: disconnectKlineWebSocket
+  } = useMarketWebSocket('kline_' + klineInterval, selectedSymbol);
+
+  /* Process kline WebSocket messages */
+  useEffect(() => {
+    if (klineMessage && klineMessage.e === 'kline') {
+      const klineEvent = klineMessage as KlineEvent;
+      const k = klineEvent.k;
+
+      // Only process if it's for the current symbol
+      if (k.s === selectedSymbol) {
+        // Convert WebSocket kline data to Bar format
+        const bar: Bar = {
+          time: k.t,
+          open: parseFloat(k.o),
+          high: parseFloat(k.h),
+          low: parseFloat(k.l),
+          close: parseFloat(k.c),
+          volume: parseFloat(k.v)
+        };
+
+        setLastBar(bar);
+        if (onTickRef.current) {
+          onTickRef.current(bar);
+        }
+      }
+    }
+  }, [klineMessage, selectedSymbol]);
+
+  /* Clean-up on unmount */
   useEffect(() => {
     return () => {
-      if (dataUpdateIntervalRef.current) clearInterval(dataUpdateIntervalRef.current);
+      if (dataUpdateIntervalRef.current) {
+        clearInterval(dataUpdateIntervalRef.current);
+        dataUpdateIntervalRef.current = null;
+      }
+      // Disconnect WebSocket on unmount
+      disconnectKlineWebSocket();
     };
-  }, []);
+  }, [disconnectKlineWebSocket]);
 
   /* Fetch available pairs if not provided as props */
   useEffect(() => {
@@ -100,11 +144,11 @@ export default function TradingViewChartContainer({
         // Transform the data as needed based on your API response format
         const formattedPairs = Array.isArray(data)
           ? data.map((pair: any) => ({
-              symbol: pair.symbol,
-              baseAsset: pair.baseAsset,
-              quoteAsset: pair.quoteAsset,
-              displayName: `${pair.baseAsset}/${pair.quoteAsset}`,
-            }))
+            symbol: pair.symbol,
+            baseAsset: pair.baseAsset,
+            quoteAsset: pair.quoteAsset,
+            displayName: `${pair.baseAsset}/${pair.quoteAsset}`,
+          }))
           : [];
 
         setPairs(formattedPairs);
@@ -149,21 +193,18 @@ export default function TradingViewChartContainer({
     };
   }, []);
 
-  /* Update chart when symbol changes */
+  /* Update chart and WebSocket when symbol or interval changes */
   useEffect(() => {
-    if (chartWidgetRef.current && selectedSymbol !== symbol) {
-      // Clean up existing subscriptions
-      if (dataUpdateIntervalRef.current) {
-        clearInterval(dataUpdateIntervalRef.current);
-        dataUpdateIntervalRef.current = null;
-      }
-
-      // Change the symbol on the chart
-      chartWidgetRef.current.setSymbol(selectedSymbol, interval, () => {
-        fetchLatestData();
-      });
+    if (!chartWidgetRef.current) {
+      return;
     }
-  }, [selectedSymbol, interval, symbol]);
+
+    chartWidgetRef.current.setSymbol(selectedSymbol, () => { });
+
+    // Reconnect WebSocket with new symbol/interval
+    disconnectKlineWebSocket();
+    connectKlineWebSocket();
+  }, [selectedSymbol, klineInterval]);
 
   /* Handle symbol change */
   const handleSymbolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -217,12 +258,10 @@ export default function TradingViewChartContainer({
     if (df?.updateBar) df.updateBar(newestBar);
   }
 
-  /* ---- main widget creator ---- */
   function createWidget() {
     if (!document.getElementById('tv_chart_container') || !('TradingView' in window))
       return;
 
-    /* --- TradingView Data-Feed object --- */
     const datafeed = {
       onReady: (cb: any) =>
         cb({
@@ -297,21 +336,42 @@ export default function TradingViewChartContainer({
         }
       },
 
-      subscribeBars: (_sym: any, _res: any, onTick: any) => {
-        if (dataUpdateIntervalRef.current) clearInterval(dataUpdateIntervalRef.current);
-        dataUpdateIntervalRef.current = setInterval(() => {
-          fetchLatestData().then(() => lastBar && onTick(lastBar));
-        }, 10_000);
-      },
-
-      unsubscribeBars: () => {
+      subscribeBars: (symbolInfo: any, resolution: any, onTick: any) => {
+        // Clean up any existing interval
         if (dataUpdateIntervalRef.current) {
           clearInterval(dataUpdateIntervalRef.current);
           dataUpdateIntervalRef.current = null;
         }
+
+        // Map TradingView resolution to WebSocket interval format
+        const mappedInterval = RESOLUTION_MAPPING[resolution];
+        if (!mappedInterval) return;
+
+        // Update the kline interval for WebSocket subscription
+        setKlineInterval(mappedInterval);
+
+        // Store the onTick callback in the ref for use in the WebSocket effect
+        onTickRef.current = onTick;
+
+        // Connect to WebSocket for the selected symbol and interval
+        connectKlineWebSocket();
+
+        // As a fallback, also fetch initial data
+        fetchLatestData();
       },
 
-      updateBar: (_bar: Bar) => {}, // filled by fetchLatestData
+      unsubscribeBars: () => {
+        // Disconnect from WebSocket
+        // disconnectKlineWebSocket();
+
+        // Clean up any existing interval as a fallback
+        // if (dataUpdateIntervalRef.current) {
+        //   clearInterval(dataUpdateIntervalRef.current);
+        //   dataUpdateIntervalRef.current = null;
+        // }
+      },
+
+      updateBar: (_bar: Bar) => { }, // filled by fetchLatestData
     };
 
     /* --- instantiate widget --- */
@@ -331,7 +391,7 @@ export default function TradingViewChartContainer({
     });
 
     chartWidgetRef.current = widget;
-    fetchLatestData(); // first poll immediately
+    fetchLatestData();
   }
 
   return (

@@ -2,16 +2,14 @@ import { HexAddress } from "@/types/general/address";
 import contractAddresses from "./contract-address.json";
 
 export enum ContractName {
-    clobBalanceManager = "clobBalanceManager",
-    clobPoolManager = "clobPoolManager",
-    clobRouter = "clobRouter",
-    resolverPoolManager = "resolverPoolManager",
-    proxyAdminOwner = "proxyAdminOwner",
-    openIntentRouter = "openIntentRouter",
-    usdc = "usdc",
-    weth = "weth",
-    wbtc = "wbtc",
-    router = "router",
+    clobBalanceManager = "PROXY_BALANCEMANAGER",
+    clobPoolManager = "PROXY_POOLMANAGER",
+    clobRouter = "PROXY_ROUTER",
+    openIntentRouter = "OPEN_INTENT_ROUTER",
+    usdc = "USDC",
+    weth = "WETH",
+    wbtc = "WBTC",
+    router = "ROUTER",
 }
 
 interface MailchimpConfig {

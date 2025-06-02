@@ -14,7 +14,7 @@ import { ENABLED_CHAINS } from '@/constants/contract/contract-address';
 
 export const projectId = 'c8d08053460bfe0752116d730dc6393b';
 
-const localChain: Chain = {
+export const localChain: Chain = {
 	id: 31337,
 	name: 'Anvil',
 	nativeCurrency: {
@@ -39,7 +39,7 @@ const localChain: Chain = {
 	testnet: true,
 };
 
-const conduitChain: Chain = {
+export const conduitChain: Chain = {
 	id: 911867,
 	name: 'Conduit',
 	nativeCurrency: {

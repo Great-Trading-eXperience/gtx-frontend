@@ -1,44 +1,45 @@
 'use client';
 
-import { ClobDexComponentProps } from '../clob-dex';
-import { OpenOrderItem, PoolItem } from '@/graphql/gtx/clob';
-import { formatPrice } from '@/lib/utils';
-import { useMarketStore } from '@/store/market-store';
-import {
-  ArrowDownUp,
-  ChevronDown,
-  Clock,
-  Loader2,
-  Wallet2,
-  BookOpen,
-  X,
-  AlertCircle,
-} from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { formatUnits } from 'viem';
-import { formatDate } from '../../../../helper';
-import { useCancelOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCancelOrder';
+import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
+  DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { getExplorerUrl } from '@/constants/urls/urls-config';
+import { OpenOrderItem } from '@/graphql/gtx/clob';
+import { useCancelOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCancelOrder';
+import { OrderData } from '@/lib/market-api';
+import { formatPrice } from '@/lib/utils';
 import { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
-import { getExplorerUrl } from '@/constants/urls/urls-config';
-import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
+import {
+  AlertCircle,
+  BookOpen,
+  ChevronDown,
+  Clock,
+  Loader2,
+  Wallet2,
+  X
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { formatUnits } from 'viem';
+import { formatDate } from '../../../../helper';
+import { ClobDexComponentProps } from '../clob-dex';
 
 export interface OrderHistoryTableProps extends ClobDexComponentProps {
   ordersData: OpenOrderItem[];
   ordersLoading: boolean;
   ordersError: Error | null;
-  selectedPool: ProcessedPoolItem;
+  selectedPool?: ProcessedPoolItem;
+  marketOpenOrdersData?: OrderData[];
+  marketOpenOrdersLoading?: boolean;
+  marketAllOrdersData?: OrderData[];
+  marketAllOrdersLoading?: boolean;
 }
 
 export default function OrderHistoryTable({
@@ -49,6 +50,10 @@ export default function OrderHistoryTable({
   ordersLoading,
   ordersError,
   selectedPool,
+  marketOpenOrdersData,
+  marketOpenOrdersLoading,
+  marketAllOrdersData,
+  marketAllOrdersLoading,
 }: OrderHistoryTableProps) {
   type SortDirection = 'asc' | 'desc';
   type SortableKey = 'timestamp' | 'filled' | 'orderId' | 'price';
@@ -149,7 +154,7 @@ export default function OrderHistoryTable({
 
       return () => clearTimeout(timer);
     }
-  }, [cancelDialogOpen, isProcessingCancel, resetCancelOrderState]);
+  }, [cancelDialogOpen, isProcessingCancel]);
 
   const handleSort = (key: SortableKey) => {
     setSortConfig(currentConfig => ({
@@ -216,47 +221,93 @@ export default function OrderHistoryTable({
   };
 
   // Check if order is cancelable (only open or partially filled orders can be canceled)
-  const isOrderCancelable = (order: OpenOrderItem) => {
+  const isOrderCancelable = (order: OrderData | OpenOrderItem) => {
     return order.status === 'OPEN' || order.status === 'PARTIALLY_FILLED';
   };
 
-  const sortedOrders = [...(ordersData || [])].sort((a, b) => {
+  // Type guard to check if an object is an OpenOrderItem
+  const isOpenOrderItem = (order: OrderData | OpenOrderItem): order is OpenOrderItem => {
+    return 'poolId' in order && 'transactionId' in order;
+  };
+
+  // Filtered orders based on selected pool
+  const filteredOrders = selectedPool
+    ? ordersData.filter(
+        (order) => order.poolId?.toLowerCase() === selectedPool.id.toLowerCase()
+      )
+    : ordersData;
+  // Helper function to get timestamp value from either order type
+  const getTimestamp = (order: OpenOrderItem | OrderData): number => {
+    if ('timestamp' in order) {
+      // GraphQL order
+      return Number(order.timestamp);
+    } else {
+      // Market API order
+      return order.time;
+    }
+  };
+
+  // Helper function to get fill percentage from either order type
+  const getFillPercentage = (order: OpenOrderItem | OrderData): number => {
+    if ('filled' in order && 'quantity' in order) {
+      // GraphQL order
+      return parseFloat(calculateFillPercentage(order.filled, order.quantity));
+    } else {
+      // Market API order
+      return order.executedQty && order.origQty
+        ? (parseFloat(order.executedQty) / parseFloat(order.origQty)) * 100
+        : 0;
+    }
+  };
+
+  // Helper function to get order ID for sorting
+  const getOrderId = (order: OpenOrderItem | OrderData): string => {
+    if ('poolId' in order) {
+      // GraphQL order
+      return order.poolId;
+    } else {
+      // Market API order
+      return order.orderId;
+    }
+  };
+
+  // Helper function to get price for sorting
+  const getPrice = (order: OpenOrderItem | OrderData): number => {
+    if ('price' in order) {
+      // Both types have price, but they might be different types
+      if (typeof order.price === 'string') {
+        return parseFloat(order.price);
+      } else {
+        return Number(order.price);
+      }
+    }
+    // Fallback
+    return 0;
+  };
+
+  // Sort orders based on current sort configuration
+  const sortedOrders = useMemo(() => [...(marketAllOrdersData || [])].sort((a, b) => {
     const key = sortConfig.key;
 
     if (key === 'timestamp') {
       return sortConfig.direction === 'asc'
-        ? a.timestamp - b.timestamp
-        : b.timestamp - a.timestamp;
-    }
-    if (key === 'filled') {
-      const aPercentage = Number(calculateFillPercentage(a.filled, a.quantity));
-      const bPercentage = Number(calculateFillPercentage(b.filled, b.quantity));
+        ? getTimestamp(a) - getTimestamp(b)
+        : getTimestamp(b) - getTimestamp(a);
+    } else if (key === 'filled') {
       return sortConfig.direction === 'asc'
-        ? aPercentage - bPercentage
-        : bPercentage - aPercentage;
-    }
-    if (key === 'orderId') {
-      const aValue = Number.parseInt(a.orderId.toString() || '0');
-      const bValue = Number.parseInt(b.orderId.toString() || '0');
-      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-    }
-    if (key === 'price') {
-      const aValue = BigInt(a.price || '0');
-      const bValue = BigInt(b.price || '0');
+        ? getFillPercentage(a) - getFillPercentage(b)
+        : getFillPercentage(b) - getFillPercentage(a);
+    } else if (key === 'orderId') {
       return sortConfig.direction === 'asc'
-        ? aValue < bValue
-          ? -1
-          : aValue > bValue
-          ? 1
-          : 0
-        : bValue < aValue
-        ? -1
-        : bValue > aValue
-        ? 1
-        : 0;
+        ? getOrderId(a).localeCompare(getOrderId(b))
+        : getOrderId(b).localeCompare(getOrderId(a));
+    } else if (key === 'price') {
+      return sortConfig.direction === 'asc'
+        ? getPrice(a) - getPrice(b)
+        : getPrice(b) - getPrice(a);
     }
     return 0;
-  });
+  }), [marketOpenOrdersData, sortConfig]);
 
   const getPoolName = (poolId: string): string => {
     if (!selectedPool) return 'Unknown';
@@ -300,7 +351,7 @@ export default function OrderHistoryTable({
     );
   }
 
-  if (!ordersData || ordersData.length === 0) {
+  if (!sortedOrders || sortedOrders.length === 0) {
     return (
       <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-gray-800/30 bg-gray-900/20 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -364,19 +415,19 @@ export default function OrderHistoryTable({
 
         {/* Table Body with Scroll */}
         <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-800/50">
-          {sortedOrders.map(order => (
+          {sortedOrders.map((order: OrderData | OpenOrderItem) => (
             <div
               key={order.orderId}
               className="grid grid-cols-7 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
             >
               <div className="text-gray-200">
-                {formatDate(order.timestamp.toString())}
+                {formatDate(getTimestamp(order).toString())}
               </div>
-              <div className="text-gray-200">{getPoolName(order.poolId)}</div>
+              <div className="text-gray-200">{getPoolName(getOrderId(order))}</div>
               <div className="font-medium text-white">
                 $
                 {formatPrice(
-                  formatUnits(BigInt(order.price), selectedPool?.quoteDecimals || 6)
+                  formatUnits(BigInt(getPrice(order)), selectedPool?.quoteDecimals || 6)
                 )}
               </div>
               <div
@@ -385,7 +436,7 @@ export default function OrderHistoryTable({
                 {order.side}
               </div>
               <div className="font-medium text-white">
-                {calculateFillPercentage(order.filled, order.quantity)}%
+                {getFillPercentage(order)}%
               </div>
               <div>
                 <span
@@ -412,7 +463,34 @@ export default function OrderHistoryTable({
                     onClick={() => {
                       // Reset any previous notification state
                       setNotificationOpen(false);
-                      setSelectedOrder(order);
+                      
+                      // Convert OrderData to OpenOrderItem format if needed
+                      let orderForCancel: OpenOrderItem;
+                      
+                      if (isOpenOrderItem(order)) {
+                        orderForCancel = order;
+                      } else {
+                        // First convert to unknown to avoid direct type casting errors
+                        const baseOrder = {
+                          chainId: Number(chainId ?? defaultChainId),
+                          poolId: selectedPool?.id || '',
+                          orderId: BigInt(order.orderId), // Convert string to bigint
+                          id: order.id,
+                          side: order.side,
+                          timestamp: order.time,
+                          transactionId: order.id,
+                          price: order.price,
+                          quantity: order.origQty,
+                          filled: order.executedQty,
+                          type: order.type,
+                          status: order.status,
+                          expiry: 0 // Default value as this might not be available in OrderData
+                        };
+                        
+                        orderForCancel = baseOrder as unknown as OpenOrderItem;
+                      }
+                      
+                      setSelectedOrder(orderForCancel);
                       setCancelDialogOpen(true);
                     }}
                   >
