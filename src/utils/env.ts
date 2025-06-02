@@ -15,7 +15,6 @@ export const getGraphQLUrl = (chainId?: number): string => {
         const chainIdStr = getChainIdStr(chainId);
         return getIndexerUrl(chainIdStr);
     } catch (error) {
-        console.error(`GraphQL URL not found for chain ${getChainIdStr(chainId)}`);
         throw new Error(`GraphQL URL not found for chain ${getChainIdStr(chainId)}`);
     }
 };

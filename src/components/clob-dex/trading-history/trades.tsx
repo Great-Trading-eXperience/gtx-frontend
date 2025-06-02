@@ -1,38 +1,36 @@
 'use client';
 
 import { EXPLORER_URL } from '@/constants/explorer-url';
-import { OpenOrderItem, PoolItem, TradeHistoryItem, TradeItem } from '@/graphql/gtx/clob';
+import { TradeItem } from '@/graphql/gtx/clob';
 import { formatPrice, formatQuantity } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 import {
-  ArrowDownUp,
+  BookOpen,
   ChevronDown,
   Clock,
   ExternalLink,
   Loader2,
-  Wallet2,
-  BookOpen,
+  Wallet2
 } from 'lucide-react';
 import { useState } from 'react';
 import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { formatDate } from '../../../../helper';
 import { ClobDexComponentProps } from '../clob-dex';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
 
 export interface TradesProps extends ClobDexComponentProps {
-  tradesData: TradeHistoryItem[];
-  // tradesData: OpenOrderItem[];
+  userTradesData?: TradeItem[];
   tradesLoading: boolean;
   tradesError: Error | null;
-  selectedPool: ProcessedPoolItem;
+  selectedPool?: ProcessedPoolItem;
 }
 
 const TradeHistoryTable = ({
   address,
   chainId,
   defaultChainId,
-  tradesData,
+  userTradesData,
   tradesLoading,
   tradesError,
   selectedPool,
@@ -49,8 +47,6 @@ const TradeHistoryTable = ({
     direction: 'desc',
   });
 
-  const [filterByMyAddress, setFilterByMyAddress] = useState(false);
-
   const { baseDecimals, quoteDecimals } = useMarketStore();
 
   const handleSort = (key: SortableKey) => {
@@ -59,11 +55,6 @@ const TradeHistoryTable = ({
       direction:
         prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
     }));
-  };
-
-  // Handler for the checkbox change
-  const handleFilterChange = () => {
-    setFilterByMyAddress(!filterByMyAddress);
   };
 
   if (!address) {
@@ -103,17 +94,11 @@ const TradeHistoryTable = ({
     );
   }
 
-  const trades = tradesData || [];
+  // Select trades based on active tab
+  const trades = userTradesData || [];
 
   const filteredTrades = trades;
-  // filterByMyAddress
-  // 	? trades.filter(
-  // 			(trade) =>
-  // 				trade.order?.user?.user?.toLowerCase() ===
-  // 				accountAddress?.toLowerCase()
-  // 	  )
-  // 	: trades;
-
+  
   const sortedTrades = [...filteredTrades].sort((a, b) => {
     const key = sortConfig.key;
 
@@ -155,27 +140,12 @@ const TradeHistoryTable = ({
     return 0;
   });
 
+  console.log('sortedTrades', sortedTrades);
+
   return (
     <div className="flex flex-col gap-3">
-      {/* Filter checkbox */}
-      {/* <div className="flex items-center gap-2 ml-auto">
-				<input
-					type="checkbox"
-					id="filter-by-address"
-					checked={filterByMyAddress}
-					onChange={handleFilterChange}
-					className="h-4 w-4 rounded border-gray-700 bg-gray-800 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-				/>
-				<label
-					htmlFor="filter-by-address"
-					className="text-sm font-medium text-gray-200"
-				>
-					Show only my trades
-				</label>
-			</div> */}
-
+      {/* Tab selector for All Trades vs My Trades */}
       <div className="w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gray-900/20 shadow-lg">
-        {/* Header */}
         <div className="grid grid-cols-6 gap-4 border-b border-gray-800/30 bg-gray-900/40 px-4 py-3 backdrop-blur-sm">
           <button
             onClick={() => handleSort('timestamp')}
@@ -227,15 +197,15 @@ const TradeHistoryTable = ({
           {sortedTrades.length > 0 ? (
             sortedTrades.map(trade => {
               const isBuy = trade?.order?.side === 'Buy';
-              const pair = selectedPool.coin;
-
+              const pair = selectedPool?.coin;
+              
               return (
                 <div
-                  key={trade.id}
+                  key={`${trade.id}-${trade.timestamp}`}
                   className="grid grid-cols-6 gap-4 border-b border-gray-800/20 px-4 py-3 text-sm transition-colors hover:bg-gray-900/40"
                 >
                   <div className="text-gray-200">
-                    {formatDate(trade.timestamp.toString())}
+                    {formatDate(trade.timestamp?.toString())}
                   </div>
                   <div className="text-gray-200">{pair}</div>
                   <div className="font-medium text-white">
@@ -258,7 +228,7 @@ const TradeHistoryTable = ({
                       rel="noopener noreferrer"
                       className="underline"
                     >
-                      {`${trade.transactionId.slice(0, 6)}...${trade.transactionId.slice(
+                      {`${trade.transactionId?.slice(0, 6)}...${trade.transactionId?.slice(
                         -4
                       )}`}{' '}
                       <ExternalLink className="w-4 h-4 inline" />
@@ -271,11 +241,7 @@ const TradeHistoryTable = ({
             <div className="flex min-h-[200px] items-center justify-center p-8">
               <div className="flex flex-col items-center gap-3 text-center">
                 <BookOpen className="h-8 w-8 text-gray-400" />
-                <p className="text-gray-200">
-                  {filterByMyAddress
-                    ? 'No trades found for your wallet'
-                    : 'No trades found for this pool'}
-                </p>
+                <p className="text-gray-200">No trades found for this pool</p>
               </div>
             </div>
           )}

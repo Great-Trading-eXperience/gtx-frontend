@@ -22,6 +22,7 @@ export function createMarketData(
   return processedPools.map(pool => {
     const metrics = calculatePoolMetrics(pool, processedTrades);
     const iconInfo = getIconInfo(pool.baseSymbol);
+    console.log('pool', pool.baseSymbol, pool);
     return {
       id: pool.id,
       name: pool.baseSymbol,

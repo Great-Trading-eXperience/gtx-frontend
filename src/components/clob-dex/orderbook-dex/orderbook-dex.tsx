@@ -4,16 +4,16 @@ import GTXRouterABI from '@/abis/gtx/clob/GTXRouterABI';
 import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
 import { wagmiConfig } from '@/configs/wagmi';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
-import { PoolItem, PoolsResponse } from '@/graphql/gtx/clob';
+import { PoolsResponse } from '@/graphql/gtx/clob';
 import { useMarketStore } from '@/store/market-store';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { readContract } from '@wagmi/core';
 import { ArrowDown, ArrowUp, Menu, RefreshCw } from 'lucide-react';
-import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatUnits } from 'viem';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
+import { DepthData } from '@/lib/market-api';
 
 interface Order {
   price: number;
@@ -49,31 +49,31 @@ export type OrderBookDexProps = ClobDexComponentProps & {
 };
 
 interface EnhancedOrderBookDexProps {
-  selectedPool: ProcessedPoolItem;
+  selectedPool?: ProcessedPoolItem;
   chainId: number | undefined;
   defaultChainId: number;
   poolsLoading: boolean;
   poolsError: Error | null;
+  depthData: DepthData | null;
 }
 
 const EnhancedOrderBookDex = ({
   chainId,
   defaultChainId,
+  depthData,
   selectedPool,
   poolsLoading,
   poolsError,
 }: EnhancedOrderBookDexProps) => {
   const [mounted, setMounted] = useState(false);
+  const [viewType, setViewType] = useState<ViewType>('both');
   const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.01');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const priceOptions = ['0.01', '0.1', '1'];
   const previousOrderBook = useRef<OrderBook | null>(null);
   const previousPrice = useRef<number | null>(null);
   const priceDirection = useRef<'up' | 'down' | null>(null);
-
-  // Get the current URL to detect changes
-  const pathname = usePathname();
-
+  
   const [orderBook, setOrderBook] = useState<OrderBook>({
     asks: [],
     bids: [],
@@ -82,7 +82,6 @@ const EnhancedOrderBookDex = ({
     lastUpdate: Date.now(),
   });
 
-  const [viewType, setViewType] = useState<ViewType>('both');
   const { marketData, quoteDecimals, baseDecimals } = useMarketStore();
 
   // Custom functions to handle dynamic orderbook addresses
@@ -110,59 +109,33 @@ const EnhancedOrderBookDex = ({
     }
   };
 
-  const getNextBestPrices = async ({
-    baseCurrency,
-    quoteCurrency,
-    side,
-    price,
-    count,
-  }: {
-    baseCurrency: string;
-    quoteCurrency: string;
-    side: OrderSideEnum;
-    price: bigint;
-    count: number;
-  }) => {
-    if (!selectedPool) {
-      throw new Error('No pool selected');
-    }
-
-    try {
-      const prices = await readContract(wagmiConfig, {
-        address: getContractAddress(
-          chainId ?? defaultChainId,
-          ContractName.clobRouter
-        ) as `0x${string}`,
-        abi: GTXRouterABI,
-        functionName: 'getNextBestPrices',
-        args: [
-          {
-            orderBook: selectedPool.orderBook as `0x${string}`,
-            baseCurrency: selectedPool.baseTokenAddress as `0x${string}`,
-            quoteCurrency: selectedPool.quoteTokenAddress as `0x${string}`,
-          },
-          side,
-          price,
-          count,
-        ] as const,
-      });
-
-      return Array.from(prices as Array<{ price: bigint; volume: bigint }>);
-    } catch (error) {
-      console.error('Error getting next best prices:', error);
-      throw error;
-    }
-  };
-
   const formatPrice = (price: number | bigint): string => {
+    if (!selectedPool?.quoteDecimals) return '0.00';
+    
     const precision = Number.parseFloat(selectedDecimal);
     const priceNumber = typeof price === 'bigint' ? Number(price) : price;
-    const roundedPrice = Math.round(priceNumber / precision) * precision;
+    
+    // Normalize the price based on quote asset decimals
+    const normalizedPrice = priceNumber / (10 ** selectedPool.quoteDecimals);
+    const roundedPrice = Math.round(normalizedPrice / precision) * precision;
 
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 6,
     }).format(roundedPrice);
+  };
+  
+  // Format size with base asset decimals
+  const formatSize = (size: number): string => {
+    if (!selectedPool?.baseDecimals) return '0.00';
+    
+    // Normalize the size based on base asset decimals
+    const normalizedSize = size / (10 ** selectedPool.baseDecimals);
+    
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    }).format(normalizedSize);
   };
 
   useEffect(() => {
@@ -242,145 +215,111 @@ const EnhancedOrderBookDex = ({
     }
   }, [marketData?.price]);
 
+  // Process depth data from WebSocket to create order book
   useEffect(() => {
-    if (!mounted || !selectedPool) return;
+    if (!mounted || !selectedPool || !depthData) return;
 
-    const fetchOrderBook = async () => {
-      try {
-        const askBestPrice = await getBestPrice({
-          side: OrderSideEnum.SELL,
+    try {
+      // Convert WebSocket depth data to order book format
+      const asks: Order[] = [];
+      const bids: Order[] = [];
+      
+      // Process asks from depth data
+      if (depthData.asks && depthData.asks.length > 0) {
+        depthData.asks.slice(0, STANDARD_ORDER_COUNT).forEach(([priceStr, sizeStr]) => {
+          // Normalize price and size based on asset decimals
+          const price = parseFloat(priceStr);
+          const size = parseFloat(sizeStr);
+          
+          if (price > 0 && size > 0) {
+            asks.push({ price, size });
+          }
         });
-
-        const bidBestPrice = await getBestPrice({
-          side: OrderSideEnum.BUY,
-        });
-
-        const nextAsks = await getNextBestPrices({
-          baseCurrency: selectedPool.baseTokenAddress as `0x${string}`,
-          quoteCurrency: selectedPool.quoteTokenAddress as `0x${string}`,
-          side: OrderSideEnum.SELL,
-          price: askBestPrice.price,
-          count: STANDARD_ORDER_COUNT - 1,
-        });
-
-        const nextBids = await getNextBestPrices({
-          baseCurrency: selectedPool.baseTokenAddress as `0x${string}`,
-          quoteCurrency: selectedPool.quoteTokenAddress as `0x${string}`,
-          side: OrderSideEnum.BUY,
-          price: bidBestPrice.price,
-
-          count: STANDARD_ORDER_COUNT - 1,
-        });
-
-        const sortedNextAsks = nextAsks.sort((a, b) => Number(a.price) - Number(b.price));
-        const sortedNextBids = nextBids.sort((a, b) => Number(b.price) - Number(a.price));
-
-        const asks = [
-          {
-            price: Number(formatUnits(askBestPrice.price, quoteDecimals)),
-            size: Number(formatUnits(askBestPrice.volume, baseDecimals)),
-          },
-          ...sortedNextAsks.map(pv => ({
-            price: Number(formatUnits(pv.price, quoteDecimals)),
-            size: Number(formatUnits(pv.volume, baseDecimals)),
-          })),
-        ]
-          .filter(ask => ask.price > 0 && ask.size > 0)
-          .reduce((unique, ask) => {
-            const exists = unique.find(u => u.price === ask.price);
-            if (!exists) {
-              unique.push(ask);
-            }
-            return unique;
-          }, [] as Order[])
-          .sort((a, b) => a.price - b.price);
-
-        const bids = [
-          {
-            price: Number(
-              formatUnits((bidBestPrice as { price: bigint }).price, quoteDecimals)
-            ),
-            size: Number(
-              formatUnits((bidBestPrice as { volume: bigint }).volume, baseDecimals)
-            ),
-          },
-          ...sortedNextBids.map(pv => ({
-            price: Number(formatUnits(pv.price, quoteDecimals)),
-            size: Number(formatUnits(pv.volume, baseDecimals)),
-          })),
-        ]
-          .filter(ask => ask.price > 0 && ask.size > 0)
-          .reduce((unique, ask) => {
-            const exists = unique.find(u => u.price === ask.price);
-            if (!exists) {
-              unique.push(ask);
-            }
-            return unique;
-          }, [] as Order[])
-          .sort((a, b) => b.price - a.price);
-
-        let bidTotal = 0;
-        const bidsWithTotal = bids.map(bid => {
-          bidTotal += bid.size;
-          return { ...bid, total: bidTotal };
-        });
-
-        let askTotal = 0;
-        const asksWithTotal = asks.map(ask => {
-          askTotal += ask.size;
-          return { ...ask, total: askTotal };
-        });
-
-        const spread =
-          asks[0]?.price && bids[0]?.price
-            ? (
-                (Math.abs(asks[0].price - bids[0].price) /
-                  ((asks[0].price + bids[0].price) / 2)) *
-                100
-              ).toFixed(2)
-            : '0';
-        const now = Date.now();
-
-        // Detect matched orders based on previous state
-        const matchedAsks = detectMatchedOrders(
-          asksWithTotal,
-          previousOrderBook.current?.asks,
-          now
-        );
-        const matchedBids = detectMatchedOrders(
-          bidsWithTotal,
-          previousOrderBook.current?.bids,
-          now
-        );
-
-        const newOrderBook = {
-          asks: matchedAsks,
-          bids: matchedBids,
-          lastPrice: asks.length > 0 ? BigInt(Math.round(asks[0]?.price)) : BigInt(0),
-          spread: BigInt(Math.round(Number(spread))),
-          lastUpdate: now,
-          previousAsks: previousOrderBook.current?.asks,
-          previousBids: previousOrderBook.current?.bids,
-        };
-
-        previousOrderBook.current = {
-          asks: matchedAsks,
-          bids: matchedBids,
-          lastPrice: newOrderBook.lastPrice,
-          spread: newOrderBook.spread,
-          lastUpdate: now,
-        };
-
-        setOrderBook(newOrderBook);
-      } catch (error) {
-        console.error('Error fetching order book:', error);
       }
-    };
+      
+      // Process bids from depth data
+      if (depthData.bids && depthData.bids.length > 0) {
+        depthData.bids.slice(0, STANDARD_ORDER_COUNT).forEach(([priceStr, sizeStr]) => {
+          // Normalize price and size based on asset decimals
+          const price = parseFloat(priceStr);
+          const size = parseFloat(sizeStr);
+          
+          if (price > 0 && size > 0) {
+            bids.push({ price, size });
+          }
+        });
+      }
+      
+      // Sort asks in ascending order by price
+      asks.sort((a, b) => a.price - b.price);
+      
+      // Sort bids in descending order by price
+      bids.sort((a, b) => b.price - a.price);
+      
+      // Calculate cumulative totals
+      let bidTotal = 0;
+      const bidsWithTotal = bids.map(bid => {
+        bidTotal += bid.size;
+        return { ...bid, total: bidTotal };
+      });
 
-    const interval = setInterval(fetchOrderBook, 5000);
+      let askTotal = 0;
+      const asksWithTotal = asks.map(ask => {
+        askTotal += ask.size;
+        return { ...ask, total: askTotal };
+      });
 
-    return () => clearInterval(interval);
-  }, [mounted, selectedPool, quoteDecimals, baseDecimals]);
+      // Calculate spread
+      const spread =
+        asks[0]?.price && bids[0]?.price
+          ? (
+              (Math.abs(asks[0].price - bids[0].price) /
+                ((asks[0].price + bids[0].price) / 2)) *
+              100
+            ).toFixed(2)
+          : '0';
+      const now = Date.now();
+
+      // Detect matched orders based on previous state
+      const matchedAsks = detectMatchedOrders(
+        asksWithTotal,
+        previousOrderBook.current?.asks,
+        now
+      );
+      const matchedBids = detectMatchedOrders(
+        bidsWithTotal,
+        previousOrderBook.current?.bids,
+        now
+      );
+
+      const newOrderBook = {
+        asks: matchedAsks,
+        bids: matchedBids,
+        lastPrice: asks.length > 0 ? BigInt(Math.round(asks[0]?.price)) : BigInt(0),
+        spread: BigInt(Math.round(Number(spread))),
+        lastUpdate: now,
+        previousAsks: previousOrderBook.current?.asks,
+        previousBids: previousOrderBook.current?.bids,
+      };
+
+      setOrderBook(newOrderBook);
+    } catch (error) {
+      console.error('Error processing depth data:', error);
+    }
+  }, [depthData, mounted, selectedPool, baseDecimals, quoteDecimals]);
+  
+  // Update previous orderbook reference after state update
+  useEffect(() => {
+    if (orderBook && orderBook.lastUpdate) {
+      previousOrderBook.current = {
+        asks: orderBook.asks,
+        bids: orderBook.bids,
+        lastPrice: orderBook.lastPrice,
+        spread: orderBook.spread,
+        lastUpdate: orderBook.lastUpdate,
+      };
+    }
+  }, [orderBook]);
 
   const toggleView = useCallback(() => {
     const views: ViewType[] = ['both', 'bids', 'asks'];
@@ -403,10 +342,7 @@ const EnhancedOrderBookDex = ({
       </div>
     );
   }
-
-  // Get base token from selected pool
-  const baseToken = selectedPool?.coin?.split('/')[0] || 'WETH';
-
+  
   return (
     <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
@@ -498,10 +434,10 @@ const EnhancedOrderBookDex = ({
                             {formatPrice(ask.price)}
                           </div>
                           <div className="text-center text-gray-200">
-                            {ask.size.toFixed(2)}
+                            {formatSize(ask.size)}
                           </div>
                           <div className="text-right text-gray-200">
-                            {(ask.total || 0).toFixed(2)}
+                            {ask.total ? formatSize(ask.total) : '0.00'}
                           </div>
                         </div>
                       </div>
@@ -543,7 +479,7 @@ const EnhancedOrderBookDex = ({
                     <div className="flex items-center gap-1">
                       <span>Spread: </span>
                       <span className="font-medium text-white">
-                        {Number(orderBook.spread) / 100}%
+                        {(Number(orderBook.spread) / 100).toFixed(2)}%
                       </span>
                     </div>
                   </div>
@@ -595,10 +531,10 @@ const EnhancedOrderBookDex = ({
                             {formatPrice(bid.price)}
                           </div>
                           <div className="text-center text-gray-200">
-                            {bid.size.toFixed(2)}
+                            {formatSize(bid.size)}
                           </div>
                           <div className="text-right text-gray-200">
-                            {(bid.total || 0).toFixed(2)}
+                            {bid.total ? formatSize(bid.total) : '0.00'}
                           </div>
                         </div>
                       </div>

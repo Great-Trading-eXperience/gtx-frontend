@@ -12,24 +12,23 @@ import {
   TradesResponse,
 } from '@/graphql/gtx/clob';
 import {
-  createMarketData,
   MarketData,
   ProcessedPool,
   ProcessedTrade,
   processPools,
-  processTrades,
+  processTrades
 } from '@/lib/market-data';
 import { getUseSubgraph } from '@/utils/env';
 import { useQuery } from '@tanstack/react-query';
 import request from 'graphql-request';
 import { CheckCircle, Clock, Search } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useChainId } from 'wagmi';
 import { DotPattern } from '../magicui/dot-pattern';
 import { MarketListSkeleton } from './market-list-skeleton';
 import MarketSearchDialog from './market-search-dialog';
-import Image from 'next/image';
 
 interface MarketListProps {
   initialMarketData?: MarketData[];
@@ -38,7 +37,7 @@ interface MarketListProps {
 export default function MarketList({ initialMarketData = [] }: MarketListProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [marketData, setMarkets] = useState<MarketData[]>(initialMarketData);
+  const [markets, setMarkets] = useState<MarketData[]>(initialMarketData);
   const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>(initialMarketData);
   const [isLoading, setIsLoading] = useState(initialMarketData.length === 0);
   const [isProcessingPools, setIsProcessingPools] = useState(
@@ -72,7 +71,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     },
     refetchInterval: 30000,
     staleTime: 60000,
-    enabled: shouldFetchData, // Only fetch if we don't have initial data
+    enabled: shouldFetchData,
   });
 
   // Fetch trades data only if we don't have initial data
@@ -110,47 +109,31 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     processData();
   }, [poolsData, tradesData, initialMarketData]);
 
-  // Second effect to create market data
-  useEffect(() => {
-    // Skip if we're using initialMarketData and don't have processed pools/trades
-    if (
-      initialMarketData.length > 0 &&
-      processedPools.length === 0 &&
-      processedTrades.length === 0
-    ) {
-      return;
-    }
-
-    if (processedPools.length > 0 && processedTrades.length > 0) {
-      const markets = createMarketData(processedPools, processedTrades);
-      setMarkets(markets);
-      setIsLoading(false);
-    }
-  }, [processedPools, processedTrades, initialMarketData]);
+  console.log('poolsData', poolsData)
 
   // Filter data based on search query
   useEffect(() => {
-    if (marketData.length > 0) {
-      let filtered = marketData;
+    if (markets.length > 0) {
+      let filteredMarkets = markets;
 
       // Apply watchlist filter if enabled
       if (showWatchlist) {
-        filtered = filtered.filter(item => item.starred);
+        filteredMarkets = filteredMarkets.filter(item => item.starred);
       }
 
       // Apply search query filter
       if (searchQuery) {
         const lowercaseQuery = searchQuery.toLowerCase();
-        filtered = filtered.filter(
+        filteredMarkets = filteredMarkets.filter(
           item =>
             item.name.toLowerCase().includes(lowercaseQuery) ||
             item.pair.toLowerCase().includes(lowercaseQuery)
         );
       }
 
-      setFilteredMarkets(filtered);
+      setFilteredMarkets(filteredMarkets);
     }
-  }, [searchQuery, marketData, showWatchlist]);
+  }, [searchQuery, markets, showWatchlist]);
 
   // Set loading state
   useEffect(() => {
@@ -170,7 +153,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
   // Prepare data for market search dialog
   const getSearchDialogData = () => {
     // Always use the most current market data to ensure starred status is in sync
-    return marketData.map(market => ({
+    return markets.map(market => ({
       id: market.id,
       name: market.name,
       pair: market.pair,
@@ -188,7 +171,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
 
   // Handle market selection from the dialog
   const handleMarketSelect = (marketId: string) => {
-    const selectedMarket = marketData.find(m => m.id === marketId);
+    const selectedMarket = markets.find(m => m.id === marketId);
     if (selectedMarket) {
       console.log(`Selected market: ${selectedMarket.name}/${selectedMarket.pair}`);
       // Navigate to the spot page with the pool ID
@@ -425,7 +408,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
         <MarketSearchDialog
           isOpen={isSearchDialogOpen}
           onClose={() => setIsSearchDialogOpen(false)}
-          marketData={getSearchDialogData()} // This will always have the latest starred status
+          marketData={getSearchDialogData()} 
           onSelectMarket={handleMarketSelect}
           onToggleStarred={handleToggleStarredFromDialog}
         />
