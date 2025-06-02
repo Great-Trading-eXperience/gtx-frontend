@@ -7,9 +7,9 @@ import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { CuratorVaultABI } from "@/abis/gtx/perpetual/CuratorVaultABI";
 import TokenABI from "@/abis/tokens/TokenABI"
+import { HexAddress } from "@/types/general/address";
 
-// Define types
-export type HexAddress = `0x${string}`;
+
 export type DepositParams = {
   vaultAddress: HexAddress;
   depositAmount: bigint;

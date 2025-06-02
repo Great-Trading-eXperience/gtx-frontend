@@ -155,7 +155,7 @@ export const useRequestToken = (
             // // Create and sign transaction
             // const transaction = {
             //     nonce: nonce,
-            //     to: FAUCET_ADDRESS as `0x${string}`,
+            //     to: FAUCET_ADDRESS as HexAddress,
             //     data: calldata,
             //     gasLimit: parseGwei('100000').toString(),
             //     maxFeePerGas: parseGwei('20').toString(),

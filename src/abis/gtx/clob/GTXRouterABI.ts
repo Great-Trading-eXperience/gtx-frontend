@@ -810,6 +810,17 @@ const abi =
                 },
             ],
         },
+        {
+            type: "error",
+            name: "OrderIsNotOpenOrder",
+            inputs: [
+                {
+                    name: "status",
+                    type: "vint8",
+                    internalType: "enum IOrderBook.Status",
+                },
+            ],
+        },
     ]
 
 export default abi;

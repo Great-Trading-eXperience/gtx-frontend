@@ -3,7 +3,7 @@ import MarketList from "@/components/markets/markets";
 import Image from "next/image";
 import { fetchAndProcessMarketData } from "@/lib/market-data";
 import { DEFAULT_CHAIN } from "@/constants/contract/contract-address";
-import { MarketData } from "@/lib/market-data";
+import { MarketData } from "@/types/gtx/market-data";
 
 // Define the props type
 interface MarketsProps {

@@ -207,8 +207,8 @@ const getEquivalentTokenOnNetwork = (
 };
 
 // Helper function to convert address to bytes32
-export const addressToBytes32 = (addr: HexAddress): `0x${string}` => {
-  return `0x${addr.slice(2).padStart(64, '0')}` as `0x${string}`;
+export const addressToBytes32 = (addr: HexAddress): HexAddress => {
+  return `0x${addr.slice(2).padStart(64, '0')}` as HexAddress;
 };
 
 export const useCrossChainOrder = (
@@ -523,7 +523,7 @@ export const useCrossChainOrder = (
         fillDeadline,
         action, // Always 1 for cross-chain operations
         nonce: BigInt(nonce),
-        data: '0x' as `0x${string}`
+        data: '0x' as HexAddress
       };
 
       console.log('Order Parameters Comparison:');
