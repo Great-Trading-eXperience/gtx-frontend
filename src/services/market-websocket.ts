@@ -3,6 +3,8 @@
  * Handles connections to the WebSocket gateway for market data and user-specific streams
  */
 
+import { getWebsocketUrl } from "@/constants/urls/urls-config";
+
 // Types for WebSocket messages
 export interface WebSocketSubscribeMessage {
   method: 'SUBSCRIBE' | 'UNSUBSCRIBE' | 'LIST_SUBSCRIPTIONS';
@@ -90,9 +92,6 @@ export type WebSocketEvent =
   | KlineEvent 
   | MiniTickerEvent;
 
-// Base WebSocket URL
-const WS_BASE_URL = 'ws://localhost:42080';
-
 // Message ID counter
 let messageIdCounter = 1;
 
@@ -107,12 +106,13 @@ export class MarketWebSocket {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 3000; // 3 seconds
   private messageHandlers: ((event: WebSocketEvent) => void)[] = [];
+  private chainId: number = 31337;
   private isConnecting = false;
 
   /**
    * Connect to the market WebSocket
    */
-  public connect(): void {
+  public connect(chainId: number): void {
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
       console.log('WebSocket is already connected or connecting');
       return;
@@ -127,7 +127,7 @@ export class MarketWebSocket {
 
     try {
       console.log('Connecting to market WebSocket...');
-      this.socket = new WebSocket(`${WS_BASE_URL}/ws`);
+      this.socket = new WebSocket(`${getWebsocketUrl(chainId)}/ws`);
 
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);
@@ -163,8 +163,10 @@ export class MarketWebSocket {
    * @param symbol Symbol (e.g., 'ethusdc')
    * @param streamType Stream type (e.g., 'depth', 'trade', 'kline_1m')
    */
-  public subscribe(symbol: string, streamType: string): void {
+  public subscribe(symbol: string, streamType: string, chainId: number): void {
     const stream = `${symbol.toLowerCase()}@${streamType}`;
+
+    this.chainId = chainId;
     
     if (this.subscriptions.has(stream)) {
       console.log(`Already subscribed to ${stream}`);
@@ -174,7 +176,7 @@ export class MarketWebSocket {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       console.log('WebSocket not connected, connecting first...');
       this.subscriptions.add(stream);
-      this.connect();
+      this.connect(chainId);
       return;
     }
 
@@ -339,7 +341,7 @@ export class MarketWebSocket {
       console.log(`Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
       
       this.reconnectTimer = setTimeout(() => {
-        this.connect();
+        this.connect(this.chainId);
       }, delay);
     } else {
       console.error(`Failed to reconnect after ${this.maxReconnectAttempts} attempts`);
@@ -358,20 +360,22 @@ export class UserWebSocket {
   private reconnectDelay = 3000; // 3 seconds
   private messageHandlers: ((event: WebSocketEvent) => void)[] = [];
   private walletAddress: string;
+  private chainId: number;
   private isConnecting = false;
 
   /**
    * Create a new UserWebSocket instance
    * @param walletAddress User's wallet address
    */
-  constructor(walletAddress: string) {
+  constructor(walletAddress: string, chainId: number) {
     this.walletAddress = walletAddress;
+    this.chainId = chainId;
   }
 
   /**
    * Connect to the user WebSocket
    */
-  public connect(): void {
+  public connect(chainId: number): void {
     if (!this.walletAddress) {
       console.error('Wallet address is required for user WebSocket');
       return;
@@ -391,7 +395,7 @@ export class UserWebSocket {
 
     try {
       console.log(`Connecting to user WebSocket for ${this.walletAddress}...`);
-      this.socket = new WebSocket(`${WS_BASE_URL}/ws/${this.walletAddress}`);
+      this.socket = new WebSocket(`${getWebsocketUrl(chainId)}/ws/${this.walletAddress}`);
 
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);
@@ -425,17 +429,18 @@ export class UserWebSocket {
    * Update the wallet address and reconnect
    * @param walletAddress New wallet address
    */
-  public updateWalletAddress(walletAddress: string): void {
+  public updateWalletAddress(walletAddress: string, chainId: number): void {
     if (this.walletAddress === walletAddress) {
       return;
     }
 
     this.walletAddress = walletAddress;
+    this.chainId = chainId;
     
     // Disconnect and reconnect with new address
     this.disconnect();
     if (walletAddress) {
-      this.connect();
+      this.connect(chainId);
     }
   }
 
@@ -518,7 +523,7 @@ export class UserWebSocket {
       console.log(`Scheduling user WebSocket reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
       
       this.reconnectTimer = setTimeout(() => {
-        this.connect();
+        this.connect(this.chainId);
       }, delay);
     } else {
       console.error(`Failed to reconnect user WebSocket after ${this.maxReconnectAttempts} attempts`);
@@ -541,9 +546,9 @@ export const getMarketWebSocket = (): MarketWebSocket => {
  * Get a user WebSocket instance for a specific wallet address
  * @param walletAddress User's wallet address
  */
-export const getUserWebSocket = (walletAddress: string): UserWebSocket => {
+export const getUserWebSocket = (walletAddress: string, chainId: number): UserWebSocket => {
   if (!userWsInstances.has(walletAddress)) {
-    userWsInstances.set(walletAddress, new UserWebSocket(walletAddress));
+    userWsInstances.set(walletAddress, new UserWebSocket(walletAddress, chainId));
   }
   return userWsInstances.get(walletAddress)!;
 };

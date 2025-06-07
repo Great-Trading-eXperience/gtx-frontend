@@ -23,12 +23,6 @@ export const getUseSubgraph = (): boolean => {
     return USE_SUBGRAPH
 }
 
-export const getKlineUrl = (chainId?: number): string => {
-    const chainIdStr = getChainIdStr(chainId)
-    const envVarName = `NEXT_PUBLIC_CLOB_${chainIdStr}_KLINE_URL`
-    return publicRuntimeConfig[envVarName]
-}
-
 export const getExplorerUrl = (chainId?: number): string => {
     try {
         const chainIdStr = getChainIdStr(chainId);

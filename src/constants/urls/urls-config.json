@@ -2,7 +2,12 @@
     "INDEXER_URLS": {
       "50002": "https://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn",
       "11155931": "https://indexer-rise.gtxdex.xyz",
-      "31337": "http://localhost:42069"
+      "31337": "https://indexer-gtx.renakaagusta.dev"
+    },
+    "WEBSOCKET_URLS": {
+      "50002": "ws://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn",
+      "11155931": "ws://indexer-rise.gtxdex.xyz",
+      "31337": "wss://websocket-gtx.renakaagusta.dev"
     },
     "EXPLORER_URLS": {
       "50002": "https://pharosscan.xyz/tx/",

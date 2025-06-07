@@ -24,10 +24,10 @@ export const localChain: Chain = {
 	},
 	rpcUrls: {
 		default: {
-			http: ['http://127.0.0.1:8545'],
+			http: ['https://anvil.renakaagusta.dev'],
 		},
 		public: {
-			http: ['http://127.0.0.1:8545'],
+			http: ['https://anvil.renakaagusta.dev'],
 		},
 	},
 	blockExplorers: {

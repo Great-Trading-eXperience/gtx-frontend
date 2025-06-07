@@ -1,3 +1,4 @@
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { apiGet } from '@/lib/api-client';
 
 export interface OrderData {
@@ -27,13 +28,13 @@ export interface AccountData {
 /**
  * Fetch all orders for a given address
  */
-export const fetchAllOrders = async (address: string): Promise<OrderData[]> => {
+export const fetchAllOrders = async (address: string, chainId: string | number = DEFAULT_CHAIN): Promise<OrderData[]> => {
   if (!address) {
     return [];
   }
   
   try {
-    const data = await apiGet<OrderData[]>(`/api/allOrders?address=${encodeURIComponent(address)}`);
+    const data = await apiGet<OrderData[]>(chainId, `/api/allOrders?address=${encodeURIComponent(address)}`);
     return data || [];
   } catch (error) {
     console.error('Error fetching all orders:', error);
@@ -44,13 +45,13 @@ export const fetchAllOrders = async (address: string): Promise<OrderData[]> => {
 /**
  * Fetch open orders for a given address
  */
-export const fetchOpenOrders = async (address: string): Promise<OrderData[]> => {
+export const fetchOpenOrders = async (address: string, chainId: string | number = DEFAULT_CHAIN): Promise<OrderData[]> => {
   if (!address) {
     return [];
   }
   
   try {
-    const data = await apiGet<OrderData[]>(`/api/openOrders?address=${encodeURIComponent(address)}`);
+    const data = await apiGet<OrderData[]>(chainId, `/api/openOrders?address=${encodeURIComponent(address)}`);
     return data || [];
   } catch (error) {
     console.error('Error fetching open orders:', error);
@@ -61,13 +62,13 @@ export const fetchOpenOrders = async (address: string): Promise<OrderData[]> => 
 /**
  * Fetch account data for a given address
  */
-export const fetchAccountData = async (address: string): Promise<AccountData | null> => {
+export const fetchAccountData = async (address: string, chainId: string | number = DEFAULT_CHAIN): Promise<AccountData | null> => {
   if (!address) {
     return null;
   }
   
   try {
-    const data = await apiGet<AccountData>(`/api/account?address=${encodeURIComponent(address)}`);
+    const data = await apiGet<AccountData>(chainId, `/api/account?address=${encodeURIComponent(address)}`);
     return data;
   } catch (error) {
     console.error('Error fetching account data:', error);
@@ -86,13 +87,13 @@ export interface TickerPriceData {
 /**
  * Fetch the latest price for a symbol
  */
-export const fetchTickerPrice = async (symbol: string): Promise<TickerPriceData | null> => {
+export const fetchTickerPrice = async (symbol: string, chainId: string | number = DEFAULT_CHAIN): Promise<TickerPriceData | null> => {
   if (!symbol) {
     return null;
   }
   
   try {
-    const data = await apiGet<TickerPriceData>(`/api/ticker/price?symbol=${encodeURIComponent(symbol)}`);
+    const data = await apiGet<TickerPriceData>(chainId, `/api/ticker/price?symbol=${encodeURIComponent(symbol)}`);
     return data;
   } catch (error) {
     console.error(`Error fetching ticker price for ${symbol}:`, error);
@@ -130,13 +131,13 @@ export interface Ticker24hrData {
 /**
  * Fetch 24hr ticker data for a symbol
  */
-export const fetchTicker24hr = async (symbol: string): Promise<Ticker24hrData | null> => {
+export const fetchTicker24hr = async (symbol: string, chainId: string | number = DEFAULT_CHAIN): Promise<Ticker24hrData | null> => {
   if (!symbol) {
     return null;
   }
   
   try {
-    const data = await apiGet<Ticker24hrData>(`/api/ticker/24hr?symbol=${encodeURIComponent(symbol)}`);
+    const data = await apiGet<Ticker24hrData>(chainId, `/api/ticker/24hr?symbol=${encodeURIComponent(symbol)}`);
     return data;
   } catch (error) {
     console.error(`Error fetching 24hr ticker for ${symbol}:`, error);
@@ -158,13 +159,13 @@ export interface DepthData {
  * @param symbol The trading pair symbol
  * @param limit Optional limit for number of bids/asks to return (default: 100)
  */
-export const fetchDepth = async (symbol: string, limit: number = 100): Promise<DepthData | null> => {
+export const fetchDepth = async (symbol: string, limit: number = 100, chainId: string | number = DEFAULT_CHAIN): Promise<DepthData | null> => {
   if (!symbol) {
     return null;
   }
   
   try {
-    const data = await apiGet<DepthData>(`/api/depth?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
+    const data = await apiGet<DepthData>(chainId, `/api/depth?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
     return data;
   } catch (error) {
     console.error(`Error fetching depth data for ${symbol}:`, error);
@@ -190,13 +191,13 @@ export interface TradeData {
  * @param symbol The trading pair symbol
  * @param limit Optional limit for number of trades to return (default: 500)
  */
-export const fetchTrades = async (symbol: string, limit: number = 500, userAddress?: string): Promise<TradeData[] | null> => {
+export const fetchTrades = async (symbol: string, limit: number = 500, userAddress?: string, chainId: string | number = DEFAULT_CHAIN): Promise<TradeData[] | null> => {
   if (!symbol) {
     return null;
   }
   
   try {
-    const data = await apiGet<TradeData[]>(userAddress ? `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}&user=${userAddress}` : `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
+    const data = await apiGet<TradeData[]>(chainId, userAddress ? `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}&user=${userAddress}` : `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
     return data || [];
   } catch (error) {
     console.error(`Error fetching trades for ${symbol}:`, error);

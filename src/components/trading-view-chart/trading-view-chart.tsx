@@ -1,6 +1,6 @@
+import { getIndexerUrl } from '@/constants/urls/urls-config';
 import { useMarketWebSocket } from '@/hooks/use-market-websocket';
 import { KlineEvent } from '@/services/market-websocket';
-import { getKlineUrl } from '@/utils/env';
 import { useEffect, useRef, useState } from 'react';
 
 declare global {
@@ -82,7 +82,7 @@ export default function TradingViewChartContainer({
     isConnected: isKlineConnected,
     connect: connectKlineWebSocket,
     disconnect: disconnectKlineWebSocket
-  } = useMarketWebSocket('kline_' + klineInterval, selectedSymbol);
+  } = useMarketWebSocket(chainId, 'kline_' + klineInterval, selectedSymbol);
 
   /* Process kline WebSocket messages */
   useEffect(() => {
@@ -133,7 +133,7 @@ export default function TradingViewChartContainer({
       try {
         setIsLoading(true);
         // Adjust this URL to match your backend endpoint for getting available pairs
-        const pairsUrl = `${getKlineUrl(chainId).replace('/klines', '/pairs')}`;
+        const pairsUrl = `${getIndexerUrl(chainId)}/api/pairs`;
         const response = await fetch(pairsUrl);
 
         if (!response.ok) {
@@ -221,7 +221,7 @@ export default function TradingViewChartContainer({
   ): Promise<Bar[]> {
     try {
       const url =
-        `${getKlineUrl(chainId)}?symbol=${symbolName}` +
+        `${getIndexerUrl(chainId)}/api/kline?symbol=${symbolName}` +
         `&interval=${mappedInterval}&startTime=${fromMs}&endTime=${toMs}&limit=100000`;
 
       const res = await fetch(url);

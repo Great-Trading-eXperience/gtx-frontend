@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiGet } from '@/lib/api-client';
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 
 // Cache implementation
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -32,13 +33,14 @@ export async function GET(request: NextRequest) {
     // Get the symbol from the URL
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
+    const chainId = searchParams.get('chainId') || DEFAULT_CHAIN;
 
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
     }
 
     // Generate cache key
-    const cacheKey = `ticker-24hr-${symbol}`;
+    const cacheKey = `ticker-24hr-${symbol}-${chainId}`;
 
     // Check cache
     const cachedResponse = cache.get(cacheKey);
@@ -56,9 +58,11 @@ export async function GET(request: NextRequest) {
     // Forward the request to the actual API endpoint
     const endpoint = `/api/ticker/24hr?symbol=${encodeURIComponent(symbol)}`;
     
+    debugLog(`[${requestId}] Using chain ID:`, chainId);
+    
     debugLog(`[${requestId}] Forwarding to API endpoint:`, endpoint);
     
-    const data = await apiGet(endpoint);
+    const data = await apiGet(chainId, endpoint);
     const requestDuration = Date.now() - requestStartTime;
 
     // Cache the successful response

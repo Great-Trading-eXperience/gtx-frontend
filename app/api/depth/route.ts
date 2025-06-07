@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiGet } from '@/lib/api-client';
-
-// Cache implementation
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 seconds in milliseconds for order book data
-
-// Helper function to check if cache entry is valid
-function isCacheValid(timestamp: number): boolean {
-  return Date.now() - timestamp < CACHE_TTL;
-}
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 
 // Helper function for debug logging
 function debugLog(...args: any[]) {
@@ -32,19 +24,10 @@ export async function GET(request: NextRequest) {
     // Get the symbol from the URL
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
+    const chainId = searchParams.get('chainId') || DEFAULT_CHAIN;
 
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
-    }
-
-    // Generate cache key
-    const cacheKey = `depth-${symbol}`;
-
-    // Check cache
-    const cachedResponse = cache.get(cacheKey);
-    if (cachedResponse && isCacheValid(cachedResponse.timestamp)) {
-      debugLog(`[${requestId}] Cache hit for depth:`, { symbol });
-      return NextResponse.json(cachedResponse.data);
     }
 
     // Log incoming request
@@ -56,16 +39,12 @@ export async function GET(request: NextRequest) {
     // Forward the request to the actual API endpoint
     const endpoint = `/api/depth?symbol=${encodeURIComponent(symbol)}`;
     
+    debugLog(`[${requestId}] Using chain ID:`, chainId);
+    
     debugLog(`[${requestId}] Forwarding to API endpoint:`, endpoint);
     
-    const data = await apiGet(endpoint);
+    const data = await apiGet(chainId, endpoint);
     const requestDuration = Date.now() - requestStartTime;
-
-    // Cache the successful response
-    cache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-    });
 
     // Log response
     debugLog(`[${requestId}] Depth Response:`, {
@@ -86,12 +65,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-// Cleanup old cache entries periodically
-setInterval(() => {
-  for (const [key, value] of cache.entries()) {
-    if (!isCacheValid(value.timestamp)) {
-      cache.delete(key);
-    }
-  }
-}, CACHE_TTL);

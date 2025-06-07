@@ -1,3 +1,4 @@
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { apiGet } from '@/lib/api-client';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -23,13 +24,11 @@ export async function GET(request: NextRequest) {
     // Get the symbol from the URL
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
+    const chainId = searchParams.get('chainId') || DEFAULT_CHAIN;
 
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
     }
-
-    // Generate cache key
-    const cacheKey = `ticker-price-${symbol}`;
 
     // Log incoming request
     debugLog(`[${requestId}] Ticker Price Request:`, {
@@ -40,9 +39,11 @@ export async function GET(request: NextRequest) {
     // Forward the request to the actual API endpoint
     const endpoint = `/api/ticker/price?symbol=${encodeURIComponent(symbol)}`;
     
+    debugLog(`[${requestId}] Using chain ID:`, chainId);
+    
     debugLog(`[${requestId}] Forwarding to API endpoint:`, endpoint);
     
-    const data = await apiGet<{ symbol: string; price: string }>(endpoint);
+    const data = await apiGet<{ symbol: string; price: string }>(chainId, endpoint);
     const requestDuration = Date.now() - requestStartTime;
 
     // Log response
