@@ -28,10 +28,6 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAccount, useChainId } from 'wagmi';
-import ChartComponent from './chart/chart';
-import MarketDataWidget from './market-widget/market-widget';
-import PlaceOrder from './place-order/place-order';
-import TradingHistory from './trading-history/trading-history';
 
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
@@ -41,10 +37,14 @@ import {
   transformApiTradeToTradeItem,
   transformWebSocketTradeToTradeItem
 } from '@/lib/transform-data';
+import { TradeEvent } from '@/services/market-websocket';
 import { getUseSubgraph } from '@/utils/env';
 import request from 'graphql-request';
+import MarketDataWidget from './market-widget/market-widget';
+import ChartComponent from './chart/chart';
 import MarketDataTabs from './market-data-tabs/market-data-tabs';
-import { TradeEvent } from '@/services/market-websocket';
+import PlaceOrder from './place-order/place-order';
+import TradingHistory from './trading-history/trading-history';
 
 const useIsClient = () => {
   const [isClient, setIsClient] = useState(false);
@@ -71,8 +71,7 @@ export default function ClobDex() {
 
   const pathname = usePathname();
 
-  const { selectedPoolId, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } =
-    useMarketStore();
+  const { selectedPoolId, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();
   const [mounted, setMounted] = useState(false);
   const [selectedPool, setSelectedPool] = useState<ProcessedPoolItem>();
   const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
@@ -88,45 +87,33 @@ export default function ClobDex() {
   const [transformedTrades, setTransformedTrades] = useState<TradeItem[]>([]);
   const [userTrades, setUserTrades] = useState<TradeItem[]>([]);
   const [wsOpenOrders, setWsOpenOrders] = useState<OrderData[]>([]);
-  
-  // Combine trades from API and WebSocket, with WebSocket trades taking precedence
+
   const combinedTrades = useMemo(() => {
-    // Start with transformed trades from API
     const combined = [...transformedTrades];
-    
-    // Add WebSocket trades that don't already exist (by ID)
+
     transformedWsTrades.forEach(wsTrade => {
       if (!combined.some(apiTrade => apiTrade.id === wsTrade.id)) {
         combined.unshift(wsTrade);
       }
     });
-    
-    // Deduplicate trades by ID
+
     const uniqueTradesMap = new Map();
     combined.forEach(trade => {
-      // Use ID as the primary key
       if (!uniqueTradesMap.has(trade.id)) {
         uniqueTradesMap.set(trade.id, trade);
       }
     });
-    
-    // Convert map back to array
+
     const uniqueTrades = Array.from(uniqueTradesMap.values());
-    
-    // Sort by timestamp, newest first
+
     return uniqueTrades.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
   }, [transformedTrades, transformedWsTrades]);
-  
-  // Log trades when they change
-  useEffect(() => {
-    console.log('Combined trades updated:', combinedTrades.length);
-  }, [combinedTrades]);
-  
+
   // State for API data loading
   const [isLoadingTickerPrice, setIsLoadingTickerPrice] = useState(false);
   const [isLoadingTicker24hr, setIsLoadingTicker24hr] = useState(false);
   const [isLoadingApiTrades, setIsLoadingApiTrades] = useState(false);
-  
+
   // Get the trading pair symbol from the selected pool
   const [symbol, setSymbol] = useState<string>('')
 
@@ -162,40 +149,28 @@ export default function ClobDex() {
     lastMessage: depthMessage,
     isConnected: isDepthConnected,
     connect: connectDepthWebSocket,
-  } = useMarketWebSocket('depth', symbol);
+  } = useMarketWebSocket(chainId, 'depth', symbol);
 
   const {
     lastMessage: tradesMessage,
     isConnected: isTradesConnected,
     connect: connectTradesWebSocket,
-  } = useMarketWebSocket('trade', symbol);
-  
+  } = useMarketWebSocket(chainId, 'trade', symbol);
+
   const {
     lastMessage: tickerMessage,
     isConnected: isTickerConnected,
     connect: connectTickerWebSocket,
-  } = useMarketWebSocket('miniTicker', symbol);
-  
-  useEffect(() => {
-    if (symbol) {
-      connectDepthWebSocket();
-      connectTradesWebSocket();
-      connectTickerWebSocket();
-    }
-  }, [symbol, connectDepthWebSocket, connectTradesWebSocket, connectTickerWebSocket]);
-  
+  } = useMarketWebSocket(chainId, 'miniTicker', symbol);
+
   const {
     lastMessage: userMessage,
     isConnected: isUserConnected,
+    connectedAddress,
+    connectedChainId,
     connect: connectUserWebSocket,
-  } = useSafeUserWebSocket(address);
-  
-  useEffect(() => {
-    if (address) {
-      connectUserWebSocket();
-    }
-  }, [address, connectUserWebSocket]);
-  
+  } = useSafeUserWebSocket(address, chainId);
+
   const fetchInitialDepthData = useCallback(async () => {
     if (selectedPool) {
       const data = await fetchDepth(selectedPool.coin);
@@ -222,22 +197,22 @@ export default function ClobDex() {
       }
     }
   }, [selectedPool]);
-  
+
   const fetchUserTradesData = useCallback(async () => {
     if (selectedPool && address) {
       try {
         const userData = await fetchTrades(selectedPool.coin, 500, address);
         if (userData) {
           const transformedUserData = transformApiTradeToTradeItem(userData, selectedPool.id, selectedPool.coin);
-          
+
           const uniqueTradesMap = new Map();
           transformedUserData.forEach(trade => {
             uniqueTradesMap.set(trade.id, trade);
           });
-          
+
           const uniqueUserTrades = Array.from(uniqueTradesMap.values())
             .sort((a, b) => b.timestamp - a.timestamp);
-            
+
           setUserTrades(uniqueUserTrades);
         }
       } catch (error) {
@@ -245,314 +220,6 @@ export default function ClobDex() {
       }
     }
   }, [selectedPool, address]);
-
-  useEffect(() => {
-    if (!userMessage || !selectedPool || !address) return;
-    
-    if (userMessage && userMessage.e === 'executionReport') {
-      console.log('Execution report update:', userMessage);
-      
-      try {
-        const execReport = userMessage as any;
-        
-        const orderId = execReport.i || '';
-        const status = execReport.X || '';
-        const symbol = execReport.s || '';
-        
-        const updatedOrder: OrderData = {
-          id: orderId,
-          orderId: orderId,
-          symbol: symbol,
-          clientOrderId: execReport.c || '',
-          price: execReport.p || '0',
-          origQty: execReport.q || '0',
-          executedQty: execReport.z || '0',
-          status: status,
-          time: execReport.E || Date.now(),
-          type: execReport.o || 'LIMIT',
-          side: execReport.S || 'BUY',
-          updateTime: execReport.E || Date.now(),
-        };
-        
-        setWsOpenOrders(prevOrders => {
-          if (['FILLED', 'CANCELED', 'REJECTED', 'EXPIRED'].includes(status)) {
-            return prevOrders.filter(order => order.orderId !== orderId);
-          }
-          
-          const existingOrderIndex = prevOrders.findIndex(order => order.orderId === orderId);
-          
-          if (existingOrderIndex >= 0) {
-            const updatedOrders = [...prevOrders];
-            updatedOrders[existingOrderIndex] = updatedOrder;
-            return updatedOrders;
-          } else if (status === 'NEW' || status === 'PARTIALLY_FILLED') {
-            return [updatedOrder, ...prevOrders];
-          }
-          
-          return prevOrders;
-        });
-        
-        if (['TRADE', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'REJECTED', 'EXPIRED'].includes(status)) {
-          fetchUserTradesData();
-          
-          if (status === 'TRADE' || status === 'PARTIALLY_FILLED') {
-            const newUserTrade: TradeItem = {
-            id: execReport.t || `exec-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            orderId: orderId,
-            poolId: selectedPool.id,
-            pool: selectedPool.coin,
-            price: execReport.p || '0',
-            quantity: execReport.l || '0',
-            timestamp: execReport.E || Date.now(),
-            transactionId: execReport.t || '',
-            order: {
-              id: orderId,
-              user: {
-                amount: '0',
-                currency: {
-                  address: selectedPool.baseTokenAddress || '',
-                  name: selectedPool.baseSymbol || '',
-                  symbol: selectedPool.baseSymbol || '',
-                  decimals: selectedPool.baseDecimals || 18
-                },
-                lockedAmount: '0',
-                symbol: selectedPool.baseSymbol || '',
-                user: address as `0x${string}`
-              },
-              price: execReport.p || '0',
-              quantity: execReport.q || '0', // Original quantity
-              side: execReport.S === 'BUY' ? 'Buy' : 'Sell',
-              status: status,
-              type: execReport.o || 'LIMIT',
-              timestamp: execReport.E || Date.now(),
-              poolId: selectedPool.id,
-              orderId: orderId,
-              expiry: 0,
-              filled: execReport.l || '0',
-              pool: {
-                coin: selectedPool.coin,
-                id: selectedPool.id,
-                lotSize: '0',
-                maxOrderAmount: '0',
-                orderBook: selectedPool.orderBook,
-                timestamp: selectedPool.timestamp,
-                baseCurrency: {
-                  address: selectedPool.baseTokenAddress,
-                  name: selectedPool.baseSymbol || '',
-                  symbol: selectedPool.baseSymbol || '',
-                  decimals: selectedPool.baseDecimals || 18
-                },
-                quoteCurrency: {
-                  address: selectedPool.quoteTokenAddress,
-                  name: selectedPool.quoteSymbol || '',
-                  symbol: selectedPool.quoteSymbol || '',
-                  decimals: selectedPool.quoteDecimals || 6
-                }
-              }
-            }
-            };
-            
-            setUserTrades(prevUserTrades => {
-              if (prevUserTrades.some(trade => trade.id === newUserTrade.id)) {
-                console.log('Duplicate user trade ignored (by ID):', newUserTrade.id);
-                return prevUserTrades;
-              }
-              
-              if (prevUserTrades.some(trade => 
-                trade.orderId === newUserTrade.orderId && 
-                trade.price === newUserTrade.price && 
-                Math.abs(trade.timestamp - newUserTrade.timestamp) < 1000
-              )) {
-                console.log('Duplicate user trade ignored (by orderId+price+timestamp):', newUserTrade.orderId);
-                return prevUserTrades;
-              }
-              
-              const updatedTrades = [newUserTrade, ...prevUserTrades];
-              
-              const uniqueTradesMap = new Map();
-              updatedTrades.forEach(trade => {
-                uniqueTradesMap.set(trade.id, trade);
-              });
-              
-              return Array.from(uniqueTradesMap.values())
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .slice(0, 50);
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error processing execution report:', error);
-      }
-    }
-  }, [userMessage, selectedPool, address, fetchUserTradesData]);
-
-  const fetchInitialTickerPrice = async () => {
-    if (!symbol) return;
-
-    try {
-      setIsLoadingTickerPrice(true);
-      const data = await fetchTickerPrice(symbol);
-      if (data) {
-        console.log('Initial ticker price data loaded:', data);
-        setTickerPrice(data);
-      }
-    } catch (error) {
-      console.error('Error fetching ticker price data:', error);
-    } finally {
-      setIsLoadingTickerPrice(false);
-    }
-  };
-
-  const fetchInitialTicker24hr = async () => {
-    if (!symbol) return;
-
-    try {
-      setIsLoadingTicker24hr(true);
-      const data = await fetchTicker24hr(symbol);
-      if (data) {
-        console.log('Initial 24hr ticker data loaded:', data);
-        setTicker24hr(data);
-      }
-    } catch (error) {
-      console.error('Error fetching 24hr ticker data:', error);
-    } finally {
-      setIsLoadingTicker24hr(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!symbol) {
-      return;
-    }
-
-    console.log(`Symbol updated to ${symbol}, fetching initial data...`);
-    fetchInitialDepthData();
-    fetchInitialTickerPrice();
-    fetchInitialTicker24hr();
-    fetchInitialTradesData();
-    
-    if (address) {
-      fetchUserTradesData();
-    }
-  }, [symbol, address]);
-
-  useEffect(() => {
-    if (!depthMessage) return;
-    
-    if (depthMessage.e === 'depthUpdate') {
-      if (depthData) {
-        const updatedDepth = { ...depthData };
-        
-        if (depthMessage.b && depthMessage.b.length > 0) {
-          const updatedBids = [...updatedDepth.bids];
-          
-          depthMessage.b.forEach(([price, quantity]) => {
-            const index = updatedBids.findIndex(bid => bid[0] === price);
-            if (parseFloat(quantity) === 0) {
-              if (index !== -1) {
-                updatedBids.splice(index, 1);
-              }
-            } else if (index !== -1) {
-              updatedBids[index] = [price, quantity];
-            } else {
-              updatedBids.push([price, quantity]);
-            }
-          });
-          
-          updatedBids.sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
-          updatedDepth.bids = updatedBids;
-        }
-        
-        if (depthMessage.a && depthMessage.a.length > 0) {
-          const updatedAsks = [...updatedDepth.asks];
-          
-          depthMessage.a.forEach(([price, quantity]) => {
-            const index = updatedAsks.findIndex(ask => ask[0] === price);
-            if (parseFloat(quantity) === 0) {
-              if (index !== -1) {
-                updatedAsks.splice(index, 1);
-              }
-            } else if (index !== -1) {
-              updatedAsks[index] = [price, quantity];
-            } else {
-              updatedAsks.push([price, quantity]);
-            }
-          });
-          
-          updatedAsks.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
-          updatedDepth.asks = updatedAsks;
-        }
-        setDepthData(updatedDepth);
-      }
-    }
-  }, [depthMessage, depthData]);
-
-  useEffect(() => {
-    if (!tradesMessage) return;
-    
-    if (tradesMessage.e === 'trade') {
-      if (selectedPool) {
-        try {
-          const tradeEvent = tradesMessage as TradeEvent;
-          const transformedTrade = transformWebSocketTradeToTradeItem(tradeEvent, selectedPool.id, selectedPool.coin);
-          if (transformedTrade) {
-            setTransformedWsTrades(prev => {
-              const tradeExists = prev.some(trade => trade.id === transformedTrade.id);
-              if (tradeExists) {
-                console.log('Duplicate trade ignored:', transformedTrade.id);
-                return prev; 
-              }
-              return [transformedTrade, ...prev].slice(0, 50);
-            });
-            
-            setTransformedTrades(prev => {
-              const tradeExists = prev.some(trade => trade.id === transformedTrade.id);
-              if (tradeExists) {
-                return prev;
-              }
-              
-              const updatedTrades = [transformedTrade, ...prev].slice(0, 50);
-              console.log('Updated transformedTrades with WebSocket data', updatedTrades.length);
-              return updatedTrades;
-            });
-          }
-        } catch (error) {
-          console.error('Error transforming trade data:', error);
-        }
-      }
-    }
-  }, [tradesMessage, selectedPool]);
-
-  useEffect(() => {
-    if (!tickerMessage) return;
-    
-    if (tickerMessage.e === 'miniTicker' || tickerMessage.e === '24hrMiniTicker') {
-      const ticker = tickerMessage as any;
-      
-      if (ticker.c) {
-        setTickerPrice({
-          symbol: ticker.s,
-          price: ticker.c
-        });
-      }
-      
-      if (ticker24hr) {
-        setTicker24hr(prevTicker24hr => {
-          if (!prevTicker24hr) return null;
-
-          return {
-            ...prevTicker24hr,
-            lastPrice: ticker.c,
-            highPrice: ticker.h || prevTicker24hr.highPrice,
-            lowPrice: ticker.l || prevTicker24hr.lowPrice,
-            volume: ticker.v || prevTicker24hr.volume
-          };
-        });
-      } else {
-        fetchInitialTicker24hr();
-      }
-    }
-  }, [tickerMessage, ticker24hr]);
 
   const {
     data: marketAllOrdersData,
@@ -604,12 +271,12 @@ export default function ClobDex() {
     refetchOnWindowFocus: false,
     refetchOnMount: true,
   });
-  
+
   const transformedBalances = useMemo(() => {
     if (!marketAccountData || !poolsData) return [];
-    
+
     const currencyMap = new Map<string, { address: string, decimals: number }>();
-    
+
     if (poolsData) {
       const pools = 'pools' in poolsData ? poolsData.pools : poolsData.poolss.items;
       pools.forEach(pool => {
@@ -627,11 +294,11 @@ export default function ClobDex() {
         }
       });
     }
-    
+
     return marketAccountData.balances.map(balance => {
       const symbol = balance.asset.toLowerCase();
       const currencyInfo = currencyMap.get(symbol) || { address: '', decimals: 18 };
-      
+
       return {
         id: symbol,
         currency: {
@@ -649,14 +316,14 @@ export default function ClobDex() {
 
   const transformedOpenOrders = useMemo(() => {
     const apiOrders = marketOpenOrdersData || [];
-    
+
     const orderMap = new Map();
     apiOrders.forEach(order => {
       orderMap.set(order.orderId, true);
     });
-    
+
     const wsOrdersToAdd = wsOpenOrders.filter(wsOrder => !orderMap.has(wsOrder.orderId));
-    
+
     return [...apiOrders, ...wsOrdersToAdd].map(order => ({
       id: order.orderId,
       chainId: Number(chainId || defaultChainId),
@@ -678,6 +345,339 @@ export default function ClobDex() {
   const tradeHistoryLoading = false;
   const tradeHistoryError = null;
 
+  const processPool = (pool: GraphQLPoolItem): ProcessedPoolItem => {
+    const { baseCurrency, quoteCurrency, ...other } = pool;
+    return {
+      ...other,
+      baseTokenAddress: baseCurrency.address,
+      quoteTokenAddress: quoteCurrency.address,
+      baseSymbol: baseCurrency.symbol,
+      quoteSymbol: quoteCurrency.symbol,
+      baseDecimals: baseCurrency.decimals,
+      quoteDecimals: quoteCurrency.decimals,
+    };
+  };
+
+  const fetchInitialTickerPrice = async () => {
+    if (!symbol) return;
+
+    try {
+      setIsLoadingTickerPrice(true);
+      const data = await fetchTickerPrice(symbol);
+      if (data) {
+        console.log('Initial ticker price data loaded:', data);
+        setTickerPrice(data);
+      }
+    } catch (error) {
+      console.error('Error fetching ticker price data:', error);
+    } finally {
+      setIsLoadingTickerPrice(false);
+    }
+  };
+
+  const fetchInitialTicker24hr = async () => {
+    if (!symbol) return;
+
+    try {
+      setIsLoadingTicker24hr(true);
+      const data = await fetchTicker24hr(symbol);
+      if (data) {
+        console.log('Initial 24hr ticker data loaded:', data);
+        setTicker24hr(data);
+      }
+    } catch (error) {
+      console.error('Error fetching 24hr ticker data:', error);
+    } finally {
+      setIsLoadingTicker24hr(false);
+    }
+  };
+
+  useEffect(() => {
+    if (symbol) {
+      connectDepthWebSocket();
+      connectTradesWebSocket();
+      connectTickerWebSocket();
+    }
+  }, [symbol]);
+
+  useEffect(() => {
+    if (chainId == connectedChainId && address == connectedAddress) {
+      return;
+    }
+
+    connectUserWebSocket();
+  }, [address, chainId]);
+
+  useEffect(() => {
+    if (!userMessage || !selectedPool || !address) return;
+
+    if (userMessage && userMessage.e === 'executionReport') {
+      console.log('Execution report update:', userMessage);
+
+      try {
+        const execReport = userMessage as any;
+
+        const orderId = execReport.i || '';
+        const status = execReport.X || '';
+        const symbol = execReport.s || '';
+
+        const updatedOrder: OrderData = {
+          id: orderId,
+          orderId: orderId,
+          symbol: symbol,
+          clientOrderId: execReport.c || '',
+          price: execReport.p || '0',
+          origQty: execReport.q || '0',
+          executedQty: execReport.z || '0',
+          status: status,
+          time: execReport.E || Date.now(),
+          type: execReport.o || 'LIMIT',
+          side: execReport.S || 'BUY',
+          updateTime: execReport.E || Date.now(),
+        };
+
+        setWsOpenOrders(prevOrders => {
+          if (['FILLED', 'CANCELED', 'REJECTED', 'EXPIRED'].includes(status)) {
+            return prevOrders.filter(order => order.orderId !== orderId);
+          }
+
+          const existingOrderIndex = prevOrders.findIndex(order => order.orderId === orderId);
+
+          if (existingOrderIndex >= 0) {
+            const updatedOrders = [...prevOrders];
+            updatedOrders[existingOrderIndex] = updatedOrder;
+            return updatedOrders;
+          } else if (status === 'NEW' || status === 'PARTIALLY_FILLED') {
+            return [updatedOrder, ...prevOrders];
+          }
+
+          return prevOrders;
+        });
+
+        if (['TRADE', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'REJECTED', 'EXPIRED'].includes(status)) {
+          fetchUserTradesData();
+
+          if (status === 'TRADE' || status === 'PARTIALLY_FILLED') {
+            const newUserTrade: TradeItem = {
+              id: execReport.t || `exec-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              orderId: orderId,
+              poolId: selectedPool.id,
+              pool: selectedPool.coin,
+              price: execReport.p || '0',
+              quantity: execReport.l || '0',
+              timestamp: execReport.E || Date.now(),
+              transactionId: execReport.t || '',
+              order: {
+                id: orderId,
+                user: {
+                  amount: '0',
+                  currency: {
+                    address: selectedPool.baseTokenAddress || '',
+                    name: selectedPool.baseSymbol || '',
+                    symbol: selectedPool.baseSymbol || '',
+                    decimals: selectedPool.baseDecimals || 18
+                  },
+                  lockedAmount: '0',
+                  symbol: selectedPool.baseSymbol || '',
+                  user: address as `0x${string}`
+                },
+                price: execReport.p || '0',
+                quantity: execReport.q || '0', // Original quantity
+                side: execReport.S === 'BUY' ? 'Buy' : 'Sell',
+                status: status,
+                type: execReport.o || 'LIMIT',
+                timestamp: execReport.E || Date.now(),
+                poolId: selectedPool.id,
+                orderId: orderId,
+                expiry: 0,
+                filled: execReport.l || '0',
+                pool: {
+                  coin: selectedPool.coin,
+                  id: selectedPool.id,
+                  lotSize: '0',
+                  maxOrderAmount: '0',
+                  orderBook: selectedPool.orderBook,
+                  timestamp: selectedPool.timestamp,
+                  baseCurrency: {
+                    address: selectedPool.baseTokenAddress,
+                    name: selectedPool.baseSymbol || '',
+                    symbol: selectedPool.baseSymbol || '',
+                    decimals: selectedPool.baseDecimals || 18
+                  },
+                  quoteCurrency: {
+                    address: selectedPool.quoteTokenAddress,
+                    name: selectedPool.quoteSymbol || '',
+                    symbol: selectedPool.quoteSymbol || '',
+                    decimals: selectedPool.quoteDecimals || 6
+                  }
+                }
+              }
+            };
+
+            setUserTrades(prevUserTrades => {
+              if (prevUserTrades.some(trade => trade.id === newUserTrade.id)) {
+                console.log('Duplicate user trade ignored (by ID):', newUserTrade.id);
+                return prevUserTrades;
+              }
+
+              if (prevUserTrades.some(trade =>
+                trade.orderId === newUserTrade.orderId &&
+                trade.price === newUserTrade.price &&
+                Math.abs(trade.timestamp - newUserTrade.timestamp) < 1000
+              )) {
+                console.log('Duplicate user trade ignored (by orderId+price+timestamp):', newUserTrade.orderId);
+                return prevUserTrades;
+              }
+
+              const updatedTrades = [newUserTrade, ...prevUserTrades];
+
+              const uniqueTradesMap = new Map();
+              updatedTrades.forEach(trade => {
+                uniqueTradesMap.set(trade.id, trade);
+              });
+
+              return Array.from(uniqueTradesMap.values())
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .slice(0, 50);
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error processing execution report:', error);
+      }
+    }
+  }, [userMessage, selectedPool, address]);
+
+  useEffect(() => {
+    if (!symbol) {
+      return;
+    }
+
+    console.log(`Symbol updated to ${symbol}, fetching initial data...`);
+    fetchInitialDepthData();
+    fetchInitialTickerPrice();
+    fetchInitialTicker24hr();
+    fetchInitialTradesData();
+
+    if (address) {
+      fetchUserTradesData();
+    }
+  }, [symbol, address]);
+
+  useEffect(() => {
+    if (!depthMessage) return;
+
+    if (depthMessage.e === 'depthUpdate') {
+      if (depthData) {
+        const updatedDepth = { ...depthData };
+
+        if (depthMessage.b && depthMessage.b.length > 0) {
+          const updatedBids = [...updatedDepth.bids];
+
+          depthMessage.b.forEach(([price, quantity]) => {
+            const index = updatedBids.findIndex(bid => bid[0] === price);
+            if (parseFloat(quantity) === 0) {
+              if (index !== -1) {
+                updatedBids.splice(index, 1);
+              }
+            } else if (index !== -1) {
+              updatedBids[index] = [price, quantity];
+            } else {
+              updatedBids.push([price, quantity]);
+            }
+          });
+
+          updatedBids.sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
+          updatedDepth.bids = updatedBids;
+        }
+
+        if (depthMessage.a && depthMessage.a.length > 0) {
+          const updatedAsks = [...updatedDepth.asks];
+
+          depthMessage.a.forEach(([price, quantity]) => {
+            const index = updatedAsks.findIndex(ask => ask[0] === price);
+            if (parseFloat(quantity) === 0) {
+              if (index !== -1) {
+                updatedAsks.splice(index, 1);
+              }
+            } else if (index !== -1) {
+              updatedAsks[index] = [price, quantity];
+            } else {
+              updatedAsks.push([price, quantity]);
+            }
+          });
+
+          updatedAsks.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+          updatedDepth.asks = updatedAsks;
+        }
+        setDepthData(updatedDepth);
+      }
+    }
+  }, [depthMessage]);
+
+  useEffect(() => {
+    if (!tradesMessage) return;
+
+    if (tradesMessage.e === 'trade') {
+      if (selectedPool) {
+        try {
+          const tradeEvent = tradesMessage as TradeEvent;
+          const transformedTrade = transformWebSocketTradeToTradeItem(tradeEvent, selectedPool.id, selectedPool.coin);
+          if (transformedTrade) {
+            setTransformedWsTrades(prev => {
+              const tradeExists = prev.some(trade => trade.id === transformedTrade.id);
+              if (tradeExists) {
+                console.log('Duplicate trade ignored:', transformedTrade.id);
+                return prev;
+              }
+              return [transformedTrade, ...prev].slice(0, 50);
+            });
+
+            setTransformedTrades(prev => {
+              const tradeExists = prev.some(trade => trade.id === transformedTrade.id);
+              if (tradeExists) {
+                return prev;
+              }
+
+              const updatedTrades = [transformedTrade, ...prev].slice(0, 50);
+              console.log('Updated transformedTrades with WebSocket data', updatedTrades.length);
+              return updatedTrades;
+            });
+          }
+        } catch (error) {
+          console.error('Error transforming trade data:', error);
+        }
+      }
+    }
+  }, [tradesMessage, selectedPool]);
+
+  useEffect(() => {
+    if (!tickerMessage) return;
+
+    if (tickerMessage.e === 'miniTicker' || tickerMessage.e === '24hrMiniTicker') {
+      const ticker = tickerMessage as any;
+
+      if (ticker.c) {
+        setTickerPrice({
+          symbol: ticker.s,
+          price: ticker.c
+        });
+      }
+
+      setTicker24hr(prevTicker24hr => {
+        if (!prevTicker24hr) return null;
+
+        return {
+          ...prevTicker24hr,
+          lastPrice: ticker.c,
+          highPrice: ticker.h || prevTicker24hr.highPrice,
+          lowPrice: ticker.l || prevTicker24hr.lowPrice,
+          volume: ticker.v || prevTicker24hr.volume
+        };
+      });
+    }
+  }, [tickerMessage]);
+
   useEffect(() => {
     if (isReconnected && selectedPool) {
       console.log('WebSocket reconnected, refetching data...');
@@ -685,19 +685,19 @@ export default function ClobDex() {
       fetchInitialTickerPrice();
       fetchInitialTicker24hr();
       fetchInitialTradesData();
-      
+
       if (address) {
         fetchUserTradesData();
       }
-      
+
       resetReconnectedFlag();
     }
-  }, [isReconnected, selectedPool, address, resetReconnectedFlag, fetchInitialDepthData, fetchInitialTickerPrice, fetchInitialTicker24hr, fetchInitialTradesData, fetchUserTradesData]);
+  }, [isReconnected, selectedPool, address]);
 
   useEffect(() => {
     console.log(`WebSocket connection state: ${connectionState}`);
   }, [connectionState]);
-  
+
   useEffect(() => {
     console.log(`Market WebSocket connection status - Depth: ${isDepthConnected}, Trades: ${isTradesConnected}, Ticker: ${isTickerConnected}`);
   }, [isDepthConnected, isTradesConnected, isTickerConnected]);
@@ -724,19 +724,6 @@ export default function ClobDex() {
       resetReconnectedFlag();
     }
   }, [isReconnected, selectedPool, address]);
-
-  const processPool = (pool: GraphQLPoolItem): ProcessedPoolItem => {
-    const { baseCurrency, quoteCurrency, ...other } = pool;
-    return {
-      ...other,
-      baseTokenAddress: baseCurrency.address,
-      quoteTokenAddress: quoteCurrency.address,
-      baseSymbol: baseCurrency.symbol,
-      quoteSymbol: quoteCurrency.symbol,
-      baseDecimals: baseCurrency.decimals,
-      quoteDecimals: quoteCurrency.decimals,
-    };
-  };
 
   useEffect(() => {
     if (!mounted || !poolsData) return;

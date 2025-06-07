@@ -11,7 +11,7 @@ interface WebSocketMessage {
  * A safer version of the market WebSocket hook that properly handles WebSocket connections
  * and maintains consistent hook order
  */
-export function useMarketWebSocket(stream: string, symbol?: string) {
+export function useMarketWebSocket(chainId: number, stream: string, symbol?: string) {
   // These state hooks must be called in the same order on every render
   const [lastMessage, setLastMessage] = useState<WebSocketEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -53,22 +53,21 @@ export function useMarketWebSocket(stream: string, symbol?: string) {
   useEffect(() => {
     if (!symbol || !stream) return;
 
+    if(!chainId) return;
+
     const ws = getMarketWebSocket();
     
     // Connect to WebSocket and subscribe to stream
     const connect = () => {
       console.log('Connecting to WebSocket');
-      ws.connect();
+      ws.connect(chainId);
       console.log('Subscribing to', symbol.toLowerCase().replaceAll('/', ''), stream);
-      ws.subscribe(symbol.toLowerCase().replaceAll('/', ''), stream);
+      ws.subscribe(symbol.toLowerCase().replaceAll('/', ''), stream, chainId);
       setIsConnected(true);
     };
 
     // Register message handler
     ws.addMessageHandler(handleMessage);
-    
-    // Initial connection
-    connect();
 
     return () => {
       // Clean up on unmount
@@ -85,10 +84,10 @@ export function useMarketWebSocket(stream: string, symbol?: string) {
     isConnected,
     connect: () => {
       const ws = getMarketWebSocket();
-      ws.connect();
+      ws.connect(chainId);
       if (symbol && stream) {
         console.log('Subscribing to', symbol.toLowerCase().replaceAll('/', ''), stream);
-        ws.subscribe(symbol.toLowerCase().replaceAll('/', ''), stream);
+        ws.subscribe(symbol.toLowerCase().replaceAll('/', ''), stream, chainId);
       }
     },
     disconnect: () => {
@@ -105,10 +104,12 @@ export function useMarketWebSocket(stream: string, symbol?: string) {
  * A safer version of the user-specific WebSocket hook that properly handles WebSocket connections
  * @param walletAddress User's wallet address
  */
-export function useSafeUserWebSocket(walletAddress: string | undefined) {
+export function useSafeUserWebSocket(walletAddress: string | undefined, chainId: number) {
   // These state hooks must be called in the same order on every render
   const [lastMessage, setLastMessage] = useState<WebSocketEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [connectedChainId, setConnectedChainId] = useState<number | null>(null);
 
   const handleMessage = useCallback((message: WebSocketEvent) => {
     try {
@@ -122,13 +123,18 @@ export function useSafeUserWebSocket(walletAddress: string | undefined) {
   }, []);
 
   useEffect(() => {
-    if (!walletAddress) return;
+    if (!walletAddress || !chainId) return;
 
-    const ws = getUserWebSocket(walletAddress);
+    if (walletAddress !== connectedAddress || chainId !== connectedChainId) {
+      setConnectedAddress(walletAddress);
+      setConnectedChainId(chainId);
+    }
+
+    const ws = getUserWebSocket(walletAddress, chainId);
     
     // Connect to WebSocket
     const connect = () => {
-      ws.connect();
+      ws.connect(chainId);
       setIsConnected(true);
     };
 
@@ -149,15 +155,17 @@ export function useSafeUserWebSocket(walletAddress: string | undefined) {
   return {
     lastMessage,
     isConnected,
+    connectedAddress,
+    connectedChainId,
     connect: () => {
       if (walletAddress) {
-        const ws = getUserWebSocket(walletAddress);
-        ws.connect();
+        const ws = getUserWebSocket(walletAddress, chainId);
+        ws.connect(chainId);
       }
     },
     disconnect: () => {
       if (walletAddress) {
-        const ws = getUserWebSocket(walletAddress);
+        const ws = getUserWebSocket(walletAddress, chainId);
         ws.disconnect();
       }
     },

@@ -11,6 +11,7 @@ interface ExplorerUrls {
 interface UrlsConfig {
     INDEXER_URLS: IndexerUrls;
     EXPLORER_URLS: ExplorerUrls;
+    WEBSOCKET_URLS: ExplorerUrls;
 }
 
 // Type assertion for the imported JSON
@@ -19,6 +20,7 @@ const typedUrlsConfig = urlsConfigData as UrlsConfig;
 // Extract URL configs with proper typing
 export const INDEXER_URLS = typedUrlsConfig.INDEXER_URLS;
 export const EXPLORER_URLS = typedUrlsConfig.EXPLORER_URLS;
+export const WEBSOCKET_URLS = typedUrlsConfig.WEBSOCKET_URLS;
 
 // Helper function to get indexer URL by chain ID
 export function getIndexerUrl(chainId: string | number): string {
@@ -27,6 +29,18 @@ export function getIndexerUrl(chainId: string | number): string {
     
     if (!url) {
         throw new Error(`Indexer URL for chain ID ${chainIdString} not found in configuration`);
+    }
+    
+    return url;
+}
+
+// Helper function to get websocket URL by chain ID
+export function getWebsocketUrl(chainId: string | number): string {
+    const chainIdString = chainId.toString();
+    const url = WEBSOCKET_URLS[chainIdString];
+    
+    if (!url) {
+        throw new Error(`Websocket URL for chain ID ${chainIdString} not found in configuration`);
     }
     
     return url;

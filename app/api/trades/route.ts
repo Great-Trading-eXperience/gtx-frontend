@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiGet } from '@/lib/api-client';
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 
 // Cache implementation
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
   const symbol = searchParams.get('symbol');
   const userAddress = searchParams.get('user');
   const limit = searchParams.get('limit') || '500'; // Default to 500 trades
+  const chainId = searchParams.get('chainId') || DEFAULT_CHAIN;
   
   if (!symbol) {
     debugError(`[${requestId}] Missing symbol parameter`);
@@ -41,27 +43,13 @@ export async function GET(request: NextRequest) {
   
   debugLog(`[${requestId}] Processing trades request for symbol: ${symbol}`);
   
-  // Check cache first
-  const cacheKey = `trades:${symbol}:${limit}`;
-  const cachedData = cache.get(cacheKey);
-  
-  if (cachedData && isCacheValid(cachedData.timestamp)) {
-    debugLog(`[${requestId}] Returning cached trades data for ${symbol}`);
-    return NextResponse.json(cachedData.data);
-  }
-  
   try {
     // Fetch from the market API
-    const apiUrl = userAddress ? `${process.env.MARKET_API_BASE_URL}/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}&user=${userAddress}` : `${process.env.MARKET_API_BASE_URL}/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`;
-    debugLog(`[${requestId}] Fetching trades from: ${apiUrl}`);
+    const endpoint = userAddress ? `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}&user=${userAddress}` : `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`;
     
-    const data = await apiGet(apiUrl);
+    debugLog(`[${requestId}] Using chain ID:`, chainId);
     
-    // Update cache
-    cache.set(cacheKey, {
-      data,
-      timestamp: Date.now()
-    });
+    const data = await apiGet(chainId, endpoint);
     
     const requestDuration = Date.now() - requestStartTime;
     debugLog(`[${requestId}] Trades request completed in ${requestDuration}ms`);

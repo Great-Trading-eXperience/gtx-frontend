@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiGet } from '@/lib/api-client';
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 
 // Helper function for debug logging
 function debugLog(...args: any[]) {
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
     const startTime = searchParams.get('startTime');
     const endTime = searchParams.get('endTime');
     const limit = searchParams.get('limit');
+    const chainId = searchParams.get('chainId') || DEFAULT_CHAIN;
 
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
@@ -57,9 +59,11 @@ export async function GET(request: NextRequest) {
     // Forward the request to the actual API endpoint
     const endpoint = `/api/kline?${queryParams.toString()}`;
     
+    debugLog(`[${requestId}] Using chain ID:`, chainId);
+    
     debugLog(`[${requestId}] Forwarding to API endpoint:`, endpoint);
     
-    const data = await apiGet(endpoint);
+    const data = await apiGet(chainId, endpoint);
     const requestDuration = Date.now() - requestStartTime;
 
     // Log response
