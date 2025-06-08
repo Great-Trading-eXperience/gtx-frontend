@@ -82,7 +82,7 @@ export default function ClobDex() {
   // WebSocket data states
   const [depthData, setDepthData] = useState<DepthData | null>(null);
   const [tickerPrice, setTickerPrice] = useState<TickerPriceData | null>(null);
-  const [ticker24hr, setTicker24hr] = useState<Ticker24hrData | null>(null);
+  const [ticker24hr, setTicker24hr] = useState<Ticker24hrData>();
   const [transformedWsTrades, setTransformedWsTrades] = useState<TradeItem[]>([]);
   const [transformedTrades, setTransformedTrades] = useState<TradeItem[]>([]);
   const [userTrades, setUserTrades] = useState<TradeItem[]>([]);
@@ -365,7 +365,6 @@ export default function ClobDex() {
       setIsLoadingTickerPrice(true);
       const data = await fetchTickerPrice(symbol);
       if (data) {
-        console.log('Initial ticker price data loaded:', data);
         setTickerPrice(data);
       }
     } catch (error) {
@@ -382,7 +381,6 @@ export default function ClobDex() {
       setIsLoadingTicker24hr(true);
       const data = await fetchTicker24hr(symbol);
       if (data) {
-        console.log('Initial 24hr ticker data loaded:', data);
         setTicker24hr(data);
       }
     } catch (error) {
@@ -412,8 +410,6 @@ export default function ClobDex() {
     if (!userMessage || !selectedPool || !address) return;
 
     if (userMessage && userMessage.e === 'executionReport') {
-      console.log('Execution report update:', userMessage);
-
       try {
         const execReport = userMessage as any;
 
@@ -516,7 +512,6 @@ export default function ClobDex() {
 
             setUserTrades(prevUserTrades => {
               if (prevUserTrades.some(trade => trade.id === newUserTrade.id)) {
-                console.log('Duplicate user trade ignored (by ID):', newUserTrade.id);
                 return prevUserTrades;
               }
 
@@ -525,7 +520,6 @@ export default function ClobDex() {
                 trade.price === newUserTrade.price &&
                 Math.abs(trade.timestamp - newUserTrade.timestamp) < 1000
               )) {
-                console.log('Duplicate user trade ignored (by orderId+price+timestamp):', newUserTrade.orderId);
                 return prevUserTrades;
               }
 
@@ -627,7 +621,6 @@ export default function ClobDex() {
             setTransformedWsTrades(prev => {
               const tradeExists = prev.some(trade => trade.id === transformedTrade.id);
               if (tradeExists) {
-                console.log('Duplicate trade ignored:', transformedTrade.id);
                 return prev;
               }
               return [transformedTrade, ...prev].slice(0, 50);
@@ -664,15 +657,15 @@ export default function ClobDex() {
         });
       }
 
-      setTicker24hr(prevTicker24hr => {
-        if (!prevTicker24hr) return null;
+      setTicker24hr((prevTicker24hr): Ticker24hrData | undefined => {
+        if (!prevTicker24hr) return undefined;
 
         return {
           ...prevTicker24hr,
           lastPrice: ticker.c,
           highPrice: ticker.h || prevTicker24hr.highPrice,
           lowPrice: ticker.l || prevTicker24hr.lowPrice,
-          volume: ticker.v || prevTicker24hr.volume
+          quoteVolume: ticker.v || prevTicker24hr.volume
         };
       });
     }
@@ -807,8 +800,7 @@ export default function ClobDex() {
             defaultChainId={defaultChainId}
             poolId={selectedPoolId}
             selectedPool={selectedPool}
-            tradesData={combinedTrades}
-            tradesLoading={tradesLoading}
+            ticker24hr={ticker24hr}
           />
           <ChartComponent
             address={address}

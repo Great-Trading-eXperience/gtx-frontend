@@ -140,8 +140,6 @@ const TradeHistoryTable = ({
     return 0;
   });
 
-  console.log('sortedTrades', sortedTrades);
-
   return (
     <div className="flex flex-col gap-3">
       {/* Tab selector for All Trades vs My Trades */}

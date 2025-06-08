@@ -74,9 +74,6 @@ const PlaceOrder = ({
       | undefined;
   };
 
-  console.log('poolManagerAddress', poolManagerAddress);
-  console.log('pool', pool);
-
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
   const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); // Default to BUY
   const [price, setPrice] = useState<string>('');
@@ -278,8 +275,6 @@ const PlaceOrder = ({
     }
   }, [selectedPool]);
 
-  console.log('price', price, quantity, total)
-
   // Update total when price or quantity changes
   useEffect(() => {
     if (price && quantity) {
@@ -424,9 +419,6 @@ const PlaceOrder = ({
       // Enhanced parameter validation
       const quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
       const priceBigInt = parseUnits(price, Number(selectedPool.quoteDecimals));
-
-      console.log('quantityBigInt', quantityBigInt);
-      console.log('priceBigInt', priceBigInt);
 
       // Additional checks before contract call
       if (quantityBigInt <= 0n) {

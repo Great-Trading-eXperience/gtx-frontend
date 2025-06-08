@@ -91,7 +91,7 @@ export default function TradingViewChartContainer({
       const k = klineEvent.k;
 
       // Only process if it's for the current symbol
-      if (k.s === selectedSymbol) {
+      if (k.s === selectedSymbol.replace('/','')) {
         // Convert WebSocket kline data to Bar format
         const bar: Bar = {
           time: k.t,
@@ -109,18 +109,6 @@ export default function TradingViewChartContainer({
       }
     }
   }, [klineMessage, selectedSymbol]);
-
-  /* Clean-up on unmount */
-  useEffect(() => {
-    return () => {
-      if (dataUpdateIntervalRef.current) {
-        clearInterval(dataUpdateIntervalRef.current);
-        dataUpdateIntervalRef.current = null;
-      }
-      // Disconnect WebSocket on unmount
-      disconnectKlineWebSocket();
-    };
-  }, [disconnectKlineWebSocket]);
 
   /* Fetch available pairs if not provided as props */
   useEffect(() => {
