@@ -20,7 +20,7 @@ import OracleSources from './OracleSources';
 import { useAccount } from 'wagmi';
 import ButtonConnectWallet from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import GradientLoader from '@/components/gradient-loader/gradient-loader';
-import { USDC_ADDRESS } from '@/constants/address';
+import { getTokenAddresses } from '@/helper/token-helper';
 
 const MarketCreationPage: React.FC = () => {
   // Wallet connection and loading states
@@ -34,7 +34,7 @@ const MarketCreationPage: React.FC = () => {
   const [tokenType, setTokenType] = useState<'evm' | 'solana'>('evm');
   const [evmToken, setEvmToken] = useState<string>('');
   const [solanaToken, setSolanaToken] = useState<string>('');
-  const [shortToken, setShortToken] = useState<string>(String(USDC_ADDRESS));
+  const [shortToken, setShortToken] = useState<string>(String(getTokenAddresses().USDC));
   const [tokenPair, setTokenPair] = useState<string>('');
   const [customSymbol, setCustomSymbol] = useState<string>('');
   const [useCustomSymbol, setUseCustomSymbol] = useState<boolean>(false);

@@ -1,52 +1,67 @@
-"use client"
+'use client';
 
-import { ButtonConnectWallet } from "@/components/button-connect-wallet.tsx/button-connect-wallet"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ClobDexComponentProps } from "../clob-dex"
-import { BalanceItem, OrderItem, PoolItem, TradeItem } from "@/graphql/gtx/clob"
-import { HexAddress } from "@/types/general/address"
-import { BookOpen, History, Wallet } from "lucide-react"
-import { useAccount } from "wagmi"
-import BalancesHistoryTable from "./balances"
-import OrderHistoryTable from "./orders"
-import TradeHistoryTable from "./trades"
+import { ButtonConnectWallet } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
+import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  BalanceItem,
+  OpenOrderItem,
+  TradeItem
+} from '@/graphql/gtx/clob';
+import { OrderData } from '@/lib/market-api';
+import { ProcessedPoolItem } from '@/types/gtx/clob';
+import { BookOpen, History, Wallet } from 'lucide-react';
+import { useAccount } from 'wagmi';
+import { ClobDexComponentProps } from '../clob-dex';
+import BalancesHistoryTable from './balances';
+import OrderHistoryTable from './orders';
+import TradeHistoryTable from './trades';
 
 export interface TradingHistoryProps extends ClobDexComponentProps {
   balanceData: BalanceItem[];
   balancesLoading: boolean;
   balancesError: Error | null;
-  ordersData: OrderItem[];
+  ordersData: OpenOrderItem[];
   ordersLoading: boolean;
   ordersError: Error | null;
-  selectedPool: PoolItem;
-  tradesData: TradeItem[];
+  selectedPool?: ProcessedPoolItem;
+  userTradesData?: TradeItem[];
   tradesLoading: boolean;
   tradesError: Error | null;
+  // Market API data
+  marketOpenOrdersData?: OrderData[];
+  marketOpenOrdersLoading?: boolean;
+  marketAllOrdersData?: OrderData[];
+  marketAllOrdersLoading?: boolean;
 }
 
 export default function TradingHistory({
-    address,
-    chainId,
-    defaultChainId,
-    balanceData,
-    balancesLoading,
-    balancesError,
-    ordersData,
-    ordersLoading,
-    ordersError,
-    selectedPool,
-    tradesData,
-    tradesLoading,
-    tradesError
+  address,
+  chainId,
+  defaultChainId,
+  balanceData,
+  balancesLoading,
+  balancesError,
+  ordersData,
+  ordersLoading,
+  ordersError,
+  selectedPool,
+  userTradesData,
+  tradesLoading,
+  tradesError,
+  // Market API data
+  marketOpenOrdersData,
+  marketOpenOrdersLoading,
+  marketAllOrdersData,
+  marketAllOrdersLoading,
 }: TradingHistoryProps) {
-  const { isConnected } = useAccount()
+  const { isConnected } = useAccount();
 
   const solidColorConfig = {
-    backgroundColor: "bg-transparent",
-    hoverBackgroundColor: "hover:bg-slate-800/50",
-    textColor: "text-white",
-    mode: 'solid' as const
+    backgroundColor: 'bg-transparent',
+    hoverBackgroundColor: 'hover:bg-slate-800/50',
+    textColor: 'text-white',
+    mode: 'solid' as const,
   };
 
   return (
@@ -91,12 +106,26 @@ export default function TradingHistory({
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <OrderHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} ordersData={ordersData} ordersLoading={ordersLoading} ordersError={ordersError} selectedPool={selectedPool} />
+                <OrderHistoryTable
+                  address={address}
+                  chainId={chainId}
+                  defaultChainId={defaultChainId}
+                  ordersData={ordersData}
+                  ordersLoading={ordersLoading}
+                  ordersError={ordersError}
+                  selectedPool={selectedPool}
+                  marketOpenOrdersData={marketOpenOrdersData}
+                  marketOpenOrdersLoading={marketOpenOrdersLoading}
+                  marketAllOrdersData={marketAllOrdersData}
+                  marketAllOrdersLoading={marketAllOrdersLoading}
+                />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
                     <BookOpen className="h-12 w-12 text-gray-400" />
-                    <p className="text-lg text-gray-200">Connect your wallet to see your open orders</p>
+                    <p className="text-lg text-gray-200">
+                      Connect your wallet to see your open orders
+                    </p>
                     <ButtonConnectWallet
                       colors={solidColorConfig}
                       className="border border-slate-500"
@@ -111,12 +140,22 @@ export default function TradingHistory({
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <TradeHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} tradesData={tradesData} tradesLoading={tradesLoading} tradesError={tradesError} selectedPool={selectedPool} />
+                <TradeHistoryTable
+                  address={address}
+                  chainId={chainId}
+                  defaultChainId={defaultChainId}
+                  userTradesData={userTradesData}
+                  tradesLoading={tradesLoading}
+                  tradesError={tradesError}
+                  selectedPool={selectedPool}
+                />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
                     <History className="h-12 w-12 text-gray-400" />
-                    <p className="text-lg text-gray-200">Connect your wallet to see your trade history</p>
+                    <p className="text-lg text-gray-200">
+                      Connect your wallet to see your trade history
+                    </p>
                     <ButtonConnectWallet
                       colors={solidColorConfig}
                       className="border border-slate-500"
@@ -131,12 +170,22 @@ export default function TradingHistory({
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
               {isConnected ? (
-                <BalancesHistoryTable address={address} chainId={chainId} defaultChainId={defaultChainId} balancesResponse={balanceData} balancesLoading={balancesLoading} balancesError={balancesError} selectedPool={selectedPool} />
+                <BalancesHistoryTable
+                  address={address}
+                  chainId={chainId}
+                  defaultChainId={defaultChainId}
+                  balancesResponse={balanceData}
+                  balancesLoading={balancesLoading}
+                  balancesError={balancesError}
+                  selectedPool={selectedPool}
+                />
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
                     <Wallet className="h-12 w-12 text-gray-400" />
-                    <p className="text-lg text-gray-200">Connect your wallet to see your balances</p>
+                    <p className="text-lg text-gray-200">
+                      Connect your wallet to see your balances
+                    </p>
                     <ButtonConnectWallet
                       colors={solidColorConfig}
                       className="border border-slate-500"
@@ -152,6 +201,5 @@ export default function TradingHistory({
       {/* Bottom Gradient */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-gray-950/50 to-transparent" />
     </div>
-  )
+  );
 }
-

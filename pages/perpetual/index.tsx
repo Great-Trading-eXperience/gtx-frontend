@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Perpetual from "@/components/perpetual/perpetual";
 import { Hexagon, Droplets, LineChart, ChartBarBig } from "lucide-react";
+import { FEATURE_FLAGS } from "@/constants/contract/contract-address";
 
 const PerpetualPage = () => {
     // Use state to track both the value and whether we've mounted
@@ -11,7 +12,7 @@ const PerpetualPage = () => {
 
     useEffect(() => {
         setMounted(true);
-        setIsComingSoon(process.env.NEXT_PUBLIC_COMING_SOON_PERPETUAL === 'true');
+        setIsComingSoon(FEATURE_FLAGS.COMING_SOON_PERPETUAL);
     }, []);
 
     // Don't render anything until mounted to avoid hydration mismatch

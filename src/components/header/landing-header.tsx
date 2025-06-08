@@ -2,8 +2,15 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Monitor } from 'lucide-react'
 import { motion } from "framer-motion"
+
+// Custom event type to communicate with App component
+const triggerMobileWarning = () => {
+  // Create and dispatch a custom event that the App component can listen for
+  const event = new CustomEvent('gtx:mobileTrigger');
+  window.dispatchEvent(event);
+};
 
 const LandingHeader = () => {
   const pathname = usePathname()
@@ -63,12 +70,12 @@ const LandingHeader = () => {
             </Link>
           </motion.div>
 
-          {/* Navigation */}
+          {/* Desktop Navigation */}
           <motion.div 
             initial={{ x: 20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex items-center justify-center space-x-4 sm:space-x-6 md:space-x-8 lg:space-x-10 relative z-10"
+            className="hidden md:flex items-center justify-center space-x-4 sm:space-x-6 md:space-x-8 lg:space-x-10 relative z-10"
           >
             {links.map((link) => (
               <Link
@@ -112,6 +119,22 @@ const LandingHeader = () => {
                 )}
               </Link>
             ))}
+          </motion.div>
+
+          {/* Mobile Desktop-Only Badge */}
+          <motion.div
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="md:hidden flex items-center relative z-10"
+          >
+            <button 
+              onClick={triggerMobileWarning}
+              className="px-3 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-sm text-blue-400 font-medium flex items-center gap-1.5"
+            >
+              <Monitor className="h-4 w-4" />
+              <span>Desktop Only</span>
+            </button>
           </motion.div>
         </div>
       </motion.div>

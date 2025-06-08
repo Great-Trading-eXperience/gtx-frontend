@@ -7,53 +7,55 @@ import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
 
+import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
+
 const Header = () => {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
 
   const allLinks = [
-    { 
-      destination: "/markets", 
+    {
+      destination: "/markets",
       label: "Markets",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_MARKETS === 'true'
+      enabled: isTabEnabled("MARKETS")
     },
-    { 
-      destination: "/swap", 
+    {
+      destination: "/swap",
       label: "Swap",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_SWAP === 'true'
+      enabled: isTabEnabled("SWAP")
     },
-    { 
-      destination: "/spot", 
+    {
+      destination: "/spot",
       label: "Spot",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_SPOT === 'true'
+      enabled: isTabEnabled("SPOT")
     },
-    { 
-      destination: "/perpetual", 
+    {
+      destination: "/perpetual",
       label: "Perpetual",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_PERPETUAL === 'true'
+      enabled: isTabEnabled("PERPETUAL")
     },
-    { 
-      destination: "/pool-creation", 
+    {
+      destination: "/pool-creation",
       label: "Create",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_CREATE === 'true'
+      enabled: isTabEnabled("CREATE")
     },
-    { 
-      destination: "/faucet", 
+    {
+      destination: "/faucet",
       label: "Faucet",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_FAUCET === 'true'
+      enabled: isTabEnabled("FAUCET")
     },
-    { 
-      destination: "/earn", 
+    {
+      destination: "/earn",
       label: "Earn",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_EARN === 'true'
+      enabled: isTabEnabled("EARN")
     },
-    { 
-      destination: "/vegtx", 
+    {
+      destination: "/vegtx",
       label: "veGTX",
-      enabled: process.env.NEXT_PUBLIC_ENABLED_TABS_VEGTX === 'true'
+      enabled: isTabEnabled("VEGTX")
     }
   ];
-  
+
   // Filter only enabled links
   const links = allLinks.filter(link => link.enabled);
 
@@ -106,7 +108,7 @@ const Header = () => {
             colors={solidColorConfig}
             className="border border-slate-500"
           />
-          
+
           {/* Mobile Menu Button - Only Visible on Mobile */}
           <div className="flex ml-4 lg:hidden">
             <Sheet>
