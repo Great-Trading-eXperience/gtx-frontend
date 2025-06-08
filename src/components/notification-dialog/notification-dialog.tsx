@@ -15,56 +15,6 @@ interface NotificationDialogProps {
   explorerBaseUrl: string
 }
 
-// Helper function to parse and format error messages
-function formatErrorMessage(errorMsg: string): string {
-  // Check for common error patterns and provide user-friendly messages
-  
-  // User rejected transaction
-  if (errorMsg.includes("User rejected the request") || 
-      errorMsg.includes("user rejected") || 
-      errorMsg.includes("rejected by user")) {
-    return "Transaction was canceled. You rejected the request in your wallet.";
-  }
-  
-  // Insufficient gas
-  if (errorMsg.includes("insufficient funds") || 
-      errorMsg.includes("gas required exceeds")) {
-    return "Insufficient funds for transaction. Please check your balance.";
-  }
-  
-  // RPC errors
-  if (errorMsg.includes("RPC") || 
-      errorMsg.includes("network error") || 
-      errorMsg.includes("connection")) {
-    return "Network connection issue. Please check your internet connection and try again.";
-  }
-  
-  // Timeout errors
-  if (errorMsg.includes("timeout") || 
-      errorMsg.includes("timed out")) {
-    return "Transaction request timed out. Please try again.";
-  }
-  
-  // Nonce errors
-  if (errorMsg.includes("nonce")) {
-    return "Transaction sequence error. Please refresh the page and try again.";
-  }
-  
-  // Slippage errors
-  if (errorMsg.includes("slippage")) {
-    return "Price changed during transaction. Please try again with updated price.";
-  }
-  
-  // Balance errors specific to our app
-  if (errorMsg.includes("Insufficient balance")) {
-    // This is already user-friendly, so return it as is
-    return errorMsg;
-  }
-  
-  // Unknown/generic error - use a generic message
-  return "There was an error processing your transaction. Please try again.";
-}
-
 // Component for displaying transaction hash with copy functionality
 function TransactionHash({
   txHash,
@@ -217,31 +167,17 @@ export function NotificationDialog({
 }: NotificationDialogProps) {
   const [open, setOpen] = useState(isOpen)
   const [copied, setCopied] = useState(false)
-  const [formattedMessage, setFormattedMessage] = useState(message)
-
-  useEffect(() => {
-    // Process and format the error message when it changes
-    if (!isSuccess) {
-      setFormattedMessage(formatErrorMessage(message));
-    } else {
-      setFormattedMessage(message);
-    }
-  }, [message, isSuccess]);
 
   useEffect(() => {
     setOpen(isOpen)
     if (isOpen) {
-      // Auto-close successful notifications after 10 seconds
-      // But keep error notifications open until user takes action
-      if (isSuccess) {
-        const timer = setTimeout(() => {
-          setOpen(false)
-          onClose()
-        }, 10000)
-        return () => clearTimeout(timer)
-      }
+      const timer = setTimeout(() => {
+        setOpen(false)
+        onClose()
+      }, 10000)
+      return () => clearTimeout(timer)
     }
-  }, [isOpen, onClose, isSuccess])
+  }, [isOpen, onClose])
 
   const handleCopy = () => {
     if (txHash) {
@@ -260,7 +196,6 @@ export function NotificationDialog({
   const glowColor = isSuccess ? "shadow-blue-500/50" : "shadow-red-500/50"
   const statusIcon = isSuccess ? <CheckCircle size={28} /> : <AlertCircle size={28} />
   const statusTitle = isSuccess ? "Transaction Successful" : "Transaction Failed"
-  const textColor = isSuccess ? "text-blue-100" : "text-red-100"
 
   return (
     <Dialog
@@ -279,10 +214,7 @@ export function NotificationDialog({
           <Button
             variant="ghost"
             size="icon"
-            className={cn(
-              "absolute right-3 top-3 z-50 hover:text-white rounded-full h-8 w-8",
-              isSuccess ? "text-blue-200 hover:bg-blue-800/50" : "text-red-200 hover:bg-red-800/50"
-            )}
+            className="absolute right-3 top-3 z-50 text-blue-200 hover:text-white hover:bg-blue-800/50 rounded-full h-8 w-8"
             onClick={onClose}
           >
             <X size={16} />
@@ -299,9 +231,7 @@ export function NotificationDialog({
                     "rounded-full p-3 flex-shrink-0 mb-4 shadow-lg transition-all duration-500",
                     iconBg,
                     iconColor,
-                    isSuccess 
-                      ? "shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
-                      : "shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+                    `shadow-[0_0_20px_rgba(59,130,246,0.5)]`,
                   )}
                 >
                   {statusIcon}
@@ -309,7 +239,7 @@ export function NotificationDialog({
 
                 <DialogTitle className="text-2xl font-bold text-white tracking-tight">{statusTitle}</DialogTitle>
 
-                <p className={cn("mt-3 text-opacity-90 max-w-sm mx-auto", textColor)}>{formattedMessage}</p>
+                <p className="mt-3 text-blue-100 text-opacity-90 max-w-sm mx-auto">{message}</p>
               </DialogHeader>
 
               {/* Transaction hash section */}
@@ -327,13 +257,7 @@ export function NotificationDialog({
           <div className="absolute bottom-0 left-0 w-full h-2 overflow-hidden">
             <div className="absolute inset-0 flex">
               {Array.from({ length: 20 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className={cn(
-                    "h-2 w-4 border-l border-r", 
-                    isSuccess ? "border-blue-400/30" : "border-red-400/30"
-                  )} 
-                />
+                <div key={i} className="h-2 w-4 border-l border-r border-blue-400/30" />
               ))}
             </div>
           </div>

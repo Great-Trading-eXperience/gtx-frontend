@@ -5,8 +5,7 @@ import { useState } from "react";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { wagmiConfig } from "@/configs/wagmi";
 import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceManagerABI";
-import { ORACLE_ADDRESS } from "@/constants/contract/contract-address";
-
+import { ORACLE_ADDRESS } from "@/constants/address";
 
 // Define types
 export type HexAddress = `0x${string}`;

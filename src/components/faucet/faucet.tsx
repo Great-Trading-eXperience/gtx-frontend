@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { DataTable } from "@/components/table/data-table"
 import { requestTokenColumns } from "@/components/table/faucet/request-token/columns"
 import { wagmiConfig } from "@/configs/wagmi"
+import { FAUCET_ADDRESS } from "@/constants/address"
 import { FAUCET_INDEXER_URL } from "@/constants/subgraph-url"
 import { queryAddTokens, queryRequestTokens } from "@/graphql/faucet/faucet.query"
 import { useFaucetCooldown } from "@/hooks/web3/faucet/useFaucetCooldown"
@@ -36,7 +37,6 @@ import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
 import GradientLoader from "../gradient-loader/gradient-loader"
 import { Button } from "@heroui/react"
 import { DotPattern } from "../magicui/dot-pattern"
-import { FAUCET_ADDRESS } from "@/constants/contract/contract-address"
 
 const faucetSchema = z.object({
   token: z.string().min(1),

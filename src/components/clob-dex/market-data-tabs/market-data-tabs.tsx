@@ -1,39 +1,29 @@
-'use client';
+"use client"
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RecentTradeItem, TradeItem } from '@/graphql/gtx/clob';
-import { HexAddress } from '@/types/general/address';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
-import { BarChart2, LineChart } from 'lucide-react';
-import { ClobDexComponentProps } from '../clob-dex';
-import EnhancedOrderBookDex from '../orderbook-dex/orderbook-dex';
-import RecentTradesComponent from '../recent-trade/recent-trade';
-import { DepthData } from '@/lib/market-api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PoolsResponse, PoolItem } from "@/graphql/gtx/clob"
+import { BarChart2, LineChart } from "lucide-react"
+import { ClobDexComponentProps } from "../clob-dex"
+import EnhancedOrderBookDex from "../orderbook-dex/orderbook-dex"
+import RecentTradesComponent from "../recent-trade/recent-trade"
+import { HexAddress } from "@/types/general/address"
 
 export interface MarketDataTabsProps extends ClobDexComponentProps {
-  address: HexAddress | undefined;
-  chainId: number;
-  defaultChainId: number;
-  selectedPool?: ProcessedPoolItem;
-  poolsLoading: boolean;
-  poolsError: Error | null;
-  depthData: DepthData | null;
-  trades: TradeItem[];
-  tradesLoading: boolean;
+    address: HexAddress | undefined
+    chainId: number
+    defaultChainId: number
+    selectedPool: PoolItem
+    poolsLoading: boolean
+    poolsError: Error | null
 }
 
-const MarketDataTabs = ({
-  chainId,
-  defaultChainId,
-  selectedPool,
-  poolsLoading,
-  poolsError,
-  depthData,
-  trades,
-  tradesLoading
-}: MarketDataTabsProps) => {
+const MarketDataTabs = ({ chainId, defaultChainId, selectedPool, poolsLoading, poolsError }: MarketDataTabsProps) => {
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
+      {/* Decorative Elements */}
+      {/* <div className="absolute -left-24 -top-24 h-48 w-48 rounded-full bg-gray-500/10 blur-3xl" />
+      <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-gray-500/10 blur-3xl" /> */}
+
       <Tabs defaultValue="orderbook" className="w-full">
         <div className="relative border-b border-gray-800/30 backdrop-blur-sm">
           <TabsList className="flex w-full justify-start gap-1 bg-transparent px-4 py-1">
@@ -61,34 +51,23 @@ const MarketDataTabs = ({
             value="orderbook"
             className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
           >
-            <EnhancedOrderBookDex
-              chainId={chainId}
-              defaultChainId={defaultChainId}
-              selectedPool={selectedPool}
-              poolsLoading={poolsLoading}
-              poolsError={poolsError}
-              depthData={depthData}
-            />
+            <EnhancedOrderBookDex chainId={chainId} defaultChainId={defaultChainId} selectedPool={selectedPool} poolsLoading={poolsLoading} poolsError={poolsError} />
           </TabsContent>
 
           <TabsContent
             value="trades"
             className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
           >
-            <RecentTradesComponent
-              chainId={chainId ?? defaultChainId}
-              defaultChainId={defaultChainId}
-              tradesData={trades}
-              tradesLoading={tradesLoading}
-            />
+            <RecentTradesComponent chainId={chainId ?? defaultChainId} defaultChainId={defaultChainId} selectedPool={selectedPool} poolsLoading={poolsLoading} poolsError={poolsError} />
           </TabsContent>
-        </div>
+        </div> 
       </Tabs>
 
       {/* Bottom Gradient */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-gray-950/50 to-transparent" />
     </div>
-  );
-};
+  )
+}
 
-export default MarketDataTabs;
+export default MarketDataTabs
+

@@ -1,6 +1,9 @@
 import RouterABI from "@/abis/gtx/perpetual/RouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
-import { ORDER_VAULT_ADDRESS, ROUTER_ADDRESS } from "@/constants/contract/contract-address";
+import {
+    ORDER_VAULT_ADDRESS,
+    ROUTER_ADDRESS,
+} from "@/constants/address";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";

@@ -11,8 +11,8 @@ import { formatUnits, parseUnits } from 'viem';
 
 // import TokenNetworkSelector from './TokenNetworkSelector';
 import type { HexAddress } from '@/types/general/address';
-import { useCrossChainPharos } from '@/hooks/web3/pharos/useCrossChain';
-import { useCrossChainOrderPharos, OrderAction, isNativeToken } from '@/hooks/web3/pharos/useCrossChainOrder';
+import { useCrossChain } from '@/hooks/web3/pharos/useCrossChain';
+import { useCrossChainOrder, OrderAction, isNativeToken } from '@/hooks/web3/pharos/useCrossChainOrder';
 import TokenNetworkSelector from './token-network-selector';
 import { SwapProgressDialog } from './swap-progress-dialog';
 
@@ -46,7 +46,7 @@ const CrossChainOrderForm: React.FC = () => {
     estimateGasPayment,
     isTokenSupportedOnNetwork,
     getEquivalentTokenOnNetwork
-  } = useCrossChainPharos();
+  } = useCrossChain();
 
   // State for networks
   const [sourceNetworkId, setSourceNetworkId] = useState<string>(currentNetwork);
@@ -84,7 +84,7 @@ const CrossChainOrderForm: React.FC = () => {
     isProcessing,
     txHash,
     error
-  } = useCrossChainOrderPharos(sourceNetworkRouter);
+  } = useCrossChainOrder(sourceNetworkRouter);
 
   // Networks for the selector
   const sourceNetworks: Network[] = [
@@ -457,10 +457,10 @@ const CrossChainOrderForm: React.FC = () => {
       // Get destination router and domain
       const destinationRouterAddress = getRouterAddressForNetwork(destNetworkId);
       const destinationDomainId = getDomainId(destNetworkId);
-
+      
       // Determine if this is a cross-chain transaction
       const isCrossChain = sourceNetworkId !== destNetworkId;
-
+      
       // For cross-chain transactions, we need to set targetDomain
       // If same chain, set targetDomain to 0 (matches contract behavior)
       const targetDomainId = isCrossChain ? getDomainId(destNetworkId) : 0;
@@ -546,20 +546,6 @@ const CrossChainOrderForm: React.FC = () => {
     token && token.address
       ? `${token.name} (${token.symbol}) ${token.address.slice(0, 6)}...${token.address.slice(-4)}`
       : '';
-
-  const getExplorerUrl = (networkId: string, txHash: string): string => {
-    switch (networkId) {
-      case 'arbitrum-sepolia':
-        return `https://sepolia.arbiscan.io/tx/${txHash}`;
-      case 'pharos':
-        return `https://pharosscan.xyz/tx/${txHash}`;
-      case 'gtxpresso':
-        return `https://gtx-explorer.xyz/tx/${txHash}`;
-      default:
-        // Default fallback to Pharos explorer
-        return `https://pharosscan.xyz/tx/${txHash}`;
-    }
-  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
@@ -773,18 +759,18 @@ const CrossChainOrderForm: React.FC = () => {
               </div>
               {txHash && (
                 <a
-                  href={getExplorerUrl(sourceNetworkId, txHash)}
+                  href={`https://pharosscan.xyz/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300"
                 >
-                  View on {sourceNetwork?.name} Explorer <ExternalLink className="ml-1 h-3 w-3" />
+                  View on Explorer <ExternalLink className="ml-1 h-3 w-3" />
                 </a>
               )}
               {sourceToken && destToken && (
                 <div className="mt-2 text-xs text-gray-400">
-                  {sourceNetworkId !== destNetworkId ?
-                    `Cross-chain from ${sourceToken.symbol} (${sourceNetworkId}) to ${destToken.symbol} (${destNetworkId})` :
+                  {sourceNetworkId !== destNetworkId ? 
+                    `Cross-chain from ${sourceToken.symbol} (${sourceNetworkId}) to ${destToken.symbol} (${destNetworkId})` : 
                     `Same-chain transfer from ${sourceToken.symbol} to ${destToken.symbol}`}
                 </div>
               )}
@@ -805,7 +791,7 @@ const CrossChainOrderForm: React.FC = () => {
                   : sourceNetworkId !== destNetworkId ? 'Cross-Chain Swap' : 'Transfer')
               : 'Loading...'}
           </Button>
-
+          
           {/* Native token warning */}
           {sourceToken && sourceToken.address === '0x0000000000000000000000000000000000000000' && (
             <div className="mt-2 text-xs text-amber-500">

@@ -5,9 +5,53 @@ import { readContract } from '@wagmi/core';
 import { wagmiConfig } from '@/configs/wagmi';
 import type { HexAddress } from '@/types/general/address';
 import HyperlaneABI from "@/abis/espresso/HyperlaneABI";
-import { HYPERLANE, NETWORK, TOKENS } from './useCrossChainOrder';
-import { ROUTER_OWNER } from '@/constants/contract/contract-address';
 
+/**
+ * Network and domain configuration
+ */
+const NETWORK = {
+  NAME: process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia',
+};
+
+/**
+ * Hyperlane configuration with router addresses
+ */
+const HYPERLANE = {
+  MAILBOX: process.env.NEXT_PUBLIC_MAILBOX as HexAddress,
+  ROUTER: {
+    ARBITRUM_SEPOLIA: process.env.NEXT_PUBLIC_ROUTER_ARBITRUM_ADDRESS as HexAddress,
+    GTXPRESSO: process.env.NEXT_PUBLIC_ROUTER_GTX_ADDRESS as HexAddress,
+  },
+  DOMAIN: {
+    ARBITRUM_SEPOLIA: Number(process.env.NEXT_PUBLIC_DESTINATION_DOMAIN) || 421614,
+    GTXPRESSO: Number(process.env.NEXT_PUBLIC_TARGET_DOMAIN) || 1020201,
+  },
+};
+
+/**
+ * Token addresses
+ */
+const TOKENS = {
+  ARBITRUM_SEPOLIA: {
+    WETH: process.env.NEXT_PUBLIC_WETH_ADDRESS as HexAddress,
+    WBTC: process.env.NEXT_PUBLIC_WBTC_ADDRESS as HexAddress,
+    USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS as HexAddress,
+    TRUMP: process.env.NEXT_PUBLIC_TRUMP_ADDRESS as HexAddress,
+    PEPE: process.env.NEXT_PUBLIC_PEPE_ADDRESS as HexAddress,
+    LINK: process.env.NEXT_PUBLIC_LINK_ADDRESS as HexAddress,
+    DOGE: process.env.NEXT_PUBLIC_DOGE_ADDRESS as HexAddress,
+    NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
+  },
+  GTXPRESSO: {
+    WETH: process.env.NEXT_PUBLIC_WETH_GTX_ADDRESS as HexAddress,
+    WBTC: process.env.NEXT_PUBLIC_WBTC_GTX_ADDRESS as HexAddress,
+    USDC: process.env.NEXT_PUBLIC_USDC_GTX_ADDRESS as HexAddress,
+    TRUMP: process.env.NEXT_PUBLIC_TRUMP_GTX_ADDRESS as HexAddress,
+    LINK: process.env.NEXT_PUBLIC_LINK_GTX_ADDRESS as HexAddress,
+    DOGE: process.env.NEXT_PUBLIC_DOGE_GTX_ADDRESS as HexAddress,
+    NATIVE: '0x0000000000000000000000000000000000000000' as HexAddress,
+  }
+};
 
 // Get current domain ID
 const getCurrentDomainId = async (router: HexAddress): Promise<number> => {
@@ -219,7 +263,7 @@ export const CrossChainProvider: React.FC<{ children: ReactNode }> = ({ children
           ) as HexAddress;
         } catch (ownerError) {
           console.warn('Failed to read owner from contract:', ownerError);
-          owner = ROUTER_OWNER as HexAddress || 
+          owner = process.env.NEXT_PUBLIC_ROUTER_OWNER as HexAddress || 
                  '0x0000000000000000000000000000000000000000' as HexAddress;
         }
         

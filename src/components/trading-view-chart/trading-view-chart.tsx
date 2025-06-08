@@ -1,6 +1,4 @@
-import { getIndexerUrl } from '@/constants/urls/urls-config';
-import { useMarketWebSocket } from '@/hooks/use-market-websocket';
-import { KlineEvent } from '@/services/market-websocket';
+import { getKlineUrl } from '@/utils/env';
 import { useEffect, useRef, useState } from 'react';
 
 declare global {
@@ -18,19 +16,15 @@ interface Bar {
   volume: number;
 }
 
-export interface TradingPair {
-  symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-  displayName: string;
-}
-
-const RESOLUTION_MAPPING: Record<string, string> = {
+const RESOLUTION_MAPPING: { [key: string]: string } = {
   '1': '1m',
   '5': '5m',
+  '15': '15m',
   '30': '30m',
   '60': '1h',
   '1D': '1d',
+  '1W': '1w',
+  '1M': '1M'
 };
 
 let tvScriptLoadingPromise: Promise<void>;
@@ -39,379 +33,215 @@ export interface TradingViewChartContainerProps {
   chainId: number;
   symbol: string;
   interval?: string;
-  /** Epoch ms. If omitted, defaults to now − 7 days */
   startTime?: number;
-  /** Epoch ms. If omitted, defaults to now */
   endTime?: number;
   onChangeInterval?: (interval: string) => void;
-  // Optional prop to provide trading pairs externally
-  availablePairs?: TradingPair[];
 }
 
-export default function TradingViewChartContainer({
-  chainId,
-  symbol,
+export default function TradingViewChartContainer({ 
+  chainId, 
+  symbol, 
   interval = '1',
-  startTime,
+  startTime, 
   endTime,
-  onChangeInterval,
-  availablePairs,
+  onChangeInterval 
 }: TradingViewChartContainerProps) {
-  /* --- default window: last seven days --- */
-  const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
-  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const HALF_DAY = 12 * 60 * 60 * 1000;
-  const defaultStartMs = startTime ?? Date.now() - ONE_DAY;
-  const defaultEndMs = endTime ?? Date.now();
-
   const onLoadScriptRef = useRef<(() => void) | null>(null);
   const chartWidgetRef = useRef<any>(null);
   const dataUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Store the onTick callback for the WebSocket updates
-  const onTickRef = useRef<((bar: Bar) => void) | null>(null);
   const [lastBar, setLastBar] = useState<Bar | null>(null);
-  const [pairs, setPairs] = useState<TradingPair[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>(symbol);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [klineInterval, setKlineInterval] = useState<string>('1m');
 
-  // WebSocket connection for kline data
-  const {
-    lastMessage: klineMessage,
-    isConnected: isKlineConnected,
-    connect: connectKlineWebSocket,
-    disconnect: disconnectKlineWebSocket
-  } = useMarketWebSocket(chainId, 'kline_' + klineInterval, selectedSymbol);
-
-  /* Process kline WebSocket messages */
   useEffect(() => {
-    if (klineMessage && klineMessage.e === 'kline') {
-      const klineEvent = klineMessage as KlineEvent;
-      const k = klineEvent.k;
-
-      // Only process if it's for the current symbol
-      if (k.s === selectedSymbol.replace('/','')) {
-        // Convert WebSocket kline data to Bar format
-        const bar: Bar = {
-          time: k.t,
-          open: parseFloat(k.o),
-          high: parseFloat(k.h),
-          low: parseFloat(k.l),
-          close: parseFloat(k.c),
-          volume: parseFloat(k.v)
-        };
-
-        setLastBar(bar);
-        if (onTickRef.current) {
-          onTickRef.current(bar);
-        }
+    return () => {
+      if (dataUpdateIntervalRef.current) {
+        clearInterval(dataUpdateIntervalRef.current);
       }
-    }
-  }, [klineMessage, selectedSymbol]);
+    };
+  }, []);
 
-  /* Fetch available pairs if not provided as props */
-  useEffect(() => {
-    if (availablePairs && availablePairs.length > 0) {
-      setPairs(availablePairs);
-      return;
-    }
-
-    async function fetchPairs() {
-      try {
-        setIsLoading(true);
-        // Adjust this URL to match your backend endpoint for getting available pairs
-        const pairsUrl = `${getIndexerUrl(chainId)}/api/pairs`;
-        const response = await fetch(pairsUrl);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch pairs');
-        }
-
-        const data = await response.json();
-        // Transform the data as needed based on your API response format
-        const formattedPairs = Array.isArray(data)
-          ? data.map((pair: any) => ({
-            symbol: pair.symbol,
-            baseAsset: pair.baseAsset,
-            quoteAsset: pair.quoteAsset,
-            displayName: `${pair.baseAsset}/${pair.quoteAsset}`,
-          }))
-          : [];
-
-        setPairs(formattedPairs);
-      } catch (error) {
-        console.error('Error fetching trading pairs:', error);
-        // Set a default pair if fetch fails
-        setPairs([
-          {
-            symbol: selectedSymbol,
-            baseAsset: selectedSymbol.split('/')[0] || '',
-            quoteAsset: selectedSymbol.split('/')[1] || '',
-            displayName: selectedSymbol,
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchPairs();
-  }, [chainId, availablePairs, selectedSymbol]);
-
-  /* Inject TradingView script once */
   useEffect(() => {
     onLoadScriptRef.current = createWidget;
 
     if (!tvScriptLoadingPromise) {
-      tvScriptLoadingPromise = new Promise<void>(resolve => {
+      tvScriptLoadingPromise = new Promise((resolve) => {
         const script = document.createElement('script');
         script.id = 'tradingview-widget-loading-script';
-        script.src = '/charting_library/charting_library.standalone.js';
+        script.src = '/charting_library/charting_library/charting_library.standalone.js';
         script.type = 'text/javascript';
         script.onload = resolve as any;
         document.head.appendChild(script);
       });
     }
 
-    tvScriptLoadingPromise.then(() => onLoadScriptRef.current?.());
+    tvScriptLoadingPromise.then(() => onLoadScriptRef.current && onLoadScriptRef.current());
 
     return () => {
       onLoadScriptRef.current = null;
     };
   }, []);
 
-  /* Update chart and WebSocket when symbol or interval changes */
-  useEffect(() => {
-    if (!chartWidgetRef.current) {
-      return;
-    }
-
-    chartWidgetRef.current.setSymbol(selectedSymbol, () => { });
-
-    // Reconnect WebSocket with new symbol/interval
-    disconnectKlineWebSocket();
-    connectKlineWebSocket();
-  }, [selectedSymbol, klineInterval]);
-
-  /* Handle symbol change */
-  const handleSymbolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSymbol = event.target.value;
-    setSelectedSymbol(newSymbol);
-  };
-
-  /* REST fetch helper */
-  async function fetchKlines(
-    symbolName: string,
-    mappedInterval: string,
-    fromMs: number,
-    toMs: number
-  ): Promise<Bar[]> {
+  async function fetchKlines(symbol: string, interval: string, startTime: number, endTime: number): Promise<Bar[]> {
     try {
-      const url =
-        `${getIndexerUrl(chainId)}/api/kline?symbol=${symbolName}` +
-        `&interval=${mappedInterval}&startTime=${fromMs}&endTime=${toMs}&limit=100000`;
-
-      const res = await fetch(url);
-      const data = await res.json();
-
+      const response = await fetch(
+        `${getKlineUrl(chainId)}?symbol=${symbol}&interval=${interval}&startTime=${startTime}&endTime=${endTime}&limit=1000`
+      );
+      const data = await response.json();
       return data.map((d: any) => ({
         time: d[0],
-        open: Number(d[1]),
-        high: Number(d[2]),
-        low: Number(d[3]),
-        close: Number(d[4]),
-        volume: Number(d[5]),
+        open: parseFloat(d[1]),
+        high: parseFloat(d[2]),
+        low: parseFloat(d[3]),
+        close: parseFloat(d[4]),
+        volume: parseFloat(d[5])
       }));
-    } catch (err) {
-      console.error('fetchKlines error', err);
+    } catch (error) {
+      console.error('Error fetching klines:', error);
       return [];
     }
   }
 
-  /* Poll the latest bar every 10 s */
+  // Function to fetch the latest data
   async function fetchLatestData() {
-    const now = Date.now();
-    const fiveMinutesAgo = now - 5 * 60 * 1000;
-    const mappedInterval = RESOLUTION_MAPPING[interval];
-
-    const bars = await fetchKlines(selectedSymbol, mappedInterval, fiveMinutesAgo, now);
-    if (!bars.length) return;
-
-    const newestBar = bars[bars.length - 1];
-    setLastBar(newestBar);
-
-    const w = chartWidgetRef.current;
-    const df = w?.options?.datafeed;
-    if (df?.updateBar) df.updateBar(newestBar);
+    try {
+      // Calculate time range for the last few minutes
+      const now = Date.now();
+      const fiveMinutesAgo = now - 5 * 60 * 1000;
+      
+      const mappedInterval = RESOLUTION_MAPPING[interval || '1'];
+      const bars = await fetchKlines(symbol, mappedInterval, fiveMinutesAgo, now);
+      
+      if (bars.length > 0) {
+        const newestBar = bars[bars.length - 1];
+        setLastBar(newestBar);
+        
+        // Update the chart if widget exists
+        if (chartWidgetRef.current && newestBar) {
+          // Get the current datafeed
+          const datafeed = chartWidgetRef.current.options.datafeed;
+          if (datafeed && datafeed.updateBar) {
+            datafeed.updateBar(newestBar);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching latest data:', error);
+    }
   }
 
   function createWidget() {
-    if (!document.getElementById('tv_chart_container') || !('TradingView' in window))
-      return;
+    if (document.getElementById('tv_chart_container') 
+      && 'TradingView' in window) {
 
-    const datafeed = {
-      onReady: (cb: any) =>
-        cb({
-          supported_resolutions: ['1', '5', '30', '60', '1D'],
-          supports_marks: true,
-          supports_timescale_marks: true,
-          supports_time: true,
-        }),
-
-      searchSymbols: (
-        userInput: string,
-        exchange: string,
-        symbolType: string,
-        onResult: any
-      ) => {
-        const filteredPairs = pairs.filter(pair =>
-          pair.displayName.toLowerCase().includes(userInput.toLowerCase())
-        );
-        onResult(
-          filteredPairs.map(pair => ({
-            symbol: pair.symbol,
-            full_name: pair.displayName,
-            description: pair.displayName,
-            exchange: 'GTX',
-            ticker: pair.symbol,
+      const datafeed = {
+        onReady: (callback: any) => {
+          console.log('Datafeed onReady called');
+          callback({
+            supported_resolutions: ['1', '5', '30', '60', '1D'],
+            supports_marks: true,
+            supports_timescale_marks: true,
+            supports_time: true,
+          });
+        },
+        searchSymbols: () => {
+          console.log('searchSymbols called');
+        },
+        resolveSymbol: (symbolName: string, onResolve: any, onError: any) => {
+          console.log('resolveSymbol called for:', symbolName);
+          onResolve({
+            name: symbolName,
+            full_name: symbolName,
+            description: symbolName,
             type: 'crypto',
-          }))
-        );
-      },
+            session: '24x7',
+            timezone: 'Etc/UTC',
+            ticker: symbolName,
+            minmov: 1,
+            pricescale: 100,
+            has_intraday: true,
+            intraday_multipliers: ['1', '5', '15', '30', '60'],
+            supported_resolutions: ['1', '5', '15', '30', '60', '1D', '1W', '1M'],
+            volume_precision: 8,
+            data_status: 'streaming',
+          });
+        },
+        getBars: async (symbolInfo: any, resolution: string, periodParams: any, onResult: any, onError: any) => {
+          try {
+            const interval = RESOLUTION_MAPPING[resolution];
 
-      resolveSymbol: (symbolName: string, onResolve: any) =>
-        onResolve({
-          name: symbolName,
-          ticker: symbolName,
-          full_name: symbolName,
-          description: symbolName,
-          type: 'crypto',
-          session: '24x7',
-          timezone: 'Etc/UTC',
-          minmov: 1,
-          pricescale: 100,
-          has_intraday: true,
-          intraday_multipliers: ['1', '5', '15', '30', '60'],
-          supported_resolutions: ['1', '5', '15', '30', '60', '1D', '1W', '1M'],
-          volume_precision: 8,
-          data_status: 'streaming',
-        }),
+            if (!interval) {
+              onError('Invalid resolution');
+              return;
+            }
 
-      /* key bit → override firstDataRequest window */
-      getBars: async (
-        symbolInfo: any,
-        resolution: string,
-        periodParams: any,
-        onResult: any,
-        onError: any
-      ) => {
-        try {
-          const mappedInterval = RESOLUTION_MAPPING[resolution];
-          if (!mappedInterval) return onError('Unsupported resolution');
+            const bars = await fetchKlines(
+              symbolInfo.name,
+              interval,
+              periodParams.from * 1000,
+              periodParams.to * 1000
+            );
 
-          const fromMs = periodParams.firstDataRequest
-            ? defaultStartMs
-            : periodParams.from * 1000;
-          const toMs = periodParams.firstDataRequest
-            ? defaultEndMs
-            : periodParams.to * 1000;
-
-          const bars = await fetchKlines(symbolInfo.name, mappedInterval, fromMs, toMs);
-          onResult(bars, { noData: !bars.length });
-        } catch (e) {
-          onError('getBars failed', e);
+            onResult(bars, { noData: bars.length === 0 });
+          } catch (error) {
+            onError('Failed to load bars', error);
+          }
+        },
+        subscribeBars: (symbolInfo: any, resolution: any, onTick: any, listenerGuid: any) => {
+          console.log('subscribeBars called with:', { symbolInfo, resolution, listenerGuid });
+          
+          // Set up interval to update data every 10 seconds
+          if (dataUpdateIntervalRef.current) {
+            clearInterval(dataUpdateIntervalRef.current);
+          }
+          
+          dataUpdateIntervalRef.current = setInterval(() => {
+            fetchLatestData().then(() => {
+              if (lastBar) {
+                onTick(lastBar);
+              }
+            });
+          }, 10000); // 10 seconds
+        },
+        unsubscribeBars: (listenerGuid: any) => {
+          console.log('unsubscribeBars called for:', listenerGuid);
+          if (dataUpdateIntervalRef.current) {
+            clearInterval(dataUpdateIntervalRef.current);
+            dataUpdateIntervalRef.current = null;
+          }
+        },
+        updateBar: (bar: Bar) => {
+          // This method will be called from the fetchLatestData function
+          console.log('Manually updating bar:', bar);
         }
-      },
+      };
 
-      subscribeBars: (symbolInfo: any, resolution: any, onTick: any) => {
-        // Clean up any existing interval
-        if (dataUpdateIntervalRef.current) {
-          clearInterval(dataUpdateIntervalRef.current);
-          dataUpdateIntervalRef.current = null;
-        }
+      // Create the widget
+      chartWidgetRef.current = new window.TradingView.widget({
+        container: 'tv_chart_container',
+        libraryPath: '/charting_library/charting_library/',
+        locale: 'en',
+        disabled_features: ['use_localstorage_for_settings'],
+        enabled_features: ['study_templates'],
+        charts_storage_api_version: '1.1',
+        client_id: 'tradingview.com',
+        user_id: 'public_user',
+        fullscreen: false,
+        autosize: true,
+        theme: 'Dark',
+        symbol: symbol,
+        interval: interval, 
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        debug: true,
+        library_path: '/charting_library/charting_library/',
+        loading_screen: { backgroundColor: "#131722" },
+        datafeed: datafeed,
+      });
 
-        // Map TradingView resolution to WebSocket interval format
-        const mappedInterval = RESOLUTION_MAPPING[resolution];
-        if (!mappedInterval) return;
-
-        // Update the kline interval for WebSocket subscription
-        setKlineInterval(mappedInterval);
-
-        // Store the onTick callback in the ref for use in the WebSocket effect
-        onTickRef.current = onTick;
-
-        // Connect to WebSocket for the selected symbol and interval
-        connectKlineWebSocket();
-
-        // As a fallback, also fetch initial data
-        fetchLatestData();
-      },
-
-      unsubscribeBars: () => {
-        // Disconnect from WebSocket
-        // disconnectKlineWebSocket();
-
-        // Clean up any existing interval as a fallback
-        // if (dataUpdateIntervalRef.current) {
-        //   clearInterval(dataUpdateIntervalRef.current);
-        //   dataUpdateIntervalRef.current = null;
-        // }
-      },
-
-      updateBar: (_bar: Bar) => { }, // filled by fetchLatestData
-    };
-
-    /* --- instantiate widget --- */
-    const widget = new window.TradingView.widget({
-      container: 'tv_chart_container',
-      library_path: '/charting_library/',
-      locale: 'en',
-      disabled_features: ['use_localstorage_for_settings'],
-      enabled_features: ['study_templates', 'symbol_search'],
-      symbol: selectedSymbol,
-      interval,
-      timezone: 'Asia/Jakarta',
-      theme: 'Dark',
-      autosize: true,
-      datafeed,
-      debug: true,
-    });
-
-    chartWidgetRef.current = widget;
-    fetchLatestData();
+      // Start fetching data immediately
+      fetchLatestData();
+    }
   }
 
   return (
-    <div className="w-full">
-      {/* Pairs selector dropdown */}
-      <div className="flex items-center mb-4 bg-gray-800 p-2 rounded">
-        <label htmlFor="pair-selector" className="mr-2 text-gray-300">
-          Trading Pair:
-        </label>
-        <select
-          id="pair-selector"
-          value={selectedSymbol}
-          onChange={handleSymbolChange}
-          className="bg-gray-700 text-white px-3 py-1 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <option>Loading pairs...</option>
-          ) : pairs.length === 0 ? (
-            <option>No pairs available</option>
-          ) : (
-            pairs.map(pair => (
-              <option key={pair.symbol} value={pair.symbol}>
-                {pair.displayName}
-              </option>
-            ))
-          )}
-        </select>
-      </div>
-
-      {/* TradingView chart container */}
-      <div id="tv_chart_container" className="w-full" style={{ height: '50vh' }} />
-    </div>
+    <div id="tv_chart_container" className="w-full" style={{ height: '50vh' }} /> // Set height to 50% of viewport height
   );
 }

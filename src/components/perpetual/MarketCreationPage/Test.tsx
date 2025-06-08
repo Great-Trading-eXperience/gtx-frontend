@@ -13,10 +13,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Plus, X, Hexagon, Settings, CheckCircle2, Droplets, Wallet } from "lucide-react"
-import { getTokensForChain } from "@/helper/token-helper"
 
-// Pre-defined tokens using addresses from contract-address.json for the default chain
-const PREDEFINED_TOKENS = getTokensForChain()
+// Token addresses
+import {
+  WETH_ADDRESS,
+  WBTC_ADDRESS,
+  PEPE_ADDRESS,
+  TRUMP_ADDRESS,
+  DOGE_ADDRESS,
+  LINK_ADDRESS,
+  SHIBA_ADDRESS,
+  BONK_ADDRESS,
+  FLOKI_ADDRESS,
+} from "@/constants/address"
+
+// Pre-defined tokens from the environment variables
+const PREDEFINED_TOKENS = [
+  { symbol: "WETH", address: WETH_ADDRESS },
+  { symbol: "WBTC", address: WBTC_ADDRESS },
+  { symbol: "PEPE", address: PEPE_ADDRESS },
+  { symbol: "TRUMP", address: TRUMP_ADDRESS },
+  { symbol: "DOGE", address: DOGE_ADDRESS },
+  { symbol: "LINK", address: LINK_ADDRESS },
+  { symbol: "SHIBA", address: SHIBA_ADDRESS },
+  { symbol: "BONK", address: BONK_ADDRESS },
+  { symbol: "FLOKI", address: FLOKI_ADDRESS },
+]
 
 // Oracle providers based on the contract implementation
 const ORACLE_PROVIDERS = ["binance", "okx", "coinbase", "geckoterminal", "dexscreener"]

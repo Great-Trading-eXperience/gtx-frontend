@@ -1,15 +1,14 @@
 import { RiseLandingPage } from "@/components/landing-page/rise-landing-page";
 import { PharosLandingPage } from "@/components/landing-page/pharos-landing-page";
 import { LandingRise } from "@/components/landing-rise/landing-rise";
-import { isFeatureEnabled } from "@/constants/features/features-config";
 
 export default function Home() {
   // Early return based on configuration
-  if (isFeatureEnabled('LANDING_PAGE_RISE')) {
+  if (process.env.NEXT_PUBLIC_LANDING_PAGE_RISE === 'true') {
     return <LandingRise />;
   }
   
-  if (isFeatureEnabled('LANDING_PAGE_PHAROS')) {
+  if (process.env.NEXT_PUBLIC_LANDING_PAGE_PHAROS === 'true') {
     return <PharosLandingPage />;
   }
   

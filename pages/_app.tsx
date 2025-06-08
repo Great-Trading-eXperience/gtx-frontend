@@ -9,7 +9,7 @@ import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "@/configs/wagmi";
 import "../styles/globals.css";
 import Head from "next/head";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { NextPage } from "next/types";
 import { ToastProvider } from "@/components/ui/toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,7 +17,6 @@ import LandingHeader from "@/components/header/landing-header";
 import { useRouter } from "next/router";
 import { arbitrumSepolia } from "wagmi/chains"
 import VeGTXHeader from "@/components/header/vegtx-header";
-import MobileWarningModal from "@/components/header/mobile-warning-modal";
 
 const queryClient = new QueryClient();
 
@@ -37,73 +36,18 @@ type AppPropsWithLayout = AppProps & {
   Component: NextPageWithLayout;
 };
 
-// Mobile detection helper
-const isMobileDevice = () => {
-  if (typeof window === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-};
-
 function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isHomePage = router.pathname === "/" && !router.pathname.includes("/vegtx");
   const isVeGTXPage = router.pathname.includes("/vegtx");
-  const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true';
-  
-  // Mobile warning state
-  const [mobileWarningOpen, setMobileWarningOpen] = useState(false);
-
-  // Detect mobile device on client-side
-  useEffect(() => {
-    // Only check on client
-    if (typeof window === 'undefined') return;
-    
-    // Define trading pathnames that should trigger the warning
-    const tradingPathnames = ['/markets', '/spot', '/perp', '/trade', '/exchange'];
-    
-    // Check if current path includes any trading paths
-    const isOnTradingPage = tradingPathnames.some(path => 
-      router.pathname.startsWith(path) || router.pathname === path
-    );
-    
-    // If on a trading page and using a mobile device
-    if (isOnTradingPage && isMobileDevice()) {
-      // Redirect to home page - not allowing trading on mobile at all
-      router.push('/');
-    }
-  }, [router.pathname, router]);
-  
-  // Listen for custom events from the LandingHeader
-  useEffect(() => {
-    const handleMobileTrigger = () => {
-      setMobileWarningOpen(true);
-    };
-    
-    // Add event listener for custom mobile trigger event
-    window.addEventListener('gtx:mobileTrigger', handleMobileTrigger);
-    
-    // Cleanup 
-    return () => {
-      window.removeEventListener('gtx:mobileTrigger', handleMobileTrigger);
-    };
-  }, []);
-
-  // Handle close of mobile warning
-  const handleCloseMobileWarning = () => {
-    setMobileWarningOpen(false);
-  };
+  const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true'
 
   return (
     <>
       {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header />}
       {children}
-      {(isHomePage || isWaitlistMode) && <Footer />}
+      {isHomePage || isWaitlistMode && <Footer />}
       <Toaster />
-      
-      {/* Mobile Warning Modal */}
-      <MobileWarningModal 
-        isOpen={mobileWarningOpen}
-        onClose={handleCloseMobileWarning}
-      />
     </>
   );
 }
@@ -124,7 +68,6 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
             <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
             <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
             <link rel="icon" type="image/png" href="/logo/gtx.png" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
           </Head>
           <ThemeProvider
             disableTransitionOnChange

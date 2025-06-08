@@ -55,5 +55,3 @@ package-lock.json
 *.cache
 .temp
 .tmp
-# Local Netlify folder
-.netlify

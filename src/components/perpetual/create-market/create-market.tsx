@@ -14,14 +14,19 @@ import { useAccount, useChainId } from "wagmi"
 import GradientLoader from "@/components/gradient-loader/gradient-loader"
 import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
 import { EXPLORER_URL } from "@/constants/explorer-url"
-import { DEFAULT_CHAIN } from "@/constants/contract/contract-address"
-import { getTokenAddresses } from "@/helper/token-helper"
+
 // Token addresses from example data
 const TOKENS = {
     // EVM tokens
-    WETH: getTokenAddresses().WETH,
-    WBTC: getTokenAddresses().WBTC,
-    USDC: getTokenAddresses().USDC,
+    WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+
+    // Solana tokens (converted to EVM format)
+    SOL: "0x173fd7434b8b50df08e3298f173487ebdb35fd14", // Converted from So11111111111111111111111111111111111111112
+    PWEASE: "0x1cf0df2a5a20cd61d68d4489eebbf85b8d39e18a", // Converted from CniPCE4b3s8gSUPhUiyMjXnytrEqUrMfSsnbBjLCpump
+    TRUMP: "0x8c5ee64e387b8aed51f771ad0f430e154b70c873", // Converted from 6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN
 }
 
 // Oracle source options based on example data
@@ -45,7 +50,7 @@ const TOKEN_NETWORKS = {
 
 const CreateMarketComponent: React.FC = () => {
     const chainId = useChainId()
-    const defaultChainId = Number(DEFAULT_CHAIN)
+    const defaultChainId = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN)
 
     // Wallet connection and loading states
     const [mounted, setMounted] = useState(false)
@@ -57,7 +62,7 @@ const CreateMarketComponent: React.FC = () => {
     // Form state
     const [longToken, setLongToken] = useState<string>("")
     const [longTokenSymbol, setLongTokenSymbol] = useState<string>("")
-    const [shortToken, setShortToken] = useState<string>(TOKENS.USDC)
+    const [shortToken, setShortToken] = useState<string>(TOKENS.USDT)
     const [shortTokenSymbol, setShortTokenSymbol] = useState<string>("USDT")
     const [marketName, setMarketName] = useState<string>("")
 

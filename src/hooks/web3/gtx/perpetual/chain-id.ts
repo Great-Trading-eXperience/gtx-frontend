@@ -1,6 +1,4 @@
-import { DEFAULT_CHAIN, ContractName, getContractAddress } from "@/constants/contract/contract-address";
-import { getTokenAddresses } from "@/helper/token-helper";
-import type { HexAddress } from "@/types/general/address";
+import { BONK_ADDRESS, DOGE_ADDRESS, FLOKI_ADDRESS, LINK_ADDRESS, PEPE_ADDRESS, SHIBA_ADDRESS, TRUMP_ADDRESS, USDC_ADDRESS, WBTC_ADDRESS, WETH_ADDRESS } from "@/constants/address";
 
 // Define chain IDs for various networks
 export const CHAIN_IDS = {
@@ -13,11 +11,11 @@ export const CHAIN_IDS = {
   MONAD_TESTNET: 10143,
 };
 
-// Get the current chain ID from contract-address.json or fallback to environment variable
-export const CURRENT_CHAIN_ID = parseInt(DEFAULT_CHAIN) || 
-  (process.env.NEXT_PUBLIC_CHAIN_ID 
-    ? parseInt(process.env.NEXT_PUBLIC_CHAIN_ID) 
-    : CHAIN_IDS.MONAD_TESTNET);
+// Get the current chain ID from the environment or default to Monad Testnet
+export const CURRENT_CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID 
+  ? parseInt(process.env.NEXT_PUBLIC_CHAIN_ID) 
+  : CHAIN_IDS.MONAD_TESTNET;
+
 
 // Contract addresses organized by chain ID
 export const CONTRACT_ADDRESSES = {
@@ -64,17 +62,11 @@ export const CONTRACT_ADDRESSES = {
   },
 };
 
-// Export current chain's router and oracle addresses
+// Export current chain's contract addresses
 export const {
   ROUTER_ADDRESS,
   ORACLE_ADDRESS,
 } = CONTRACT_ADDRESSES[CURRENT_CHAIN_ID];
-
-// Get token addresses for the current chain
-const { WETH: WETH_ADDRESS, WBTC: WBTC_ADDRESS, USDC: USDC_ADDRESS } = getTokenAddresses(CURRENT_CHAIN_ID.toString());
-
-// Export token addresses for convenience
-export { WETH_ADDRESS, WBTC_ADDRESS, USDC_ADDRESS };
 
 // Export common token list for the current chain
 export const COMMON_TOKENS = [
@@ -96,4 +88,46 @@ export const COMMON_TOKENS = [
     name: 'USD Coin',
     decimals: 6
   },
-].filter(token => token.address); // Filter out any tokens with undefined addresses
+  { 
+    address: PEPE_ADDRESS as `0x${string}`, 
+    symbol: 'PEPE', 
+    name: 'Pepe',
+    decimals: 18
+  },
+  { 
+    address: TRUMP_ADDRESS as `0x${string}`, 
+    symbol: 'TRUMP', 
+    name: 'Trump',
+    decimals: 18
+  },
+  { 
+    address: DOGE_ADDRESS as `0x${string}`, 
+    symbol: 'DOGE', 
+    name: 'Dogecoin',
+    decimals: 18
+  },
+  { 
+    address: LINK_ADDRESS as `0x${string}`, 
+    symbol: 'LINK', 
+    name: 'Chainlink',
+    decimals: 18
+  },
+  { 
+    address: SHIBA_ADDRESS as `0x${string}`, 
+    symbol: 'SHIB', 
+    name: 'Shiba Inu',
+    decimals: 18
+  },
+  { 
+    address: BONK_ADDRESS as `0x${string}`, 
+    symbol: 'BONK', 
+    name: 'Bonk',
+    decimals: 18
+  },
+  { 
+    address: FLOKI_ADDRESS as `0x${string}`, 
+    symbol: 'FLOKI', 
+    name: 'Floki Inu',
+    decimals: 18
+  }
+];

@@ -24,12 +24,11 @@ export default function Spot() {
             {/* Main content area */}
             <div className="relative">
                 {/* ClobDex component with conditional blur effect */}
-                {/* <div className={isComingSoon ? "blur-sm" : ""}>
+                <div className={isComingSoon ? "blur-sm" : ""}>
                     <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
                         <ClobDex />
                     </Suspense>
-                </div> */}
-                <ClobDex />
+                </div>
                 
                 {/* Coming Soon overlay positioned over the ClobDex */}
                 {isComingSoon && (

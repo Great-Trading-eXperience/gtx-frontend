@@ -1,6 +1,6 @@
 import faucetABI from '@/abis/faucet/FaucetABI';
 import { wagmiConfig } from '@/configs/wagmi';
-import { FAUCET_ADDRESS } from '@/constants/contract/contract-address';
+import { FAUCET_ADDRESS } from '@/constants/address';
 import { HexAddress } from '@/types/general/address';
 import { simulateContract } from '@wagmi/core';
 import { useState } from 'react';
