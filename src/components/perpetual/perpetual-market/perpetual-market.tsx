@@ -15,7 +15,7 @@ import { PerpetualPairDropdown } from './perpetual-pair-dropdown'
 import { PERPETUAL_GRAPHQL_URL } from '@/constants/subgraph-url'
 import { fundingFeesQuery, openInterestsQuery, pricesQuery } from '@/graphql/gtx/perpetual'
 import { usePerpetualMarketStore, Market as StoreMarket } from '@/store/perpetual-market-store'
-
+import { HexAddress } from '@/types/general/address'
 // Define the markets query
 export const marketsQuery = gql`
   query GetMarkets {
@@ -287,9 +287,9 @@ const PerpetualMarket = () => {
         const storeMarket: StoreMarket = {
           ...localMarket,
           // Convert string addresses to the template literal type expected by the store
-          longToken: localMarket.longToken as `0x${string}`,
-          shortToken: localMarket.shortToken as `0x${string}`,
-          marketToken: localMarket.marketToken as `0x${string}`,
+          longToken: localMarket.longToken as HexAddress,
+          shortToken: localMarket.shortToken as HexAddress,
+          marketToken: localMarket.marketToken as HexAddress,
         };
         
         // Map all tokens to their corresponding market

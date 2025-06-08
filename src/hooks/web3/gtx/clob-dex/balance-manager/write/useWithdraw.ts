@@ -40,7 +40,7 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
       try {
         if (user) {
           const hash = await writeContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
             abi: BalanceManagerABI,
             functionName: 'withdraw',
             args: [currency, amount, user] as const,
@@ -54,7 +54,7 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
           return receipt;
         } else {
           const hash = await writeContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
             abi: BalanceManagerABI,
             functionName: 'withdraw',
             args: [currency, amount] as const,

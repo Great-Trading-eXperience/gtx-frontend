@@ -36,7 +36,7 @@ import { COMMON_TOKENS } from '@/hooks/web3/gtx/perpetual/chain-id';
 import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager';
 import useCreateMarket from '@/hooks/web3/gtx/perpetual/useCreateMarket';
 import { getTokenAddresses } from '@/helper/token-helper';
-
+import { HexAddress } from '@/types/general/address';
 // Define Solana token options
 const SOLANA_TOKENS = [
   {
@@ -133,7 +133,7 @@ const MarketCreationPage: React.FC = () => {
     solanaAddress?: string
   ) => {
     const newSources = generateDefaultSources(
-      tokenAddress as `0x${string}`,
+      tokenAddress as HexAddress,
       pairName,
       isSolana,
       solanaAddress
@@ -187,16 +187,16 @@ const MarketCreationPage: React.FC = () => {
     try {
       if (tokenType === 'evm') {
         await createMarket({
-          longToken: evmToken as `0x${string}`,
-          shortToken: shortToken as `0x${string}`,
+          longToken: evmToken as HexAddress,
+          shortToken: shortToken as HexAddress,
           tokenPair: finalTokenPair,
           sources: sources
         });
       } else {
         await createMarket({
           // This is just a placeholder - the actual conversion happens in the hook
-          longToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-          shortToken: shortToken as `0x${string}`,
+          longToken: '0x0000000000000000000000000000000000000000' as HexAddress,
+          shortToken: shortToken as HexAddress,
           tokenPair: finalTokenPair,
           sources: sources,
           isSolanaToken: true,

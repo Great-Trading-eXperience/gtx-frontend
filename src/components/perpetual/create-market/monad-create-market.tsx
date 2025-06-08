@@ -16,7 +16,7 @@ import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-c
 
 import { getTokenAddresses } from "@/helper/token-helper"
 import { ROUTER_ADDRESS } from "@/constants/contract/contract-address"
-
+import { HexAddress } from "@/types/general/address"
 
 
 // RouterABI with createMarket function
@@ -148,8 +148,8 @@ const hash = await writeContract(wagmiConfig, {
     abi: RouterABI,
     functionName: 'createMarket',
     args: [
-      longToken as `0x${string}`,
-      shortToken as `0x${string}`,
+      longToken as HexAddress,
+      shortToken as HexAddress,
       tokenPair,
       oracleSources
     ]
