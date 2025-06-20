@@ -1,57 +1,54 @@
 "use client"
 
 import TokenABI from "@/abis/tokens/TokenABI"
-// import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
 import { DataTable } from "@/components/table/data-table"
 import { requestTokenColumns } from "@/components/table/faucet/request-token/columns"
+import { Card, CardContent } from "@/components/ui/card"
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { wagmiConfig } from "@/configs/wagmi"
-import { FAUCET_INDEXER_URL } from "@/constants/subgraph-url"
-import { queryAddTokens, queryRequestTokens } from "@/graphql/faucet/faucet.query"
+import { getIndexerUrl } from "@/constants/urls/urls-config"
+import { queryFaucetTokenss, queryRequestTokenss } from "@/graphql/faucet/faucet.query"
 import { useFaucetCooldown } from "@/hooks/web3/faucet/useFaucetCooldown"
 import { useLastRequestTime } from "@/hooks/web3/faucet/useLastRequestTime"
 import { useRequestToken } from "@/hooks/web3/faucet/useRequestToken"
 import { useBalance } from "@/hooks/web3/token/useBalance"
-import type { AddTokensData } from "@/types/faucet/add-token"
-import type { RequestTokensData } from "@/types/faucet/request-token"
 import type { HexAddress } from "@/types/general/address"
 import type { Token } from "@/types/tokens/token"
 
+import { ContractName, DEFAULT_CHAIN, getContractAddress } from "@/constants/contract/contract-address"
+import { FaucetTokensData } from "@/types/faucet/add-token"
+import { FaucetRequestsData } from "@/types/faucet/request-token"
+import { Button } from "@heroui/react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
 import { readContract } from "@wagmi/core"
 import { request } from "graphql-request"
-import { Calendar, Clock, History, Wallet, Droplets, Hexagon } from "lucide-react"
+import { Calendar, Clock, Droplets, Hexagon, History, Wallet } from "lucide-react"
 import { DateTime } from "luxon"
 import type { NextPage } from "next"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { formatUnits } from "viem"
-import { useAccount } from "wagmi"
+import { useAccount, useChainId } from "wagmi"
 import * as z from "zod"
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
-import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
 import GradientLoader from "../gradient-loader/gradient-loader"
-import { Button } from "@heroui/react"
 import { DotPattern } from "../magicui/dot-pattern"
-import { FAUCET_ADDRESS } from "@/constants/contract/contract-address"
+import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
+import { formatNumber } from "@/lib/utils"
 
 const faucetSchema = z.object({
   token: z.string().min(1),
 })
-
-const navItems = ["Spot", "Perpetual", "Earn", "Faucet"]
 
 const GTXFaucet: NextPage = () => {
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const { isConnected } = useAccount()
   const [showConnectionLoader, setShowConnectionLoader] = useState(false)
-  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected) // Initialize with current connection state
+  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
 
-  // Handle initial mounting
   useEffect(() => {
     const timer = setTimeout(() => {
       setMounted(true)
@@ -61,10 +58,8 @@ const GTXFaucet: NextPage = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  // Handle wallet connection state changes - Using the working approach
   useEffect(() => {
     if (mounted) {
-      // Only handle connection changes after mounting
       if (isConnected && !previousConnectionState) {
         setShowConnectionLoader(true)
         const timer = setTimeout(() => {
@@ -93,50 +88,55 @@ const GTXFaucet: NextPage = () => {
     userAddress as HexAddress,
     selectedTokenAddress as HexAddress,
   )
+  const chainId = useChainId();
+  const defaultChainId = Number(DEFAULT_CHAIN);
+  const faucetAddress = getContractAddress(chainId ?? defaultChainId, ContractName.faucet) as HexAddress
+
   const { balance: faucetBalance, error: faucetBalanceError } = useBalance(
-    FAUCET_ADDRESS as HexAddress,
+    faucetAddress,
     selectedTokenAddress as HexAddress,
   )
-  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(
-    userAddress as HexAddress,
-    FAUCET_ADDRESS as HexAddress,
-  )
-  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(FAUCET_ADDRESS as HexAddress)
+  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime()
+  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress)
 
   const { isAlertOpen: isAlertRequestTokenOpen, handleRequestToken } = useRequestToken()
 
   const {
-    data: addTokensData,
+    data: faucetTokensData,
     isLoading: addTokensIsLoading,
     refetch: addTokensRefetch,
-  } = useQuery<AddTokensData>({
-    queryKey: ["addTokensData"],
+  } = useQuery<FaucetTokensData>({
+    queryKey: ["faucetTokensData"],
     queryFn: async () => {
-      return await request(FAUCET_INDEXER_URL as string, queryAddTokens)
+      const url = getIndexerUrl(chainId ?? defaultChainId);
+      if (!url) throw new Error('Indexer URL not found');
+      return await request(url, queryFaucetTokenss)
     },
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: false,
-    enabled: mounted, // Only run the query when component is mounted
+    enabled: mounted,
   })
 
   const {
-    data: requestTokensData,
-    isLoading: requestTokensIsLoading,
-    refetch: requestTokensRefetch,
-  } = useQuery<RequestTokensData>({
-    queryKey: ["requestTokensData"],
+    data: faucetRequestsData,
+    isLoading: faucetRequestsIsLoading,
+    refetch: faucetRequestsRefetch,
+  } = useQuery<FaucetRequestsData>({
+    queryKey: ["faucetRequestsData"],
     queryFn: async () => {
-      return await request(FAUCET_INDEXER_URL as string, queryRequestTokens)
+      const url = getIndexerUrl(DEFAULT_CHAIN);
+      if (!url) throw new Error('Indexer URL not found');
+      return await request(url, queryRequestTokenss)
     },
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: false,
-    enabled: mounted, // Only run the query when component is mounted
+    enabled: mounted,
   })
 
   const onSubmit = async (values: z.infer<typeof faucetSchema>) => {
@@ -144,7 +144,7 @@ const GTXFaucet: NextPage = () => {
   }
 
   useEffect(() => {
-    if (!addTokensData || !mounted) {
+    if (!faucetTokensData || !mounted) {
       return
     }
 
@@ -152,20 +152,20 @@ const GTXFaucet: NextPage = () => {
       const availableTokens: Record<string, Token> = {}
 
       await Promise.all(
-        addTokensData.addTokens.items.map(async (addTokenData) => {
+        faucetTokensData.faucetTokenss.items.map(async (faucetToken) => {
           let tokenName = ""
           let tokenSymbol = ""
 
           try {
             const tokenNameResult = await readContract(wagmiConfig, {
-              address: addTokenData.address,
+              address: faucetToken.token,
               abi: TokenABI,
               functionName: "name",
               args: [],
             })
 
             const tokenSymbolResult = await readContract(wagmiConfig, {
-              address: addTokenData.address,
+              address: faucetToken.token,
               abi: TokenABI,
               functionName: "symbol",
               args: [],
@@ -174,11 +174,11 @@ const GTXFaucet: NextPage = () => {
             tokenName = tokenNameResult as string
             tokenSymbol = tokenSymbolResult as string
           } catch (err: unknown) {
-            console.log("Error fetching token name of", addTokenData.address, err)
+            console.log("Error fetching token name of", faucetToken.token, err)
           }
 
-          availableTokens[addTokenData.address] = {
-            address: addTokenData.address,
+          availableTokens[faucetToken.token] = {
+            address: faucetToken.token,
             name: tokenName,
             symbol: tokenSymbol,
           }
@@ -189,20 +189,18 @@ const GTXFaucet: NextPage = () => {
     }
 
     fetchTokensData()
-  }, [addTokensData, mounted])
+  }, [faucetTokensData, mounted])
 
   useEffect(() => {
     if (mounted) {
-      requestTokensRefetch()
+      faucetRequestsRefetch()
     }
-  }, [requestTokensRefetch, mounted])
+  }, [faucetRequestsRefetch, mounted])
 
-  // Priority 1: Show connection loader when wallet is connecting
   if (showConnectionLoader) {
     return <GradientLoader />
   }
-  
-  // Priority 2: Show initial loading skeletons
+
   if (!mounted || isLoading) {
     return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />
   }
@@ -242,11 +240,9 @@ const GTXFaucet: NextPage = () => {
               <p className="text-white/80">Request test tokens for your blockchain development journey</p>
             </div>
 
-            {/* Faucet Form */}
             <Card className="border-0 bg-[#121212] backdrop-blur-xl shadow-[0_0_15px_rgba(56,189,248,0.03)] border border-white/20">
               <CardContent className="p-8">
                 <div className="grid md:grid-cols-2 gap-8">
-                  {/* Token Selection */}
                   <div className="space-y-6">
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
@@ -301,7 +297,11 @@ const GTXFaucet: NextPage = () => {
                           <p className="text-sm text-white/70">Faucet Balance</p>
                           <p className="text-lg font-medium text-white">
                             {faucetBalance
-                              ? `${formatUnits(BigInt(faucetBalance), 18)} ${availableTokens[selectedTokenAddress]?.symbol}`
+                              ? `${formatNumber(Number(formatUnits(BigInt(faucetBalance), 18)), {
+
+                                decimals: 2,
+                                compact: true,
+                              })} ${availableTokens[selectedTokenAddress]?.symbol}`
                               : "-"}
                           </p>
                         </div>
@@ -353,7 +353,10 @@ const GTXFaucet: NextPage = () => {
                           <p className="text-sm text-white/70">Your Balance</p>
                           <p className="text-lg font-medium text-white">
                             {userBalance
-                              ? `${formatUnits(BigInt(userBalance), 18)} ${availableTokens[selectedTokenAddress]?.symbol}`
+                              ? `${formatNumber(Number(formatUnits(BigInt(userBalance), 18)), {
+                                decimals: 2,
+                                compact: true,
+                              })} ${availableTokens[selectedTokenAddress]?.symbol}`
                               : "-"}
                           </p>
                         </div>
@@ -378,10 +381,10 @@ const GTXFaucet: NextPage = () => {
               <Card className="border-0 bg-[#121212] backdrop-blur-xl border border-white/10">
                 <CardContent className="p-6">
                   <DataTable
-                    data={requestTokensData?.requestTokens.items ?? []}
+                    data={faucetRequestsData?.faucetRequestss.items ?? []}
                     columns={requestTokenColumns()}
-                    handleRefresh={() => {}}
-                    isLoading={requestTokensIsLoading}
+                    handleRefresh={() => { }}
+                    isLoading={faucetRequestsIsLoading}
                   />
                 </CardContent>
               </Card>

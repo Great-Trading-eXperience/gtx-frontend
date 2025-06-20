@@ -14,31 +14,6 @@ import { ENABLED_CHAINS } from '@/constants/contract/contract-address';
 
 export const projectId = 'c8d08053460bfe0752116d730dc6393b';
 
-export const localChain: Chain = {
-	id: 31337,
-	name: 'Anvil',
-	nativeCurrency: {
-		decimals: 18,
-		name: 'Anvil Ether',
-		symbol: 'ETH',
-	},
-	rpcUrls: {
-		default: {
-			http: ['https://anvil.renakaagusta.dev'],
-		},
-		public: {
-			http: ['https://anvil.renakaagusta.dev'],
-		},
-	},
-	blockExplorers: {
-		default: {
-			name: 'Ganache Explorer',
-			url: 'https://ganache.renakaagusta.dev',
-		},
-	},
-	testnet: true,
-};
-
 export const conduitChain: Chain = {
 	id: 911867,
 	name: 'Conduit',
@@ -214,15 +189,7 @@ const connectors = connectorsForWallets(
 );
 
 const allChains = [
-	riseSepolia,
-	localChain,
-	conduitChain,
-	arbitrumSepolia,
-	monad,
-	sepolia,
-	gtxpresso,
-	gtxChain,
-	pharos,
+	riseSepolia
 ];
 
 const enabledChains = ENABLED_CHAINS

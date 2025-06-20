@@ -120,7 +120,7 @@ export default function TradingViewChartContainer({
     async function fetchPairs() {
       try {
         setIsLoading(true);
-        // Adjust this URL to match your backend endpoint for getting available pairs
+
         const pairsUrl = `${getIndexerUrl(chainId)}/api/pairs`;
         const response = await fetch(pairsUrl);
 
@@ -129,7 +129,7 @@ export default function TradingViewChartContainer({
         }
 
         const data = await response.json();
-        // Transform the data as needed based on your API response format
+
         const formattedPairs = Array.isArray(data)
           ? data.map((pair: any) => ({
             symbol: pair.symbol,

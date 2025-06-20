@@ -106,7 +106,7 @@ export class MarketWebSocket {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 3000; // 3 seconds
   private messageHandlers: ((event: WebSocketEvent) => void)[] = [];
-  private chainId: number = 31337;
+  private chainId: number = 11155931;
   private isConnecting = false;
 
   /**

@@ -1,8 +1,10 @@
 import FaucetABI from "@/abis/faucet/FaucetABI";
 import { wagmiConfig } from "@/configs/wagmi";
+import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
 import { readContract } from "@wagmi/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useChainId } from "wagmi";
 
 interface UseLastRequestTimeOptions {
     debounceTime?: number;
@@ -18,11 +20,11 @@ interface UseLastRequestTimeResult {
 }
 
 export const useLastRequestTime = (
-    userAddress: HexAddress,
-    faucetAddress: HexAddress,
     options: UseLastRequestTimeOptions = {}
 ): UseLastRequestTimeResult => {
     const { debounceTime = 1000, enabled = true } = options;
+
+    const chainId = useChainId();
 
     const [lastRequestTime, setLastRequestTime] = useState<bigint | undefined>(undefined);
     const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export const useLastRequestTime = (
     }, [debounceTime]);
 
     const fetchLastRequestTime = useCallback(async () => {
-        if (!faucetAddress || !enabled) {
+        if (!enabled) {
             setLoading(false);
             return;
         }
@@ -47,10 +49,10 @@ export const useLastRequestTime = (
 
         try {
             const result = await readContract(wagmiConfig, {
-                address: faucetAddress,
+                address: getContractAddress(chainId, ContractName.faucet) as `0x${string}`,
                 abi: FaucetABI,
-                functionName: 'lastRequestTime',
-                args: [userAddress],
+                functionName: 'getLastRequestTime',
+                args: [],
             });
 
             setLastRequestTime(result as bigint);
@@ -64,7 +66,7 @@ export const useLastRequestTime = (
         } finally {
             setLoading(false);
         }
-    }, [faucetAddress, enabled]);
+    }, [enabled]);
 
     const refreshLastRequestTime = useCallback(async () => {
         await fetchLastRequestTime();
@@ -72,7 +74,7 @@ export const useLastRequestTime = (
 
     useEffect(() => {
         setIsStale(true);
-    }, [faucetAddress]);
+    }, []);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;

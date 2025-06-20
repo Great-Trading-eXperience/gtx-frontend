@@ -50,7 +50,7 @@ const Header = () => {
       enabled: isTabEnabled("EARN")
     },
     {
-      destination: "/vegtx",
+      destination: "/vegtx/dashboard",
       label: "veGTX",
       enabled: isTabEnabled("VEGTX")
     }

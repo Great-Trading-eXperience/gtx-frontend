@@ -10,6 +10,7 @@ export enum ContractName {
     weth = "WETH",
     wbtc = "WBTC",
     router = "ROUTER",
+    faucet = "PROXY_FAUCET",
 }
 
 interface MailchimpConfig {
@@ -52,10 +53,8 @@ export const NETWORK = contractsConfig.NETWORK;
 export const ROUTER_OWNER = contractsConfig.ROUTER_OWNER as HexAddress;
 export const ENABLED_CHAINS = contractsConfig.ENABLED_CHAINS;
 
-// Mailchimp configuration
 export const MAILCHIMP = contractsConfig.MAILCHIMP as MailchimpConfig;
 
-// Helper function to get contract address by chain ID and contract name
 export function getContractAddress(
     chainId: string | number = DEFAULT_CHAIN,
     contractName: ContractName
