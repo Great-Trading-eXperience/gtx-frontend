@@ -25,7 +25,6 @@ const queryClient = new QueryClient();
 const MONAD_TESTNET_CHAIN_ID = 10143;
 const RISE_SEPOLIA_CHAIN_ID = 11155931;
 const CONDUIT_CHAIN_ID = 911867;
-const LOCAL_ANVIL_CHAIN_ID = 31337;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 // Add type to support getLayout

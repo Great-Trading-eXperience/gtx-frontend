@@ -109,8 +109,6 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     processData();
   }, [poolsData, tradesData, initialMarketData]);
 
-  console.log('poolsData', poolsData)
-
   // Filter data based on search query
   useEffect(() => {
     if (markets.length > 0) {
