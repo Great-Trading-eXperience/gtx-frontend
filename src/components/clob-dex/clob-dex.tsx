@@ -66,9 +66,9 @@ export type ClobDexComponentProps = {
 export default function ClobDex() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const isClient = useIsClient();
   const defaultChainId = Number(DEFAULT_CHAIN);
-
+  const isClient = useIsClient();
+  
   const pathname = usePathname();
 
   const { selectedPoolId, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();

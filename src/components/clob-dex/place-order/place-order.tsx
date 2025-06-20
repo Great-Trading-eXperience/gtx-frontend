@@ -37,7 +37,6 @@ const PlaceOrder = ({
   depthData,
 }: PlaceOrderProps) => {
   const { isConnected } = useAccount();
-  const pathname = usePathname();
 
   const currentChainId = useChainId();
   const poolManagerAddress = getContractAddress(
@@ -45,14 +44,6 @@ const PlaceOrder = ({
     ContractName.clobPoolManager
   ) as HexAddress;
 
-  // 1. Create the Pool struct with orderBook
-  const poolStruct = {
-    baseCurrency: selectedPool?.baseTokenAddress as HexAddress,
-    quoteCurrency: selectedPool?.quoteTokenAddress as HexAddress,
-    orderBook: selectedPool?.orderBook as HexAddress,
-  };
-
-  // 2. Get the pool using poolManager
   const { data: pool } = useContractRead({
     address: poolManagerAddress,
     abi: poolManagerABI,
