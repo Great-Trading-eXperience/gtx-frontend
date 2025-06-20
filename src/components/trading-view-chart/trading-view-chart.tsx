@@ -182,17 +182,18 @@ export default function TradingViewChartContainer({
   }, []);
 
   /* Update chart and WebSocket when symbol or interval changes */
-  useEffect(() => {
-    if (!chartWidgetRef.current) {
-      return;
-    }
+  // TODO
+  // useEffect(() => {
+  //   if (!chartWidgetRef.current) {
+  //     return;
+  //   }
 
-    chartWidgetRef.current.setSymbol(selectedSymbol, () => { });
+  //   chartWidgetRef.current?.setSymbol(selectedSymbol, () => { });
 
-    // Reconnect WebSocket with new symbol/interval
-    disconnectKlineWebSocket();
-    connectKlineWebSocket();
-  }, [selectedSymbol, klineInterval]);
+  //   // Reconnect WebSocket with new symbol/interval
+  //   disconnectKlineWebSocket();
+  //   connectKlineWebSocket();
+  // }, [selectedSymbol, klineInterval]);
 
   /* Handle symbol change */
   const handleSymbolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
