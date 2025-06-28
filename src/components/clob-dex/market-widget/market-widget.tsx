@@ -10,14 +10,6 @@ import { formatUnits } from 'viem';
 import { ClobDexComponentProps } from '../clob-dex';
 import { PairDropdown } from './pair-dropdown';
 
-const SkeletonLoader = () => (
-  <div className="w-full h-16 bg-gray-100 dark:bg-[#1B2028] rounded-t-lg animate-pulse flex items-center px-4 space-x-8">
-    {[...Array(7)].map((_, i) => (
-      <div key={i} className="h-8 bg-gray-300 dark:bg-gray-700/50 rounded w-32" />
-    ))}
-  </div>
-);
-
 export interface MarketDataWidgetProps extends ClobDexComponentProps {
   poolId: string | null;
   selectedPool?: ProcessedPoolItem;
@@ -69,21 +61,21 @@ export default function MarketDataWidget({
           <div className="text-gray-600 dark:text-gray-400 text-xs w-32">
             <div className="font-semibold text-[15px] pb-1 underline">Price</div>
             <div className="text-gray-900 dark:text-white">
-              ${formatNumber(formatUnits(BigInt(ticker24hr?.lastPrice ?? '0'), selectedPool?.quoteDecimals?? 0))}
+              ${formatNumber(formatUnits(BigInt(Math.floor(Number(ticker24hr?.lastPrice ?? '0'))), selectedPool?.quoteDecimals?? 0))}
             </div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
             <div className="font-semibold text-[15px] pb-1">24h High</div>
             <div className="text-green-600 dark:text-[#5BBB6F]">
-              ${formatNumber(formatUnits(BigInt(ticker24hr?.highPrice ?? '0'), selectedPool?.quoteDecimals?? 0))}
+              ${formatNumber(formatUnits(BigInt(Math.floor(Number(ticker24hr?.highPrice ?? '0'))), selectedPool?.quoteDecimals?? 0))}
             </div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs w-44">
             <div className="font-semibold text-[15px] pb-1">24h Low</div>
             <div className="text-red-600 dark:text-[#FF6978]">
-              ${formatNumber(formatUnits(BigInt(ticker24hr?.lowPrice ?? '0'), selectedPool?.quoteDecimals?? 0))}
+              ${formatNumber(formatUnits(BigInt(Math.floor(Number(ticker24hr?.lowPrice ?? '0'))), selectedPool?.quoteDecimals?? 0))}
             </div>
           </div>
 

@@ -142,7 +142,6 @@ export default function TradingViewChartContainer({
         setPairs(formattedPairs);
       } catch (error) {
         console.error('Error fetching trading pairs:', error);
-        // Set a default pair if fetch fails
         setPairs([
           {
             symbol: selectedSymbol,
