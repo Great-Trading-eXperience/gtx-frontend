@@ -26,8 +26,6 @@ export const WEBSOCKET_URLS = typedUrlsConfig.WEBSOCKET_URLS;
 export function getIndexerUrl(chainId: string | number): string {
     const chainIdString = chainId.toString();
     const url = INDEXER_URLS[chainIdString];
-
-    console.log("url", url, INDEXER_URLS);
     
     if (!url) {
         throw new Error(`Indexer URL for chain ID ${chainIdString} not found in configuration`);

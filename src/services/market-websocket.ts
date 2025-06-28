@@ -127,7 +127,7 @@ export class MarketWebSocket {
 
     try {
       console.log('Connecting to market WebSocket...');
-      this.socket = new WebSocket(`${getWebsocketUrl(chainId)}/ws`);
+      this.socket = new WebSocket(getWebsocketUrl(chainId));
 
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);

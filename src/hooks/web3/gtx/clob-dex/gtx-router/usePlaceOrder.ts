@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { OrderSideEnum } from "../../../../../../lib/enums/clob.enum";
+import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 
 export const usePlaceOrder = () => {
   const { address } = useAccount();
@@ -39,6 +39,7 @@ export const usePlaceOrder = () => {
       price,
       quantity,
       side,
+      timeInForce = TimeInForceEnum.GTC,
       withDeposit = false
     }: {
       pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
@@ -48,10 +49,14 @@ export const usePlaceOrder = () => {
       price: bigint;
       quantity: bigint;
       side: OrderSideEnum;
+      timeInForce?: TimeInForceEnum;
       withDeposit?: boolean;
     }) => {
       try {
         let hash: HexAddress;
+
+        console.log('base currency', baseCurrency);
+        console.log('quote currency', quoteCurrency);
 
         if (withDeposit) {
           try {
@@ -154,11 +159,11 @@ export const usePlaceOrder = () => {
                 BigInt(price),
                 BigInt(quantity),
                 side === OrderSideEnum.BUY ? 0 : 1,
-                address as HexAddress
+                timeInForce
               ] as const,
             });
 
-            console.log("Simulation result:", simulation.result);
+            console.log("Simulation result:", JSON.stringify(simulation.result, null, 2));
 
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
@@ -170,7 +175,7 @@ export const usePlaceOrder = () => {
                 BigInt(price),
                 BigInt(quantity),
                 side === OrderSideEnum.BUY ? 0 : 1,
-                address as HexAddress
+                timeInForce
               ] as const,
             });
           } catch (simulationError: unknown) {
@@ -280,29 +285,29 @@ export const usePlaceOrder = () => {
             const simulation = await simulateContract(wagmiConfig, {
               address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
               abi: GTXRouterABI,
-              functionName: 'placeOrderWithDeposit',
+              functionName: 'placeOrder',
               args: [
                 pool,
                 BigInt(price),
                 BigInt(quantity),
                 side === OrderSideEnum.BUY ? 0 : 1,
-                address as HexAddress
+                timeInForce
               ] as const,
             });
 
-            console.log("Simulation result:", simulation.result);
+            console.log("Simulation result:", JSON.stringify(simulation.result, null, 2));
 
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
               address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
               abi: GTXRouterABI,
-              functionName: 'placeOrderWithDeposit',
+              functionName: 'placeOrder',
               args: [
                 pool,
                 BigInt(price),
                 BigInt(quantity),
                 side === OrderSideEnum.BUY ? 0 : 1,
-                address as HexAddress
+                timeInForce
               ] as const,
             });
           } catch (simulationError: unknown) {
@@ -368,6 +373,10 @@ export const usePlaceOrder = () => {
     }) => {
       try {
         let hash: HexAddress;
+
+        console.log('place market order')
+        console.log('base currency', baseCurrency);
+        console.log('quote currency', quoteCurrency);
 
         if (withDeposit) {
           if (!price) {
@@ -464,6 +473,24 @@ export const usePlaceOrder = () => {
               console.log('Sufficient allowance already exists');
             }
 
+            // Before placing order, check order book liquidity
+            try {
+              const bestSellPrice = await readContract(wagmiConfig, {
+                address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
+                abi: GTXRouterABI,
+                functionName: 'getBestPrice',
+                args: [pool.baseCurrency, pool.quoteCurrency, 1], // SELL side
+              });
+              console.log('Best SELL price in order book:', bestSellPrice);
+              
+              if (bestSellPrice.price === 0n) {
+                toast.error('No liquidity available - no sell orders in the order book');
+                throw new Error('No sell orders available for market buy order');
+              }
+            } catch (liquidityError) {
+              console.error('Failed to check order book liquidity:', liquidityError);
+            }
+
             // First simulate the transaction
             const simulation = await simulateContract(wagmiConfig, {
               address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
@@ -472,12 +499,11 @@ export const usePlaceOrder = () => {
               args: [
                 pool,
                 BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as HexAddress
+                side === OrderSideEnum.BUY ? 0 : 1
               ] as const,
             });
 
-            console.log("Simulation result:", simulation.result);
+            console.log("Simulation result:", JSON.stringify(simulation.result, null, 2));
 
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
@@ -485,23 +511,35 @@ export const usePlaceOrder = () => {
               abi: GTXRouterABI,
               functionName: 'placeMarketOrderWithDeposit',
               args: [
-                {
-                  baseCurrency,
-                  quoteCurrency,
-                  orderBook
-                },
+                pool,
                 BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as HexAddress
+                side === OrderSideEnum.BUY ? 0 : 1
               ] as const,
             });
           } catch (simulationError: unknown) {
-            console.error("Market order with deposit simulation failed:", simulationError);
+            console.error("Market order with deposit simulation failed:");
+            console.error("Error object:", simulationError);
+            console.error("Error string:", simulationError instanceof Error ? simulationError.toString() : String(simulationError));
+            
+            // Log the exact call parameters for debugging
+            console.error("Call parameters:", {
+              pool: pool,
+              quantity: quantity.toString(),
+              side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
+              userAddress: address
+            });
 
-            // Check if it's the specific error signature we can't decode
-            if (simulationError instanceof Error && simulationError.toString().includes('0xfb8f41b2')) {
-              toast.error("Insufficient balance for this order. Please deposit more funds.");
-              throw new Error("Insufficient balance for this order. Please deposit more funds.");
+            // Check for known error signatures
+            if (simulationError instanceof Error) {
+              const errorStr = simulationError.toString();
+              if (errorStr.includes('0xfb8f41b2')) {
+                toast.error("Insufficient balance for this order. Please deposit more funds.");
+                throw new Error("Insufficient balance for this order. Please deposit more funds.");
+              }
+              if (errorStr.includes('0x1f2a2005')) {
+                toast.error("Unknown contract validation error. Check balance and allowances.");
+                throw new Error("Contract validation failed - check your USDC balance and allowances.");
+              }
             }
 
             // For any other errors, propagate them
@@ -514,14 +552,9 @@ export const usePlaceOrder = () => {
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
             args: [
-              {
-                baseCurrency,
-                quoteCurrency,
-                orderBook
-              },
+              pool,
               BigInt(quantity),
-              side === OrderSideEnum.BUY ? 0 : 1,
-              address as HexAddress
+              side === OrderSideEnum.BUY ? 0 : 1
             ] as const,
           });
 
@@ -533,14 +566,9 @@ export const usePlaceOrder = () => {
             abi: GTXRouterABI,
             functionName: 'placeMarketOrder',
             args: [
-              {
-                baseCurrency,
-                quoteCurrency,
-                orderBook
-              },
+              pool,
               BigInt(quantity),
-              side === OrderSideEnum.BUY ? 0 : 1,
-              address as HexAddress
+              side === OrderSideEnum.BUY ? 0 : 1
             ] as const,
           });
         }
@@ -590,6 +618,7 @@ export const usePlaceOrder = () => {
     price: bigint,
     quantity: bigint,
     side: OrderSideEnum,
+    timeInForce: TimeInForceEnum = TimeInForceEnum.GTC,
     withDeposit: boolean = false
   ) => {
     if (!address) {
@@ -615,6 +644,7 @@ export const usePlaceOrder = () => {
       price,
       quantity,
       side,
+      timeInForce,
       withDeposit
     });
   };
@@ -635,6 +665,14 @@ export const usePlaceOrder = () => {
       toast.error('Quantity must be greater than zero');
       return;
     }
+
+    console.log('handlePlaceMarketOrder called with:', {
+      pool,
+      quantity,
+      side,
+      price,
+      withDeposit
+    });
 
     return placeMarketOrder({
       pool,
