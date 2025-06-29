@@ -290,7 +290,7 @@ export class MarketWebSocket {
       
       // Add validation to ensure data is a valid WebSocketEvent
       if (data && typeof data === 'object') {
-        console.log('Market WebSocket message:', data);
+        // console.log('Market WebSocket message:', data);
         
         // Notify all handlers with the validated data
         for (const handler of this.messageHandlers) {

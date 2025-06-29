@@ -65,8 +65,8 @@ const PlaceOrder = ({
       | undefined;
   };
 
-  const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
-  const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); // Default to BUY
+  const [orderType, setOrderType] = useState<'limit' | 'market'>('market');
+  const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); 
   const [price, setPrice] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
   const [total, setTotal] = useState<string>('0');

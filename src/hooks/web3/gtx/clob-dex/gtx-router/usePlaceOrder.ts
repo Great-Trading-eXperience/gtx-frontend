@@ -8,6 +8,22 @@ import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+
+// Helper function to get token decimals
+const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
+  try {
+    const decimals = await readContract(wagmiConfig, {
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'decimals',
+    });
+    return decimals;
+  } catch (error) {
+    console.error(`Failed to fetch decimals for token ${tokenAddress}:`, error);
+    // Default to 18 decimals if we can't fetch
+    return 18;
+  }
+};
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 
 export const usePlaceOrder = () => {
@@ -68,8 +84,11 @@ export const usePlaceOrder = () => {
             // For SELL orders, we need the base currency (e.g., WETH)
             if (side === OrderSideEnum.BUY) {
               requiredToken = quoteCurrency as HexAddress;
-              // Calculate total cost (price * quantity) for buy orders
-              requiredAmount = price * quantity / BigInt(10 ** 18); // Adjust based on your token decimals
+              // For BUY orders: price * quantity should give the total cost in quote currency units
+              // Let's test without division first to see if price is already properly formatted
+              console.log(`BUY order calculation: price=${price}, quantity=${quantity}`);
+              requiredAmount = price * quantity;
+              console.log(`Calculated required amount (no division): ${requiredAmount}`);
             } else {
               requiredToken = baseCurrency as HexAddress;
               requiredAmount = quantity;
@@ -90,7 +109,7 @@ export const usePlaceOrder = () => {
             // If balance is insufficient, stop immediately with helpful message
             if (balance < requiredAmount) {
               const tokenSymbol = side === OrderSideEnum.BUY ? "USDC" : "Asset";
-              const tokenDecimals = side === OrderSideEnum.BUY ? 6 : 18; // Adjust based on your tokens
+              const tokenDecimals = await getTokenDecimals(requiredToken);
 
               const formattedBalance = formatUnits(balance, tokenDecimals);
               const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
@@ -113,7 +132,8 @@ export const usePlaceOrder = () => {
             // If allowance is insufficient, trigger approval transaction
             if (allowance < requiredAmount) {
               toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
+              const tokenDecimals = await getTokenDecimals(requiredToken);
+              console.log(`Approving ${formatUnits(requiredAmount, tokenDecimals)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
 
               try {
                 // Execute the approval transaction
@@ -163,7 +183,7 @@ export const usePlaceOrder = () => {
               ] as const,
             });
 
-            console.log("Simulation result:", JSON.stringify(simulation.result, null, 2));
+            console.log("Simulation result:", simulation.result);
 
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
@@ -200,8 +220,11 @@ export const usePlaceOrder = () => {
             // For SELL orders, we need the base currency (e.g., WETH)
             if (side === OrderSideEnum.BUY) {
               requiredToken = quoteCurrency as HexAddress;
-              // Calculate total cost (price * quantity) for buy orders
-              requiredAmount = price * quantity / BigInt(10 ** 18); // Adjust based on your token decimals
+              // For BUY orders: price * quantity should give the total cost in quote currency units
+              // Let's test without division first to see if price is already properly formatted
+              console.log(`BUY order calculation: price=${price}, quantity=${quantity}`);
+              requiredAmount = price * quantity;
+              console.log(`Calculated required amount (no division): ${requiredAmount}`);
             } else {
               requiredToken = baseCurrency as HexAddress;
               requiredAmount = quantity;
@@ -222,7 +245,7 @@ export const usePlaceOrder = () => {
             // If balance is insufficient, stop immediately with helpful message
             if (balance < requiredAmount) {
               const tokenSymbol = side === OrderSideEnum.BUY ? "USDC" : "Asset";
-              const tokenDecimals = side === OrderSideEnum.BUY ? 6 : 18; // Adjust based on your tokens
+              const tokenDecimals = await getTokenDecimals(requiredToken);
 
               const formattedBalance = formatUnits(balance, tokenDecimals);
               const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
@@ -245,7 +268,8 @@ export const usePlaceOrder = () => {
             // If allowance is insufficient, trigger approval transaction
             if (allowance < requiredAmount) {
               toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
+              const tokenDecimals = await getTokenDecimals(requiredToken);
+              console.log(`Approving ${formatUnits(requiredAmount, tokenDecimals)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
 
               try {
                 // Execute the approval transaction
@@ -295,7 +319,7 @@ export const usePlaceOrder = () => {
               ] as const,
             });
 
-            console.log("Simulation result:", JSON.stringify(simulation.result, null, 2));
+            console.log("Simulation result:", simulation.result);
 
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
@@ -392,8 +416,10 @@ export const usePlaceOrder = () => {
             // For SELL orders, we need the base currency (e.g., WETH)
             if (side === OrderSideEnum.BUY) {
               requiredToken = quoteCurrency as HexAddress;
+              // Get base token decimals for calculation (quantity is in base token units)
+              const baseDecimals = await getTokenDecimals(baseCurrency);
               // Calculate total cost (price * quantity) for buy orders
-              requiredAmount = BigInt(quantity) * price / BigInt(10 ** 18); // Adjust based on your token decimals
+              requiredAmount = BigInt(quantity) * price / BigInt(10 ** baseDecimals);
             } else {
               requiredToken = baseCurrency as HexAddress;
               requiredAmount = BigInt(quantity);
@@ -414,7 +440,7 @@ export const usePlaceOrder = () => {
             // If balance is insufficient, stop immediately with helpful message
             if (balance < requiredAmount) {
               const tokenSymbol = side === OrderSideEnum.BUY ? "USDC" : "Asset";
-              const tokenDecimals = side === OrderSideEnum.BUY ? 6 : 18; // Adjust based on your tokens
+              const tokenDecimals = await getTokenDecimals(requiredToken);
 
               const formattedBalance = formatUnits(balance, tokenDecimals);
               const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
@@ -437,7 +463,8 @@ export const usePlaceOrder = () => {
             // If allowance is insufficient, trigger approval transaction
             if (allowance < requiredAmount) {
               toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
+              const tokenDecimals = await getTokenDecimals(requiredToken);
+              console.log(`Approving ${formatUnits(requiredAmount, tokenDecimals)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
 
               try {
                 // Execute the approval transaction
@@ -483,7 +510,7 @@ export const usePlaceOrder = () => {
               });
               console.log('Best SELL price in order book:', bestSellPrice);
               
-              if (bestSellPrice.price === 0n) {
+              if (bestSellPrice?.price === 0n) {
                 toast.error('No liquidity available - no sell orders in the order book');
                 throw new Error('No sell orders available for market buy order');
               }
@@ -503,7 +530,7 @@ export const usePlaceOrder = () => {
               ] as const,
             });
 
-            console.log("Simulation result:", JSON.stringify(simulation.result, null, 2));
+            console.log("Simulation result:", simulation.result);
 
             // If simulation succeeds, execute the transaction
             hash = await writeContract(wagmiConfig, {
@@ -523,7 +550,11 @@ export const usePlaceOrder = () => {
             
             // Log the exact call parameters for debugging
             console.error("Call parameters:", {
-              pool: pool,
+              pool: {
+                baseCurrency: pool.baseCurrency,
+                quoteCurrency: pool.quoteCurrency,
+                orderBook: pool.orderBook
+              },
               quantity: quantity.toString(),
               side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
               userAddress: address
