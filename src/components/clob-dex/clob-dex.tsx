@@ -633,7 +633,6 @@ export default function ClobDex() {
               }
 
               const updatedTrades = [transformedTrade, ...prev].slice(0, 50);
-              console.log('Updated transformedTrades with WebSocket data', updatedTrades.length);
               return updatedTrades;
             });
           }

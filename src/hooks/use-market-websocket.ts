@@ -18,31 +18,23 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
 
   const handleMessage = useCallback((rawMessage: any) => {
     try {
-      // Check if the message matches the expected format with stream and data properties
       if (rawMessage && typeof rawMessage === 'object' && 'stream' in rawMessage && 'data' in rawMessage) {
-        // Cast to our expected format
         const message = rawMessage as WebSocketMessage;
         const eventData = message.data;
         
-        // Extract the stream type from the message.stream (format: symbol@streamType)
         const streamParts = message.stream.split('@');
         const messageStreamType = streamParts.length > 1 ? streamParts[1] : '';
         
-        // Check if this message is for our subscribed stream
         if (
-          // Match based on the stream part of the message.stream
           messageStreamType === stream ||
-          // Special cases for events with different naming conventions
           (stream === 'trade' && eventData.e === 'trade') ||
           (stream === 'miniTicker' && eventData.e === '24hrMiniTicker') ||
           (stream === 'depth' && eventData.e === 'depthUpdate') ||
           (stream === 'kline' && eventData.e === 'kline')
         ) {
-          console.log(`Received ${eventData.e} message for ${stream} stream:`, eventData);
           setLastMessage(eventData);
         }
       } else {
-        // Handle legacy format or unexpected message format
         console.warn('Received message in unexpected format:', rawMessage);
       }
     } catch (error) {
@@ -57,7 +49,6 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
 
     const ws = getMarketWebSocket();
     
-    // Connect to WebSocket and subscribe to stream
     const connect = () => {
       console.log('Connecting to WebSocket');
       ws.connect(chainId);
@@ -66,11 +57,9 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
       setIsConnected(true);
     };
 
-    // Register message handler
     ws.addMessageHandler(handleMessage);
 
     return () => {
-      // Clean up on unmount
       if (symbol && stream) {
         ws.unsubscribe(symbol.toLowerCase().replaceAll('/', ''), stream);
       }
@@ -78,7 +67,6 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
     };
   }, [symbol, stream, handleMessage]);
 
-  // Return consistent interface
   return {
     lastMessage,
     isConnected,
