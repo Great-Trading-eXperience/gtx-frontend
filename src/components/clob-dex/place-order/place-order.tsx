@@ -7,7 +7,7 @@ import { EXPLORER_URL } from '@/constants/explorer-url';
 import { TradeItem } from '@/graphql/gtx/clob';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
-import { DepthData } from '@/lib/market-api';
+import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import { formatNumber } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
 import type { HexAddress } from '@/types/general/address';
@@ -27,6 +27,8 @@ export interface PlaceOrderProps extends ClobDexComponentProps {
   tradesData?: TradeItem[];
   tradesLoading: boolean;
   depthData?: DepthData | null;
+  ticker24hr?: Ticker24hrData;
+  refetchAccount: () => void;
 }
 
 const PlaceOrder = ({
@@ -35,6 +37,8 @@ const PlaceOrder = ({
   defaultChainId,
   selectedPool,
   depthData,
+  ticker24hr,
+  refetchAccount,
 }: PlaceOrderProps) => {
   const { isConnected } = useAccount();
 
@@ -282,14 +286,19 @@ const PlaceOrder = ({
   }, [price, quantity]);
 
   useEffect(() => {
+    if (!selectedPool || !selectedPool.quoteDecimals) return;
+
     if (!price && orderType === 'limit') {
-      if (side === OrderSideEnum.BUY && bestAskPrice && selectedPool?.quoteDecimals !== undefined) {
+      if (side === OrderSideEnum.BUY && bestAskPrice) {
         const normalizedPrice = formatUnits(BigInt(bestAskPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
-      } else if (side === OrderSideEnum.SELL && bestBidPrice && selectedPool?.quoteDecimals !== undefined) {
+      } else if (side === OrderSideEnum.SELL && bestBidPrice) {
         const normalizedPrice = formatUnits(BigInt(bestBidPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
       }
+    } else if (orderType === 'market' && ticker24hr?.lastPrice) {
+      const normalizedPrice = formatUnits(BigInt(ticker24hr.lastPrice), selectedPool.quoteDecimals);
+      setPrice(normalizedPrice);
     }
   }, [bestBidPrice, bestAskPrice, side, price, orderType, selectedPool?.quoteDecimals]);
 
@@ -373,6 +382,12 @@ const PlaceOrder = ({
     limitOrderHash,
     marketOrderHash,
   ]);
+
+  useEffect(() => {
+    if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
+      refetchAccount();
+    }
+  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refetchAccount]);
 
   // Function to handle transaction errors
   const handleTransactionError = (error: unknown) => {

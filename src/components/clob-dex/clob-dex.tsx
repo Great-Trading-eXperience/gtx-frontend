@@ -270,6 +270,7 @@ export default function ClobDex() {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    refetchInterval: 60000,
   });
 
   const transformedBalances = useMemo(() => {
@@ -832,6 +833,8 @@ export default function ClobDex() {
             tradesData={combinedTrades}
             tradesLoading={tradesLoading}
             depthData={depthData}
+            ticker24hr={ticker24hr}
+            refetchAccount={refetchAccount}
           />
         </div>
       </div>
@@ -854,6 +857,7 @@ export default function ClobDex() {
         marketOpenOrdersLoading={marketOpenOrdersLoading}
         marketAllOrdersData={marketAllOrdersData}
         marketAllOrdersLoading={marketAllOrdersLoading}
+        refetchFn={refetchAccount}
       />
     </QueryClientProvider>
   );
