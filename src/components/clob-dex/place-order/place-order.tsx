@@ -288,7 +288,7 @@ const PlaceOrder = ({
   useEffect(() => {
     if (!selectedPool || !selectedPool.quoteDecimals) return;
 
-    if (!price && orderType === 'limit') {
+    if (orderType === 'limit') {
       if (side === OrderSideEnum.BUY && bestAskPrice) {
         const normalizedPrice = formatUnits(BigInt(bestAskPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
@@ -296,11 +296,11 @@ const PlaceOrder = ({
         const normalizedPrice = formatUnits(BigInt(bestBidPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
       }
-    } else if (orderType === 'market' && ticker24hr?.lastPrice) {
-      const normalizedPrice = formatUnits(BigInt(ticker24hr.lastPrice), selectedPool.quoteDecimals);
+    } else {
+      const normalizedPrice = formatUnits(BigInt(ticker24hr?.lastPrice || 0), selectedPool?.quoteDecimals);
       setPrice(normalizedPrice);
     }
-  }, [bestBidPrice, bestAskPrice, side, price, orderType, selectedPool?.quoteDecimals]);
+  }, [bestBidPrice, bestAskPrice, side, orderType, selectedPool?.quoteDecimals, ticker24hr?.lastPrice]);
 
   // Load balance when relevant data changes
   useEffect(() => {
