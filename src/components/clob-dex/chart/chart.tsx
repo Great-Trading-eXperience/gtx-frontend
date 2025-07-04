@@ -444,7 +444,7 @@ function ChartComponent({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
+      <div className="w-full h-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white rounded-b-lg">
         {!selectedPool?.coin && (
           <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
             <div className="text-lg font-semibold">
@@ -495,7 +495,7 @@ function ChartComponent({
           </div>
         )}
 
-        <div className="p-2">
+        <div className="p-2 h-full">
           {selectedPool?.coin ? (
             <TradingViewChartContainer
               chainId={chainId}
