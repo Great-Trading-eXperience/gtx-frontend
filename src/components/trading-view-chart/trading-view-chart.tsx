@@ -504,8 +504,8 @@ export default function TradingViewChartContainer({
   }
 
   return (
-    <div className="w-full">
-      <div id="tv_chart_container" className="w-full" style={{ height: '50vh' }} />
+    <div className="w-full h-full">
+      <div id="tv_chart_container" className="w-full" style={{ height: '100%' }} />
     </div>
   );
 }

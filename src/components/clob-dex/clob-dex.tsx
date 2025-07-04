@@ -793,8 +793,8 @@ export default function ClobDex() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px]">
-        <div className="shadow-lg rounded-lg border border-gray-700/20">
+      <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
+        <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
           <MarketDataWidget
             address={address}
             chainId={chainId}
@@ -811,7 +811,7 @@ export default function ClobDex() {
           />
         </div>
 
-        <div className="space-y-[6px]">
+        <div className="space-y-[6px] h-fit">
           <MarketDataTabs
             address={address}
             chainId={chainId}
