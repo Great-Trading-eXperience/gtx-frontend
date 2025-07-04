@@ -274,7 +274,7 @@ export const usePlaceOrder = () => {
   }
 
 
-  const createOrderMutation = (orderType: OrderType, setOrderHash: (hash: HexAddress) => void) => {
+  const CreateOrderMutation = (orderType: OrderType, setOrderHash: (hash: HexAddress) => void) => {
     return useMutation({
       mutationFn: async ({
         pool,
@@ -367,7 +367,7 @@ export const usePlaceOrder = () => {
     isPending: isMarketOrderPending,
     isError: isMarketOrderError,
     error: marketSimulateError,
-  } = createOrderMutation('market', setMarketOrderHash);
+  } = CreateOrderMutation('market', setMarketOrderHash);
 
   // Limit Order Hook
   const {
@@ -375,7 +375,7 @@ export const usePlaceOrder = () => {
     isPending: isLimitOrderPending,
     isError: isLimitOrderError,
     error: limitSimulateError,
-  } = createOrderMutation('limit', setLimitOrderHash);
+  } = CreateOrderMutation('limit', setLimitOrderHash);
 
   // Transaction confirmation states
   const {
