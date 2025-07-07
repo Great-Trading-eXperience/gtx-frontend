@@ -8,7 +8,7 @@ import { PoolsResponse } from '@/graphql/gtx/clob';
 import { useMarketStore } from '@/store/market-store';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { readContract } from '@wagmi/core';
-import { ArrowDown, ArrowUp, Menu, RefreshCw } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Menu, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatUnits } from 'viem';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
@@ -35,7 +35,7 @@ interface OrderBook {
 }
 
 type ViewType = 'both' | 'bids' | 'asks';
-type DecimalPrecision = '0.01' | '0.1' | '1';
+type DecimalPrecision = '0.001' | '0.002' | '0.005' |'0.01' | '0.1' | '1';
 
 const STANDARD_ORDER_COUNT = 6;
 const PRICE_MATCH_THRESHOLD = 0.1;
@@ -69,10 +69,27 @@ const EnhancedOrderBookDex = ({
   const [viewType, setViewType] = useState<ViewType>('both');
   const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.01');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const priceOptions = ['0.01', '0.1', '1'];
+  const priceOptions = ['0.001', '0.002', '0.005', '0.01', '0.1', '1'];
   const previousOrderBook = useRef<OrderBook | null>(null);
   const previousPrice = useRef<number | null>(null);
   const priceDirection = useRef<'up' | 'down' | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: Event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
   
   const [orderBook, setOrderBook] = useState<OrderBook>({
     asks: [],
@@ -278,6 +295,25 @@ const EnhancedOrderBookDex = ({
               100
             ).toFixed(2)
           : '0';
+
+      const bestAsk = asks[0].price;
+      const bestBid = bids[0].price;
+      const spreadNominal = bestAsk - bestBid;
+
+      const askSpread = spreadNominal / bestAsk * 100;
+      const midSpread = spreadNominal / ((bestAsk + bestBid) / 2);
+      const bidSpread = spreadNominal / bestBid * 100;
+
+      console.log('askSpread', askSpread);
+      console.log('midSpread', midSpread);
+      console.log('bidSpread', bidSpread);
+
+      const newSpread = asks[0].price && bids[0].price ? (
+        (asks[0].price - bids[0].price) / 1000000000
+      ) : '0';
+
+      console.log(newSpread, asks[0].price, bids[0].price);
+          
       const now = Date.now();
 
       // Detect matched orders based on previous state
@@ -301,6 +337,9 @@ const EnhancedOrderBookDex = ({
         previousAsks: previousOrderBook.current?.asks,
         previousBids: previousOrderBook.current?.bids,
       };
+
+      console.log(newOrderBook);
+      
 
       setOrderBook(newOrderBook);
     } catch (error) {
@@ -346,23 +385,17 @@ const EnhancedOrderBookDex = ({
   return (
     <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleView}
-            className="rounded-lg bg-gray-700/40 py-1.5 px-2 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300 border border-gray-700/50"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-          <span className="text-xs text-gray-300">
-            {viewType === 'both'
-              ? 'Bid/Ask'
-              : viewType === 'asks'
-              ? 'Asks Only'
-              : 'Bids Only'}
-          </span>
-        </div>
-
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
+          <div className='flex items-center'>
+            <span className='text-sm text-gray-200 mr-1'>{selectedDecimal}</span>
+            <button>
+              {isDropdownOpen ? (
+                <ChevronUp onClick={() => setIsDropdownOpen(false)} height={16} className='text-gray-400 hover:text-gray-200'/>
+              ) : (
+                <ChevronDown onClick={() => setIsDropdownOpen(true)} height={16} className='text-gray-400 hover:text-gray-200'/>
+              )}
+            </button>
+          </div>
           {isDropdownOpen && (
             <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">
               {priceOptions.map(option => (
@@ -379,6 +412,22 @@ const EnhancedOrderBookDex = ({
               ))}
             </div>
           )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-300">
+            {viewType === 'both'
+              ? 'Bid/Ask'
+              : viewType === 'asks'
+              ? 'Asks Only'
+              : 'Bids Only'}
+          </span>
+          <button
+            onClick={toggleView}
+            className="rounded-lg bg-gray-700/40 py-1.5 px-2 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300 border border-gray-700/50"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
