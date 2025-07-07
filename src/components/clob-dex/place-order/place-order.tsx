@@ -21,6 +21,7 @@ import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId, useContractRead } from 'wagmi';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
+import GTXSlider from './slider';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -684,67 +685,7 @@ const PlaceOrder = ({
               {selectedPool && (side === OrderSideEnum.BUY ? 'USDC' : selectedPool.coin.split('/')[0])}
             </div>
           </div>
-          <div className='flex flex-row gap-2 items-start'>
-            <div className="relative w-full mt-1">
-              {/* Slider Track */}
-              <div className="relative">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={percentage}
-                  onChange={(e) => setPercentage(parseInt(e.target.value))}
-                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
-                  style={{
-                    background: `linear-gradient(to right, #06b6d4 0%, #06b6d4 ${percentage}%, #475569 ${percentage}%, #475569 100%)`
-                  }}
-                />
-                
-                {/* Preset Dots */}
-                {/* <div className="absolute top-[9px] left-0 w-full h-2 pointer-events-none">
-                  {presetValues.map((value, index) => (
-                    <div
-                      key={value}
-                      className={`absolute w-3 h-3 rounded-full border-2 transform -translate-x-1/2 -translate-y-1/2 top-1/2 ${
-                        percentage >= value ? 'bg-cyan-400 border-cyan-400' : 'bg-slate-700 border-slate-600'
-                      }`}
-                      style={{ left: `${value}%` }}
-                    />
-                  ))}
-                </div> */}
-              </div>
-
-              {/* Preset Buttons */}
-              <div className="flex justify-between mt-2">
-                {presetValues.map((value) => (
-                  <button
-                    key={value}
-                    type='button'
-                    onClick={() => handlePresetClick(value)}
-                    className={`text-xs px-2 py-1 rounded transition-colors ${
-                      percentage === value
-                        ? 'text-cyan-400 bg-cyan-400/10'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {value}%
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 rounded-lg p-2 border border-gray-700/50">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={handleInputChange}
-                maxLength={3}
-                className="flex-1 bg-transparent text-white text-sm font-medium outline-none w-7"
-                placeholder="0"
-              />
-              <span className="text-gray-400 text-sm">%</span>
-            </div>
-          </div>
+          <GTXSlider quantity={availableBalance} setQuantity={setQuantity}/>
         </div>
 
         {/* Total - Calculated Field */}
@@ -810,6 +751,21 @@ const PlaceOrder = ({
           </button>
         </div>
       </form>
+
+      <div className='flex flex-col w-full gap-3 text-xs text-gray-400 mt-3'>
+        <div className='flex flex-row justify-between'>
+          <span>Order Value</span>
+          <span className='text-gray-200 font-medium'>{total} USDC</span>
+        </div>
+        <div className='flex flex-row justify-between'>
+          <span>Slippage</span>
+          <span className='text-cyan-400 font-medium'>Est: 5.00% / Max: 8.00%</span>
+        </div>
+        <div className='flex flex-row justify-between'>
+          <span>Fees</span>
+          <span className='text-gray-200 font-medium'>0.0000% / 0.0400%</span>
+        </div>
+      </div>
 
       {!isConnected && (
         <div className="mt-3 p-2 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
