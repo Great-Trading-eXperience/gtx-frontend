@@ -1,0 +1,146 @@
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
+import { Wallet, LogOut, Link, User, Mail, Globe } from 'lucide-react';
+import { CustomAvatar } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
+
+interface PrivyAuthButtonProps {
+  className?: string;
+  showFullProfile?: boolean;
+}
+
+export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuthButtonProps) {
+  const {
+    ready,
+    authenticated,
+    login,
+    logout,
+    linkWallet,
+    hasWallet,
+    walletAddress,
+    hasSocialLogin,
+    socialLoginMethod,
+    displayName,
+    isFullyAuthenticated,
+    needsWalletConnection,
+    authenticationMethod,
+  } = usePrivyAuth();
+
+  // Don't render until Privy is ready
+  if (!ready) {
+    return (
+      <Button disabled className={className}>
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+      </Button>
+    );
+  }
+
+  // Not authenticated - show login button
+  if (!authenticated) {
+    return (
+      <Button
+        onClick={login}
+        className={`bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all rounded-lg text-sm font-bold ${className || ''}`}
+      >
+        <User className="mr-2 h-4 w-4" />
+        Sign In
+      </Button>
+    );
+  }
+
+  // Authenticated but needs wallet connection
+  if (needsWalletConnection) {
+    return (
+      <div className="flex gap-2">
+        <Button
+          onClick={linkWallet}
+          className={`bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.15)] hover:shadow-[0_0_20px_rgba(34,197,94,0.25)] transition-all rounded-lg text-sm font-bold ${className || ''}`}
+        >
+          <Link className="mr-2 h-4 w-4" />
+          Connect Wallet
+        </Button>
+        {showFullProfile && (
+          <Button
+            onClick={logout}
+            variant="outline"
+            className="text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // Fully authenticated - show profile
+  if (isFullyAuthenticated && showFullProfile) {
+    return (
+      <div className="flex gap-2">
+        {/* Authentication Method Indicator */}
+        <Button
+          variant="outline"
+          className="text-sm font-bold rounded-xl bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
+          disabled
+        >
+          {authenticationMethod === 'wallet' ? (
+            <>
+              <Wallet className="mr-2 h-4 w-4" />
+              {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+            </>
+          ) : authenticationMethod === 'google_oauth' ? (
+            <>
+              <Globe className="mr-2 h-4 w-4" />
+              Google
+            </>
+          ) : authenticationMethod === 'email' ? (
+            <>
+              <Mail className="mr-2 h-4 w-4" />
+              Email
+            </>
+          ) : (
+            <>
+              <User className="mr-2 h-4 w-4" />
+              {socialLoginMethod?.replace('_oauth', '').toUpperCase()}
+            </>
+          )}
+        </Button>
+
+        {/* User Profile */}
+        <Button
+          variant="outline"
+          className="text-sm font-bold rounded-xl bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
+          disabled
+        >
+          {walletAddress && (
+            <CustomAvatar address={walletAddress} ensImage={undefined} size={18} />
+          )}
+          <span className="mx-2">{displayName}</span>
+        </Button>
+
+        {/* Sign Out Button */}
+        <Button
+          onClick={logout}
+          variant="outline"
+          className="text-sm font-bold rounded-xl bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+    );
+  }
+
+  // Simple authenticated state
+  return (
+    <Button
+      onClick={logout}
+      variant="outline"
+      className={`text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all ${className || ''}`}
+    >
+      <LogOut className="mr-2 h-4 w-4" />
+      Sign Out
+    </Button>
+  );
+}

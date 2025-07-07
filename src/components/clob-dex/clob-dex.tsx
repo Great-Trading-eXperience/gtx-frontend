@@ -2,25 +2,25 @@
 
 import { useWebSocket } from '@/contexts/websocket-context';
 import {
-  PoolItem as GraphQLPoolItem,
-  poolsPonderQuery,
-  PoolsPonderResponse,
-  PoolsResponse,
-  TradeItem
+    PoolItem as GraphQLPoolItem,
+    poolsPonderQuery,
+    PoolsPonderResponse,
+    PoolsResponse,
+    TradeItem
 } from '@/graphql/gtx/clob';
 import {
-  AccountData,
-  DepthData,
-  fetchAccountData,
-  fetchAllOrders,
-  fetchDepth,
-  fetchOpenOrders,
-  fetchTicker24hr,
-  fetchTickerPrice,
-  fetchTrades,
-  OrderData,
-  Ticker24hrData,
-  TickerPriceData
+    AccountData,
+    DepthData,
+    fetchAccountData,
+    fetchAllOrders,
+    fetchDepth,
+    fetchOpenOrders,
+    fetchTicker24hr,
+    fetchTickerPrice,
+    fetchTrades,
+    OrderData,
+    Ticker24hrData,
+    TickerPriceData
 } from '@/lib/market-api';
 import { useMarketStore } from '@/store/market-store';
 import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
@@ -32,17 +32,18 @@ import { useAccount, useChainId } from 'wagmi';
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import { poolsQuery } from '@/graphql/gtx/clob';
-import { useMarketWebSocket, useSafeUserWebSocket } from '@/hooks/use-market-websocket';
+import { useMarketWebSocket } from '@/hooks/use-market-websocket';
+import { useUserWebSocket } from '@/hooks/use-user-websocket';
 import {
-  transformApiTradeToTradeItem,
-  transformWebSocketTradeToTradeItem
+    transformApiTradeToTradeItem,
+    transformWebSocketTradeToTradeItem
 } from '@/lib/transform-data';
 import { TradeEvent } from '@/services/market-websocket';
 import { getUseSubgraph } from '@/utils/env';
 import request from 'graphql-request';
-import MarketDataWidget from './market-widget/market-widget';
 import ChartComponent from './chart/chart';
 import MarketDataTabs from './market-data-tabs/market-data-tabs';
+import MarketDataWidget from './market-widget/market-widget';
 import PlaceOrder from './place-order/place-order';
 import TradingHistory from './trading-history/trading-history';
 
@@ -169,7 +170,7 @@ export default function ClobDex() {
     connectedAddress,
     connectedChainId,
     connect: connectUserWebSocket,
-  } = useSafeUserWebSocket(address, chainId);
+  } = useUserWebSocket(address, chainId);
 
   const fetchInitialDepthData = useCallback(async () => {
     if (selectedPool) {

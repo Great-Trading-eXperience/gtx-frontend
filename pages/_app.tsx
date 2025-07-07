@@ -18,6 +18,7 @@ import { useRouter } from "next/router";
 import { arbitrumSepolia } from "wagmi/chains"
 import VeGTXHeader from "@/components/header/vegtx-header";
 import MobileWarningModal from "@/components/header/mobile-warning-modal";
+import { PrivyProviderWrapper } from "@/providers/privy-provider";
 
 const queryClient = new QueryClient();
 
@@ -110,36 +111,38 @@ function AppLayout({ children }: { children: ReactNode }) {
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   // Get getLayout from component, fallback to Main Layout
   const getLayout = Component.getLayout || ((page: ReactNode) => (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          initialChain={RISE_SEPOLIA_CHAIN_ID} // Updated to use Rise Sepolia as default
-          theme={darkTheme({
-            accentColor: "white",
-            accentColorForeground: "black",
-          })}
-        >
-          <Head>
-            <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
-            <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
-            <link rel="icon" type="image/png" href="/logo/gtx.png" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          </Head>
-          <ThemeProvider
-            disableTransitionOnChange
-            attribute="class"
-            defaultTheme="dark"
-            value={{ light: "light", dark: "dark" }}
+    <PrivyProviderWrapper>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider
+            initialChain={RISE_SEPOLIA_CHAIN_ID} // Updated to use Rise Sepolia as default
+            theme={darkTheme({
+              accentColor: "white",
+              accentColorForeground: "black",
+            })}
           >
-            <ToastProvider>
-              <AppLayout>
-                {page}
-              </AppLayout>
-            </ToastProvider>
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+            <Head>
+              <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
+              <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
+              <link rel="icon" type="image/png" href="/logo/gtx.png" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            </Head>
+            <ThemeProvider
+              disableTransitionOnChange
+              attribute="class"
+              defaultTheme="dark"
+              value={{ light: "light", dark: "dark" }}
+            >
+              <ToastProvider>
+                <AppLayout>
+                  {page}
+                </AppLayout>
+              </ToastProvider>
+            </ThemeProvider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </PrivyProviderWrapper>
   ));
 
   return getLayout(<Component {...pageProps} />);

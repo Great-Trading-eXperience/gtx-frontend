@@ -6,12 +6,15 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
+import { PrivyAuthButton } from "../auth/privy-auth-button";
+import { usePrivyAuth } from "@/hooks/use-privy-auth";
 
 import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
 
 const Header = () => {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
+  const { ready, authenticated } = usePrivyAuth();
 
   const allLinks = [
     {
@@ -104,10 +107,19 @@ const Header = () => {
 
         {/* Right Column */}
         <div className="flex justify-end items-center">
-          <ButtonConnectWallet
-            colors={solidColorConfig}
-            className="border border-slate-500"
-          />
+          {/* Show authentication buttons - prioritize Privy if available */}
+          <div className="flex items-center gap-2">
+            <PrivyAuthButton />
+            {ready && !authenticated && (
+              <>
+                <span className="text-gray-500 text-sm">or</span>
+                <ButtonConnectWallet
+                  colors={solidColorConfig}
+                  className="border border-slate-500"
+                />
+              </>
+            )}
+          </div>
 
           {/* Mobile Menu Button - Only Visible on Mobile */}
           <div className="flex ml-4 lg:hidden">
