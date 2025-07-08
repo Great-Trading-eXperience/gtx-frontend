@@ -108,18 +108,9 @@ const Header = () => {
 
         {/* Right Column */}
         <div className="flex justify-end items-center">
-          {/* Show authentication buttons - prioritize Privy if available */}
+          {/* Show authentication buttons - only Privy */}
           <div className="flex items-center gap-2">
             <PrivyAuthButton />
-            {ready && !authenticated && (
-              <>
-                <span className="text-gray-500 text-sm">or</span>
-                <ButtonConnectWallet
-                  colors={solidColorConfig}
-                  className="border border-slate-500"
-                />
-              </>
-            )}
           </div>
 
           {/* Mobile Menu Button - Only Visible on Mobile */}

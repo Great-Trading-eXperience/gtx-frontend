@@ -9,7 +9,6 @@ import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
-
 // Helper function to get token decimals
 const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
   try {

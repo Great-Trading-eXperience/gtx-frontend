@@ -60,34 +60,23 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
         onClick={login}
         className={`bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all rounded-lg text-sm font-bold ${className || ''}`}
       >
-        <User className="mr-2 h-4 w-4" />
-        Sign In
+        <Wallet className="mr-2 h-4 w-4" />
+        Connect
       </Button>
     );
   }
 
-  // Authenticated but needs wallet connection
+  // Authenticated but needs wallet connection - only show sign out
   if (needsWalletConnection) {
     return (
-      <div className="flex gap-2">
-        <Button
-          onClick={linkWallet}
-          className={`bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.15)] hover:shadow-[0_0_20px_rgba(34,197,94,0.25)] transition-all rounded-lg text-sm font-bold ${className || ''}`}
-        >
-          <Link className="mr-2 h-4 w-4" />
-          Connect Wallet
-        </Button>
-        {showFullProfile && (
-          <Button
-            onClick={logout}
-            variant="outline"
-            className="text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
-        )}
-      </div>
+      <Button
+        onClick={logout}
+        variant="outline"
+        className={`text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all ${className || ''}`}
+      >
+        <LogOut className="mr-2 h-4 w-4" />
+        Sign Out
+      </Button>
     );
   }
 

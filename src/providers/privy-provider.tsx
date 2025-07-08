@@ -14,7 +14,7 @@ const privyConfig: PrivyClientConfig = {
     requireUserPasswordOnCreate: true,
     noPromptOnSignature: false,
   },
-  loginMethods: ['email','google', 'twitter', 'wallet'],
+  loginMethods: ['wallet'],
   appearance: {
     theme: 'dark',
     accentColor: '#676FFF',
