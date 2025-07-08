@@ -37,6 +37,7 @@ import TradingViewChartContainer, {
 } from '@/components/trading-view-chart/trading-view-chart';
 import { getUseSubgraph } from '@/utils/env';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
+import GTXLoadingAnimation from './gtx-loading-animation';
 
 // Updated interface to match the new Binance-compatible bucket format
 interface BucketData {
@@ -428,7 +429,7 @@ function ChartComponent({
   if (isLoading) {
     return (
       <div className="w-full h-[300px] bg-white dark:bg-[#151924] rounded-b-lg text-gray-900 dark:text-white flex items-center justify-center">
-        Loading...
+        <GTXLoadingAnimation />
       </div>
     );
   }
@@ -436,14 +437,14 @@ function ChartComponent({
   if (error) {
     return (
       <div className="w-full h-[300px] bg-white dark:bg-[#151924] text-gray-900 dark:text-white flex items-center justify-center">
-        Error: {error.toString()}
+        Error: {error?.message || String(error) || 'Unknown error'}
       </div>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="w-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white">
+      <div className="w-full h-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white rounded-b-lg">
         {!selectedPool?.coin && (
           <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
             <div className="text-lg font-semibold">
@@ -494,7 +495,7 @@ function ChartComponent({
           </div>
         )}
 
-        <div className="p-2">
+        <div className="p-2 h-full">
           {selectedPool?.coin ? (
             <TradingViewChartContainer
               chainId={chainId}

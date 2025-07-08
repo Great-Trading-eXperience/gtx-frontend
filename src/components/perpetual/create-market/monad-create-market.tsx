@@ -321,7 +321,7 @@ const hash = await writeContract(wagmiConfig, {
                 {error && (
                   <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-md text-red-800 dark:text-red-300 text-sm flex items-start">
                     <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                    <div>{error}</div>
+                    <div>{String(error || 'Unknown error')}</div>
                   </div>
                 )}
                 

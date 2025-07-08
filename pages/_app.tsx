@@ -1,12 +1,9 @@
 import Footer from "@/components/footer/footer";
 import Header from "@/components/header/header";
-import { Chain, darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import type { AppProps } from "next/app";
-import { WagmiProvider } from "wagmi";
-import { wagmiConfig } from "@/configs/wagmi";
 import "../styles/globals.css";
 import Head from "next/head";
 import { ReactNode, useEffect, useState } from "react";
@@ -15,11 +12,10 @@ import { ToastProvider } from "@/components/ui/toast";
 import { Toaster } from "@/components/ui/toaster";
 import LandingHeader from "@/components/header/landing-header";
 import { useRouter } from "next/router";
-import { arbitrumSepolia } from "wagmi/chains"
 import VeGTXHeader from "@/components/header/vegtx-header";
 import MobileWarningModal from "@/components/header/mobile-warning-modal";
-
-const queryClient = new QueryClient();
+import Providers from "@/providers/privy-provider";
+import { ClientOnly } from "@/components/client-only";
 
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;
@@ -110,10 +106,14 @@ function AppLayout({ children }: { children: ReactNode }) {
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   // Get getLayout from component, fallback to Main Layout
   const getLayout = Component.getLayout || ((page: ReactNode) => (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
+    <ClientOnly fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+      </div>
+    }>
+      <Providers>
         <RainbowKitProvider
-          initialChain={RISE_SEPOLIA_CHAIN_ID} // Updated to use Rise Sepolia as default
+          initialChain={RISE_SEPOLIA_CHAIN_ID}
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",
@@ -138,8 +138,8 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
             </ToastProvider>
           </ThemeProvider>
         </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+      </Providers>
+    </ClientOnly>
   ));
 
   return getLayout(<Component {...pageProps} />);

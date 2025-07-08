@@ -19,8 +19,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId, useContractRead } from 'wagmi';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
+import GTXSlider from './slider';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -41,6 +43,10 @@ const PlaceOrder = ({
   refetchAccount,
 }: PlaceOrderProps) => {
   const { isConnected } = useAccount();
+  const { isFullyAuthenticated } = usePrivyAuth();
+  
+  // Check if user is connected via either traditional wallet or Privy
+  const effectiveIsConnected = isConnected || isFullyAuthenticated;
 
   const currentChainId = useChainId();
   const poolManagerAddress = getContractAddress(
@@ -119,7 +125,7 @@ const PlaceOrder = ({
     marketOrderHash,
     resetLimitOrderState,
     resetMarketOrderState,
-  } = usePlaceOrder();
+  } = usePlaceOrder(address);
 
   const bestBidPrice = useMemo(() => {
     if (depthData?.bids && depthData.bids.length > 0) {
@@ -146,7 +152,8 @@ const PlaceOrder = ({
     getContractAddress(
       chainId ?? defaultChainId,
       ContractName.clobBalanceManager
-    ) as HexAddress
+    ) as HexAddress,
+    address // Pass the effective address from props
   );
 
   //   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
@@ -288,7 +295,7 @@ const PlaceOrder = ({
   useEffect(() => {
     if (!selectedPool || !selectedPool.quoteDecimals) return;
 
-    if (!price && orderType === 'limit') {
+    if (orderType === 'limit') {
       if (side === OrderSideEnum.BUY && bestAskPrice) {
         const normalizedPrice = formatUnits(BigInt(bestAskPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
@@ -296,11 +303,11 @@ const PlaceOrder = ({
         const normalizedPrice = formatUnits(BigInt(bestBidPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
       }
-    } else if (orderType === 'market' && ticker24hr?.lastPrice) {
-      const normalizedPrice = formatUnits(BigInt(ticker24hr.lastPrice), selectedPool.quoteDecimals);
+    } else {
+      const normalizedPrice = formatUnits(BigInt(ticker24hr?.lastPrice || 0), selectedPool?.quoteDecimals);
       setPrice(normalizedPrice);
     }
-  }, [bestBidPrice, bestAskPrice, side, price, orderType, selectedPool?.quoteDecimals]);
+  }, [bestBidPrice, bestAskPrice, side, orderType, selectedPool?.quoteDecimals, ticker24hr?.lastPrice]);
 
   // Load balance when relevant data changes
   useEffect(() => {
@@ -451,6 +458,40 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
+  const [percentage, setPercentage] = useState(0);
+  const [inputValue, setInputValue] = useState('');
+
+  const presetValues: number[] = [0, 25, 50, 75, 100];
+
+  useEffect(() => {
+    setInputValue(percentage.toString());
+
+    const amount = (Number(availableBalance) / 100) * percentage;
+    setQuantity(amount.toString());
+  }, [percentage, availableBalance]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = e.target.value;
+    setInputValue(value);
+    
+    if (!/^\d*$/.test(value)) return;
+    
+    const numValue = parseFloat(value);
+    
+    if (numValue >= 0 && numValue <= 100) {
+      setPercentage(numValue);
+      setInputValue(value);
+    } else if (numValue > 100) {
+      setPercentage(100);
+      setInputValue('100');
+    }
+  };
+
+  const handlePresetClick = (value: number): void => {
+    setPercentage(value);
+    setInputValue(value.toString());
+  };
+
   if (!mounted)
     return (
       <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
@@ -468,7 +509,7 @@ const PlaceOrder = ({
       </style>
 
       <div className="flex flex-col w-full gap-3 mb-3">
-        {isConnected && selectedPool && (
+        {effectiveIsConnected && selectedPool && (
           <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-gray-300 flex items-center gap-1.5">
@@ -647,9 +688,10 @@ const PlaceOrder = ({
               required
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-              {selectedPool?.baseTokenAddress ? selectedPool.coin.split('/')[0] : ''}
+              {selectedPool && (side === OrderSideEnum.BUY ? 'USDC' : selectedPool.coin.split('/')[0])}
             </div>
           </div>
+          <GTXSlider quantity={availableBalance} setQuantity={setQuantity}/>
         </div>
 
         {/* Total - Calculated Field */}
@@ -676,7 +718,7 @@ const PlaceOrder = ({
           <div
             className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
               side === OrderSideEnum.BUY ? 'bg-emerald-500/30' : 'bg-rose-500/30'
-            } ${isPending || isConfirming || !isConnected ? 'opacity-0' : 'opacity-50'}`}
+            } ${isPending || isConfirming || !effectiveIsConnected ? 'opacity-0' : 'opacity-50'}`}
           ></div>
           <button
             type="submit"
@@ -685,11 +727,11 @@ const PlaceOrder = ({
                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]'
                 : 'bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]'
             } ${
-              isPending || isConfirming || !isConnected
+              isPending || isConfirming || !effectiveIsConnected
                 ? 'opacity-50 cursor-not-allowed'
                 : ''
             }`}
-            disabled={isPending || isConfirming || !isConnected}
+            disabled={isPending || isConfirming || !effectiveIsConnected}
           >
             {isPending ? (
               <div className="flex items-center justify-center gap-2">
@@ -716,7 +758,22 @@ const PlaceOrder = ({
         </div>
       </form>
 
-      {!isConnected && (
+      <div className='flex flex-col w-full gap-3 text-xs text-gray-400 mt-3'>
+        <div className='flex flex-row justify-between'>
+          <span>Order Value</span>
+          <span className='text-gray-200 font-medium'>{total} USDC</span>
+        </div>
+        <div className='flex flex-row justify-between'>
+          <span>Slippage</span>
+          <span className='text-cyan-400 font-medium'>Est: 5.00% / Max: 8.00%</span>
+        </div>
+        <div className='flex flex-row justify-between'>
+          <span>Fees</span>
+          <span className='text-gray-200 font-medium'>0.0000% / 0.0400%</span>
+        </div>
+      </div>
+
+      {!effectiveIsConnected && (
         <div className="mt-3 p-2 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
           <Wallet className="w-4 h-4" />
           <span>Please connect wallet to trade</span>
