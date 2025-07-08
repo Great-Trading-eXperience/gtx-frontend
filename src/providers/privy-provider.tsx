@@ -1,48 +1,50 @@
 'use client';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { PrivyClientConfig } from '@privy-io/react-auth';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
-import { arbitrumSepolia } from 'viem/chains';
+import { WagmiProvider } from '@privy-io/wagmi';
+import { wagmiConfig } from '@/configs/wagmi';
 
-const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
+const queryClient = new QueryClient();
 
-interface PrivyProviderWrapperProps {
-  children: React.ReactNode;
-}
+const privyConfig: PrivyClientConfig = {
+  embeddedWallets: {
+    createOnLogin: 'users-without-wallets',
+    requireUserPasswordOnCreate: true,
+    noPromptOnSignature: false,
+  },
+  loginMethods: ['email','google', 'twitter', 'wallet'],
+  appearance: {
+    theme: 'dark',
+    accentColor: '#676FFF',
+    logo: '/logo/gtx.png',
+  },
+};
 
-export function PrivyProviderWrapper({ children }: PrivyProviderWrapperProps) {
+export default function Providers({ children }: { children: React.ReactNode }) {
+  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+
+  if (!privyAppId) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
+          {children}
+        </WagmiProvider>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <PrivyProvider
-      appId={PRIVY_APP_ID}
-      config={{
-        loginMethods: ['email', 'wallet'], // Temporarily use only email and wallet
-        appearance: {
-          theme: 'dark',
-          accentColor: '#676FFF',
-          logo: '/logo/gtx.png',
-        },
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
-        defaultChain: arbitrumSepolia,
-        supportedChains: [arbitrumSepolia],
-        // Add custom chains if needed
-        // customChains: [
-        //   {
-        //     id: 11155931,
-        //     name: 'Rise Sepolia',
-        //     nativeCurrency: { name: 'Rise', symbol: 'RISE', decimals: 18 },
-        //     rpcUrls: {
-        //       default: { http: ['https://sepolia-rpc.rise.art'] },
-        //     },
-        //     blockExplorers: {
-        //       default: { name: 'Rise Explorer', url: 'https://sepolia-explorer.rise.art' },
-        //     },
-        //   },
-        // ],
-      }}
+      appId={privyAppId}
+      config={privyConfig}
     >
-      {children}
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
+          {children}
+        </WagmiProvider>
+      </QueryClientProvider>
     </PrivyProvider>
   );
 }

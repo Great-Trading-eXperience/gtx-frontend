@@ -1,7 +1,7 @@
 import { Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
@@ -9,7 +9,8 @@ import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect
 
 const VeGTXHeader = () => {
   const { theme, setTheme } = useTheme();
-  const pathname = usePathname();
+  const router = useRouter();
+  const pathname = router.pathname;
 
   const allLinks = [
     { 

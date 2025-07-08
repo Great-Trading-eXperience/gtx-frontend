@@ -81,8 +81,6 @@ export default function TradingViewChartContainer({
     disconnect: disconnectKlineWebSocket
   } = useMarketWebSocket(chainId, 'kline_' + klineInterval, selectedSymbol.replace('/', ''));
 
-  console.log('default symbol', symbol);
-
   useEffect(() => {
     console.log('📨 WebSocket message received:', klineMessage);
     if (klineMessage && klineMessage.e === 'kline') {

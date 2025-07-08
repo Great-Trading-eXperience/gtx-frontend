@@ -2,8 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
-import { Wallet, LogOut, Link, User, Mail, Globe } from 'lucide-react';
+import { Wallet, LogOut, Link, User, Mail, Globe, Copy, Check } from 'lucide-react';
 import { CustomAvatar } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
+import { useState, useEffect } from 'react';
 
 interface PrivyAuthButtonProps {
   className?: string;
@@ -27,8 +28,24 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
     authenticationMethod,
   } = usePrivyAuth();
 
-  // Don't render until Privy is ready
-  if (!ready) {
+  const [copied, setCopied] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're only rendering on the client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handleCopyAddress = () => {
+    if (walletAddress) {
+      navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Don't render until we're on the client and Privy is ready
+  if (!isClient || !ready) {
     return (
       <Button disabled className={className}>
         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -79,33 +96,50 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
     return (
       <div className="flex gap-2">
         {/* Authentication Method Indicator */}
-        <Button
-          variant="outline"
-          className="text-sm font-bold rounded-xl bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
-          disabled
-        >
-          {authenticationMethod === 'wallet' ? (
-            <>
-              <Wallet className="mr-2 h-4 w-4" />
-              {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-            </>
-          ) : authenticationMethod === 'google_oauth' ? (
-            <>
-              <Globe className="mr-2 h-4 w-4" />
-              Google
-            </>
-          ) : authenticationMethod === 'email' ? (
-            <>
-              <Mail className="mr-2 h-4 w-4" />
-              Email
-            </>
-          ) : (
-            <>
-              <User className="mr-2 h-4 w-4" />
-              {socialLoginMethod?.replace('_oauth', '').toUpperCase()}
-            </>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            className="text-sm font-bold rounded-xl bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
+            disabled
+          >
+            {authenticationMethod === 'wallet' ? (
+              <>
+                <Wallet className="mr-2 h-4 w-4" />
+{walletAddress ? `${String(walletAddress).slice(0, 6)}...${String(walletAddress).slice(-4)}` : 'Wallet'}
+              </>
+            ) : authenticationMethod === 'google_oauth' ? (
+              <>
+                <Globe className="mr-2 h-4 w-4" />
+                Google
+              </>
+            ) : authenticationMethod === 'email' ? (
+              <>
+                <Mail className="mr-2 h-4 w-4" />
+                Email
+              </>
+            ) : (
+              <>
+                <User className="mr-2 h-4 w-4" />
+                {socialLoginMethod ? String(socialLoginMethod).replace('_oauth', '').toUpperCase() : 'Social'}
+              </>
+            )}
+          </Button>
+          {walletAddress && (
+            <Button
+              onClick={handleCopyAddress}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-xl bg-[#1A1A1A] border-white/20 hover:border-blue-500/40 hover:bg-[#121212] transition-all"
+              title="Copy address"
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-green-400" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </Button>
           )}
-        </Button>
+        </div>
 
         {/* User Profile */}
         <Button
@@ -116,7 +150,7 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
           {walletAddress && (
             <CustomAvatar address={walletAddress} ensImage={undefined} size={18} />
           )}
-          <span className="mx-2">{displayName}</span>
+          <span className="mx-2">{String(displayName || 'Anonymous')}</span>
         </Button>
 
         {/* Sign Out Button */}

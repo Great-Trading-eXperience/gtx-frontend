@@ -28,6 +28,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAccount, useChainId } from 'wagmi';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
 
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
@@ -66,16 +67,21 @@ export type ClobDexComponentProps = {
 
 export default function ClobDex() {
   const { address, isConnected } = useAccount();
+  const { walletAddress, isFullyAuthenticated } = usePrivyAuth();
   const chainId = useChainId();
   const defaultChainId = Number(DEFAULT_CHAIN);
   const isClient = useIsClient();
+  
+  // Use Privy address as fallback if available
+  const effectiveAddress = (address || walletAddress) as HexAddress;
+  const effectiveIsConnected = isConnected || isFullyAuthenticated;
   
   const pathname = usePathname();
 
   const { selectedPoolId, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();
   const [mounted, setMounted] = useState(false);
   const [selectedPool, setSelectedPool] = useState<ProcessedPoolItem>();
-  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
+  const [previousConnectionState, setPreviousConnectionState] = useState(effectiveIsConnected);
 
   // WebSocket context
   const { connectionState, isReconnected, resetReconnectedFlag } = useWebSocket();
@@ -170,7 +176,7 @@ export default function ClobDex() {
     connectedAddress,
     connectedChainId,
     connect: connectUserWebSocket,
-  } = useUserWebSocket(address, chainId);
+  } = useUserWebSocket(effectiveAddress, chainId);
 
   const fetchInitialDepthData = useCallback(async () => {
     if (selectedPool) {
@@ -200,9 +206,9 @@ export default function ClobDex() {
   }, [selectedPool]);
 
   const fetchUserTradesData = useCallback(async () => {
-    if (selectedPool && address) {
+    if (selectedPool && effectiveAddress) {
       try {
-        const userData = await fetchTrades(selectedPool.coin, 500, address);
+        const userData = await fetchTrades(selectedPool.coin, 500, effectiveAddress);
         if (userData) {
           const transformedUserData = transformApiTradeToTradeItem(userData, selectedPool.id, selectedPool.coin);
 
@@ -220,7 +226,7 @@ export default function ClobDex() {
         console.error('Error fetching user trades data:', error);
       }
     }
-  }, [selectedPool, address]);
+  }, [selectedPool, effectiveAddress]);
 
   const {
     data: marketAllOrdersData,
@@ -228,12 +234,12 @@ export default function ClobDex() {
     error: marketAllOrdersError,
     refetch: refetchAllOrders
   } = useQuery<OrderData[]>({
-    queryKey: ['marketAllOrders', address, selectedPool?.baseSymbol, selectedPool?.quoteSymbol],
+    queryKey: ['marketAllOrders', effectiveAddress, selectedPool?.baseSymbol, selectedPool?.quoteSymbol],
     queryFn: async () => {
-      if (!address) return [];
-      return await fetchAllOrders(address);
+      if (!effectiveAddress) return [];
+      return await fetchAllOrders(effectiveAddress);
     },
-    enabled: !!address,
+    enabled: !!effectiveAddress,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
@@ -245,12 +251,12 @@ export default function ClobDex() {
     error: marketOpenOrdersError,
     refetch: refetchOpenOrders
   } = useQuery<OrderData[]>({
-    queryKey: ['marketOpenOrders', address, selectedPool?.baseSymbol, selectedPool?.quoteSymbol],
+    queryKey: ['marketOpenOrders', effectiveAddress, selectedPool?.baseSymbol, selectedPool?.quoteSymbol],
     queryFn: async () => {
-      if (!address) return [];
-      return await fetchOpenOrders(address);
+      if (!effectiveAddress) return [];
+      return await fetchOpenOrders(effectiveAddress);
     },
-    enabled: !!address,
+    enabled: !!effectiveAddress,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
@@ -262,12 +268,12 @@ export default function ClobDex() {
     error: marketAccountError,
     refetch: refetchAccount
   } = useQuery<AccountData | null>({
-    queryKey: ['marketAccount', address],
+    queryKey: ['marketAccount', effectiveAddress],
     queryFn: async () => {
-      if (!address) return null;
-      return await fetchAccountData(address);
+      if (!effectiveAddress) return null;
+      return await fetchAccountData(effectiveAddress);
     },
-    enabled: !!address,
+    enabled: !!effectiveAddress,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
@@ -401,15 +407,15 @@ export default function ClobDex() {
   }, [symbol]);
 
   useEffect(() => {
-    if (chainId == connectedChainId && address == connectedAddress) {
+    if (chainId == connectedChainId && effectiveAddress == connectedAddress) {
       return;
     }
 
     connectUserWebSocket();
-  }, [address, chainId]);
+  }, [effectiveAddress, chainId]);
 
   useEffect(() => {
-    if (!userMessage || !selectedPool || !address) return;
+    if (!userMessage || !selectedPool || !effectiveAddress) return;
 
     if (userMessage && userMessage.e === 'executionReport') {
       try {
@@ -477,7 +483,7 @@ export default function ClobDex() {
                   },
                   lockedAmount: '0',
                   symbol: selectedPool.baseSymbol || '',
-                  user: address as `0x${string}`
+                  user: effectiveAddress as `0x${string}`
                 },
                 price: execReport.p || '0',
                 quantity: execReport.q || '0', // Original quantity
@@ -542,7 +548,7 @@ export default function ClobDex() {
         console.error('Error processing execution report:', error);
       }
     }
-  }, [userMessage, selectedPool, address]);
+  }, [userMessage, selectedPool, effectiveAddress]);
 
   useEffect(() => {
     if (!symbol) {
@@ -555,10 +561,10 @@ export default function ClobDex() {
     fetchInitialTicker24hr();
     fetchInitialTradesData();
 
-    if (address) {
+    if (effectiveAddress) {
       fetchUserTradesData();
     }
-  }, [symbol, address]);
+  }, [symbol, effectiveAddress]);
 
   useEffect(() => {
     if (!depthMessage) return;
@@ -686,7 +692,7 @@ export default function ClobDex() {
 
       resetReconnectedFlag();
     }
-  }, [isReconnected, selectedPool, address]);
+  }, [isReconnected, selectedPool, effectiveAddress]);
 
   useEffect(() => {
     console.log(`WebSocket connection state: ${connectionState}`);
@@ -697,10 +703,10 @@ export default function ClobDex() {
   }, [isDepthConnected, isTradesConnected, isTickerConnected]);
 
   useEffect(() => {
-    if (address) {
+    if (effectiveAddress) {
       console.log(`User WebSocket connection status: ${isUserConnected}`);
     }
-  }, [isUserConnected, address]);
+  }, [isUserConnected, effectiveAddress]);
 
   useEffect(() => {
     if (isReconnected && selectedPool) {
@@ -709,7 +715,7 @@ export default function ClobDex() {
       fetchInitialTickerPrice();
       fetchInitialTicker24hr();
 
-      if (address) {
+      if (effectiveAddress) {
         refetchOpenOrders();
         refetchAllOrders();
         refetchAccount();
@@ -717,7 +723,7 @@ export default function ClobDex() {
 
       resetReconnectedFlag();
     }
-  }, [isReconnected, selectedPool, address]);
+  }, [isReconnected, selectedPool, effectiveAddress]);
 
   useEffect(() => {
     if (!mounted || !poolsData) return;
@@ -775,17 +781,17 @@ export default function ClobDex() {
 
   useEffect(() => {
     if (mounted) {
-      if (isConnected && !previousConnectionState) {
-        if (address) {
+      if (effectiveIsConnected && !previousConnectionState) {
+        if (effectiveAddress) {
           refetchAllOrders();
           refetchOpenOrders();
           refetchAccount();
         }
         return;
       }
-      setPreviousConnectionState(isConnected);
+      setPreviousConnectionState(effectiveIsConnected);
     }
-  }, [isConnected, previousConnectionState, mounted, address]);
+  }, [effectiveIsConnected, previousConnectionState, mounted, effectiveAddress]);
 
   if (!isClient) {
     return null;
@@ -796,7 +802,7 @@ export default function ClobDex() {
       <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
         <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
           <MarketDataWidget
-            address={address}
+            address={effectiveAddress}
             chainId={chainId}
             defaultChainId={defaultChainId}
             poolId={selectedPoolId}
@@ -804,7 +810,7 @@ export default function ClobDex() {
             ticker24hr={ticker24hr}
           />
           <ChartComponent
-            address={address}
+            address={effectiveAddress}
             chainId={chainId}
             defaultChainId={defaultChainId}
             selectedPool={selectedPool}
@@ -813,7 +819,7 @@ export default function ClobDex() {
 
         <div className="space-y-[6px] h-fit">
           <MarketDataTabs
-            address={address}
+            address={effectiveAddress}
             chainId={chainId}
             defaultChainId={defaultChainId}
             selectedPool={selectedPool}
@@ -827,7 +833,7 @@ export default function ClobDex() {
 
         <div className="space-y-2">
           <PlaceOrder
-            address={address}
+            address={effectiveAddress}
             chainId={chainId}
             defaultChainId={defaultChainId}
             selectedPool={selectedPool}
@@ -841,7 +847,7 @@ export default function ClobDex() {
       </div>
 
       <TradingHistory
-        address={address}
+        address={effectiveAddress}
         chainId={chainId}
         defaultChainId={defaultChainId}
         balanceData={transformedBalances}

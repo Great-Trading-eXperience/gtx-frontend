@@ -1,15 +1,6 @@
-import { connectorsForWallets } from '@rainbow-me/rainbowkit';
-import {
-	bitgetWallet,
-	coinbaseWallet,
-	metaMaskWallet,
-	okxWallet,
-	rabbyWallet,
-	rainbowWallet,
-	walletConnectWallet,
-} from '@rainbow-me/rainbowkit/wallets';
-import { createConfig, http } from 'wagmi';
-import { Chain } from 'wagmi/chains';
+import { createConfig } from '@privy-io/wagmi';
+import { http } from 'viem';
+import { Chain } from 'viem/chains';
 
 export const projectId = 'c8d08053460bfe0752116d730dc6393b';
 
@@ -63,39 +54,9 @@ export const riseSepolia: Chain = {
 	testnet: true,
 };
 
-const connectors = connectorsForWallets(
-	[
-		{
-			groupName: 'Recommended',
-			wallets: [okxWallet, rabbyWallet],
-		},
-		{
-			groupName: 'Others',
-			wallets: [
-				walletConnectWallet,
-				metaMaskWallet,
-				coinbaseWallet,
-				rainbowWallet,
-				bitgetWallet,
-			],
-		},
-	],
-	{ appName: 'RainbowKit App', projectId: projectId }
-);
-
-const allChains = [
-	riseSepolia
-];
-
-const enabledChains = [riseSepolia]
-
-const transports = enabledChains.reduce((acc, chain) => {
-	acc[chain.id] = http(chain.rpcUrls.default.http[0]);
-	return acc;
-}, {} as Record<number, ReturnType<typeof http>>);
-
 export const wagmiConfig = createConfig({
-	chains: enabledChains as [Chain, ...Chain[]],
-	connectors: connectors,
-	transports,
+	chains: [riseSepolia],
+	transports: {
+		[riseSepolia.id]: http(riseSepolia.rpcUrls.default.http[0]),
+	},
 });

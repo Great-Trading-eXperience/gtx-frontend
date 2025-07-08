@@ -1,7 +1,7 @@
 import { Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
@@ -13,7 +13,8 @@ import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-confi
 
 const Header = () => {
   const { theme, setTheme } = useTheme();
-  const pathname = usePathname();
+  const router = useRouter();
+  const pathname = router.pathname;
   const { ready, authenticated } = usePrivyAuth();
 
   const allLinks = [

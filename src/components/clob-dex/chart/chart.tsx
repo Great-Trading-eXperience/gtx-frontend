@@ -437,7 +437,7 @@ function ChartComponent({
   if (error) {
     return (
       <div className="w-full h-[300px] bg-white dark:bg-[#151924] text-gray-900 dark:text-white flex items-center justify-center">
-        Error: {error.toString()}
+        Error: {error?.message || String(error) || 'Unknown error'}
       </div>
     );
   }

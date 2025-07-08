@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { PrivyAuthButton } from './privy-auth-button';
 import { ButtonConnectWallet } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import { Button } from '@/components/ui/button';
 import { ArrowLeftRight } from 'lucide-react';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -15,9 +16,15 @@ interface AuthWrapperProps {
 export function AuthWrapper({ children, requireWallet = false }: AuthWrapperProps) {
   const { ready, authenticated, isFullyAuthenticated, needsWalletConnection } = usePrivyAuth();
   const [useTraditionalWallet, setUseTraditionalWallet] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Don't render until Privy is ready
-  if (!ready) {
+  // Ensure we're only rendering on the client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Don't render until we're on the client and Privy is ready
+  if (!isClient || !ready) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -63,14 +70,18 @@ export function AuthWrapper({ children, requireWallet = false }: AuthWrapperProp
           {useTraditionalWallet ? (
             <div className="space-y-2 text-center">
               <p className="text-sm text-gray-400">Connect with your wallet</p>
-              <ButtonConnectWallet />
+              <ErrorBoundary>
+                <ButtonConnectWallet />
+              </ErrorBoundary>
             </div>
           ) : (
             <div className="space-y-2 text-center">
               <p className="text-sm text-gray-400">
                 Sign in with social media or wallet
               </p>
-              <PrivyAuthButton />
+              <ErrorBoundary>
+                <PrivyAuthButton />
+              </ErrorBoundary>
             </div>
           )}
         </div>
