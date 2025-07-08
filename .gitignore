@@ -60,3 +60,6 @@ package-lock.json
 
 # public folder
 public/charting_library.zip
+
+# wagmi demo folder
+wagmi-demo/
