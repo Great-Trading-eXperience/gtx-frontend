@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId, useContractRead } from 'wagmi';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
 import GTXSlider from './slider';
@@ -42,6 +43,10 @@ const PlaceOrder = ({
   refetchAccount,
 }: PlaceOrderProps) => {
   const { isConnected } = useAccount();
+  const { isFullyAuthenticated } = usePrivyAuth();
+  
+  // Check if user is connected via either traditional wallet or Privy
+  const effectiveIsConnected = isConnected || isFullyAuthenticated;
 
   const currentChainId = useChainId();
   const poolManagerAddress = getContractAddress(
@@ -120,7 +125,7 @@ const PlaceOrder = ({
     marketOrderHash,
     resetLimitOrderState,
     resetMarketOrderState,
-  } = usePlaceOrder();
+  } = usePlaceOrder(address);
 
   const bestBidPrice = useMemo(() => {
     if (depthData?.bids && depthData.bids.length > 0) {
@@ -147,7 +152,8 @@ const PlaceOrder = ({
     getContractAddress(
       chainId ?? defaultChainId,
       ContractName.clobBalanceManager
-    ) as HexAddress
+    ) as HexAddress,
+    address // Pass the effective address from props
   );
 
   //   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
@@ -503,7 +509,7 @@ const PlaceOrder = ({
       </style>
 
       <div className="flex flex-col w-full gap-3 mb-3">
-        {isConnected && selectedPool && (
+        {effectiveIsConnected && selectedPool && (
           <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-gray-300 flex items-center gap-1.5">
@@ -712,7 +718,7 @@ const PlaceOrder = ({
           <div
             className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
               side === OrderSideEnum.BUY ? 'bg-emerald-500/30' : 'bg-rose-500/30'
-            } ${isPending || isConfirming || !isConnected ? 'opacity-0' : 'opacity-50'}`}
+            } ${isPending || isConfirming || !effectiveIsConnected ? 'opacity-0' : 'opacity-50'}`}
           ></div>
           <button
             type="submit"
@@ -721,11 +727,11 @@ const PlaceOrder = ({
                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]'
                 : 'bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]'
             } ${
-              isPending || isConfirming || !isConnected
+              isPending || isConfirming || !effectiveIsConnected
                 ? 'opacity-50 cursor-not-allowed'
                 : ''
             }`}
-            disabled={isPending || isConfirming || !isConnected}
+            disabled={isPending || isConfirming || !effectiveIsConnected}
           >
             {isPending ? (
               <div className="flex items-center justify-center gap-2">
@@ -767,7 +773,7 @@ const PlaceOrder = ({
         </div>
       </div>
 
-      {!isConnected && (
+      {!effectiveIsConnected && (
         <div className="mt-3 p-2 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
           <Wallet className="w-4 h-4" />
           <span>Please connect wallet to trade</span>

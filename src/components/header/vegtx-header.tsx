@@ -1,15 +1,16 @@
 import { Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
-import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
+import { PrivyAuthButton } from "../auth/privy-auth-button";
 
 const VeGTXHeader = () => {
   const { theme, setTheme } = useTheme();
-  const pathname = usePathname();
+  const router = useRouter();
+  const pathname = router.pathname;
 
   const allLinks = [
     { 
@@ -82,10 +83,7 @@ const VeGTXHeader = () => {
 
         {/* Right Column */}
         <div className="flex justify-end items-center">
-          <ButtonConnectWallet
-            colors={solidColorConfig}
-            className="border border-slate-500"
-          />
+          <PrivyAuthButton />
           
           {/* Mobile Menu Button - Only Visible on Mobile */}
           <div className="flex ml-4 lg:hidden">

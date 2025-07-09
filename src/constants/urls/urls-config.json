@@ -5,7 +5,7 @@
     },
     "WEBSOCKET_URLS": {
       "50002": "ws://api.goldsky.com/api/public/project_cma8am8gdyorv01yy8fo11s91/subgraphs/gtx-clob/1.0.3/gn",
-      "11155931": "wss://indexer-rise.gtxdex.xyz/ws/"
+      "11155931": "ws://34.199.34.148:42080"
     },
     "EXPLORER_URLS": {
       "50002": "https://pharosscan.xyz/tx/",

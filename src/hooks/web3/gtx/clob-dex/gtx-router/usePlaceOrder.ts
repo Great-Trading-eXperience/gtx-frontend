@@ -3,12 +3,12 @@ import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
 import { useMutation } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-
+import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 // Helper function to get token decimals
 const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
   try {
@@ -24,7 +24,6 @@ const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
     return 18;
   }
 };
-import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 
 type OrderType = 'market' | 'limit';
 
@@ -45,10 +44,13 @@ interface BestSellPrice {
   volume: bigint;
 }
 
-export const usePlaceOrder = () => {
-  const { address } = useAccount();
+export const usePlaceOrder = (userAddress?: HexAddress) => {
+  const { address: wagmiAddress } = useAccount();
   const [limitOrderHash, setLimitOrderHash] = useState<HexAddress | undefined>(undefined);
   const [marketOrderHash, setMarketOrderHash] = useState<HexAddress | undefined>(undefined);
+  
+  // Use provided address or fall back to wagmi address
+  const address = userAddress || wagmiAddress;
 
   const chainId = useChainId()
 
@@ -102,6 +104,11 @@ export const usePlaceOrder = () => {
     }
   };
 
+  const writeContractSafe = async (contractCall: any) => {
+    // Use Wagmi writeContract - Privy should now work as a connector
+    return await writeContract(wagmiConfig, contractCall);
+  };
+
   const ensureAllowance = async (
     token: HexAddress,
     requiredAmount: bigint,
@@ -120,7 +127,7 @@ export const usePlaceOrder = () => {
     if (allowance < requiredAmount) {
       toast.info('Approving tokens for trading...');
       
-      const approvalHash = await writeContract(wagmiConfig, {
+      const approvalHash = await writeContractSafe({
         account: address,
         address: token,
         abi: erc20Abi,
@@ -196,7 +203,7 @@ export const usePlaceOrder = () => {
     });
 
     // Execute if simulation passes
-    return await writeContract(wagmiConfig, {
+    return await writeContractSafe({
       address: routerAddress,
       abi: GTXRouterABI,
       functionName,

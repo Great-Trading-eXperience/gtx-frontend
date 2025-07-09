@@ -1,18 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
-import { WebSocketEvent, getMarketWebSocket, getUserWebSocket } from '@/services/market-websocket';
+import { WebSocketEvent, getMarketWebSocket } from '@/services/market-websocket';
+import { useCallback, useEffect, useState } from 'react';
 
-// Define the actual WebSocket message format
 interface WebSocketMessage {
   stream: string;
   data: WebSocketEvent;
 }
 
-/**
- * A safer version of the market WebSocket hook that properly handles WebSocket connections
- * and maintains consistent hook order
- */
 export function useMarketWebSocket(chainId: number, stream: string, symbol?: string) {
-  // These state hooks must be called in the same order on every render
   const [lastMessage, setLastMessage] = useState<WebSocketEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -83,78 +77,6 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
       if (symbol && stream) {
         console.log('Unsubscribing from', symbol, stream);
         ws.unsubscribe(symbol.toLowerCase().replaceAll('/', ''), stream);
-      }
-    },
-  };
-}
-
-/**
- * A safer version of the user-specific WebSocket hook that properly handles WebSocket connections
- * @param walletAddress User's wallet address
- */
-export function useSafeUserWebSocket(walletAddress: string | undefined, chainId: number) {
-  // These state hooks must be called in the same order on every render
-  const [lastMessage, setLastMessage] = useState<WebSocketEvent | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
-  const [connectedChainId, setConnectedChainId] = useState<number | null>(null);
-
-  const handleMessage = useCallback((message: WebSocketEvent) => {
-    try {
-      // Only set messages that are relevant to user events
-      if (message.e === 'executionReport' || message.e === 'balanceUpdate') {
-        setLastMessage(message);
-      }
-    } catch (error) {
-      console.error('Error handling user WebSocket message:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!walletAddress || !chainId) return;
-
-    if (walletAddress !== connectedAddress || chainId !== connectedChainId) {
-      setConnectedAddress(walletAddress);
-      setConnectedChainId(chainId);
-    }
-
-    const ws = getUserWebSocket(walletAddress, chainId);
-    
-    // Connect to WebSocket
-    const connect = () => {
-      ws.connect(chainId);
-      setIsConnected(true);
-    };
-
-    // Register message handler
-    ws.addMessageHandler(handleMessage);
-    
-    // Initial connection
-    connect();
-
-    return () => {
-      // Clean up on unmount
-      ws.disconnect();
-      ws.removeMessageHandler(handleMessage);
-    };
-  }, [walletAddress, handleMessage]);
-
-  // Return consistent interface
-  return {
-    lastMessage,
-    isConnected,
-    connectedAddress,
-    connectedChainId,
-    connect: () => {
-      if (walletAddress) {
-        const ws = getUserWebSocket(walletAddress, chainId);
-        ws.connect(chainId);
-      }
-    },
-    disconnect: () => {
-      if (walletAddress) {
-        const ws = getUserWebSocket(walletAddress, chainId);
-        ws.disconnect();
       }
     },
   };
