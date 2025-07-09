@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider } from '@privy-io/wagmi';
-import { wagmiConfig } from '@/configs/wagmi';
+import { riseTestnet, wagmiConfig } from '@/configs/wagmi';
+import { defineChain } from 'viem';
 
 const queryClient = new QueryClient();
 
@@ -14,12 +15,16 @@ const privyConfig: PrivyClientConfig = {
     requireUserPasswordOnCreate: true,
     noPromptOnSignature: false,
   },
-  loginMethods: ['wallet'],
+  loginMethods: ['google', 'wallet'],
   appearance: {
     theme: 'dark',
     accentColor: '#676FFF',
     logo: '/logo/gtx.png',
   },
+  defaultChain: defineChain(riseTestnet),
+  supportedChains: [
+    defineChain(riseTestnet),
+  ],
 };
 
 export default function Providers({ children }: { children: React.ReactNode }) {
