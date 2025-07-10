@@ -5,21 +5,19 @@ import { NotificationDialog } from '@/components/notification-dialog/notificatio
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { EXPLORER_URL } from '@/constants/explorer-url';
 import { TradeItem } from '@/graphql/gtx/clob';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
 import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import { formatNumber } from '@/lib/utils';
-import { useMarketStore } from '@/store/market-store';
 import type { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { RefreshCw, Wallet } from 'lucide-react';
-import { usePathname } from 'next/navigation';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId, useContractRead } from 'wagmi';
-import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
 import GTXSlider from './slider';
@@ -153,17 +151,8 @@ const PlaceOrder = ({
       chainId ?? defaultChainId,
       ContractName.clobBalanceManager
     ) as HexAddress,
-    address // Pass the effective address from props
+    address
   );
-
-  //   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
-  //     return {
-  //       baseDecimals: baseDecimals,
-  //       quoteDecimals: quoteDecimals,
-  //       ...poolItem,
-  //       timestamp: poolItem.timestamp,
-  //     };
-  //   };
 
   // Function to refresh balance manually
   const refreshBalance = useCallback(async () => {
@@ -309,47 +298,30 @@ const PlaceOrder = ({
     }
   }, [bestBidPrice, bestAskPrice, side, orderType, selectedPool?.quoteDecimals, ticker24hr?.lastPrice]);
 
-  // Load balance when relevant data changes
   useEffect(() => {
     loadBalance();
   }, [address, selectedPool, side, loadBalance]);
 
-  // TODO
-  // Refresh order book on regular intervals
-  // useEffect(() => {
-  //   if (pool?.orderBook) {
-  //     const interval = setInterval(() => {
-  //       refreshOrderBook();
-  //     }, 1000); // Refresh every second
-
-  //     return () => clearInterval(interval);
-  //   }
-  // }, [pool?.orderBook, refreshOrderBook]);
-
-  // Auto refresh balance after transaction completion
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
-      // Add a small delay to allow blockchain to update
       const timeoutId = setTimeout(() => {
         refreshBalance();
-      }, 2000); // 2 seconds delay to allow transaction to propagate
+      }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refreshBalance]);
 
-  // Reset confirmation status after 1 second
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
       const timeoutId = setTimeout(() => {
-        // Reset the confirmation states after 1 second
         if (isLimitOrderConfirmed) {
           resetLimitOrderState();
         }
         if (isMarketOrderConfirmed) {
           resetMarketOrderState();
         }
-      }, 1000); // 1 second timeout
+      }, 1000);
 
       return () => clearTimeout(timeoutId);
     }
@@ -360,7 +332,6 @@ const PlaceOrder = ({
     resetMarketOrderState,
   ]);
 
-  // Show error notification when there's an error
   useEffect(() => {
     if (limitSimulateError || marketSimulateError) {
       const error = limitSimulateError || marketSimulateError;
@@ -371,7 +342,6 @@ const PlaceOrder = ({
     }
   }, [limitSimulateError, marketSimulateError]);
 
-  // Show success notification when order is confirmed
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
       const txHash = limitOrderHash || marketOrderHash;
@@ -396,7 +366,6 @@ const PlaceOrder = ({
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refetchAccount]);
 
-  // Function to handle transaction errors
   const handleTransactionError = (error: unknown) => {
     let errorMessage = 'Failed to place order';
 
@@ -411,7 +380,6 @@ const PlaceOrder = ({
     setShowNotification(true);
   };
 
-  // Function to handle order placement
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('handleSubmit', e);
     e.preventDefault();
@@ -429,11 +397,9 @@ const PlaceOrder = ({
     }
 
     try {
-      // Enhanced parameter validation
       const quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
       const priceBigInt = parseUnits(price, Number(selectedPool.quoteDecimals));
 
-      // Additional checks before contract call
       if (quantityBigInt <= 0n) {
         throw new Error('Quantity must be positive');
       }

@@ -29,9 +29,9 @@ export const conduitChain: Chain = {
 	testnet: true,
 };
 
-export const riseSepolia: Chain = {
+export const riseTestnet: Chain = {
 	id: 11155931,
-	name: 'Rise Sepolia',
+	name: 'Rise Testnet',
 	nativeCurrency: {
 		decimals: 18,
 		name: 'ETH',
@@ -55,8 +55,8 @@ export const riseSepolia: Chain = {
 };
 
 export const wagmiConfig = createConfig({
-	chains: [riseSepolia],
+	chains: [riseTestnet],
 	transports: {
-		[riseSepolia.id]: http(riseSepolia.rpcUrls.default.http[0]),
+		[riseTestnet.id]: http(riseTestnet.rpcUrls.default.http[0]),
 	},
 });

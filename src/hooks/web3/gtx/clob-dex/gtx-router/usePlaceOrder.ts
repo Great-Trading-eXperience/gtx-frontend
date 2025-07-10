@@ -2,6 +2,7 @@ import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
+import { useWallets } from '@privy-io/react-auth';
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
-// Helper function to get token decimals
+
 const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
   try {
     const decimals = await readContract(wagmiConfig, {
@@ -20,7 +21,6 @@ const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
     return decimals;
   } catch (error) {
     console.error(`Failed to fetch decimals for token ${tokenAddress}:`, error);
-    // Default to 18 decimals if we can't fetch
     return 18;
   }
 };
@@ -46,11 +46,13 @@ interface BestSellPrice {
 
 export const usePlaceOrder = (userAddress?: HexAddress) => {
   const { address: wagmiAddress } = useAccount();
+  const { wallets } = useWallets();
   const [limitOrderHash, setLimitOrderHash] = useState<HexAddress | undefined>(undefined);
   const [marketOrderHash, setMarketOrderHash] = useState<HexAddress | undefined>(undefined);
   
   // Use provided address or fall back to wagmi address
   const address = userAddress || wagmiAddress;
+  const embeddedWallet = wallets[0];
 
   const chainId = useChainId()
 
@@ -105,8 +107,17 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   };
 
   const writeContractSafe = async (contractCall: any) => {
-    // Use Wagmi writeContract - Privy should now work as a connector
-    return await writeContract(wagmiConfig, contractCall);
+    
+    if (!address) {
+      throw new Error('No wallet address available');
+    }
+    
+    try {
+      return await writeContract(wagmiConfig, contractCall);
+    } catch (error: any) {
+      console.error('Wagmi writeContract failed:', error);
+      throw error;
+    }
   };
 
   const ensureAllowance = async (
@@ -128,7 +139,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       toast.info('Approving tokens for trading...');
       
       const approvalHash = await writeContractSafe({
-        account: address,
         address: token,
         abi: erc20Abi,
         functionName: 'approve',
@@ -372,7 +382,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   const {
     mutateAsync: placeMarketOrder,
     isPending: isMarketOrderPending,
-    isError: isMarketOrderError,
     error: marketSimulateError,
   } = CreateOrderMutation('market', setMarketOrderHash);
 
@@ -380,13 +389,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   const {
     mutateAsync: placeLimitOrder,
     isPending: isLimitOrderPending,
-    isError: isLimitOrderError,
     error: limitSimulateError,
   } = CreateOrderMutation('limit', setLimitOrderHash);
 
   // Transaction confirmation states
   const {
-    data: limitOrderReceipt,
     isLoading: isLimitOrderConfirming,
     isSuccess: isLimitOrderConfirmed,
   } = useWaitForTransactionReceipt({
@@ -394,7 +401,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   });
 
   const {
-    data: marketOrderReceipt,
     isLoading: isMarketOrderConfirming,
     isSuccess: isMarketOrderConfirmed,
   } = useWaitForTransactionReceipt({
