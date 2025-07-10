@@ -72,8 +72,8 @@ export default function ClobDex() {
   const defaultChainId = Number(DEFAULT_CHAIN);
   const isClient = useIsClient();
   
-  // Use Privy address as fallback if available
-  const effectiveAddress = (address || walletAddress) as HexAddress;
+  // Use Privy embedded wallet address as priority, fallback to external wallet
+  const effectiveAddress = (walletAddress || address) as HexAddress;
   const effectiveIsConnected = isConnected || isFullyAuthenticated;
   
   const pathname = usePathname();

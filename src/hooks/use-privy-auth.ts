@@ -20,12 +20,12 @@ export function usePrivyAuth() {
 
   // Helper function to check if user has a wallet connected
   const hasWallet = user?.linkedAccounts?.some(account => account.type === 'wallet') || false;
-
-  // Helper function to get the primary wallet address
-  const walletAddress = user?.linkedAccounts?.find(account => account.type === 'wallet')?.address || undefined;
   
   // Get the first wallet (Privy embedded wallet)
   const embeddedWallet = wallets[0];
+
+  // Helper function to get the primary wallet address
+  const walletAddress = embeddedWallet?.address || user?.linkedAccounts?.find(account => account.type === 'wallet')?.address || undefined;
 
   // Helper function to check if user is authenticated with social login
   const hasSocialLogin = user?.linkedAccounts?.some(account => 

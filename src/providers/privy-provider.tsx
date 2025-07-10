@@ -11,11 +11,10 @@ const queryClient = new QueryClient();
 
 const privyConfig: PrivyClientConfig = {
   embeddedWallets: {
-    createOnLogin: 'users-without-wallets',
-    requireUserPasswordOnCreate: true,
+    createOnLogin: 'all-users',
     noPromptOnSignature: false,
   },
-  loginMethods: ['google', 'wallet'],
+  loginMethods: ['google', 'twitter', 'email','wallet'],
   appearance: {
     theme: 'dark',
     accentColor: '#676FFF',
