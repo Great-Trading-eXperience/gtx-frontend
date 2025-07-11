@@ -418,7 +418,7 @@ function ChartComponent({ height = 430 }: ChartComponentProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
           </svg>
           <span className="text-xs font-medium">Error loading chart data</span>
-          <span className="text-xs text-gray-400 mt-1">{error?.message || String(error) || 'Unknown error'}</span>
+          <span className="text-xs text-gray-400 mt-1">{error.toString()}</span>
         </div>
       </div>
     )

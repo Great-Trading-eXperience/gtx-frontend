@@ -1,19 +1,20 @@
 import { gql } from "graphql-request";
 
-export const queryFaucetTokenss = gql`{
-    faucetTokenss(orderBy: "timestamp", orderDirection: "desc") {
+export const queryAddTokens = gql`{
+    addTokens(orderBy: "timestamp", orderDirection: "desc") {
         items {
-          token
+          address
           id
+          lastRequestTime
           timestamp
-          transactionId
+          transactionHash
           blockNumber
         }
     }
 }`
 
-export const queryRequestTokenss = gql`{
-    faucetRequestss {
+export const queryRequestTokens = gql`{
+    requestTokens {
         items {
           id
           receiver
@@ -21,7 +22,7 @@ export const queryRequestTokenss = gql`{
           timestamp
           token
           blockNumber
-          transactionId
+          transactionHash
         }
   }
 }`

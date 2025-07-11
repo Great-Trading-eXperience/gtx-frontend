@@ -42,7 +42,7 @@ export const useCreatePool = () => {
     try {
       // Execute the contract write directly without simulation
       writeCreatePool({
-        address: getContractAddress(chainId, ContractName.clobPoolManager) as HexAddress,
+        address: getContractAddress(chainId, ContractName.clobPoolManager) as `0x${string}`,
         abi: PoolManagerABI,
         functionName: 'createPool',
         args: [

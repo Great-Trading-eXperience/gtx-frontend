@@ -7,7 +7,6 @@ import { readContract } from "@wagmi/core"
 import { Clock, Hexagon, Search, Star, Wallet, X } from "lucide-react"
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
-import { HexAddress } from "@/types/general/address"
 
 // Token types
 export interface Token {
@@ -69,21 +68,21 @@ const TokenSelectionDialog: React.FC<TokenSelectionDialogProps> = ({
   const fetchTokenInfo = async (address: string) => {
     try {
       const tokenName = await readContract(wagmiConfig, {
-        address: address as HexAddress,
+        address: address as `0x${string}`,
         abi: TokenABI,
         functionName: "name",
         args: [],
       })
       
       const tokenSymbol = await readContract(wagmiConfig, {
-        address: address as HexAddress,
+        address: address as `0x${string}`,
         abi: TokenABI,
         functionName: "symbol",
         args: [],
       })
       
       const tokenDecimals = await readContract(wagmiConfig, {
-        address: address as HexAddress,
+        address: address as `0x${string}`,
         abi: TokenABI,
         functionName: "decimals",
         args: [],

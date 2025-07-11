@@ -66,13 +66,10 @@ export function requestTokenColumns(): ColumnDef<TransactionHistoryRow>[] {
           title="Timestamp"
         />
       ),
-      cell: ({ row }) => {
-        const date = new Date(Number(row.original.timestamp) * 1000);
-        return <div>{date.toLocaleString()}</div>;
-      },
+      cell: ({ row }) => <div>{row.original.blockTimestamp}</div>,
     },
     {
-      accessorKey: "transactionId",
+      accessorKey: "transactionHash",
       header: ({ column }) => (
         <DataTableColumnHeader
           column={column}
@@ -81,9 +78,9 @@ export function requestTokenColumns(): ColumnDef<TransactionHistoryRow>[] {
       ),
       cell: ({ row }) => (
         <div className="flex items-center truncate w-fit justify-between">
-          <span className="mr-2">{row.original.transactionId}</span>
+          <span className="mr-2">{row.original.transactionHash}</span>
           <button
-            onClick={() => copyToClipboard(String(row.original.transactionId))}
+            onClick={() => copyToClipboard(String(row.original.transactionHash))}
             aria-label="Copy to clipboard"
             className="text-gray-500 hover:text-gray-700 focus:outline-none"
           >
