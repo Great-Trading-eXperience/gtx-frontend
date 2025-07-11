@@ -28,14 +28,15 @@ interface OrderBook {
   asks: Order[];
   bids: Order[];
   lastPrice: bigint;
-  spread: bigint;
+  spread: string;
+  spreadPercentage: string;
   lastUpdate?: number;
   previousAsks?: Order[];
   previousBids?: Order[];
 }
 
 type ViewType = 'both' | 'bids' | 'asks';
-type DecimalPrecision = '0.001' | '0.002' | '0.005' |'0.01' | '0.1' | '1';
+type DecimalPrecision = '0.05' | '0.02' |'0.01' | '0.1' | '1';
 
 const STANDARD_ORDER_COUNT = 6;
 const PRICE_MATCH_THRESHOLD = 0.1;
@@ -67,9 +68,9 @@ const EnhancedOrderBookDex = ({
 }: EnhancedOrderBookDexProps) => {
   const [mounted, setMounted] = useState(false);
   const [viewType, setViewType] = useState<ViewType>('both');
-  const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.01');
+  const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.05');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const priceOptions = ['0.001', '0.002', '0.005', '0.01', '0.1', '1'];
+  const priceOptions = ['0.05', '0.02', '0.01', '0.1', '1'];
   const previousOrderBook = useRef<OrderBook | null>(null);
   const previousPrice = useRef<number | null>(null);
   const priceDirection = useRef<'up' | 'down' | null>(null);
@@ -95,7 +96,8 @@ const EnhancedOrderBookDex = ({
     asks: [],
     bids: [],
     lastPrice: BigInt(0),
-    spread: BigInt(0),
+    spread: "0",
+    spreadPercentage: "0",
     lastUpdate: Date.now(),
   });
 
@@ -166,7 +168,8 @@ const EnhancedOrderBookDex = ({
         asks: [],
         bids: [],
         lastPrice: BigInt(0),
-        spread: BigInt(0),
+        spread: "0",
+        spreadPercentage: "0",
         lastUpdate: Date.now(),
       });
       previousOrderBook.current = null;
@@ -266,12 +269,23 @@ const EnhancedOrderBookDex = ({
           }
         });
       }
+
+      const satuan = 1000000000;
+      const scale = Number(selectedDecimal) * satuan;
       
       // Sort asks in ascending order by price
       asks.sort((a, b) => a.price - b.price);
       
       // Sort bids in descending order by price
       bids.sort((a, b) => b.price - a.price);
+
+      const filteredAsksByScale = asks.filter(item => item.price % scale === 0);
+      const filteredBidsByScale = bids.filter(item => item.price % scale === 0);
+
+      asks.length = 0;
+      bids.length = 0;
+      asks.push(...filteredAsksByScale);
+      bids.push(...filteredBidsByScale); 
       
       // Calculate cumulative totals
       let bidTotal = 0;
@@ -287,32 +301,11 @@ const EnhancedOrderBookDex = ({
       });
 
       // Calculate spread
-      const spread =
-        asks[0]?.price && bids[0]?.price
-          ? (
-              (Math.abs(asks[0].price - bids[0].price) /
-                ((asks[0].price + bids[0].price) / 2)) *
-              100
-            ).toFixed(2)
-          : '0';
-
-      const bestAsk = asks[0].price;
-      const bestBid = bids[0].price;
+      const bestAsk = asks[0] ? asks[0].price : 0;
+      const bestBid = bids[0] ? bids[0].price : 0;
       const spreadNominal = bestAsk - bestBid;
-
-      const askSpread = spreadNominal / bestAsk * 100;
-      const midSpread = spreadNominal / ((bestAsk + bestBid) / 2);
-      const bidSpread = spreadNominal / bestBid * 100;
-
-      console.log('askSpread', askSpread);
-      console.log('midSpread', midSpread);
-      console.log('bidSpread', bidSpread);
-
-      const newSpread = asks[0].price && bids[0].price ? (
-        (asks[0].price - bids[0].price) / 1000000000
-      ) : '0';
-
-      console.log(newSpread, asks[0].price, bids[0].price);
+      const spread = (spreadNominal / satuan).toFixed(3);
+      const spreadPercentage = bestBid != 0 ? ((spreadNominal / bestBid) * 100).toFixed(3) : "0";
           
       const now = Date.now();
 
@@ -332,20 +325,18 @@ const EnhancedOrderBookDex = ({
         asks: matchedAsks,
         bids: matchedBids,
         lastPrice: asks.length > 0 ? BigInt(Math.round(asks[0]?.price)) : BigInt(0),
-        spread: BigInt(Math.round(Number(spread))),
+        spread: spread,
+        spreadPercentage: spreadPercentage,
         lastUpdate: now,
         previousAsks: previousOrderBook.current?.asks,
         previousBids: previousOrderBook.current?.bids,
       };
 
-      console.log(newOrderBook);
-      
-
       setOrderBook(newOrderBook);
     } catch (error) {
       console.error('Error processing depth data:', error);
     }
-  }, [depthData, mounted, selectedPool, baseDecimals, quoteDecimals]);
+  }, [depthData, mounted, selectedPool, baseDecimals, quoteDecimals, selectedDecimal]);
   
   // Update previous orderbook reference after state update
   useEffect(() => {
@@ -355,6 +346,7 @@ const EnhancedOrderBookDex = ({
         bids: orderBook.bids,
         lastPrice: orderBook.lastPrice,
         spread: orderBook.spread,
+        spreadPercentage: orderBook.spreadPercentage,
         lastUpdate: orderBook.lastUpdate,
       };
     }
@@ -525,10 +517,13 @@ const EnhancedOrderBookDex = ({
                     </div>
 
                     {/* Spread */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-16 w-full">
                       <span>Spread: </span>
                       <span className="font-medium text-white">
-                        {(Number(orderBook.spread) / 100).toFixed(2)}%
+                        {orderBook.spread}
+                      </span>
+                      <span className='font-medium text-white'>
+                        {orderBook.spreadPercentage}%
                       </span>
                     </div>
                   </div>
