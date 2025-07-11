@@ -702,19 +702,21 @@ const PlaceOrder = ({
           <span>Order Value</span>
           <span className='text-gray-200 font-medium'>{total} USDC</span>
         </div>
-        <div className='flex flex-row justify-between'>
-          <span>Slippage</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Click to adjust!</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        {orderType == 'market' && (
+          <div className='flex flex-row justify-between'>
+            <span>Slippage</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click to adjust!</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
         <div className='flex flex-row justify-between'>
           <span>Fees</span>
           <span className='text-gray-200 font-medium'>{takerFeePercent.toFixed(2)}% / {makerFeePercent.toFixed(2)}%</span>
