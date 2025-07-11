@@ -153,7 +153,7 @@ export default function WaitlistPage() {
                     </>
                   )}
                 </Button>
-                {error && <p className="text-red-500 text-sm">{String(error || 'An error occurred')}</p>}
+                {error && <p className="text-red-500 text-sm">{error}</p>}
                 {isSuccess && (
                   <div className="flex items-center gap-2 text-green-500">
                     <CheckCircle className="h-5 w-5" />

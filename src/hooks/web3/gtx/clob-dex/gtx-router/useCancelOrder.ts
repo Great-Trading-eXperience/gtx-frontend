@@ -66,7 +66,7 @@ export const useCancelOrder = () => {
           });
 
           const simulation = await simulateContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
+            address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'cancelOrder',
             args: [
@@ -127,7 +127,7 @@ export const useCancelOrder = () => {
         let hash;
         try {
           hash = await writeContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
+            address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
             abi: GTXRouterABI,
             functionName: 'cancelOrder',
             args: [

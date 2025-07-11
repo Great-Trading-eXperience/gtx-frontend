@@ -15,13 +15,10 @@ import { HexAddress } from '@/types/general/address';
  * Simplified hook for trading balances that focuses on wallet balances
  * and avoids problematic contract calls
  */
-export const useTradingBalances = (balanceManagerAddress: HexAddress, userAddress?: HexAddress) => {
-  const { address: wagmiAddress } = useAccount();
+export const useTradingBalances = (balanceManagerAddress: HexAddress) => {
+  const { address } = useAccount();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
-  // Use provided address or fall back to wagmi address
-  const address = userAddress || wagmiAddress;
 
   // Get wallet balance (ERC20) - this is our primary and most reliable method
   const getWalletBalance = useCallback(async (currency: HexAddress): Promise<bigint> => {
@@ -51,7 +48,7 @@ export const useTradingBalances = (balanceManagerAddress: HexAddress, userAddres
     } finally {
       setLoading(false);
     }
-  }, [address, userAddress]);
+  }, [address]);
 
   // These are stub implementations that just return wallet balance
   // We're avoiding the problematic contract calls
@@ -174,7 +171,7 @@ export const useTradingBalances = (balanceManagerAddress: HexAddress, userAddres
     } finally {
       setLoading(false);
     }
-  }, [address, balanceManagerAddress, userAddress]);
+  }, [address, balanceManagerAddress]);
 
   // Simple withdraw function - stub that always fails since the contract seems problematic
   const withdraw = useCallback(async (

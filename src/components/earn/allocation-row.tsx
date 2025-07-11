@@ -2,7 +2,7 @@
 
 import { useContractRead } from "wagmi"
 import { parseAbi } from "viem"
-import { HexAddress } from "@/types/general/address"
+
 interface AllocationRowProps {
   marketToken: string
   allocation: string
@@ -11,7 +11,7 @@ interface AllocationRowProps {
 export function AllocationRow({ marketToken, allocation }: AllocationRowProps) {
   // Get market token symbol
   const { data: symbol } = useContractRead({
-    address: marketToken as HexAddress,
+    address: marketToken as `0x${string}`,
     abi: parseAbi(["function symbol() view returns (string)"]),
     functionName: "symbol",
   })

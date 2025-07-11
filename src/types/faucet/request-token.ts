@@ -1,15 +1,15 @@
-export default interface FaucetRequest {
+export default interface RequestToken {
   id: string,
   requester: string;  
   receiver: string;
   token: string;
   blockNumber: number;
-  timestamp: number;
-  transactionId: number;
+  blockTimestamp: number;
+  transactionHash: number;
 }
 
-export type FaucetRequestsData = {
-  faucetRequestss: {
-    items: FaucetRequest[]
+export type RequestTokensData = {
+  requestTokens: {
+    items: RequestToken[]
   };
 };

@@ -16,7 +16,7 @@ import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-c
 
 import { getTokenAddresses } from "@/helper/token-helper"
 import { ROUTER_ADDRESS } from "@/constants/contract/contract-address"
-import { HexAddress } from "@/types/general/address"
+
 
 
 // RouterABI with createMarket function
@@ -148,8 +148,8 @@ const hash = await writeContract(wagmiConfig, {
     abi: RouterABI,
     functionName: 'createMarket',
     args: [
-      longToken as HexAddress,
-      shortToken as HexAddress,
+      longToken as `0x${string}`,
+      shortToken as `0x${string}`,
       tokenPair,
       oracleSources
     ]
@@ -321,7 +321,7 @@ const hash = await writeContract(wagmiConfig, {
                 {error && (
                   <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-md text-red-800 dark:text-red-300 text-sm flex items-start">
                     <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                    <div>{String(error || 'Unknown error')}</div>
+                    <div>{error}</div>
                   </div>
                 )}
                 

@@ -22,7 +22,6 @@ import { Label } from '@/components/ui/label';
 import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
 import { getExplorerUrl } from '@/constants/urls/urls-config';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
-import GTXSlider from '../place-order/slider';
 
 export interface BalancesHistoryTableProps extends ClobDexComponentProps {
   balancesResponse: BalanceItem[];
@@ -355,8 +354,15 @@ export default function BalancesHistoryTable({
                     onChange={handleAmountChange}
                     className="bg-gray-800 border-gray-700 text-gray-200"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleMaxAmount}
+                    className="border-gray-700 bg-transparent text-gray-300 hover:bg-gray-800 hover:text-gray-100"
+                  >
+                    MAX
+                  </Button>
                 </div>
-                <GTXSlider quantity={formatAmount(formatUnits(BigInt(selectedBalance.amount), 18))} setQuantity={setWithdrawAmount} />
               </div>
             </div>
           )}

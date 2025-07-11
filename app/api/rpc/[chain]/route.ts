@@ -114,6 +114,7 @@ function getRpcUrl(chain: string): string | null {
 	const rpcUrls: Record<string, string> = {
 		pharos: 'https://devnet.dplabs-internal.com',
 		gtxpresso: 'https://rpc.gtx.alwaysbedream.dev',
+		gtx: 'https://anvil.gtxdex.xyz',
 		'rise-sepolia': 'https://testnet.riselabs.xyz',
 		conduit: 'https://odyssey.ithaca.xyz',
 		monad: 'https://testnet-rpc.monad.xyz',

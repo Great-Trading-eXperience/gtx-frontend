@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/router"
+import { usePathname } from "next/navigation"
 import { ExternalLink, Monitor } from 'lucide-react'
 import { motion } from "framer-motion"
 
@@ -13,8 +13,7 @@ const triggerMobileWarning = () => {
 };
 
 const LandingHeader = () => {
-  const router = useRouter()
-  const pathname = router.pathname
+  const pathname = usePathname()
 
   const links = [
     { destination: "/markets", label: "Launch App" },

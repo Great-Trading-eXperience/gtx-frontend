@@ -48,7 +48,7 @@ export const useFaucetCooldown = (
             const result = await readContract(wagmiConfig, {
                 address: faucetAddress,
                 abi: FaucetABI,
-                functionName: 'getCooldown',
+                functionName: 'faucetCooldown',
                 args: [],
             });
 

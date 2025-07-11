@@ -47,10 +47,10 @@ export const useWithdraw = () => {
                 try {
                     console.log("Checking user balance in contract...");
                     const balanceResult = await readContract(wagmiConfig, {
-                        address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
+                        address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
                         abi: BalanceManagerABI,
                         functionName: 'getBalance',
-                        args: [address as HexAddress, currency],
+                        args: [address as `0x${string}`, currency],
                     });
 
                     // Explicitly cast the balance to bigint
@@ -89,7 +89,7 @@ export const useWithdraw = () => {
                 try {
                     console.log("Simulating withdrawal...");
                     const simulation = await simulateContract(wagmiConfig, {
-                        address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
+                        address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
                         abi: BalanceManagerABI,
                         functionName: 'withdraw',
                         args: [
@@ -123,7 +123,7 @@ export const useWithdraw = () => {
                 // Execute the withdrawal transaction
                 console.log("Executing withdrawal...");
                 const hash = await writeContract(wagmiConfig, {
-                    address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
+                    address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
                     abi: BalanceManagerABI,
                     functionName: 'withdraw',
                     args: [

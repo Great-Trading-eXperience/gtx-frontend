@@ -1,15 +1,15 @@
 import { HexAddress } from "../general/address";
 
-export default interface FaucetToken {
+export default interface AddToken {
   id: string;
-  token: HexAddress;
+  address: HexAddress;
   blockNumber: number;
   blockTimestamp: number;
   transactionHash: string;
 }
 
-export type FaucetTokensData = {
-  faucetTokenss: {
-    items: FaucetToken[]
+export type AddTokensData = {
+  addTokens: {
+    items: AddToken[]
   };
 };

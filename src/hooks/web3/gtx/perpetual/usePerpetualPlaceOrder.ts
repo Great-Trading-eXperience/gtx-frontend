@@ -7,8 +7,9 @@ import { toast } from "sonner";
 import { encodeFunctionData, parseUnits } from "viem";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { HexAddress } from "@/types/general/address";
 
+// Define types
+export type HexAddress = `0x${string}`;
 export type OrderType = 0 | 1 | 2 | 3; // 0 = MarketIncrease, 1 = LimitIncrease, 2 = MarketDecrease, 3 = LimitDecrease
 export type OrderParams = {
     market: HexAddress;
@@ -51,7 +52,7 @@ export const usePerpetualPlaceOrder = () => {
                 let acceptablePrice = params.triggerPrice || 0n;
                 if (params.triggerPrice && params.acceptablePriceImpact) {
                     const impact = BigInt(params.acceptablePriceImpact);
-
+                    
                     // For market orders, we adjust acceptablePrice based on order type and direction
                     if (orderType === 0) { // MarketIncrease
                         acceptablePrice = params.isLong

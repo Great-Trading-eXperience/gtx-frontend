@@ -41,11 +41,11 @@ export type CreateCrossChainOrderParams = {
 };
 
 // Helper function to convert address to bytes32
-export const addressToBytes32 = (addr: HexAddress): HexAddress => {
+export const addressToBytes32 = (addr: HexAddress): `0x${string}` => {
     if (!addr || typeof addr !== 'string' || !addr.startsWith('0x')) {
         return '0x0000000000000000000000000000000000000000000000000000000000000000';
     }
-    return `0x000000000000000000000000${addr.slice(2)}` as HexAddress;
+    return `0x000000000000000000000000${addr.slice(2)}` as `0x${string}`;
 };
 
 // Helper to check if address is native token (address(0) in Solidity)
@@ -494,7 +494,7 @@ export const useCrossChainOrderPharos = (
                 fillDeadline,
                 action,
                 nonce: BigInt(nonce),
-                data: '0x' as HexAddress
+                data: '0x' as `0x${string}`
             };
 
             console.log('Order data structure:', orderData);

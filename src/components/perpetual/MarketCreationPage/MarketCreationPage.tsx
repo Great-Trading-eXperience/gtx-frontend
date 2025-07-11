@@ -21,7 +21,7 @@ import { useAccount } from 'wagmi';
 import ButtonConnectWallet from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import GradientLoader from '@/components/gradient-loader/gradient-loader';
 import { getTokenAddresses } from '@/helper/token-helper';
-import { HexAddress } from '@/types/general/address';
+
 const MarketCreationPage: React.FC = () => {
   // Wallet connection and loading states
   const [mounted, setMounted] = useState(false);
@@ -113,16 +113,16 @@ const MarketCreationPage: React.FC = () => {
     try {
       if (tokenType === 'evm') {
         await createMarket({
-          longToken: evmToken as HexAddress,
-          shortToken: shortToken as HexAddress,
+          longToken: evmToken as `0x${string}`,
+          shortToken: shortToken as `0x${string}`,
           tokenPair: finalTokenPair,
           sources: sources
         });
       } else {
         await createMarket({
           // This is just a placeholder - the actual conversion happens in the hook
-          longToken: '0x0000000000000000000000000000000000000000' as HexAddress,
-          shortToken: shortToken as HexAddress,
+          longToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+          shortToken: shortToken as `0x${string}`,
           tokenPair: finalTokenPair,
           sources: sources,
           isSolanaToken: true,

@@ -241,7 +241,7 @@ export function PairDropdown({ pairs, selectedPairId, onPairSelect }: PairDropdo
               {selectedPair?.coin || "Select pair"}
             </span>
           </div>
-          {/* <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /> */}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0 bg-gray-900 border border-gray-700/50 text-white">
