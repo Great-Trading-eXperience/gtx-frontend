@@ -23,6 +23,7 @@ import { ClobDexComponentProps } from '../clob-dex';
 import GTXSlider from './slider';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -170,16 +171,18 @@ const PlaceOrder = ({
     return undefined;
   }, [depthData]);
 
+  const balanceManagerAddress = getContractAddress(
+    chainId ?? defaultChainId,
+    ContractName.clobBalanceManager
+  ) as HexAddress
+
   const {
     getWalletBalance,
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
   } = useTradingBalances(
-    getContractAddress(
-      chainId ?? defaultChainId,
-      ContractName.clobBalanceManager
-    ) as HexAddress,
+    balanceManagerAddress,
     address
   );
 
@@ -453,7 +456,7 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
-  const [inputValue, setInputValue] = useState('');
+  const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
 
   if (!mounted)
     return (
@@ -714,7 +717,7 @@ const PlaceOrder = ({
         </div>
         <div className='flex flex-row justify-between'>
           <span>Fees</span>
-          <span className='text-gray-200 font-medium'>0.0000% / 0.0400%</span>
+          <span className='text-gray-200 font-medium'>{takerFeePercent.toFixed(2)}% / {makerFeePercent.toFixed(2)}%</span>
         </div>
       </div>
 
