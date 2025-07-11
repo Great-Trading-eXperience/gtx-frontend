@@ -130,7 +130,7 @@ const RecentTradesPrep = () => {
                     <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
                     <span>Error loading trades</span>
                 </div>
-                <p className="mt-2 text-sm text-gray-300">{error.toString()}</p>
+                <p className="mt-2 text-sm text-gray-300">{error?.message || String(error) || 'Unknown error'}</p>
             </div>
         );
     }

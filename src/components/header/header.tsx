@@ -1,17 +1,21 @@
 import { Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
+import { PrivyAuthButton } from "../auth/privy-auth-button";
+import { usePrivyAuth } from "@/hooks/use-privy-auth";
 
 import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
 
 const Header = () => {
   const { theme, setTheme } = useTheme();
-  const pathname = usePathname();
+  const router = useRouter();
+  const pathname = router.pathname;
+  const { ready, authenticated } = usePrivyAuth();
 
   const allLinks = [
     {
@@ -50,7 +54,7 @@ const Header = () => {
       enabled: isTabEnabled("EARN")
     },
     {
-      destination: "/vegtx",
+      destination: "/vegtx/dashboard",
       label: "veGTX",
       enabled: isTabEnabled("VEGTX")
     }
@@ -104,10 +108,10 @@ const Header = () => {
 
         {/* Right Column */}
         <div className="flex justify-end items-center">
-          <ButtonConnectWallet
-            colors={solidColorConfig}
-            className="border border-slate-500"
-          />
+          {/* Show authentication buttons - only Privy */}
+          <div className="flex items-center gap-2">
+            <PrivyAuthButton />
+          </div>
 
           {/* Mobile Menu Button - Only Visible on Mobile */}
           <div className="flex ml-4 lg:hidden">

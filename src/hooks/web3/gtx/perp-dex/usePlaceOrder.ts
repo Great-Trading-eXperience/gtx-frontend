@@ -3,12 +3,10 @@ import { useMutation } from "@tanstack/react-query";
 import { writeContract, waitForTransactionReceipt } from "wagmi/actions";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import routerABI from "@/abis/gtx/perpetual/RouterABI"; 
+import routerABI from "@/abis/gtx/perpetual/RouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { encodeFunctionData } from "viem";
-
-// Type definitions for clarity
-export type HexAddress = `0x${string}`;
+import { HexAddress } from "@/types/general/address";
 
 // Order types matching the contract
 export enum OrderType {
@@ -66,7 +64,7 @@ export const usePerpetualOrder = (
   orderVaultAddress: HexAddress
 ) => {
   const { address } = useAccount();
-  
+
   // Track transaction steps
   const [steps, setSteps] = useState<
     Array<{
@@ -85,11 +83,11 @@ export const usePerpetualOrder = (
 
   // Mutation for creating a position
   const createOrderMutation = useMutation({
-    mutationFn: async ({ 
+    mutationFn: async ({
       params,
       collateralAmount,
       executionFeeAmount
-    }: { 
+    }: {
       params: CreateOrderParams;
       collateralAmount: bigint;
       executionFeeAmount: bigint;
@@ -103,8 +101,8 @@ export const usePerpetualOrder = (
         ]);
 
         // Set first step to loading
-        setSteps((prev) => 
-          prev.map((item) => 
+        setSteps((prev) =>
+          prev.map((item) =>
             item.step === 1 ? { ...item, status: "loading" } : item
           )
         );
@@ -112,17 +110,17 @@ export const usePerpetualOrder = (
         // Use type assertions to ensure TypeScript understands the correct types
         // Here we explicitly cast function names to match what's in your ABI
         const sendWntData = encodeFunctionData({
-          abi: routerABI, 
+          abi: routerABI,
           functionName: 'sendWnt' as any,
           args: [orderVaultAddress, executionFeeAmount]
         });
-        
+
         const sendTokensData = encodeFunctionData({
           abi: routerABI,
           functionName: 'sendTokens' as any,
           args: [params.initialCollateralToken, orderVaultAddress, collateralAmount]
         });
-        
+
         const createOrderData = encodeFunctionData({
           abi: routerABI,
           functionName: 'createOrder' as any,
@@ -143,15 +141,15 @@ export const usePerpetualOrder = (
         // Update steps as we go
         setSteps((prev) =>
           prev.map((item) =>
-            item.step === 1 ? { ...item, status: "success" } : 
-            item.step === 2 ? { ...item, status: "loading" } : item
+            item.step === 1 ? { ...item, status: "success" } :
+              item.step === 2 ? { ...item, status: "loading" } : item
           )
         );
-        
+
         setSteps((prev) =>
           prev.map((item) =>
-            item.step === 2 ? { ...item, status: "success" } : 
-            item.step === 3 ? { ...item, status: "loading" } : item
+            item.step === 2 ? { ...item, status: "success" } :
+              item.step === 3 ? { ...item, status: "loading" } : item
           )
         );
 
@@ -164,7 +162,7 @@ export const usePerpetualOrder = (
               item.step === 3 ? { ...item, status: "success" } : item
             )
           );
-          
+
           // Determine message based on order type
           let successMessage = "Order created successfully!";
           switch (params.orderType) {
@@ -184,7 +182,7 @@ export const usePerpetualOrder = (
               successMessage = "Stop loss order placed!";
               break;
           }
-          
+
           toast.success(successMessage);
         } else {
           throw new Error("Transaction failed");

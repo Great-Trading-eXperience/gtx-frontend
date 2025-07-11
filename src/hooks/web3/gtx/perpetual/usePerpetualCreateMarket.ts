@@ -7,9 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
-
-// Define types
-export type HexAddress = `0x${string}`;
+import { HexAddress } from "@/types/general/address";
 
 // Match the exact structure expected by the ABI
 export type OracleSource = {

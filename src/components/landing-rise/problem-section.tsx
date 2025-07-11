@@ -11,6 +11,14 @@ interface Problem {
   solution: string
 }
 
+// Safe icon component renderer
+function SafeIcon({ icon: IconComponent, className }: { icon: React.ElementType; className: string }) {
+  if (!IconComponent || typeof IconComponent !== 'function') {
+    return <div className={className} />; // Fallback
+  }
+  return <IconComponent className={className} />;
+}
+
 export function ProblemsSection() {
   const [expandedCard, setExpandedCard] = useState<number | null>(null)
 
@@ -99,9 +107,10 @@ export function ProblemsSection() {
                   <div
                     className={`p-3 rounded-lg ${expandedCard === index ? "bg-blue-900/40" : "bg-blue-900/20"} mr-4`}
                   >
-                    {React.createElement(problem.icon, {
-                      className: `h-6 w-6 ${expandedCard === index ? "text-blue-400" : "text-blue-300/70"}`,
-                    })}
+                    <SafeIcon 
+                      icon={problem.icon}
+                      className={`h-6 w-6 ${expandedCard === index ? "text-blue-400" : "text-blue-300/70"}`}
+                    />
                   </div>
                   <h3 className={`font-bold text-lg ${expandedCard === index ? "text-white" : "text-gray-200"}`}>
                     {problem.title}

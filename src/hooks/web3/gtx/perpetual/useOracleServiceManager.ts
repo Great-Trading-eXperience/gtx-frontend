@@ -6,10 +6,9 @@ import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { wagmiConfig } from "@/configs/wagmi";
 import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceManagerABI";
 import { ORACLE_ADDRESS } from "@/constants/contract/contract-address";
+import { HexAddress } from "@/types/general/address";
 
 
-// Define types
-export type HexAddress = `0x${string}`;
 export type OracleSource = {
   name: string;
   identifier: string;

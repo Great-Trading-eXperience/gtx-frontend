@@ -70,7 +70,7 @@ export function HeroSection() {
                                         <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 opacity-0 group-hover:opacity-100 transform group-hover:translate-x-full transition-all duration-1000 ease-out"></span>
                                         <div className="flex items-center gap-2 relative z-10">
                                             Launch App
-                                            <ExternalLink size={18} className="sm:size-20" />
+                                            <ExternalLink className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
                                         </div>
                                     </Button>
                                 </Link>

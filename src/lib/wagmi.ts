@@ -1,11 +1,9 @@
-import { riseSepolia } from '@/configs/wagmi'
+import { riseTestnet } from '@/configs/wagmi'
 import { createConfig, http } from 'wagmi'
-import { localChain } from '@/configs/wagmi'
 
 export const wagmiConfig = createConfig({
-  chains: [riseSepolia, localChain],
+  chains: [riseTestnet],
   transports: {
-    [riseSepolia.id]: http(),
-    [localChain.id]: http(),
+    [riseTestnet.id]: http()
   },
 }) 

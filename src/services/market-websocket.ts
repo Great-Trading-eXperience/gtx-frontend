@@ -95,6 +95,64 @@ export type WebSocketEvent =
 // Message ID counter
 let messageIdCounter = 1;
 
+// File logging utility
+const logToFile = (message: string) => {
+  try {
+    if (typeof window !== 'undefined') {
+      // Browser environment - use localStorage or send to server
+      const timestamp = new Date().toISOString();
+      const logEntry = `${timestamp} - ${message}\n`;
+      
+      // Store in localStorage (limited but available)
+      const existingLogs = localStorage.getItem('websocket-logs') || '';
+      const newLogs = existingLogs + logEntry;
+      
+      // Keep only last 1000 lines to prevent overflow
+      const lines = newLogs.split('\n');
+      if (lines.length > 1000) {
+        lines.splice(0, lines.length - 1000);
+      }
+      
+      localStorage.setItem('websocket-logs', lines.join('\n'));
+    }
+  } catch (error) {
+    // Fallback to console if localStorage fails
+    console.error('Failed to write to log file:', error);
+  }
+};
+
+// Enhanced logging function
+const logWS = (prefix: string, message: string, data?: any) => {
+  const fullMessage = data ? `${prefix} ${message} ${JSON.stringify(data)}` : `${prefix} ${message}`;
+  console.log(fullMessage);
+  logToFile(fullMessage);
+};
+
+// Export logs function
+export const exportWebSocketLogs = () => {
+  try {
+    const logs = localStorage.getItem('websocket-logs') || 'No logs found';
+    const blob = new Blob([logs], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `websocket-logs-${new Date().toISOString().slice(0, 19)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log('WebSocket logs exported successfully');
+  } catch (error) {
+    console.error('Failed to export logs:', error);
+  }
+};
+
+// Clear logs function
+export const clearWebSocketLogs = () => {
+  localStorage.removeItem('websocket-logs');
+  console.log('WebSocket logs cleared');
+};
+
 /**
  * Market WebSocket class for handling market data streams
  */
@@ -102,11 +160,13 @@ export class MarketWebSocket {
   private socket: WebSocket | null = null;
   private subscriptions: Set<string> = new Set();
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private pingTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 3000; // 3 seconds
+  private pingInterval = 30000; // 30 seconds
   private messageHandlers: ((event: WebSocketEvent) => void)[] = [];
-  private chainId: number = 31337;
+  private chainId: number = 11155931;
   private isConnecting = false;
 
   /**
@@ -114,27 +174,34 @@ export class MarketWebSocket {
    */
   public connect(chainId: number): void {
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-      console.log('WebSocket is already connected or connecting');
+      console.log('[MARKET-WS] Already connected or connecting');
       return;
     }
 
     if (this.isConnecting) {
-      console.log('WebSocket connection is in progress');
+      console.log('[MARKET-WS] Connection in progress');
       return;
+    }
+
+    // Close any existing socket first
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
     }
 
     this.isConnecting = true;
 
     try {
-      console.log('Connecting to market WebSocket...');
-      this.socket = new WebSocket(`${getWebsocketUrl(chainId)}/ws`);
+      const wsUrl = getWebsocketUrl(chainId);
+      logWS('[MARKET-WS]', 'Connecting to market WebSocket...', { url: wsUrl, chainId });
+      this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);
       this.socket.onclose = this.handleClose.bind(this);
       this.socket.onerror = this.handleError.bind(this);
     } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+      console.error('[MARKET-WS] Error connecting to WebSocket:', error);
       this.isConnecting = false;
       this.scheduleReconnect();
     }
@@ -144,9 +211,16 @@ export class MarketWebSocket {
    * Disconnect from the WebSocket
    */
   public disconnect(): void {
+    console.log('[MARKET-WS] Disconnect called');
+    
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
     }
 
     if (this.socket) {
@@ -169,12 +243,12 @@ export class MarketWebSocket {
     this.chainId = chainId;
     
     if (this.subscriptions.has(stream)) {
-      console.log(`Already subscribed to ${stream}`);
+      console.log(`[MARKET-WS] Already subscribed to ${stream}`);
       return;
     }
 
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket not connected, connecting first...');
+      console.log('[MARKET-WS] Not connected, connecting first...');
       this.subscriptions.add(stream);
       this.connect(chainId);
       return;
@@ -188,7 +262,7 @@ export class MarketWebSocket {
 
     this.socket.send(JSON.stringify(message));
     this.subscriptions.add(stream);
-    console.log(`Subscribed to ${stream}`);
+    console.log(`[MARKET-WS] Subscribed to ${stream}`);
   }
 
   /**
@@ -200,12 +274,12 @@ export class MarketWebSocket {
     const stream = `${symbol.toLowerCase()}@${streamType}`;
     
     if (!this.subscriptions.has(stream)) {
-      console.log(`Not subscribed to ${stream}`);
+      console.log(`[MARKET-WS] Not subscribed to ${stream}`);
       return;
     }
 
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket not connected');
+      console.log('[MARKET-WS] Not connected');
       this.subscriptions.delete(stream);
       return;
     }
@@ -218,7 +292,7 @@ export class MarketWebSocket {
 
     this.socket.send(JSON.stringify(message));
     this.subscriptions.delete(stream);
-    console.log(`Unsubscribed from ${stream}`);
+    console.log(`[MARKET-WS] Unsubscribed from ${stream}`);
   }
 
   /**
@@ -226,7 +300,7 @@ export class MarketWebSocket {
    */
   public listSubscriptions(): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket not connected');
+      console.log('[MARKET-WS] Not connected');
       return;
     }
 
@@ -261,9 +335,20 @@ export class MarketWebSocket {
    * Handle WebSocket open event
    */
   private handleOpen(): void {
-    console.log('Market WebSocket connected');
+    console.log('[MARKET-WS] Market WebSocket connected');
     this.isConnecting = false;
     this.reconnectAttempts = 0;
+
+    // Start ping timer
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+    }
+    this.pingTimer = setInterval(() => {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ method: 'PING' }));
+        console.log('[MARKET-WS] Sent ping');
+      }
+    }, this.pingInterval);
 
     // Resubscribe to all streams
     if (this.subscriptions.size > 0) {
@@ -275,7 +360,7 @@ export class MarketWebSocket {
       };
 
       this.socket?.send(JSON.stringify(message));
-      console.log(`Resubscribed to ${streams.length} streams`);
+      console.log(`[MARKET-WS] Resubscribed to ${streams.length} streams`);
     }
   }
 
@@ -290,21 +375,21 @@ export class MarketWebSocket {
       
       // Add validation to ensure data is a valid WebSocketEvent
       if (data && typeof data === 'object') {
-        console.log('Market WebSocket message:', data);
+        console.log('[MARKET-WS] Message:', data);
         
         // Notify all handlers with the validated data
         for (const handler of this.messageHandlers) {
           try {
             handler(data);
           } catch (handlerError) {
-            console.error('Error in WebSocket message handler:', handlerError);
+            console.error('[MARKET-WS] Error in message handler:', handlerError);
           }
         }
       } else {
-        console.warn('Received invalid WebSocket message format:', data);
+        console.warn('[MARKET-WS] Invalid message format:', data);
       }
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error, 'Raw data:', event.data);
+      console.error('[MARKET-WS] Error parsing message:', error, 'Raw data:', event.data);
     }
   }
 
@@ -312,9 +397,15 @@ export class MarketWebSocket {
    * Handle WebSocket close event
    */
   private handleClose(event: CloseEvent): void {
-    console.log(`Market WebSocket closed: ${event.code} ${event.reason}`);
+    console.log(`[MARKET-WS] Closed: ${event.code} ${event.reason}`);
     this.socket = null;
     this.isConnecting = false;
+    
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
+    
     this.scheduleReconnect();
   }
 
@@ -323,7 +414,7 @@ export class MarketWebSocket {
    * @param event WebSocket error event
    */
   private handleError(event: Event): void {
-    console.error('Market WebSocket error:', event);
+    console.error('[MARKET-WS] Error:', event);
     this.isConnecting = false;
   }
 
@@ -338,13 +429,13 @@ export class MarketWebSocket {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
-      console.log(`Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
+      console.log(`[MARKET-WS] Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
       
       this.reconnectTimer = setTimeout(() => {
         this.connect(this.chainId);
       }, delay);
     } else {
-      console.error(`Failed to reconnect after ${this.maxReconnectAttempts} attempts`);
+      console.error(`[MARKET-WS] Failed to reconnect after ${this.maxReconnectAttempts} attempts`);
     }
   }
 }
@@ -355,13 +446,16 @@ export class MarketWebSocket {
 export class UserWebSocket {
   private socket: WebSocket | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private pingTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 3000; // 3 seconds
+  private pingInterval = 30000; // 30 seconds
   private messageHandlers: ((event: WebSocketEvent) => void)[] = [];
   private walletAddress: string;
   private chainId: number;
   private isConnecting = false;
+  private shouldStayConnected = false;
 
   /**
    * Create a new UserWebSocket instance
@@ -377,32 +471,42 @@ export class UserWebSocket {
    */
   public connect(chainId: number): void {
     if (!this.walletAddress) {
-      console.error('Wallet address is required for user WebSocket');
+      console.error('[USER-WS] Wallet address is required');
       return;
     }
 
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-      console.log('User WebSocket is already connected or connecting');
+      console.log('[USER-WS] Already connected or connecting');
       return;
     }
 
     if (this.isConnecting) {
-      console.log('User WebSocket connection is in progress');
+      console.log('[USER-WS] Connection in progress');
       return;
     }
 
+    // Close any existing socket first
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+
     this.isConnecting = true;
+    this.shouldStayConnected = true;
 
     try {
-      console.log(`Connecting to user WebSocket for ${this.walletAddress}...`);
-      this.socket = new WebSocket(`${getWebsocketUrl(chainId)}/ws/${this.walletAddress}`);
+      const baseUrl = getWebsocketUrl(chainId);
+      const wsUrl = `${baseUrl}/ws/${this.walletAddress}`;
+      console.log('[USER-WS] Base URL:', baseUrl, 'Final URL:', wsUrl);
+      console.log(`[USER-WS] Connecting for ${this.walletAddress}...`, wsUrl, 'chainId:', chainId);
+      this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);
       this.socket.onclose = this.handleClose.bind(this);
       this.socket.onerror = this.handleError.bind(this);
     } catch (error) {
-      console.error('Error connecting to user WebSocket:', error);
+      console.error('[USER-WS] Error connecting:', error);
       this.isConnecting = false;
       this.scheduleReconnect();
     }
@@ -412,9 +516,18 @@ export class UserWebSocket {
    * Disconnect from the WebSocket
    */
   public disconnect(): void {
+    console.log('[USER-WS] Disconnect called');
+    
+    this.shouldStayConnected = false;
+    
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
     }
 
     if (this.socket) {
@@ -467,9 +580,26 @@ export class UserWebSocket {
    * Handle WebSocket open event
    */
   private handleOpen(): void {
-    console.log(`User WebSocket connected for ${this.walletAddress}`);
+    console.log(`[USER-WS] Connected for ${this.walletAddress}`);
     this.isConnecting = false;
     this.reconnectAttempts = 0;
+
+    // Start ping timer
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+    }
+    this.pingTimer = setInterval(() => {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ method: 'PING' }));
+        console.log('[USER-WS] Sent ping');
+      }
+    }, this.pingInterval);
+
+    // Send initial ping
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ method: 'PING' }));
+      console.log('[USER-WS] Sent initial ping');
+    }
   }
 
   /**
@@ -479,14 +609,14 @@ export class UserWebSocket {
   private handleMessage(event: MessageEvent): void {
     try {
       const data = JSON.parse(event.data);
-      console.log('User WebSocket message:', data);
+      console.log('[USER-WS] Message:', data);
 
       // Notify all handlers
       for (const handler of this.messageHandlers) {
         handler(data);
       }
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      console.error('[USER-WS] Error parsing message:', error);
     }
   }
 
@@ -494,9 +624,15 @@ export class UserWebSocket {
    * Handle WebSocket close event
    */
   private handleClose(event: CloseEvent): void {
-    console.log(`User WebSocket closed: ${event.code} ${event.reason}`);
+    console.log(`[USER-WS] Closed: ${event.code} ${event.reason}`);
     this.socket = null;
     this.isConnecting = false;
+    
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
+    
     this.scheduleReconnect();
   }
 
@@ -505,7 +641,7 @@ export class UserWebSocket {
    * @param event WebSocket error event
    */
   private handleError(event: Event): void {
-    console.error('User WebSocket error:', event);
+    console.error('[USER-WS] Error:', event);
     this.isConnecting = false;
   }
 
@@ -513,6 +649,11 @@ export class UserWebSocket {
    * Schedule a reconnection attempt
    */
   private scheduleReconnect(): void {
+    if (!this.shouldStayConnected) {
+      console.log('[USER-WS] Not reconnecting - shouldStayConnected is false');
+      return;
+    }
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
@@ -520,13 +661,15 @@ export class UserWebSocket {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
-      console.log(`Scheduling user WebSocket reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
+      console.log(`[USER-WS] Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
       
       this.reconnectTimer = setTimeout(() => {
-        this.connect(this.chainId);
+        if (this.shouldStayConnected) {
+          this.connect(this.chainId);
+        }
       }, delay);
     } else {
-      console.error(`Failed to reconnect user WebSocket after ${this.maxReconnectAttempts} attempts`);
+      console.error(`[USER-WS] Failed to reconnect after ${this.maxReconnectAttempts} attempts`);
     }
   }
 }
@@ -551,4 +694,15 @@ export const getUserWebSocket = (walletAddress: string, chainId: number): UserWe
     userWsInstances.set(walletAddress, new UserWebSocket(walletAddress, chainId));
   }
   return userWsInstances.get(walletAddress)!;
+};
+
+/**
+ * Force disconnect all user WebSocket instances (for development debugging)
+ */
+export const disconnectAllUserWebSockets = (): void => {
+  console.log('[USER-WS] Disconnecting all user WebSocket instances');
+  for (const [address, ws] of userWsInstances) {
+    ws.disconnect();
+  }
+  userWsInstances.clear();
 };

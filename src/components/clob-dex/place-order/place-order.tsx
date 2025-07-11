@@ -5,15 +5,14 @@ import { NotificationDialog } from '@/components/notification-dialog/notificatio
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { EXPLORER_URL } from '@/constants/explorer-url';
 import { TradeItem } from '@/graphql/gtx/clob';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
-import { DepthData } from '@/lib/market-api';
+import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import { formatNumber } from '@/lib/utils';
-import { useMarketStore } from '@/store/market-store';
 import type { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
-import { RefreshCw, Wallet } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { RefreshCw, Wallet, X } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -21,12 +20,18 @@ import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId, useContractRead } from 'wagmi';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
+import GTXSlider from './slider';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
   tradesData?: TradeItem[];
   tradesLoading: boolean;
   depthData?: DepthData | null;
+  ticker24hr?: Ticker24hrData;
+  refetchAccount: () => void;
 }
 
 const PlaceOrder = ({
@@ -35,9 +40,14 @@ const PlaceOrder = ({
   defaultChainId,
   selectedPool,
   depthData,
+  ticker24hr,
+  refetchAccount,
 }: PlaceOrderProps) => {
   const { isConnected } = useAccount();
-  const pathname = usePathname();
+  const { isFullyAuthenticated } = usePrivyAuth();
+  
+  // Check if user is connected via either traditional wallet or Privy
+  const effectiveIsConnected = isConnected || isFullyAuthenticated;
 
   const currentChainId = useChainId();
   const poolManagerAddress = getContractAddress(
@@ -45,14 +55,6 @@ const PlaceOrder = ({
     ContractName.clobPoolManager
   ) as HexAddress;
 
-  // 1. Create the Pool struct with orderBook
-  const poolStruct = {
-    baseCurrency: selectedPool?.baseTokenAddress as HexAddress,
-    quoteCurrency: selectedPool?.quoteTokenAddress as HexAddress,
-    orderBook: selectedPool?.orderBook as HexAddress,
-  };
-
-  // 2. Get the pool using poolManager
   const { data: pool } = useContractRead({
     address: poolManagerAddress,
     abi: poolManagerABI,
@@ -74,8 +76,8 @@ const PlaceOrder = ({
       | undefined;
   };
 
-  const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
-  const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); // Default to BUY
+  const [orderType, setOrderType] = useState<'limit' | 'market'>('market');
+  const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); 
   const [price, setPrice] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
   const [total, setTotal] = useState<string>('0');
@@ -93,6 +95,33 @@ const PlaceOrder = ({
 
   // Component mounted state
   const [mounted, setMounted] = useState(false);
+
+  
+  // Component Slippage
+  const [autoSlippage, setAutoSlippage] = useState(true);
+  const [slippageValue, setSlippageValue] = useState('0.3');
+  const [slippageValueChange, setSlippageValueChange] = useState<string>(slippageValue);
+  const [isModalSlippageOpen, setIsModalSlippageOpen] = useState(false);
+  
+  const handleSlippageValueChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = e.target.value;
+      setSlippageValueChange(value);
+      
+      if (!/^\d*$/.test(value)) return;
+      
+      const numValue = parseFloat(value);
+      
+      if (numValue >= 0 && numValue <= 99) {
+          setSlippageValueChange(value);
+      } else if (numValue > 99) {
+          setSlippageValueChange('99');
+      }
+  };
+
+  const handleConfirmModalSlippage = () => {
+    setIsModalSlippageOpen(false)
+    setSlippageValue(slippageValueChange)
+  }
 
   const inputStyles = `
   /* Chrome, Safari, Edge, Opera */
@@ -124,7 +153,7 @@ const PlaceOrder = ({
     marketOrderHash,
     resetLimitOrderState,
     resetMarketOrderState,
-  } = usePlaceOrder();
+  } = usePlaceOrder(address);
 
   const bestBidPrice = useMemo(() => {
     if (depthData?.bids && depthData.bids.length > 0) {
@@ -142,26 +171,20 @@ const PlaceOrder = ({
     return undefined;
   }, [depthData]);
 
+  const balanceManagerAddress = getContractAddress(
+    chainId ?? defaultChainId,
+    ContractName.clobBalanceManager
+  ) as HexAddress
+
   const {
     getWalletBalance,
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
   } = useTradingBalances(
-    getContractAddress(
-      chainId ?? defaultChainId,
-      ContractName.clobBalanceManager
-    ) as HexAddress
+    balanceManagerAddress,
+    address
   );
-
-  //   const convertToPoolType = (poolItem: PoolItemWithStringTimestamp): Pool => {
-  //     return {
-  //       baseDecimals: baseDecimals,
-  //       quoteDecimals: quoteDecimals,
-  //       ...poolItem,
-  //       timestamp: poolItem.timestamp,
-  //     };
-  //   };
 
   // Function to refresh balance manually
   const refreshBalance = useCallback(async () => {
@@ -291,58 +314,46 @@ const PlaceOrder = ({
   }, [price, quantity]);
 
   useEffect(() => {
-    if (!price && orderType === 'limit') {
-      if (side === OrderSideEnum.BUY && bestAskPrice && selectedPool?.quoteDecimals !== undefined) {
+    if (!selectedPool || !selectedPool.quoteDecimals) return;
+
+    if (orderType === 'limit') {
+      if (side === OrderSideEnum.BUY && bestAskPrice) {
         const normalizedPrice = formatUnits(BigInt(bestAskPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
-      } else if (side === OrderSideEnum.SELL && bestBidPrice && selectedPool?.quoteDecimals !== undefined) {
+      } else if (side === OrderSideEnum.SELL && bestBidPrice) {
         const normalizedPrice = formatUnits(BigInt(bestBidPrice), selectedPool.quoteDecimals);
         setPrice(normalizedPrice);
       }
+    } else {
+      const normalizedPrice = formatUnits(BigInt(ticker24hr?.lastPrice || 0), selectedPool?.quoteDecimals);
+      setPrice(normalizedPrice);
     }
-  }, [bestBidPrice, bestAskPrice, side, price, orderType, selectedPool?.quoteDecimals]);
+  }, [bestBidPrice, bestAskPrice, side, orderType, selectedPool?.quoteDecimals, ticker24hr?.lastPrice]);
 
-  // Load balance when relevant data changes
   useEffect(() => {
     loadBalance();
   }, [address, selectedPool, side, loadBalance]);
 
-  // TODO
-  // Refresh order book on regular intervals
-  // useEffect(() => {
-  //   if (pool?.orderBook) {
-  //     const interval = setInterval(() => {
-  //       refreshOrderBook();
-  //     }, 1000); // Refresh every second
-
-  //     return () => clearInterval(interval);
-  //   }
-  // }, [pool?.orderBook, refreshOrderBook]);
-
-  // Auto refresh balance after transaction completion
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
-      // Add a small delay to allow blockchain to update
       const timeoutId = setTimeout(() => {
         refreshBalance();
-      }, 2000); // 2 seconds delay to allow transaction to propagate
+      }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refreshBalance]);
 
-  // Reset confirmation status after 1 second
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
       const timeoutId = setTimeout(() => {
-        // Reset the confirmation states after 1 second
         if (isLimitOrderConfirmed) {
           resetLimitOrderState();
         }
         if (isMarketOrderConfirmed) {
           resetMarketOrderState();
         }
-      }, 1000); // 1 second timeout
+      }, 1000);
 
       return () => clearTimeout(timeoutId);
     }
@@ -353,7 +364,6 @@ const PlaceOrder = ({
     resetMarketOrderState,
   ]);
 
-  // Show error notification when there's an error
   useEffect(() => {
     if (limitSimulateError || marketSimulateError) {
       const error = limitSimulateError || marketSimulateError;
@@ -364,7 +374,6 @@ const PlaceOrder = ({
     }
   }, [limitSimulateError, marketSimulateError]);
 
-  // Show success notification when order is confirmed
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
       const txHash = limitOrderHash || marketOrderHash;
@@ -383,7 +392,12 @@ const PlaceOrder = ({
     marketOrderHash,
   ]);
 
-  // Function to handle transaction errors
+  useEffect(() => {
+    if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
+      refetchAccount();
+    }
+  }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refetchAccount]);
+
   const handleTransactionError = (error: unknown) => {
     let errorMessage = 'Failed to place order';
 
@@ -398,7 +412,6 @@ const PlaceOrder = ({
     setShowNotification(true);
   };
 
-  // Function to handle order placement
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('handleSubmit', e);
     e.preventDefault();
@@ -416,11 +429,9 @@ const PlaceOrder = ({
     }
 
     try {
-      // Enhanced parameter validation
       const quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
       const priceBigInt = parseUnits(price, Number(selectedPool.quoteDecimals));
 
-      // Additional checks before contract call
       if (quantityBigInt <= 0n) {
         throw new Error('Quantity must be positive');
       }
@@ -445,6 +456,8 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
+  const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
+
   if (!mounted)
     return (
       <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
@@ -456,13 +469,13 @@ const PlaceOrder = ({
     );
 
   return (
-    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
+    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
       <style jsx global>
         {inputStyles}
       </style>
 
       <div className="flex flex-col w-full gap-3 mb-3">
-        {isConnected && selectedPool && (
+        {effectiveIsConnected && selectedPool && (
           <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-gray-300 flex items-center gap-1.5">
@@ -504,35 +517,8 @@ const PlaceOrder = ({
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}
-        {/* <div className="grid grid-cols-2 gap-3"> */}
         <div className="grid gap-3">
           {/* Order Type Selection */}
-          {/* <div className="relative">
-            <div className="flex h-9 text-sm border-b border-gray-700">
-              <button
-                type="button"
-                className={`flex-1 flex items-center justify-center transition-colors pb-1 border-b-2 ${
-                  orderType === 'market'
-                    ? 'border-blue-500 text-white'
-                    : 'border-transparent text-blue-300 hover:text-white'
-                }`}
-                onClick={() => setOrderType('market')}
-              >
-                Market
-              </button>
-              <button
-                type="button"
-                className={`flex-1 flex items-center justify-center transition-colors pb-1 border-b-2 ${
-                  orderType === 'limit'
-                    ? 'border-blue-500 text-white'
-                    : 'border-transparent text-blue-300 hover:text-white'
-                }`}
-                onClick={() => setOrderType('limit')}
-              >
-                Limit
-              </button>
-            </div>
-          </div> */}
           <div className="relative">
             <div className="flex w-full gap-6 bg-transparent">
               <button
@@ -641,9 +627,10 @@ const PlaceOrder = ({
               required
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-              {selectedPool?.baseTokenAddress ? selectedPool.coin.split('/')[0] : ''}
+              {selectedPool && (side === OrderSideEnum.BUY ? 'USDC' : selectedPool.coin.split('/')[0])}
             </div>
           </div>
+          <GTXSlider quantity={availableBalance} setQuantity={setQuantity}/>
         </div>
 
         {/* Total - Calculated Field */}
@@ -670,7 +657,7 @@ const PlaceOrder = ({
           <div
             className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
               side === OrderSideEnum.BUY ? 'bg-emerald-500/30' : 'bg-rose-500/30'
-            } ${isPending || isConfirming || !isConnected ? 'opacity-0' : 'opacity-50'}`}
+            } ${isPending || isConfirming || !effectiveIsConnected ? 'opacity-0' : 'opacity-50'}`}
           ></div>
           <button
             type="submit"
@@ -679,11 +666,11 @@ const PlaceOrder = ({
                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]'
                 : 'bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]'
             } ${
-              isPending || isConfirming || !isConnected
+              isPending || isConfirming || !effectiveIsConnected
                 ? 'opacity-50 cursor-not-allowed'
                 : ''
             }`}
-            disabled={isPending || isConfirming || !isConnected}
+            disabled={isPending || isConfirming || !effectiveIsConnected}
           >
             {isPending ? (
               <div className="flex items-center justify-center gap-2">
@@ -710,7 +697,96 @@ const PlaceOrder = ({
         </div>
       </form>
 
-      {!isConnected && (
+      <div className='flex flex-col w-full gap-3 text-xs text-gray-400 mt-3'>
+        <div className='flex flex-row justify-between'>
+          <span>Order Value</span>
+          <span className='text-gray-200 font-medium'>{total} USDC</span>
+        </div>
+        <div className='flex flex-row justify-between'>
+          <span>Slippage</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Click to adjust!</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div className='flex flex-row justify-between'>
+          <span>Fees</span>
+          <span className='text-gray-200 font-medium'>{takerFeePercent.toFixed(2)}% / {makerFeePercent.toFixed(2)}%</span>
+        </div>
+      </div>
+
+      <Dialog
+          open={isModalSlippageOpen}
+          onOpenChange={(openState) => {
+              setIsModalSlippageOpen(openState);
+              if (!openState) setIsModalSlippageOpen(false);
+          }}
+      >
+          <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-800/30 text-gray-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-white text-xl font-semibold">Slippage Setting</h2>
+              <button
+                onClick={() => setIsModalSlippageOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-1 mb-8">
+              <div className='flex justify-between items-center'>
+                <label className="text-sm text-gray-300 flex items-center gap-1.5 ml-1">
+                  <span>Slippage</span>
+                </label>
+                <div className='flex items-center gap-2'>
+                  <span className='text-gray-400 text-xs'>Auto-slippage</span>
+                  <button
+                    onClick={() => {
+                      setAutoSlippage(!autoSlippage)
+                      setSlippageValueChange(slippageValue)
+                    }}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      autoSlippage ? 'bg-green-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <div
+                      className={`absolute w-4 h-4 bg-white rounded-full top-0.5 transition-transform ${
+                        autoSlippage ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 rounded-lg p-2 border border-gray-700/50">
+                <input
+                  type="text"
+                  value={slippageValueChange}
+                  onChange={handleSlippageValueChange}
+                  disabled={autoSlippage}
+                  className="flex-1 bg-transparent text-gray-400 text-sm outline-none w-7 text-right"
+                  placeholder="2"
+                />
+                <span className="text-white text-md font-medium">%</span>
+              </div>
+            </div>
+    
+            {/* Confirm Button */}
+            <button
+              className="w-full bg-blue-600 hover:bg-blue-700 font-semibold py-3 rounded-xl transition-colors"
+              onClick={() => handleConfirmModalSlippage()}
+            >
+              Confirm Settings
+            </button>
+          </DialogContent>
+      </Dialog>
+
+      {!effectiveIsConnected && (
         <div className="mt-3 p-2 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
           <Wallet className="w-4 h-4" />
           <span>Please connect wallet to trade</span>

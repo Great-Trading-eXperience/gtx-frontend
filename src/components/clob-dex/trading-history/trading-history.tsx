@@ -33,6 +33,7 @@ export interface TradingHistoryProps extends ClobDexComponentProps {
   marketOpenOrdersLoading?: boolean;
   marketAllOrdersData?: OrderData[];
   marketAllOrdersLoading?: boolean;
+  refetchFn?: () => void;
 }
 
 export default function TradingHistory({
@@ -54,6 +55,7 @@ export default function TradingHistory({
   marketOpenOrdersLoading,
   marketAllOrdersData,
   marketAllOrdersLoading,
+  refetchFn
 }: TradingHistoryProps) {
   const { isConnected } = useAccount();
 
@@ -168,6 +170,7 @@ export default function TradingHistory({
             <TabsContent
               value="balances"
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
+              onClick={() => refetchFn?.()}
             >
               {isConnected ? (
                 <BalancesHistoryTable
