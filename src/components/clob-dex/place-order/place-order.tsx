@@ -12,7 +12,7 @@ import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import { formatNumber } from '@/lib/utils';
 import type { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
-import { RefreshCw, Wallet } from 'lucide-react';
+import { RefreshCw, Wallet, X } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -21,6 +21,9 @@ import { useAccount, useChainId, useContractRead } from 'wagmi';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
 import GTXSlider from './slider';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -93,6 +96,33 @@ const PlaceOrder = ({
   // Component mounted state
   const [mounted, setMounted] = useState(false);
 
+  
+  // Component Slippage
+  const [autoSlippage, setAutoSlippage] = useState(true);
+  const [slippageValue, setSlippageValue] = useState('0.3');
+  const [slippageValueChange, setSlippageValueChange] = useState<string>(slippageValue);
+  const [isModalSlippageOpen, setIsModalSlippageOpen] = useState(false);
+  
+  const handleSlippageValueChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = e.target.value;
+      setSlippageValueChange(value);
+      
+      if (!/^\d*$/.test(value)) return;
+      
+      const numValue = parseFloat(value);
+      
+      if (numValue >= 0 && numValue <= 99) {
+          setSlippageValueChange(value);
+      } else if (numValue > 99) {
+          setSlippageValueChange('99');
+      }
+  };
+
+  const handleConfirmModalSlippage = () => {
+    setIsModalSlippageOpen(false)
+    setSlippageValue(slippageValueChange)
+  }
+
   const inputStyles = `
   /* Chrome, Safari, Edge, Opera */
   input::-webkit-outer-spin-button,
@@ -141,16 +171,18 @@ const PlaceOrder = ({
     return undefined;
   }, [depthData]);
 
+  const balanceManagerAddress = getContractAddress(
+    chainId ?? defaultChainId,
+    ContractName.clobBalanceManager
+  ) as HexAddress
+
   const {
     getWalletBalance,
     getTotalAvailableBalance,
     deposit,
     loading: balanceLoading,
   } = useTradingBalances(
-    getContractAddress(
-      chainId ?? defaultChainId,
-      ContractName.clobBalanceManager
-    ) as HexAddress,
+    balanceManagerAddress,
     address
   );
 
@@ -424,39 +456,7 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
-  const [percentage, setPercentage] = useState(0);
-  const [inputValue, setInputValue] = useState('');
-
-  const presetValues: number[] = [0, 25, 50, 75, 100];
-
-  useEffect(() => {
-    setInputValue(percentage.toString());
-
-    const amount = (Number(availableBalance) / 100) * percentage;
-    setQuantity(amount.toString());
-  }, [percentage, availableBalance]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.value;
-    setInputValue(value);
-    
-    if (!/^\d*$/.test(value)) return;
-    
-    const numValue = parseFloat(value);
-    
-    if (numValue >= 0 && numValue <= 100) {
-      setPercentage(numValue);
-      setInputValue(value);
-    } else if (numValue > 100) {
-      setPercentage(100);
-      setInputValue('100');
-    }
-  };
-
-  const handlePresetClick = (value: number): void => {
-    setPercentage(value);
-    setInputValue(value.toString());
-  };
+  const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
 
   if (!mounted)
     return (
@@ -469,7 +469,7 @@ const PlaceOrder = ({
     );
 
   return (
-    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-xl p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
+    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
       <style jsx global>
         {inputStyles}
       </style>
@@ -517,35 +517,8 @@ const PlaceOrder = ({
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}
-        {/* <div className="grid grid-cols-2 gap-3"> */}
         <div className="grid gap-3">
           {/* Order Type Selection */}
-          {/* <div className="relative">
-            <div className="flex h-9 text-sm border-b border-gray-700">
-              <button
-                type="button"
-                className={`flex-1 flex items-center justify-center transition-colors pb-1 border-b-2 ${
-                  orderType === 'market'
-                    ? 'border-blue-500 text-white'
-                    : 'border-transparent text-blue-300 hover:text-white'
-                }`}
-                onClick={() => setOrderType('market')}
-              >
-                Market
-              </button>
-              <button
-                type="button"
-                className={`flex-1 flex items-center justify-center transition-colors pb-1 border-b-2 ${
-                  orderType === 'limit'
-                    ? 'border-blue-500 text-white'
-                    : 'border-transparent text-blue-300 hover:text-white'
-                }`}
-                onClick={() => setOrderType('limit')}
-              >
-                Limit
-              </button>
-            </div>
-          </div> */}
           <div className="relative">
             <div className="flex w-full gap-6 bg-transparent">
               <button
@@ -731,13 +704,87 @@ const PlaceOrder = ({
         </div>
         <div className='flex flex-row justify-between'>
           <span>Slippage</span>
-          <span className='text-cyan-400 font-medium'>Est: 5.00% / Max: 8.00%</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Click to adjust!</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className='flex flex-row justify-between'>
           <span>Fees</span>
-          <span className='text-gray-200 font-medium'>0.0000% / 0.0400%</span>
+          <span className='text-gray-200 font-medium'>{takerFeePercent.toFixed(2)}% / {makerFeePercent.toFixed(2)}%</span>
         </div>
       </div>
+
+      <Dialog
+          open={isModalSlippageOpen}
+          onOpenChange={(openState) => {
+              setIsModalSlippageOpen(openState);
+              if (!openState) setIsModalSlippageOpen(false);
+          }}
+      >
+          <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-800/30 text-gray-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-white text-xl font-semibold">Slippage Setting</h2>
+              <button
+                onClick={() => setIsModalSlippageOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-1 mb-8">
+              <div className='flex justify-between items-center'>
+                <label className="text-sm text-gray-300 flex items-center gap-1.5 ml-1">
+                  <span>Slippage</span>
+                </label>
+                <div className='flex items-center gap-2'>
+                  <span className='text-gray-400 text-xs'>Auto-slippage</span>
+                  <button
+                    onClick={() => {
+                      setAutoSlippage(!autoSlippage)
+                      setSlippageValueChange(slippageValue)
+                    }}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      autoSlippage ? 'bg-green-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <div
+                      className={`absolute w-4 h-4 bg-white rounded-full top-0.5 transition-transform ${
+                        autoSlippage ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 rounded-lg p-2 border border-gray-700/50">
+                <input
+                  type="text"
+                  value={slippageValueChange}
+                  onChange={handleSlippageValueChange}
+                  disabled={autoSlippage}
+                  className="flex-1 bg-transparent text-gray-400 text-sm outline-none w-7 text-right"
+                  placeholder="2"
+                />
+                <span className="text-white text-md font-medium">%</span>
+              </div>
+            </div>
+    
+            {/* Confirm Button */}
+            <button
+              className="w-full bg-blue-600 hover:bg-blue-700 font-semibold py-3 rounded-xl transition-colors"
+              onClick={() => handleConfirmModalSlippage()}
+            >
+              Confirm Settings
+            </button>
+          </DialogContent>
+      </Dialog>
 
       {!effectiveIsConnected && (
         <div className="mt-3 p-2 bg-gray-900/30 text-gray-300 rounded-lg text-sm border border-gray-700/40 text-center flex items-center justify-center gap-2">
