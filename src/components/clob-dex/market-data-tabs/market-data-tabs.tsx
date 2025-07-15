@@ -33,7 +33,7 @@ const MarketDataTabs = ({
   tradesLoading
 }: MarketDataTabsProps) => {
   return (
-    <div className="relative w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
+    <div className="relative w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
       <Tabs defaultValue="orderbook" className="w-full">
         <div className="relative border-b border-gray-800/30 backdrop-blur-sm">
           <TabsList className="flex w-full justify-start gap-1 bg-transparent px-4 py-1">

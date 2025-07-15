@@ -71,39 +71,41 @@ const Header = () => {
   };
 
   return (
-    <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20">
-      <nav className="flex flex-row py-3 px-5 md:grid md:grid-cols-3 md:items-center">
-        {/* Left Column */}
-        <div className="flex flex-row gap-4 items-center">
-          <Link href="/" className="flex flex-row items-center gap-2">
-            <img
-              src={"/logo/gtx.png"}
-              className="h-9"
-              alt="GTX Logo"
-            />
-            <p className="text-xl lg:text-2xl font-bold text-white text-center">
-              GTX
-            </p>
-          </Link>
-        </div>
-
-        {/* Center Column */}
-        <div className="hidden md:flex items-center justify-center gap-4">
-          {links.map((link) => (
-            <Link
-              key={link.label}
-              href={link.destination}
-              className={cn(
-                "text-sm lg:text-md px-4 py-1 rounded-lg transition-all whitespace-nowrap",
-                "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
-                "dark:hover:bg-white/10 dark:hover:text-white",
-                "text-white",
-                pathname === link.destination && "bg-[#0064A7]/10 text-[#0064A7] dark:bg-white/10 dark:text-white"
-              )}
-            >
-              {link.label}
+    <header className="relative z-10 border rounded-lg mt-1 mx-1 border-white/10 backdrop-blur-lg bg-black/20">
+      <nav className="flex flex-row py-3 px-5 justify-between">
+        <div className="flex flex-row gap-8">
+          {/* Left Column */}
+          <div className="flex flex-row gap-4 items-center">
+            <Link href="/" className="flex flex-row items-center gap-2">
+              <img
+                src={"/logo/gtx.png"}
+                className="h-9"
+                alt="GTX Logo"
+              />
+              <p className="text-xl lg:text-2xl font-bold text-white text-center">
+                GTX
+              </p>
             </Link>
-          ))}
+          </div>
+
+          {/* Center Column */}
+          <div className="hidden md:flex items-center justify-center gap-4">
+            {links.map((link) => (
+              <Link
+                key={link.label}
+                href={link.destination}
+                className={cn(
+                  "text-sm lg:text-md px-4 py-1 rounded-lg transition-all whitespace-nowrap",
+                  "hover:bg-[#0064A7]/10 hover:text-[#0064A7]",
+                  "dark:hover:bg-white/10 dark:hover:text-white",
+                  "text-white",
+                  pathname === link.destination && "bg-[#0064A7]/10 text-[#0064A7] dark:bg-white/10 dark:text-white"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Right Column */}
