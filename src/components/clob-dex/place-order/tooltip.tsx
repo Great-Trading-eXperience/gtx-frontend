@@ -11,6 +11,10 @@ interface GTXTooltipProps {
 const GTXTooltip = ({ children, text, width, position } : GTXTooltipProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
+  const getWidthStyle = () => {
+    return typeof width === 'number' ? { width: `${width}px` } : {};
+  };
+
   let positionClass = 'left-1/2 -translate-x-1/2';
   let positionArrow = 'left-1/2 -translate-x-1/2';
   if (position == 'left') {
@@ -31,7 +35,10 @@ const GTXTooltip = ({ children, text, width, position } : GTXTooltipProps) => {
         {children}
       </div>
       {isVisible && (
-        <div className={`absolute bottom-full ${positionClass} mb-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-90 w-[${width}px]`}>
+        <div 
+            className={`absolute bottom-full ${positionClass} mb-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-9`}
+            style={getWidthStyle()}
+        >
           <span className="text-wrap">{text}</span>
           <div className={`absolute transform ${positionArrow} bottom-[-4px] w-2 h-2 bg-gray-700 rotate-45`}></div>
         </div>
