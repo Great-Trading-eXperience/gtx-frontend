@@ -58,3 +58,51 @@ export interface ProcessedPoolItem {
   baseDecimals: number | undefined;
   quoteDecimals: number | undefined;
 }
+
+export type CurrencyType = {
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+
+export type TradeItem = {
+  id: string;
+  orderId: string;
+  poolId: string;
+  pool: string;
+  price: string;
+  quantity: string;
+  timestamp: number;
+  transactionId: string;
+  order: {
+    expiry: number;
+    filled: string;
+    id: string;
+    orderId: string;
+    poolId: string;
+    price: string;
+    type: string;
+    timestamp: number;
+    status: string;
+    side: 'Buy' | 'Sell';
+    quantity: string;
+    user: {
+      amount: string;
+      currency: CurrencyType;
+      lockedAmount: string;
+      symbol: string;
+      user: HexAddress;
+    };
+    pool: {
+      coin: string;
+      id: string;
+      lotSize: string;
+      maxOrderAmount: string;
+      orderBook: string;
+      timestamp: number;
+      baseCurrency: CurrencyType;
+      quoteCurrency: CurrencyType;
+    };
+  };
+};

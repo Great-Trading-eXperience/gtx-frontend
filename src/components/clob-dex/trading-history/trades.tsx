@@ -1,10 +1,9 @@
 'use client';
 
 import { EXPLORER_URL } from '@/constants/explorer-url';
-import { TradeItem } from '@/graphql/gtx/clob';
 import { formatPrice, formatQuantity } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
+import { ProcessedPoolItem, TradeItem } from '@/types/gtx/clob';
 import {
   BookOpen,
   ChevronDown,

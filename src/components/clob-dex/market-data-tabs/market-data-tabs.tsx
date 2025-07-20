@@ -1,7 +1,7 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RecentTradeItem, TradeItem } from '@/graphql/gtx/clob';
+import { TradeItem } from '@/types/gtx/clob';
 import { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BarChart2, LineChart } from 'lucide-react';

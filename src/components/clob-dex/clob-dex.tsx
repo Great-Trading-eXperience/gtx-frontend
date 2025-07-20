@@ -5,8 +5,7 @@ import {
     PoolItem as GraphQLPoolItem,
     poolsPonderQuery,
     PoolsPonderResponse,
-    PoolsResponse,
-    TradeItem
+    PoolsResponse
 } from '@/graphql/gtx/clob';
 import {
     AccountData,
@@ -23,7 +22,7 @@ import {
     TickerPriceData
 } from '@/lib/market-api';
 import { useMarketStore } from '@/store/market-store';
-import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
+import { HexAddress, ProcessedPoolItem, TradeItem } from '@/types/gtx/clob';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -211,7 +210,7 @@ export default function ClobDex() {
         const userData = await fetchTrades(selectedPool.coin, 500, effectiveAddress);
         if (userData) {
           const transformedUserData = transformApiTradeToTradeItem(userData, selectedPool.id, selectedPool.coin);
-
+          
           const uniqueTradesMap = new Map();
           transformedUserData.forEach(trade => {
             uniqueTradesMap.set(trade.id, trade);

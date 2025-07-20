@@ -1,9 +1,7 @@
 'use client';
 
-import {
-	PoolsResponse,
-	TradeItem
-} from '@/graphql/gtx/clob';
+import { PoolsResponse } from '@/graphql/gtx/clob';
+import { TradeItem } from '@/types/gtx/clob';
 import { formatPrice, formatTime } from '@/lib/utils';
 import { useMarketStore } from '@/store/market-store';
 import { ArrowDown, ArrowUp, Clock } from 'lucide-react';

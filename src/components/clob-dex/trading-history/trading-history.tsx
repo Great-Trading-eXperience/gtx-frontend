@@ -5,11 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BalanceItem,
-  OpenOrderItem,
-  TradeItem
+  OpenOrderItem
 } from '@/graphql/gtx/clob';
 import { OrderData } from '@/lib/market-api';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
+import { ProcessedPoolItem, TradeItem } from '@/types/gtx/clob';
 import { BookOpen, History, Wallet } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { ClobDexComponentProps } from '../clob-dex';
