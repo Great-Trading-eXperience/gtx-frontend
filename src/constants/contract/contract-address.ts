@@ -32,8 +32,8 @@ interface ContractConfig {
     NETWORK: string;
     ROUTER_OWNER: HexAddress | string;
     ENABLED_CHAINS: string;
-    MAILCHIMP: MailchimpConfig;
-    [chainId: string]: Partial<Record<ContractName, string>> | string | MailchimpConfig;
+    MAILCHIMP?: MailchimpConfig;
+    [chainId: string]: Partial<Record<ContractName, string>> | string | MailchimpConfig | undefined;
 }
 
 // Extract contract config
@@ -53,7 +53,11 @@ export const NETWORK = contractsConfig.NETWORK;
 export const ROUTER_OWNER = contractsConfig.ROUTER_OWNER as HexAddress;
 export const ENABLED_CHAINS = contractsConfig.ENABLED_CHAINS;
 
-export const MAILCHIMP = contractsConfig.MAILCHIMP as MailchimpConfig;
+export const MAILCHIMP = {
+  API_KEY: process.env.NEXT_PUBLIC_MAILCHIMP_API_KEY || '',
+  AUDIENCE_ID: process.env.NEXT_PUBLIC_MAILCHIMP_AUDIENCE_ID || '',
+  API_SERVER: process.env.NEXT_PUBLIC_MAILCHIMP_API_SERVER || '',
+};
 
 export function getContractAddress(
     chainId: string | number = DEFAULT_CHAIN,
