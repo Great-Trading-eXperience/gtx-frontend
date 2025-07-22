@@ -53,6 +53,7 @@ export const NETWORK = contractsConfig.NETWORK;
 export const ROUTER_OWNER = contractsConfig.ROUTER_OWNER as HexAddress;
 export const ENABLED_CHAINS = contractsConfig.ENABLED_CHAINS;
 
+// Using env
 export const MAILCHIMP = {
   API_KEY: process.env.NEXT_PUBLIC_MAILCHIMP_API_KEY || '',
   AUDIENCE_ID: process.env.NEXT_PUBLIC_MAILCHIMP_AUDIENCE_ID || '',
