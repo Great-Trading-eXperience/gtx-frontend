@@ -116,8 +116,10 @@ const Header = ({onTogglePanel}: NavbarProps) => {
           <div className="flex items-center gap-2">
             {ready && authenticated ? (
               <div>
-                <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-between w-40 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
-                  <Wallet className="w-6 h-6" /> 0.0000 USDC
+                <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-between w-36 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
+                  <Wallet className="w-6 h-6" /> 
+                  0.0000 
+                  <img src="/network/rise.svg" alt="Logo Rise" height={12} width={12} />
                 </div>
               </div>
             ) : (
