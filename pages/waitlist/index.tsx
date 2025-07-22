@@ -1,14 +1,12 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
-import { ArrowRight, CheckCircle, Users, Shield, Zap, Clock, Layers, ArrowUpRight, BarChart2, Code2, LineChart, Puzzle, ShieldCheck, Terminal, Wallet } from "lucide-react"
 import { DotPattern } from "@/components/magicui/dot-pattern"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import Link from "next/link"
+import { ArrowRight, ArrowUpRight, BarChart2, CheckCircle, Clock, Code2, LineChart, Puzzle, Wallet } from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
 
 export default function WaitlistPage() {
-  const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState("")
@@ -16,18 +14,29 @@ export default function WaitlistPage() {
   const emailRef = useRef<HTMLInputElement>(null)
   const emailCTARef = useRef<HTMLInputElement>(null)
   const [refrestCounter, setRefreshCounter] = useState<number>(0);
+  const version = process.env.NEXT_PUBLIC_VERSION || '1.0.0'
+  
+  // Log version on component mount
+  useEffect(() => {
+    console.log(`GTX version: ${version}`)
+  }, [version])
   
   // Fetch subscriber count on component mount
   useEffect(() => {
     const fetchSubscriberCount = async () => {
       try {
+        const initialCount = parseInt(process.env.NEXT_PUBLIC_INITIAL_SUBCRIBER_COUNT || '0', 10) || 0
         const response = await fetch("/api/subscribers/count")
         const data = await response.json()
         if (data.success) {
-          setSubscriberCount(data.count)
+          setSubscriberCount(initialCount + data.count)
+        } else {
+          setSubscriberCount(initialCount)
         }
       } catch (error) {
         console.error("Failed to fetch subscriber count:", error)
+        const initialCount = parseInt(process.env.NEXT_PUBLIC_INITIAL_SUBCRIBER_COUNT || '0', 10) || 0
+        setSubscriberCount(initialCount)
       }
     }
 
@@ -381,7 +390,7 @@ export default function WaitlistPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
+              <form onSubmit={handleSubmitCTA} className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
                 <Input
                   type="email"
                   ref={emailCTARef}
