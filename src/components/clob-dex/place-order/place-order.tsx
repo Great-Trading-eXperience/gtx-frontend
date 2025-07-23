@@ -24,6 +24,7 @@ import GTXSlider from './slider';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
+import GTXTooltip from './tooltip';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -697,6 +698,8 @@ const PlaceOrder = ({
         </div>
       </form>
 
+      <div className='w-full border-t-2 border-gray-600 mt-3'></div>
+
       <div className='flex flex-col w-full gap-3 text-xs text-gray-400 mt-3'>
         <div className='flex flex-row justify-between'>
           <span>Order Value</span>
@@ -704,22 +707,27 @@ const PlaceOrder = ({
         </div>
         {orderType == 'market' && (
           <div className='flex flex-row justify-between'>
-            <span>Slippage</span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Click to adjust!</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div className='border-b border-dashed border-gray-400'>
+              <GTXTooltip text='Slippage is the difference between the expected price of a trade and the price at which it is actually executed' width={400} position='center'>
+                <span>Slippage</span>
+              </GTXTooltip>
+            </div>
+            <GTXTooltip text='Click to adjust!' width={112} position='right'>
+              <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
+            </GTXTooltip>
           </div>
         )}
         <div className='flex flex-row justify-between'>
-          <span>Fees</span>
-          <span className='text-gray-200 font-medium'>{takerFeePercent.toFixed(2)}% / {makerFeePercent.toFixed(2)}%</span>
+          <div className='border-b border-dashed border-gray-400'>
+            <GTXTooltip text={`Taker orders pay a ${takerFeePercent.toFixed(2)}% fee. Maker orders pay ${makerFeePercent.toFixed(2)}% a fee`} width={372} position='center'>
+              <span>Fees</span>
+            </GTXTooltip>
+          </div>
+          <div className='flex flex-row gap-1 text-gray-200 font-medium'>
+            <GTXTooltip text='Taker fee' width={80} position='right'>{takerFeePercent.toFixed(2)}%</GTXTooltip>
+            <span>/</span>
+            <GTXTooltip text='Maker fee' width={85} position='right'>{makerFeePercent.toFixed(2)}%</GTXTooltip>
+          </div>
         </div>
       </div>
 

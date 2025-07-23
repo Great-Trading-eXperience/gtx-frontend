@@ -428,7 +428,7 @@ function ChartComponent({
 
   if (isLoading) {
     return (
-      <div className="w-full h-[300px] bg-white dark:bg-[#151924] rounded-b-lg text-gray-900 dark:text-white flex items-center justify-center">
+      <div className="w-full h-full bg-white dark:bg-[#151924] rounded-b-lg text-gray-900 dark:text-white flex items-center justify-center">
         <GTXLoadingAnimation />
       </div>
     );
@@ -436,7 +436,7 @@ function ChartComponent({
 
   if (error) {
     return (
-      <div className="w-full h-[300px] bg-white dark:bg-[#151924] text-gray-900 dark:text-white flex items-center justify-center">
+      <div className="w-full h-full bg-white dark:bg-[#151924] text-gray-900 dark:text-white flex items-center justify-center">
         Error: {error?.message || String(error) || 'Unknown error'}
       </div>
     );

@@ -16,6 +16,7 @@ import VeGTXHeader from "@/components/header/vegtx-header";
 import MobileWarningModal from "@/components/header/mobile-warning-modal";
 import Providers from "@/providers/privy-provider";
 import { ClientOnly } from "@/components/client-only";
+import EmbededPanel from "@/components/header/embeded-panel";
 
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;
@@ -87,9 +88,32 @@ function AppLayout({ children }: { children: ReactNode }) {
     setMobileWarningOpen(false);
   };
 
+  // Add handle to open and close right panel
+  const [isPanelOpen, setIsPanelOpen] = useState(false); // State to control panel visibility
+
+  // Function to toggle the panel's open/close state
+  const togglePanel = () => {
+    setIsPanelOpen(!isPanelOpen);
+  };
+
+  // Effect to handle body scroll when panel is open
+  useEffect(() => {
+    if (isPanelOpen) {
+      document.body.style.overflow = 'hidden'; // Prevent scrolling when panel is open
+    } else {
+      document.body.style.overflow = 'unset'; // Restore scrolling when panel is closed
+    }
+    // Cleanup function to ensure scroll is restored on component unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isPanelOpen]);
+
+  console.log(isPanelOpen);
+
   return (
     <>
-      {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header />}
+      {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header onTogglePanel={togglePanel} />}
       {children}
       {(isHomePage || isWaitlistMode) && <Footer />}
       <Toaster />
@@ -99,6 +123,8 @@ function AppLayout({ children }: { children: ReactNode }) {
         isOpen={mobileWarningOpen}
         onClose={handleCloseMobileWarning}
       />
+
+      <EmbededPanel isOpen={isPanelOpen} onClose={togglePanel} />
     </>
   );
 }

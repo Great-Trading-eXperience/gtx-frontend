@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu, Moon, Sun, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -11,7 +11,11 @@ import { usePrivyAuth } from "@/hooks/use-privy-auth";
 
 import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
 
-const Header = () => {
+interface NavbarProps {
+  onTogglePanel: () => void;
+}
+
+const Header = ({onTogglePanel}: NavbarProps) => {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = router.pathname;
@@ -110,7 +114,17 @@ const Header = () => {
         <div className="flex justify-end items-center">
           {/* Show authentication buttons - only Privy */}
           <div className="flex items-center gap-2">
-            <PrivyAuthButton />
+            {ready && authenticated ? (
+              <div>
+                <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-between w-36 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
+                  <Wallet className="w-6 h-6" /> 
+                  0.0000 
+                  <img src="/network/rise.svg" alt="Logo Rise" height={12} width={12} />
+                </div>
+              </div>
+            ) : (
+              <PrivyAuthButton />
+            )}
           </div>
 
           {/* Mobile Menu Button - Only Visible on Mobile */}
