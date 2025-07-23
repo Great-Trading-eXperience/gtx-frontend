@@ -24,6 +24,11 @@ interface Order {
   lastUpdated?: number;
 }
 
+interface ScaledOrderbook {
+  asks: Order[];
+  bids: Order[];
+}
+
 interface OrderBook {
   asks: Order[];
   bids: Order[];
@@ -56,6 +61,57 @@ interface EnhancedOrderBookDexProps {
   poolsLoading: boolean;
   poolsError: Error | null;
   depthData: DepthData | null;
+}
+
+function scaleOrderbook(
+  asks: Order[], 
+  bids: Order[], 
+  scale: number
+): ScaledOrderbook {
+  // Sort orders first
+  asks.sort((a, b) => a.price - b.price);
+  bids.sort((a, b) => b.price - a.price);
+
+  // Function to round price to nearest scale interval
+  function roundToScale(price: number, scale: number): number {
+    return Math.round(price / scale) * scale;
+  }
+
+  // Function to aggregate orders by scaled price
+  function aggregateOrders(orders: Order[], scale: number): Order[] {
+    const aggregated = new Map<number, Order>();
+    
+    orders.forEach((order: Order) => {
+      const scaledPrice = roundToScale(order.price, scale);
+      
+      if (aggregated.has(scaledPrice)) {
+        // Combine sizes for the same scaled price
+        const existing = aggregated.get(scaledPrice)!;
+        existing.size += order.size;
+      } else {
+        // Create new entry for this scaled price
+        aggregated.set(scaledPrice, {
+          price: scaledPrice,
+          size: order.size
+        });
+      }
+    });
+    
+    return Array.from(aggregated.values());
+  }
+
+  // Aggregate both asks and bids
+  const scaledAsks = aggregateOrders(asks, scale);
+  const scaledBids = aggregateOrders(bids, scale);
+
+  // Sort again after aggregation
+  scaledAsks.sort((a, b) => a.price - b.price);
+  scaledBids.sort((a, b) => b.price - a.price);
+
+  return {
+    asks: scaledAsks,
+    bids: scaledBids
+  };
 }
 
 const EnhancedOrderBookDex = ({
@@ -272,20 +328,13 @@ const EnhancedOrderBookDex = ({
 
       const satuan = 1000000000;
       const scale = Number(selectedDecimal) * satuan;
-      
-      // Sort asks in ascending order by price
-      asks.sort((a, b) => a.price - b.price);
-      
-      // Sort bids in descending order by price
-      bids.sort((a, b) => b.price - a.price);
 
-      const filteredAsksByScale = asks.filter(item => item.price % scale === 0);
-      const filteredBidsByScale = bids.filter(item => item.price % scale === 0);
+      const { asks: scaledAsks, bids: scaledBids }: ScaledOrderbook = scaleOrderbook(asks, bids, scale);
 
       asks.length = 0;
       bids.length = 0;
-      asks.push(...filteredAsksByScale);
-      bids.push(...filteredBidsByScale); 
+      asks.push(...scaledAsks);
+      bids.push(...scaledBids);
       
       // Calculate cumulative totals
       let bidTotal = 0;
