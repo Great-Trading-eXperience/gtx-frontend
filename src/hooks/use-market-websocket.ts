@@ -41,25 +41,29 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
 
     if(!chainId) return;
 
+    console.log(`[HOOK] useMarketWebSocket effect triggered - ${stream} for ${symbol}`);
+
     const ws = getMarketWebSocket();
     
     const connect = () => {
-      console.log('Connecting to WebSocket');
+      console.log(`[HOOK] Connecting WebSocket for ${stream}`);
       ws.connect(chainId);
-      console.log('Subscribing to', symbol.toLowerCase().replaceAll('/', ''), stream);
+      console.log(`[HOOK] Subscribing to ${symbol.toLowerCase().replaceAll('/', '')}@${stream}`);
       ws.subscribe(symbol.toLowerCase().replaceAll('/', ''), stream, chainId);
       setIsConnected(true);
     };
 
     ws.addMessageHandler(handleMessage);
+    connect();
 
     return () => {
+      console.log(`[HOOK] Cleanup for ${stream} - ${symbol}`);
       if (symbol && stream) {
         ws.unsubscribe(symbol.toLowerCase().replaceAll('/', ''), stream);
       }
       ws.removeMessageHandler(handleMessage);
     };
-  }, [symbol, stream, handleMessage]);
+  }, [symbol, stream, chainId]);
 
   return {
     lastMessage,

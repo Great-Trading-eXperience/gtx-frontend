@@ -40,14 +40,10 @@ export function useUserWebSocket(walletAddress: string | undefined, chainId: num
 
     return () => {
       console.log(`[USER-WS] Effect cleanup for ${walletAddress} - ID: ${effectId}`);
-      if (process.env.NODE_ENV === 'production') {
-        ws.disconnect();
-        ws.removeMessageHandler(handleMessage);
-      } else {
-        ws.removeMessageHandler(handleMessage);
-      }
+      ws.disconnect();
+      ws.removeMessageHandler(handleMessage);
     };
-  }, [walletAddress, handleMessage]);
+  }, [walletAddress, chainId]);
 
   return {
     lastMessage,
