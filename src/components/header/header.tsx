@@ -2,12 +2,14 @@ import { Menu, Moon, Sun, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
 import { PrivyAuthButton } from "../auth/privy-auth-button";
 import { usePrivyAuth } from "@/hooks/use-privy-auth";
+import { useWallets } from "@privy-io/react-auth";
+import { useTokenBalance } from "@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf";
 
 import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
 
@@ -74,6 +76,19 @@ const Header = ({onTogglePanel}: NavbarProps) => {
     mode: 'solid' as const
   };
 
+  const { wallets } = useWallets();
+
+  const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
+  const embeddedWalletAddress = embeddedWallet?.address || 'Not Created';
+
+  const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
+
+  const {
+    formattedBalance: BalanceOfMUSDC,
+    tokenSymbol: SymbolMUSDC,
+    refetchBalance: refetchMUSDC,
+  } = useTokenBalance(addressMUSDC, embeddedWalletAddress as `0x${string}`);
+
   return (
     <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20">
       <nav className="flex flex-row py-3 px-5 md:grid md:grid-cols-3 md:items-center">
@@ -114,7 +129,17 @@ const Header = ({onTogglePanel}: NavbarProps) => {
         <div className="flex justify-end items-center">
           {/* Show authentication buttons - only Privy */}
           <div className="flex items-center gap-2">
-            <PrivyAuthButton />
+            {ready && authenticated ? (
+              <div>
+                <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
+                  <Wallet className="w-6 h-6" /> 
+                  <span>{formatNumber(Number(BalanceOfMUSDC), { decimals: 2, compact: true, })}</span>
+                  <span>USDC</span>
+                </div>
+              </div>
+            ) : (
+              <PrivyAuthButton />
+            )}
           </div>
 
           {/* Mobile Menu Button - Only Visible on Mobile */}
