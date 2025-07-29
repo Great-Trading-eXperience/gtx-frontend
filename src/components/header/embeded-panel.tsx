@@ -5,9 +5,6 @@ import {
   QrCode,
   Edit3,
   Search,
-  DollarSign,
-  TrendingDown,
-  TrendingUp,
   ChevronDown,
   Key,
   LogOut,
@@ -16,9 +13,9 @@ import {
 } from 'lucide-react';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
-import { useTransferFrom } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useDeposit';
-import { useWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useWithdraw';
 import GTXTooltip from '../clob-dex/place-order/tooltip';
+import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
+import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
 
 interface Asset {
   symbol: string;
@@ -78,12 +75,11 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawToDifferentWallet, setWithdrawToDifferentWallet] = useState(false);
-  const [differentWalletAddress, setDifferentWalletAddress] = useState('0x77C037fbF42e85dB1487B390b08f58C00f438812');
+  const [withdrawWallet, setwithdrawWallet] = useState(externalWalletAddress);
   const [depositAmount, setDepositAmount] = useState<string>('');
 
   const addressMWETH = '0x05d889798a21c3838d7ff6f67cd46b576dab2174';
   const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
-  const addressETH = '0x0000000000000000000000000000000000000000';
 
   const {
     formattedBalance: BalanceOfMUSDC,
@@ -126,75 +122,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     ];
   }
 
-  const {
-    transferFrom,
-    requestApproval,
-    resetState: depositResetState,
-    needsApproval,
-    currentStep: depositCurrentStep,
-    error: depositError,
-    isLoading: depositLoading,
-    isTransactionLoading: depositTransactionLoading,
-    txHash: depositTxHash,
-    balance: depositBalance,
-    allowance: depositAllowance,
-    tokenSymbol: depositTokenSymbol,
-    hasEnoughBalance,
-    hasEnoughAllowance,
-    fromAddress, // This will be FROM_WALLET_ADDRESS
-    toAddress, // This will be TO_WALLET_ADDRESS
-    spenderAddress, // This will be the connected wallet by default
-  } = useTransferFrom({
-    tokenAddress: addressMUSDC,
-    fromAddress: externalWalletAddress as `0x${string}`,
-    toAddress: embeddedWalletAddress as `0x${string}`,
-  });
-
-  useEffect(() => {
-    if (depositCurrentStep === 'transferring_success') {
-      depositResetState;
-      refetchMUSDC;
-      setDepositAmount('');
-    }
-  }, [depositCurrentStep]);
-
-  const handleInitiateTransfer = async () => {
-    await transferFrom(depositAmount);
-  };
-
-  const {
-    withdraw,
-    resetState: withdrawResetState,
-    isLoading: withdrawLoading,
-    isTransactionLoading: withdrawTransactionLoading,
-    currentStep: withdrawCurrentStep,
-    error: withdrawError,
-    balance: withdrawBalance,
-    maxWithdrawAmount,
-    validateAmount,
-    txHash: withdrawTxHash
-  } = useWithdraw({
-    tokenAddress: addressMUSDC,
-    fromAddress: embeddedWalletAddress as `0x${string}`,
-    toAddress: differentWalletAddress as `0x${string}`
-  })
-
-  useEffect(() => {
-    if (withdrawCurrentStep === 'transfer_success') {
-        setWithdrawAmount('');
-        refetchMUSDC;
-        withdrawResetState;
-    }
-  }, [withdrawCurrentStep])
-
-  const handleWithdraw = async () => {
-    const validationError = validateAmount(withdrawAmount);
-    
-    if (!validationError) {
-      await withdraw(withdrawAmount);
-    }
-  }
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
@@ -203,6 +130,45 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     await logout();
     onClose();
   };
+
+  const {
+    deposit: privyDeposit,
+    loading: depositloading,
+    currentStep: depositCurrentStep,
+    error: depositError,
+    resetState: depositResetState,
+  } = usePrivyDeposit();
+  const {
+    withdraw: privyWithdraw,
+    loading: withdrawLoading,
+    currentStep: withdrawCurrentStep,
+    error: withdrawError,
+    resetState: withdrawResetState,
+  } = usePrivyWithdraw();
+
+  const handlePrivyDeposit = () => {
+    privyDeposit(depositAmount);
+  };
+
+  const handlePrivyWithdraw = () => {
+    privyWithdraw(withdrawWallet, withdrawAmount);
+  };
+
+  useEffect(() => {
+    if (depositCurrentStep === 'Transaction submitted successfully!') {
+      console.log('refetch');
+      refetchMUSDC;
+      depositResetState;
+      setDepositAmount('');
+    }
+
+    if (withdrawCurrentStep === 'Transaction submitted successfully!') {
+      console.log('refetch');
+      refetchMUSDC;
+      withdrawResetState;
+      setWithdrawAmount('');
+    }
+  }, [depositCurrentStep, withdrawCurrentStep]);
 
   return (
     <>
@@ -382,13 +348,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
           {activeTab === 'Deposit' && (
             <div className="p-4">
-              {/* Deposit Info Banner */}
-              {/* <div className="mb-6 p-3 bg-gray-800 border border-gray-600 rounded-lg">
-                <div className="text-center text-sm text-gray-300">
-                  Kuru supports only MON deposits
-                </div>
-              </div> */}
-
               {/* From Connected Wallet */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">
@@ -454,15 +413,10 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
               {/* Deposit Button */}
               <button
-                onClick={handleInitiateTransfer}
+                onClick={handlePrivyDeposit}
                 className="w-full bg-[#0078D4] hover:bg-[#0064C8] text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200"
               >
-                {depositCurrentStep === 'awaiting_approval_tx' ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Approving...</span>
-                  </div>
-                ) : depositCurrentStep === 'awaiting_transfer_tx' ? (
+                {depositloading && depositCurrentStep !== 'Transaction submitted successfully!' ? (
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Depositing...</span>
@@ -573,8 +527,8 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     <input
                       type="text"
                       placeholder="0x0000...0000"
-                      value={differentWalletAddress}
-                      onChange={e => setDifferentWalletAddress(e.target.value)}
+                      value={withdrawWallet}
+                      onChange={e => setwithdrawWallet(e.target.value)}
                       className="w-full bg-transparent border border-gray-600 rounded-lg px-4 py-2 text-sm placeholder-gray-400 focus:outline-none"
                     />
                   </div>
@@ -583,7 +537,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
               {/* Send Button */}
               <button
-                onClick={handleWithdraw}
+                onClick={handlePrivyWithdraw}
                 disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
                 className={`w-full py-3 px-4 rounded-lg font-medium transition-colors duration-200 ${
                   !withdrawAmount || parseFloat(withdrawAmount) <= 0
@@ -591,18 +545,10 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     : 'bg-[#0078D4] hover:bg-[#0064C8] text-white'
                 }`}
               >
-                {/* <div className="flex items-center justify-center gap-2">
-                  <span>Send</span>
-                </div> */}
-                {withdrawCurrentStep === 'awaiting_transfer_tx' ? (
+                {withdrawLoading && withdrawCurrentStep !== 'Transaction submitted successfully!' ? (
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Processing...</span>
-                  </div>
-                ) : withdrawCurrentStep === 'transfer_success' ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Transaction Success</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
