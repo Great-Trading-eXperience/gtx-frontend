@@ -123,7 +123,6 @@ export function usePrivyWithdraw() {
         },
         {
           address: embedded.address,
-          uiOptions: { showWalletUIs: true },
         }
       );
 

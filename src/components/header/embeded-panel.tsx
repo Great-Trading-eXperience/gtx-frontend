@@ -78,6 +78,12 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   const [withdrawWallet, setwithdrawWallet] = useState(externalWalletAddress);
   const [depositAmount, setDepositAmount] = useState<string>('');
 
+  useEffect(() => {
+    if (externalWallet) {
+      setwithdrawWallet(externalWallet.address);
+    }
+  }, [externalWallet]);
+
   const addressMWETH = '0x05d889798a21c3838d7ff6f67cd46b576dab2174';
   const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
 
@@ -148,27 +154,49 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const handlePrivyDeposit = () => {
     privyDeposit(depositAmount);
+    setTimeout(() => {
+      refetchMUSDC();
+      refetchMWETH();
+    }, 1000);
   };
 
   const handlePrivyWithdraw = () => {
     privyWithdraw(withdrawWallet, withdrawAmount);
+    setTimeout(() => {
+      refetchMUSDC();
+      refetchMWETH();
+    }, 1000);
   };
 
   useEffect(() => {
     if (depositCurrentStep === 'Transaction submitted successfully!') {
-      console.log('refetch');
-      refetchMUSDC;
-      depositResetState;
+      depositResetState();
       setDepositAmount('');
+      refetchMUSDC();
     }
 
     if (withdrawCurrentStep === 'Transaction submitted successfully!') {
-      console.log('refetch');
-      refetchMUSDC;
-      withdrawResetState;
+      withdrawResetState();
       setWithdrawAmount('');
+      refetchMUSDC();
     }
-  }, [depositCurrentStep, withdrawCurrentStep]);
+  }, [
+    depositCurrentStep,
+    withdrawCurrentStep,
+    refetchMUSDC,
+    refetchMWETH,
+    depositResetState,
+    withdrawResetState,
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchMUSDC();
+      refetchMWETH();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [refetchMUSDC, refetchMWETH]);
 
   return (
     <>
