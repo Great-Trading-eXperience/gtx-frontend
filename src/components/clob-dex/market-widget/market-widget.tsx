@@ -57,29 +57,29 @@ export default function MarketDataWidget({
         <div className="flex-1 flex gap-4 justify-between pl-4">
           <div className="text-gray-600 dark:text-gray-400 text-xs text-center">
             <div className="font-semibold text-[15px] pb-1 underline">Price</div>
-            <div className="text-gray-900 dark:text-white">
+            <div className="text-gray-900 dark:text-white w-14">
               ${formatNumber(formatUnits(BigInt(Math.floor(Number(ticker24hr?.lastPrice ?? '0'))), selectedPool?.quoteDecimals?? 0))}
             </div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs text-center">
             <div className="font-semibold text-[15px] pb-1">24h High</div>
-            <div className="text-green-600 dark:text-[#5BBB6F]">
+            <div className="text-green-600 dark:text-[#5BBB6F] w-14">
               ${formatNumber(formatUnits(BigInt(Math.floor(Number(ticker24hr?.highPrice ?? '0'))), selectedPool?.quoteDecimals?? 0))}
             </div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs text-center">
             <div className="font-semibold text-[15px] pb-1">24h Low</div>
-            <div className="text-red-600 dark:text-[#FF6978]">
+            <div className="text-red-600 dark:text-[#FF6978] w-14">
               ${formatNumber(formatUnits(BigInt(Math.floor(Number(ticker24hr?.lowPrice ?? '0'))), selectedPool?.quoteDecimals?? 0))}
             </div>
           </div>
 
           <div className="text-gray-600 dark:text-gray-400 text-xs text-center">
             <div className="font-semibold text-[15px] pb-1">24h Volume</div>
-            <div className="text-gray-900 dark:text-white">
-              ${formatNumber(ticker24hr?.quoteVolume ?? 0)}
+            <div className="text-gray-900 dark:text-white w-16">
+              ${formatNumber(Number(ticker24hr?.quoteVolume ?? '0'), { decimals: 2, compact: true })}
             </div>
           </div>
         </div>

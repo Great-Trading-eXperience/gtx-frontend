@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 const privyConfig: PrivyClientConfig = {
   embeddedWallets: {
     createOnLogin: 'all-users',
-    noPromptOnSignature: false,
+    showWalletUIs: false,
   },
   loginMethods: ['google', 'twitter', 'email','wallet'],
   appearance: {

@@ -5,15 +5,17 @@ import {
   QrCode,
   Edit3,
   Search,
-  DollarSign,
-  TrendingDown,
-  TrendingUp,
   ChevronDown,
   Key,
   LogOut,
   CreditCard,
+  RefreshCw,
 } from 'lucide-react';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
+import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
+import GTXTooltip from '../clob-dex/place-order/tooltip';
+import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
+import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
 
 interface Asset {
   symbol: string;
@@ -68,36 +70,63 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  const [activeTab, setActiveTab] = useState<'Asset' | 'Deposit' | 'Withdraw'>('Asset');
+  const [activeTab, setActiveTab] = useState<'Asset' | 'Deposit' | 'Withdraw'>('Deposit');
   const [hideDust, setHideDust] = useState(false);
-
-  const assets: Asset[] = [
-    {
-      symbol: 'USDC',
-      balance: '<0.01 USDC',
-      icon: (
-        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-          $
-        </div>
-      ),
-    },
-  ];
 
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawToDifferentWallet, setWithdrawToDifferentWallet] = useState(false);
-  const [differentWalletAddress, setDifferentWalletAddress] = useState('');
+  const [withdrawWallet, setwithdrawWallet] = useState(externalWalletAddress);
+  const [depositAmount, setDepositAmount] = useState<string>('');
 
-  const handleDeposit = () => {
-    console.log('Processing deposit...');
-  };
+  useEffect(() => {
+    if (externalWallet) {
+      setwithdrawWallet(externalWallet.address);
+    }
+  }, [externalWallet]);
 
-  const handleWithdraw = () => {
-    console.log('Processing withdrawal...', {
-      amount: withdrawAmount,
-      toDifferentWallet: withdrawToDifferentWallet,
-      address: withdrawToDifferentWallet ? differentWalletAddress : externalWalletAddress,
-    });
-  };
+  const addressMWETH = '0x05d889798a21c3838d7ff6f67cd46b576dab2174';
+  const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
+
+  const {
+    formattedBalance: BalanceOfMUSDC,
+    tokenSymbol: SymbolMUSDC,
+    refetchBalance: refetchMUSDC,
+  } = useTokenBalance(addressMUSDC, embeddedWalletAddress as `0x${string}`);
+  const {
+    formattedBalance: BalanceOfMWETH,
+    tokenSymbol: SymbolMWETH,
+    refetchBalance: refetchMWETH,
+  } = useTokenBalance(addressMWETH, embeddedWalletAddress as `0x${string}`);
+
+  let assets: Asset[] = [];
+
+  if (
+    BalanceOfMUSDC !== null &&
+    SymbolMUSDC !== null &&
+    BalanceOfMWETH !== null &&
+    SymbolMWETH !== null
+  ) {
+    assets = [
+      {
+        symbol: SymbolMUSDC,
+        balance: `${BalanceOfMUSDC} ${SymbolMUSDC}`,
+        icon: (
+          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            M
+          </div>
+        ),
+      },
+      {
+        symbol: SymbolMWETH,
+        balance: `${BalanceOfMWETH} ${SymbolMWETH}`,
+        icon: (
+          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            M
+          </div>
+        ),
+      },
+    ];
+  }
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -107,6 +136,67 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     await logout();
     onClose();
   };
+
+  const {
+    deposit: privyDeposit,
+    loading: depositloading,
+    currentStep: depositCurrentStep,
+    error: depositError,
+    resetState: depositResetState,
+  } = usePrivyDeposit();
+  const {
+    withdraw: privyWithdraw,
+    loading: withdrawLoading,
+    currentStep: withdrawCurrentStep,
+    error: withdrawError,
+    resetState: withdrawResetState,
+  } = usePrivyWithdraw();
+
+  const handlePrivyDeposit = () => {
+    privyDeposit(depositAmount);
+    setTimeout(() => {
+      refetchMUSDC();
+      refetchMWETH();
+    }, 1000);
+  };
+
+  const handlePrivyWithdraw = () => {
+    privyWithdraw(withdrawWallet, withdrawAmount);
+    setTimeout(() => {
+      refetchMUSDC();
+      refetchMWETH();
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (depositCurrentStep === 'Transaction submitted successfully!') {
+      depositResetState();
+      setDepositAmount('');
+      refetchMUSDC();
+    }
+
+    if (withdrawCurrentStep === 'Transaction submitted successfully!') {
+      withdrawResetState();
+      setWithdrawAmount('');
+      refetchMUSDC();
+    }
+  }, [
+    depositCurrentStep,
+    withdrawCurrentStep,
+    refetchMUSDC,
+    refetchMWETH,
+    depositResetState,
+    withdrawResetState,
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchMUSDC();
+      refetchMWETH();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [refetchMUSDC, refetchMWETH]);
 
   return (
     <>
@@ -142,9 +232,14 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full shadow-md"></div>
               <div className="w-fit border-b border-dashed border-gray-400">
-                <span className="text-sm text-gray-300">Login wallet</span>
+                <GTXTooltip
+                  text="Wallet used to create your account"
+                  width={236}
+                  position="center"
+                >
+                  <span className="text-sm text-gray-300">Login wallet</span>
+                </GTXTooltip>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -249,7 +344,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               </div>
 
               {/* Asset List Header */}
-              <div className="flex items-center justify-between mb-3 text-sm text-gray-400">
+              {/* <div className="flex items-center justify-between mb-3 text-sm text-gray-400">
                 <div className="flex items-center gap-1">
                   <span>Asset</span>
                   <span className="border-b border-dotted border-gray-400">--------</span>
@@ -262,7 +357,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     -----------
                   </span>
                 </div>
-              </div>
+              </div> */}
 
               {/* Asset List */}
               <div className="space-y-3">
@@ -281,13 +376,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
           {activeTab === 'Deposit' && (
             <div className="p-4">
-              {/* Deposit Info Banner */}
-              {/* <div className="mb-6 p-3 bg-gray-800 border border-gray-600 rounded-lg">
-                <div className="text-center text-sm text-gray-300">
-                  Kuru supports only MON deposits
-                </div>
-              </div> */}
-
               {/* From Connected Wallet */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">
@@ -298,18 +386,23 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 <div className="mb-4 p-4 border border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                        <img
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        {/* <img
                           src="/network/rise.svg"
                           alt="Logo Rise"
                           height={12}
                           width={12}
-                        />
+                        /> */}
+                        M
                       </div>
-                      <span className="text-white font-medium">RIS</span>
+                      <span className="text-white font-medium">MUSDC</span>
                     </div>
                     <input
                       type="number"
+                      value={depositAmount}
+                      onChange={e => {
+                        setDepositAmount(e.target.value);
+                      }}
                       className="outline-none bg-transparent text-right font-medium w-full ml-4"
                       placeholder="0.00"
                     />
@@ -318,7 +411,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                   {/* Fee Display */}
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>0.95</span>
+                    <span>{BalanceOfMUSDC}</span>
                   </div>
                 </div>
               </div>
@@ -348,17 +441,26 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
               {/* Deposit Button */}
               <button
-                onClick={handleDeposit}
+                onClick={handlePrivyDeposit}
                 className="w-full bg-[#0078D4] hover:bg-[#0064C8] text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200"
               >
-                Deposit
+                {depositloading && depositCurrentStep !== 'Transaction submitted successfully!' ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Depositing...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Deposit</span>
+                  </div>
+                )}
               </button>
             </div>
           )}
 
           {activeTab === 'Withdraw' && (
             <div className="p-4">
-              {/* From Your Kuru Wallet */}
+              {/* From Your GTX Wallet */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">From your GTX wallet</div>
                 <div className="border border-gray-600 rounded-lg p-3 flex items-center justify-between">
@@ -391,16 +493,17 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 <div className="mb-4 p-4 border border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                        <img
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        {/* <img
                           src="/network/rise.svg"
                           alt="Logo Rise"
                           height={12}
                           width={12}
-                        />
+                        /> */}
+                        M
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">RIS</span>
+                        <span className="text-white font-medium">MUSDC</span>
                         <ChevronDown size={16} className="text-gray-400" />
                       </div>
                     </div>
@@ -416,7 +519,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                   {/* Fee Display */}
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>0.95</span>
+                    <span>{BalanceOfMUSDC}</span>
                   </div>
                 </div>
               </div>
@@ -452,8 +555,8 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     <input
                       type="text"
                       placeholder="0x0000...0000"
-                      value={differentWalletAddress}
-                      onChange={e => setDifferentWalletAddress(e.target.value)}
+                      value={withdrawWallet}
+                      onChange={e => setwithdrawWallet(e.target.value)}
                       className="w-full bg-transparent border border-gray-600 rounded-lg px-4 py-2 text-sm placeholder-gray-400 focus:outline-none"
                     />
                   </div>
@@ -462,7 +565,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
               {/* Send Button */}
               <button
-                onClick={handleWithdraw}
+                onClick={handlePrivyWithdraw}
                 disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
                 className={`w-full py-3 px-4 rounded-lg font-medium transition-colors duration-200 ${
                   !withdrawAmount || parseFloat(withdrawAmount) <= 0
@@ -470,7 +573,16 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     : 'bg-[#0078D4] hover:bg-[#0064C8] text-white'
                 }`}
               >
-                Send
+                {withdrawLoading && withdrawCurrentStep !== 'Transaction submitted successfully!' ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Send</span>
+                  </div>
+                )}
               </button>
             </div>
           )}
