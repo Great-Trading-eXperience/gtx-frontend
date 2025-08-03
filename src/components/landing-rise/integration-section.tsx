@@ -90,10 +90,15 @@ export function RiseIntegrationsSection() {
       name: "Metamask",
       description: "Connect your Metamask wallet for secure and easy transactions"
     },
+    // {
+    //   icon: "/images/coinbase.png",
+    //   name: "Coinbase",
+    //   description: "Integration with Coinbase for seamless funds transfer and trading"
+    // },
     {
-      icon: "/images/coinbase.png",
-      name: "Coinbase",
-      description: "Integration with Coinbase for seamless funds transfer and trading"
+      icon: "/images/rise.jpg",
+      name: "Rise Chain",
+      description: 'The fastest blockchain, secured by Ethereum.',
     },
     {
       icon: "/images/tradingview.png",
@@ -101,10 +106,15 @@ export function RiseIntegrationsSection() {
       description: "Powerful charting capabilities powered by TradingView"
     },
     {
-      icon: "/images/binance.png",
-      name: "Binance",
-      description: "Access Binance liquidity pools through our platform"
+      icon: "/images/espresso.png",
+      name: "Espresso Network",
+      description: 'A confirmation layer built to support cross-chain composability.',
     },
+    // {
+    //   icon: "/images/binance.png",
+    //   name: "Binance",
+    //   description: "Access Binance liquidity pools through our platform"
+    // },
     {
       icon: "/images/chainlink.png",
       name: "Chainlink",
