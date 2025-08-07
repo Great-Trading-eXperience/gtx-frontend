@@ -21,7 +21,7 @@ export const useTradingBalances = (balanceManagerAddress: HexAddress, userAddres
   const [error, setError] = useState<Error | null>(null);
   
   // Use provided address or fall back to wagmi address
-  const address = userAddress || wagmiAddress;
+  const address = userAddress;
 
   // Get wallet balance (ERC20) - this is our primary and most reliable method
   const getWalletBalance = useCallback(async (currency: HexAddress): Promise<bigint> => {

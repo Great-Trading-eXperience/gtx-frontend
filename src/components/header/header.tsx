@@ -81,7 +81,8 @@ const Header = ({onTogglePanel}: NavbarProps) => {
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
   const embeddedWalletAddress = embeddedWallet?.address || 'Not Created';
 
-  const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
+  // const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
+  const addressMUSDC = '0x97668aec1d8deaf34d899c4f6683f9ba877485f6';
 
   const {
     formattedBalance: BalanceOfMUSDC,

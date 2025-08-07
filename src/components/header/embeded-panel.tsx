@@ -16,6 +16,23 @@ import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBa
 import GTXTooltip from '../clob-dex/place-order/tooltip';
 import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
 import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
+import { useMarketStore } from '@/store/market-store';
+import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
+import { useQuery } from '@tanstack/react-query';
+import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
+import { getUseSubgraph } from '@/utils/env';
+import request from 'graphql-request';
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
+import { useChainId, useReadContract } from 'wagmi';
+import {
+  poolsPonderQuery,
+  PoolsPonderResponse,
+  poolsQuery,
+  PoolsResponse,
+  PoolItem as GraphQLPoolItem,
+} from '@/graphql/gtx/clob';
+import { usePathname } from 'next/navigation';
+import ERC20ABI from '@/abis/tokens/TokenABI';
 
 interface Asset {
   symbol: string;
@@ -84,19 +101,109 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     }
   }, [externalWallet]);
 
+  const { selectedPoolId, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();
+  const [mounted, setMounted] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<ProcessedPoolItem>();
+  const [symbol, setSymbol] = useState<string>('');
+  const chainId = useChainId();
+  const defaultChainId = Number(DEFAULT_CHAIN);
+  const pathname = usePathname();
+
+  const {
+    data: poolsData,
+    isLoading: poolsLoading,
+    error: poolsError,
+  } = useQuery<PoolsResponse | PoolsPonderResponse>({
+    queryKey: ['pools', String(chainId ?? defaultChainId)],
+    queryFn: async () => {
+      const currentChainId = Number(chainId ?? defaultChainId);
+      const url = GTX_GRAPHQL_URL(currentChainId);
+      if (!url) throw new Error('GraphQL URL not found');
+      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);
+    },
+    refetchInterval: 60000,
+    staleTime: 60000,
+  });
+
+  const processPool = (pool: GraphQLPoolItem): ProcessedPoolItem => {
+    const { baseCurrency, quoteCurrency, ...other } = pool;
+    return {
+      ...other,
+      baseTokenAddress: baseCurrency.address,
+      quoteTokenAddress: quoteCurrency.address,
+      baseSymbol: baseCurrency.symbol,
+      quoteSymbol: quoteCurrency.symbol,
+      baseDecimals: baseCurrency.decimals,
+      quoteDecimals: quoteCurrency.decimals,
+    };
+  };
+
+  useEffect(() => {
+    if (!mounted || !poolsData) return;
+
+    const processPools = async () => {
+      const pools = 'pools' in poolsData ? poolsData.pools : poolsData.poolss.items;
+
+      const processedPoolsArray = getUseSubgraph()
+        ? pools.map(pool => processPool(pool))
+        : pools.map(pool => {
+            return processPool(pool);
+          });
+
+      const urlParts = pathname?.split('/') || [];
+      const poolIdFromUrl = urlParts.length >= 3 ? urlParts[2] : null;
+
+      let selectedPoolItem = processedPoolsArray.find(
+        p => p.id === (poolIdFromUrl || selectedPoolId)
+      );
+
+      console.log('selected Pool Item', selectedPoolItem);
+
+      if (!selectedPoolItem) {
+        selectedPoolItem =
+          processedPoolsArray.find(
+            p =>
+              p.coin?.toLowerCase() === 'weth/usdc' ||
+              (p.baseSymbol?.toLowerCase() === 'weth' &&
+                p.quoteSymbol?.toLowerCase() === 'usdc')
+          ) || processedPoolsArray[0];
+      }
+
+      if (selectedPoolItem) {
+        setSelectedPoolId(selectedPoolItem.id);
+        setSelectedPool(selectedPoolItem);
+        setSymbol(selectedPoolItem.coin);
+
+        setBaseDecimals(selectedPoolItem.baseDecimals ?? 18);
+        setQuoteDecimals(selectedPoolItem.quoteDecimals ?? 6);
+      }
+    };
+
+    processPools();
+  }, [mounted, poolsData, pathname, selectedPoolId]);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const baseCurrency = selectedPool?.baseTokenAddress as HexAddress;
+  const quoteCurrency = selectedPool?.quoteTokenAddress as HexAddress; //0x97668aec1d8deaf34d899c4f6683f9ba877485f6
+
   const addressMWETH = '0x05d889798a21c3838d7ff6f67cd46b576dab2174';
-  const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
+  // const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
+  const addressMUSDC = '0x97668aec1d8deaf34d899c4f6683f9ba877485f6';
 
   const {
     formattedBalance: BalanceOfMUSDC,
     tokenSymbol: SymbolMUSDC,
     refetchBalance: refetchMUSDC,
-  } = useTokenBalance(addressMUSDC, embeddedWalletAddress as `0x${string}`);
+  } = useTokenBalance(quoteCurrency, embeddedWalletAddress as `0x${string}`);
   const {
     formattedBalance: BalanceOfMWETH,
     tokenSymbol: SymbolMWETH,
     refetchBalance: refetchMWETH,
-  } = useTokenBalance(addressMWETH, embeddedWalletAddress as `0x${string}`);
+  } = useTokenBalance(baseCurrency, embeddedWalletAddress as `0x${string}`);
 
   let assets: Asset[] = [];
 
@@ -153,7 +260,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   } = usePrivyWithdraw();
 
   const handlePrivyDeposit = () => {
-    privyDeposit(depositAmount);
+    privyDeposit(depositAmount, quoteCurrency);
     setTimeout(() => {
       refetchMUSDC();
       refetchMWETH();
@@ -161,7 +268,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   };
 
   const handlePrivyWithdraw = () => {
-    privyWithdraw(withdrawWallet, withdrawAmount);
+    privyWithdraw(withdrawWallet, withdrawAmount, quoteCurrency);
     setTimeout(() => {
       refetchMUSDC();
       refetchMWETH();

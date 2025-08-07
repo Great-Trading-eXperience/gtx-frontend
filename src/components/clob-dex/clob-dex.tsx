@@ -47,6 +47,7 @@ import MarketDataTabs from './market-data-tabs/market-data-tabs';
 import MarketDataWidget from './market-widget/market-widget';
 import PlaceOrder from './place-order/place-order';
 import TradingHistory from './trading-history/trading-history';
+import { useWallets } from '@privy-io/react-auth';
 
 const useIsClient = () => {
   const [isClient, setIsClient] = useState(false);
@@ -68,12 +69,15 @@ export type ClobDexComponentProps = {
 export default function ClobDex() {
   const { address, isConnected } = useAccount();
   const { walletAddress, isFullyAuthenticated } = usePrivyAuth();
+  const { wallets } = useWallets();
   const chainId = useChainId();
   const defaultChainId = Number(DEFAULT_CHAIN);
   const isClient = useIsClient();
-  
+
+  const embedded = wallets.find(wallet => wallet.walletClientType === 'privy');
+
   // Use Privy embedded wallet address as priority, fallback to external wallet
-  const effectiveAddress = (walletAddress || address) as HexAddress;
+  const effectiveAddress = embedded?.address as HexAddress;
   const effectiveIsConnected = isConnected || isFullyAuthenticated;
   
   const pathname = usePathname();
