@@ -97,6 +97,10 @@ const PlaceOrder = ({
   // Component mounted state
   const [mounted, setMounted] = useState(false);
 
+  // Slippage info state for market orders
+  const [slippageInfo, setSlippageInfo] = useState<any>(null);
+  const [calculatingSlippage, setCalculatingSlippage] = useState(false);
+
   
   // Component Slippage
   const [autoSlippage, setAutoSlippage] = useState(true);
@@ -120,6 +124,12 @@ const PlaceOrder = ({
   };
 
   const handleConfirmModalSlippage = () => {
+    console.log('[PLACE_ORDER] 🎯 Slippage value changed:', {
+      oldValue: slippageValue,
+      newValue: slippageValueChange,
+      oldBps: Math.round(parseFloat(slippageValue) * 100),
+      newBps: Math.round(parseFloat(slippageValueChange) * 100)
+    });
     setIsModalSlippageOpen(false)
     setSlippageValue(slippageValueChange)
   }
@@ -142,6 +152,7 @@ const PlaceOrder = ({
   const {
     handlePlaceLimitOrder,
     handlePlaceMarketOrder,
+    getMarketOrderSlippageInfo,
     isLimitOrderPending,
     isLimitOrderConfirming,
     isLimitOrderConfirmed,
@@ -200,9 +211,10 @@ const PlaceOrder = ({
 
       try {
         const total = await getTotalAvailableBalance(relevantCurrency);
-        setAvailableBalance(
-          formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals))
-        );
+        const formattedBalance = formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals));
+        // Round to 6 decimal places to avoid floating point precision issues
+        const roundedBalance = Math.round(parseFloat(formattedBalance) * 1000000) / 1000000;
+        setAvailableBalance(roundedBalance.toString());
         toast.success('Balance refreshed');
       } catch (error) {
         console.error(
@@ -210,12 +222,13 @@ const PlaceOrder = ({
           error
         );
         const walletBal = await getWalletBalance(relevantCurrency);
-        setAvailableBalance(
-          formatUnits(
-            walletBal,
-            Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
-          )
+        const formattedWalletBalance = formatUnits(
+          walletBal,
+          Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
         );
+        // Round to 6 decimal places to avoid floating point precision issues
+        const roundedWalletBalance = Math.round(parseFloat(formattedWalletBalance) * 1000000) / 1000000;
+        setAvailableBalance(roundedWalletBalance.toString());
         toast.info('Used wallet balance (balance manager unavailable)');
       }
     } catch (error) {
@@ -245,21 +258,23 @@ const PlaceOrder = ({
 
         try {
           const total = await getTotalAvailableBalance(relevantCurrency);
-          setAvailableBalance(
-            formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals))
-          );
+          const formattedBalance = formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals));
+          // Round to 6 decimal places to avoid floating point precision issues
+          const roundedBalance = Math.round(parseFloat(formattedBalance) * 1000000) / 1000000;
+          setAvailableBalance(roundedBalance.toString());
         } catch (error) {
           console.error(
             'Failed to get total balance, falling back to wallet balance:',
             error
           );
           const walletBal = await getWalletBalance(relevantCurrency);
-          setAvailableBalance(
-            formatUnits(
-              walletBal,
-              Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
-            )
+          const formattedWalletBalance = formatUnits(
+            walletBal,
+            Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
           );
+          // Round to 6 decimal places to avoid floating point precision issues
+          const roundedWalletBalance = Math.round(parseFloat(formattedWalletBalance) * 1000000) / 1000000;
+          setAvailableBalance(roundedWalletBalance.toString());
         }
       } catch (error) {
         console.error('Error loading any balance:', error);
@@ -301,18 +316,40 @@ const PlaceOrder = ({
 
   // Update total when price or quantity changes
   useEffect(() => {
-    if (price && quantity) {
-      try {
-        const priceValue = Number.parseFloat(price);
-        const quantityValue = Number.parseFloat(quantity);
-        setTotal((priceValue * quantityValue).toFixed(2));
-      } catch (error) {
+    if (orderType === 'limit') {
+      if (price && quantity) {
+        try {
+          const priceValue = Number.parseFloat(price);
+          const quantityValue = Number.parseFloat(quantity);
+          setTotal((priceValue * quantityValue).toFixed(2));
+        } catch (error) {
+          setTotal('0');
+        }
+      } else {
         setTotal('0');
       }
-    } else {
-      setTotal('0');
+    } else if (orderType === 'market') {
+      if (quantity && slippageInfo) {
+        try {
+          if (side === OrderSideEnum.BUY) {
+            const conservativeMinEth = formatUnits(
+              slippageInfo.conservativeMinOut, 
+              18
+            );
+            setTotal(parseFloat(conservativeMinEth).toFixed(6));
+          } else {
+            const conservativeMinUsdc = formatUnits(
+              slippageInfo.conservativeMinOut, 
+              6 
+            );
+            setTotal(parseFloat(conservativeMinUsdc).toFixed(2));
+          }
+        } catch (error) {
+          setTotal('0');
+        }
+      }
     }
-  }, [price, quantity]);
+  }, [price, quantity, orderType, side, slippageInfo]);
 
   useEffect(() => {
     if (!selectedPool || !selectedPool.quoteDecimals) return;
@@ -334,6 +371,91 @@ const PlaceOrder = ({
   useEffect(() => {
     loadBalance();
   }, [address, selectedPool, side, loadBalance]);
+
+  // Calculate slippage info for market orders with stable dependencies
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const calculateSlippage = async () => {
+      if (
+        orderType === 'market' &&
+        quantity &&
+        selectedPool &&
+        pool &&
+        getMarketOrderSlippageInfo &&
+        Number(quantity) > 0
+      ) {
+        if (!isCancelled) {
+          setCalculatingSlippage(true);
+        }
+        
+        try {
+          // Parse quantity based on order type and side
+          let quantityBigInt: bigint;
+          if (side === OrderSideEnum.BUY) {
+            // For market BUY orders, quantity is USDC amount to spend
+            quantityBigInt = parseUnits(quantity, Number(selectedPool.quoteDecimals));
+          } else {
+            // For market SELL orders, quantity is ETH amount to sell
+            quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
+          }
+          
+          const slippageBps = Math.round(parseFloat(slippageValue) * 100);
+          
+          console.log('[PLACE_ORDER] 🚀 About to call getMarketOrderSlippageInfo with:', {
+            quantity,
+            quantityBigInt: quantityBigInt.toString(),
+            slippageValue,
+            slippageBps,
+            side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
+            poolOrderBook: pool.orderBook,
+            decimalsUsed: side === OrderSideEnum.BUY ? `${selectedPool.quoteDecimals} (USDC)` : `${selectedPool.baseDecimals} (MWETH)`
+          });
+          
+          const info = await getMarketOrderSlippageInfo(
+            pool,
+            quantityBigInt,
+            side,
+            slippageBps
+          );
+          
+          console.log('[PLACE_ORDER] 🏆 Received slippage info:', {
+            info,
+            slippageTolerance: info?.slippageTolerance,
+            actualSlippage: info?.actualSlippage,
+            minOutAmount: info?.minOutAmount?.toString(),
+            conservativeMinOut: info?.conservativeMinOut?.toString(),
+            estimatedPrice: info?.estimatedPrice?.toString()
+          });
+          
+          if (!isCancelled) {
+            setSlippageInfo(info);
+            setCalculatingSlippage(false);
+          }
+        } catch (error) {
+          console.error('Failed to calculate slippage info:', error);
+          if (!isCancelled) {
+            setSlippageInfo(null);
+            setCalculatingSlippage(false);
+          }
+        }
+      } else {
+        if (!isCancelled) {
+          setSlippageInfo(null);
+          setCalculatingSlippage(false);
+        }
+      }
+    };
+
+    // Debounce the calculation to avoid too many calls
+    const timeoutId = setTimeout(calculateSlippage, 500);
+    
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+    // Remove getMarketOrderSlippageInfo from dependencies to prevent infinite re-renders
+  }, [orderType, quantity, selectedPool?.baseDecimals, pool?.orderBook, side, slippageValue]);
 
   useEffect(() => {
     if (isLimitOrderConfirmed || isMarketOrderConfirmed) {
@@ -430,21 +552,43 @@ const PlaceOrder = ({
     }
 
     try {
-      const quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
+      let quantityBigInt: bigint;
       const priceBigInt = parseUnits(price, Number(selectedPool.quoteDecimals));
 
-      if (quantityBigInt <= 0n) {
-        throw new Error('Quantity must be positive');
+      // Different logic for market vs limit orders
+      if (orderType === 'market' && side === OrderSideEnum.BUY) {
+        // Market BUY: quantity is USDC amount to spend, need to convert to base currency amount
+        const usdcAmountBigInt = parseUnits(quantity, Number(selectedPool.quoteDecimals));
+        if (usdcAmountBigInt <= 0n) {
+          throw new Error('Amount must be positive');
+        }
+        
+        // For market orders, we'll need to calculate the equivalent base currency amount
+        // This should use the current market price, but for now we'll convert in the hook
+        // Pass the USDC amount as the quantity for market BUY orders
+        quantityBigInt = usdcAmountBigInt;
+      } else {
+        // Limit orders and SELL market orders: quantity is base currency amount
+        quantityBigInt = parseUnits(quantity, Number(selectedPool.baseDecimals));
+        if (quantityBigInt <= 0n) {
+          throw new Error('Quantity must be positive');
+        }
       }
 
-      if (priceBigInt <= 0n) {
+      if (orderType === 'limit' && priceBigInt <= 0n) {
         throw new Error('Price must be positive');
       }
 
       if (orderType === 'limit') {
-        await handlePlaceLimitOrder(pool, priceBigInt, quantityBigInt, side);
+        // For limit orders, quantityBigInt is always base currency amount
+        const baseQuantity = orderType === 'limit' || side === OrderSideEnum.SELL ? 
+          quantityBigInt : 
+          parseUnits(quantity, Number(selectedPool.baseDecimals));
+        await handlePlaceLimitOrder(pool, priceBigInt, baseQuantity, side);
       } else {
-        await handlePlaceMarketOrder(pool, quantityBigInt, side, priceBigInt, true);
+        // Convert slippage percentage to basis points (e.g., 0.3% -> 30 bps)
+        const slippageBps = Math.round(parseFloat(slippageValue) * 100);
+        await handlePlaceMarketOrder(pool, quantityBigInt, side, slippageBps);
       }
     } catch (err) {
       console.error('Order placement error:', err);
@@ -613,59 +757,110 @@ const PlaceOrder = ({
 
         {/* Quantity */}
         <div className="space-y-1">
-          <label className="text-sm text-gray-300 flex items-center gap-1.5 ml-1">
-            <span>Amount</span>
+          <label className="text-sm text-gray-300 flex items-center justify-between ml-1">
+            <span>Quantity</span>
           </label>
           <div className="relative">
             <input
               type="number"
               className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
               value={quantity}
-              onChange={e => setQuantity(e.target.value)}
+              onChange={e => {
+                const value = e.target.value;
+                const numValue = parseFloat(value);
+                
+                // Validate reasonable limits
+                if (side === OrderSideEnum.BUY && orderType === 'market' && numValue > 1000000) {
+                  toast.warning('Amount exceeds reasonable limit of 1M USDC for market orders');
+                  return;
+                }
+                
+                if (numValue > 1000000) {
+                  toast.warning('Amount seems unusually large');
+                }
+                
+                setQuantity(value);
+              }}
               placeholder="Enter amount"
-              step="0.000001"
+              step={
+                side === OrderSideEnum.BUY && orderType === 'market' 
+                  ? "0.000001"  // USDC has 6 decimals  
+                  : "0.000000000000000001"  // ETH has 18 decimals
+              }
+              max={
+                side === OrderSideEnum.BUY && orderType === 'market' 
+                  ? Math.min(parseFloat(availableBalance) || 0, 1000000).toString()  // Max 1M USDC for market buys
+                  : availableBalance
+              }
               min="0"
               required
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-              {selectedPool && (side === OrderSideEnum.BUY ? 'USDC' : selectedPool.coin.split('/')[0])}
+              {side === OrderSideEnum.BUY ? 
+                (orderType === 'market' ? 'USDC' : selectedPool?.coin.split('/')[0]) : 
+                selectedPool?.coin.split('/')[0]
+              }
             </div>
           </div>
           <GTXSlider quantity={availableBalance} setQuantity={setQuantity}/>
         </div>
 
-        {/* Total - Calculated Field */}
+        {/* Order Value/Minimum Received - Display Only */}
         <div className="space-y-1">
-          <label className="text-sm text-gray-300 flex items-center gap-1.5 ml-1">
-            <span>Total</span>
+          <label className="text-sm text-gray-300 flex items-center justify-between ml-1">
+            <span>
+              {orderType === 'limit' ? 'Order Value' : 
+               (side === OrderSideEnum.BUY ? 'Minimum Received' : 'Minimum Proceeds')
+              }
+            </span>
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50"
-              value={total}
-              placeholder="Total amount"
-              readOnly
-            />
+          <div className="relative bg-gray-900/40 rounded-lg py-2 px-3 pr-16 border border-gray-700/50">
+            <div className="text-white text-sm">
+              {total}
+            </div>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
-              USDC
+              {orderType === 'limit' 
+                ? 'USDC'  // Limit orders always show USDC value (price * quantity)
+                : (side === OrderSideEnum.BUY ? selectedPool?.coin.split('/')[0] : 'USDC')
+              }
             </div>
           </div>
         </div>
 
-        {/* Submit Button with glow effect */}
-        <div className="relative mt-6 group">
-          <div
-            className={`absolute inset-0 rounded-lg blur-md transition-opacity group-hover:opacity-100 ${
-              side === OrderSideEnum.BUY ? 'bg-emerald-500/30' : 'bg-rose-500/30'
-            } ${isPending || isConfirming || !effectiveIsConnected ? 'opacity-0' : 'opacity-50'}`}
-          ></div>
+        {/* Slippage Info for Market Orders */}
+        {orderType === 'market' && quantity && selectedPool && pool && (
+          <div className="bg-gray-900/30">
+            {slippageInfo ? (
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Slippage:</span>
+                  <span className={`font-medium ${
+                    slippageInfo.actualSlippage > slippageInfo.slippageTolerance 
+                      ? 'text-red-400' 
+                      : slippageInfo.actualSlippage > 1.0
+                      ? 'text-yellow-400'
+                      : 'text-green-400'
+                  }`}>
+                    {slippageInfo.actualSlippage.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            ) : calculatingSlippage ? (
+              <div className="text-xs text-gray-400">Calculating slippage...</div>
+            ) : (
+              <div className="text-xs text-gray-400">Enter amount to see slippage info</div>
+            )}
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <div className="relative mt-6">
           <button
             type="submit"
-            className={`relative w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+            className={`w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
               side === OrderSideEnum.BUY
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)]'
-                : 'bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-white'
+                : 'bg-rose-500 hover:bg-rose-400 text-white'
             } ${
               isPending || isConfirming || !effectiveIsConnected
                 ? 'opacity-50 cursor-not-allowed'
@@ -701,22 +896,6 @@ const PlaceOrder = ({
       <div className='w-full border-t-2 border-gray-600 mt-3'></div>
 
       <div className='flex flex-col w-full gap-3 text-xs text-gray-400 mt-3'>
-        <div className='flex flex-row justify-between'>
-          <span>Order Value</span>
-          <span className='text-gray-200 font-medium'>{total} USDC</span>
-        </div>
-        {orderType == 'market' && (
-          <div className='flex flex-row justify-between'>
-            <div className='border-b border-dashed border-gray-400'>
-              <GTXTooltip text='Slippage is the difference between the expected price of a trade and the price at which it is actually executed' width={400} position='center'>
-                <span>Slippage</span>
-              </GTXTooltip>
-            </div>
-            <GTXTooltip text='Click to adjust!' width={112} position='right'>
-              <span className='text-cyan-400 font-medium cursor-pointer' onClick={() => setIsModalSlippageOpen(true)}>{slippageValue} %</span>
-            </GTXTooltip>
-          </div>
-        )}
         <div className='flex flex-row justify-between'>
           <div className='border-b border-dashed border-gray-400'>
             <GTXTooltip text={`Taker orders pay a ${takerFeePercent.toFixed(2)}% fee. Maker orders pay ${makerFeePercent.toFixed(2)}% a fee`} width={372} position='center'>

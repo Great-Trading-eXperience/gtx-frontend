@@ -16,7 +16,8 @@ const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
         setInputValue(percentage.toString());
 
         const amount = (Number(quantity) / 100) * percentage;
-        setQuantity(amount.toString());
+        const roundedAmount = Math.round(amount * 1000000) / 1000000;
+        setQuantity(roundedAmount.toString());
     }, [percentage, quantity]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
