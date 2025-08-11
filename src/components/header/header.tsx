@@ -48,6 +48,16 @@ const Header = ({onTogglePanel}: NavbarProps) => {
       enabled: isTabEnabled("CREATE")
     },
     {
+      destination: "/leaderboard",
+      label: "Leaderboard",
+      enabled: isTabEnabled("LEADERBOARD")
+    },
+    {
+      destination: "/stats",
+      label: "Stats",
+      enabled: true
+    },
+    {
       destination: "/faucet",
       label: "Faucet",
       enabled: isTabEnabled("FAUCET")
@@ -61,7 +71,7 @@ const Header = ({onTogglePanel}: NavbarProps) => {
       destination: "/vegtx/dashboard",
       label: "veGTX",
       enabled: isTabEnabled("VEGTX")
-    }
+    },
   ];
 
   // Filter only enabled links
