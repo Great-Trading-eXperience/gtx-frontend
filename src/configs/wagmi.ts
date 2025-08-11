@@ -54,9 +54,61 @@ export const riseTestnet: Chain = {
 	testnet: true,
 };
 
+export const rariTestnet: Chain = {
+	id: 1918988905,
+	name: 'Rari Testnet',
+	nativeCurrency: {
+		decimals: 18,
+		name: 'ETH',
+		symbol: 'ETH',
+	},
+	rpcUrls: {
+		default: {
+			http: ['/api/rpc/rari-testnet'],
+		},
+		public: {
+			http: ['/api/rpc/rari-testnet'],
+		},
+	},
+	blockExplorers: {
+		default: {
+			name: 'Rari Explorer',
+			url: 'https://rari-testnet.hub.caldera.xyz',
+		},
+	},
+	testnet: true,
+};
+
+export const appchainTestnet: Chain = {
+	id: 4661,
+	name: 'Appchain Testnet',
+	nativeCurrency: {
+		decimals: 18,
+		name: 'ETH',
+		symbol: 'ETH',
+	},
+	rpcUrls: {
+		default: {
+			http: ['/api/rpc/appchain-testnet'],
+		},
+		public: {
+			http: ['/api/rpc/appchain-testnet'],
+		},
+	},
+	blockExplorers: {
+		default: {
+			name: 'Appchain Explorer',
+			url: 'https://appchaintestnet.hub.caldera.xyz',
+		},
+	},
+	testnet: true,
+};
+
 export const wagmiConfig = createConfig({
-	chains: [riseTestnet],
+	chains: [riseTestnet, rariTestnet, appchainTestnet],
 	transports: {
 		[riseTestnet.id]: http(riseTestnet.rpcUrls.default.http[0]),
+		[rariTestnet.id]: http(rariTestnet.rpcUrls.default.http[0]),
+		[appchainTestnet.id]: http(appchainTestnet.rpcUrls.default.http[0]),
 	},
 });
