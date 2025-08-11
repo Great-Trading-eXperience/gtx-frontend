@@ -7,7 +7,8 @@ import { EXPLORER_URL } from '@/constants/explorer-url';
 import { TradeItem } from '@/graphql/gtx/clob';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
-import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
+// import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
+import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePrivyPlaceOrder';
 import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import { formatNumber } from '@/lib/utils';
 import type { HexAddress } from '@/types/general/address';
@@ -619,7 +620,7 @@ const PlaceOrder = ({
         {inputStyles}
       </style>
 
-      <div className="flex flex-col w-full gap-3 mb-3">
+      {/* <div className="flex flex-col w-full gap-3 mb-3">
         {effectiveIsConnected && selectedPool && (
           <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
             <div className="flex items-center justify-between mb-2">
@@ -658,7 +659,7 @@ const PlaceOrder = ({
             </div>
           </div>
         )}
-      </div>
+      </div> */}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}
