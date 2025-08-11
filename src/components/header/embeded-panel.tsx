@@ -204,6 +204,20 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     tokenSymbol: SymbolMWETH,
     refetchBalance: refetchMWETH,
   } = useTokenBalance(baseCurrency, embeddedWalletAddress as `0x${string}`);
+  /*
+  const {
+    formattedBalance: BalanceOfETH,
+    tokenSymbol: SymbolETH,
+    refetchBalance: refetchETH,
+  } = useTokenBalance(
+    '0xc4CebF58836707611439e23996f4FA4165Ea6A28',
+    embeddedWalletAddress as `0x${string}`
+  );
+  console.log(BalanceOfETH);
+
+  const ethAddress = '0x4200000000000000000000000000000000000006';
+  const wethaddres = '0x567a076beef17758952b05b1bc639e6cdd1a31ec';
+  */
 
   let assets: Asset[] = [];
 
@@ -232,7 +246,39 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           </div>
         ),
       },
+      {
+        symbol: SymbolMWETH,
+        balance: `${BalanceOfMWETH} ${SymbolMWETH}`,
+        icon: (
+          <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            M
+          </div>
+        ),
+      },
     ];
+  }
+
+  const [selectedDepositToken, setSelectedDepositToken] = useState('MUSDC');
+  const [isDepositDropdownOpen, setIsDepositDropdownOpen] = useState(false);
+  const [selectedWithdrawToken, setSelectedWithdrawToken] = useState('MUSDC');
+  const [isWithdrawDropdownOpen, setIsWithdrawDropdownOpen] = useState(false);
+
+  const tokens = [
+    { symbol: 'MUSDC', name: 'MUSDC', color: 'bg-blue-500', initial: 'M' },
+    { symbol: 'ETH', name: 'ETH', color: 'bg-gray-600', initial: 'E' },
+  ];
+
+  const currentDepositToken = tokens.find(token => token.symbol === selectedDepositToken);
+  const currentWithdrawToken = tokens.find(token => token.symbol === selectedWithdrawToken);
+
+  const handleDepositTokenSelect = (tokenSymbol: string) => {
+    setSelectedDepositToken(tokenSymbol);
+    setIsDepositDropdownOpen(false);
+  };
+
+  const handleWithdrawTokenSelect = (tokenSymbol: string) => {
+    setSelectedWithdrawToken(tokenSymbol);
+    setIsWithdrawDropdownOpen(false);
   }
 
   const copyToClipboard = (text: string) => {
@@ -492,17 +538,47 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 {/* Token Selection */}
                 <div className="mb-4 p-4 border border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        {/* <img
-                          src="/network/rise.svg"
-                          alt="Logo Rise"
-                          height={12}
-                          width={12}
-                        /> */}
-                        M
+                    <div className="relative">
+                      <div
+                        className="flex items-center gap-3 cursor-pointer hover:bg-gray-800 rounded-lg p-2 -m-2 transition-colors"
+                        onClick={() => setIsDepositDropdownOpen(!isDepositDropdownOpen)}
+                      >
+                        <div
+                          className={`w-8 h-8 ${currentDepositToken?.color} rounded-full flex items-center justify-center text-white font-medium`}
+                        >
+                          {currentDepositToken?.initial}
+                        </div>
+                        <span className="text-white font-medium">
+                          {currentDepositToken?.name}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            isDepositDropdownOpen ? 'rotate-180' : ''
+                          }`}
+                        />
                       </div>
-                      <span className="text-white font-medium">MUSDC</span>
+
+                      {isDepositDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[140px] z-10">
+                          {tokens.map(token => (
+                            <div
+                              key={token.symbol}
+                              className="flex items-center gap-3 p-3 hover:bg-gray-700 cursor-pointer first:rounded-t-lg last:rounded-b-lg transition-colors"
+                              onClick={() => handleDepositTokenSelect(token.symbol)}
+                            >
+                              <div
+                                className={`w-6 h-6 ${token.color} rounded-full flex items-center justify-center text-white text-sm font-medium`}
+                              >
+                                {token.initial}
+                              </div>
+                              <span className="text-white font-medium">{token.name}</span>
+                              {selectedDepositToken === token.symbol && (
+                                <div className="w-2 h-2 bg-blue-400 rounded-full ml-auto"></div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <input
                       type="number"
@@ -599,20 +675,47 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 {/* Token and Amount */}
                 <div className="mb-4 p-4 border border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        {/* <img
-                          src="/network/rise.svg"
-                          alt="Logo Rise"
-                          height={12}
-                          width={12}
-                        /> */}
-                        M
+                    <div className="relative">
+                      <div
+                        className="flex items-center gap-3 cursor-pointer hover:bg-gray-800 rounded-lg p-2 -m-2 transition-colors"
+                        onClick={() => setIsWithdrawDropdownOpen(!isWithdrawDropdownOpen)}
+                      >
+                        <div
+                          className={`w-8 h-8 ${currentWithdrawToken?.color} rounded-full flex items-center justify-center text-white font-medium`}
+                        >
+                          {currentWithdrawToken?.initial}
+                        </div>
+                        <span className="text-white font-medium">
+                          {currentWithdrawToken?.name}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            isWithdrawDropdownOpen ? 'rotate-180' : ''
+                          }`}
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">MUSDC</span>
-                        <ChevronDown size={16} className="text-gray-400" />
-                      </div>
+
+                      {isWithdrawDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[140px] z-10">
+                          {tokens.map(token => (
+                            <div
+                              key={token.symbol}
+                              className="flex items-center gap-3 p-3 hover:bg-gray-700 cursor-pointer first:rounded-t-lg last:rounded-b-lg transition-colors"
+                              onClick={() => handleWithdrawTokenSelect(token.symbol)}
+                            >
+                              <div
+                                className={`w-6 h-6 ${token.color} rounded-full flex items-center justify-center text-white text-sm font-medium`}
+                              >
+                                {token.initial}
+                              </div>
+                              <span className="text-white font-medium">{token.name}</span>
+                              {selectedWithdrawToken === token.symbol && (
+                                <div className="w-2 h-2 bg-blue-400 rounded-full ml-auto"></div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <input
                       type="number"
