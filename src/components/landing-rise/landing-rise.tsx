@@ -29,6 +29,7 @@ import { ProblemsSection } from "./problem-section"
 import { TradingStepsSection } from "./trading-step-section"
 import { HeroSection } from "./hero-section"
 import { TechnologySection } from "./technology-section"
+import CustomerFeedbackForm from "./feedback-form"
 
 export function LandingRise() {
     const [mounted, setMounted] = useState(false)
@@ -126,6 +127,8 @@ export function LandingRise() {
                     </div>
                 </div>
             </section>
+
+            <CustomerFeedbackForm />
         </main>
     )
 }
