@@ -82,25 +82,14 @@ export default function TradingViewChartContainer({
   } = useMarketWebSocket(chainId, 'kline_' + klineInterval, selectedSymbol.replace('/', ''));
 
   useEffect(() => {
-    console.log('📨 WebSocket message received:', klineMessage);
     if (klineMessage && klineMessage.e === 'kline') {
-      console.log('✅ Valid kline event received');
       const klineEvent = klineMessage as KlineEvent;
       const k = klineEvent.k;
 
       if (k.s === selectedSymbol.replace('/','')) {
-        console.log('🎯 Symbol matches, updating chart data:', k.s);
         const symbolWithoutSlash = selectedSymbol.replace('/', '');
         const pair = pairs.find(p => p.symbol === selectedSymbol || p.symbol === symbolWithoutSlash);
         const quoteDecimals = pair?.quoteDecimals || 18;
-
-        console.log('🔍 Debug websocket bar:', {
-          selectedSymbol,
-          pair,
-          quoteDecimals,
-          rawClose: k.c,
-          convertedClose: Number(formatUnits(BigInt(Math.floor(Number(k.c))), quoteDecimals))
-        });
 
         const bar: Bar = {
           time: k.t,
@@ -111,20 +100,12 @@ export default function TradingViewChartContainer({
           volume: parseFloat(k.v)
         };
 
-        console.log('📊 New bar data:', bar);
         setLastBar(bar);
         
         if (onTickRef.current) {
-          console.log('🔄 Sending data to TradingView via onTick');
           onTickRef.current(bar);
-        } else {
-          console.log('⚠️ onTick callback not available');
         }
-      } else {
-        console.log('❌ Symbol mismatch - expected:', selectedSymbol.replace('/',''), 'got:', k.s);
       }
-    } else {
-      console.log('❌ Invalid or missing kline event:', klineMessage);
     }
   }, [klineMessage, selectedSymbol]);
 
@@ -157,8 +138,6 @@ export default function TradingViewChartContainer({
           }))
           : [];
 
-        console.log('📊 Loaded pairs:', formattedPairs);
-        console.log('🔍 Debug pairs decimals:', formattedPairs.map(p => ({ symbol: p.symbol, baseDecimals: p.baseDecimals, quoteDecimals: p.quoteDecimals })));
         setPairs(formattedPairs);
       } catch (error) {
         console.error('Error fetching trading pairs:', error);
@@ -183,12 +162,9 @@ export default function TradingViewChartContainer({
       const foundPair = pairs.find(p => p.symbol === selectedSymbol || p.symbol === symbolWithoutSlash);
       
       if (!foundPair) {
-        console.log('Symbol not found in pairs, selecting first available:', pairs[0].symbol);
         setSelectedSymbol(pairs[0].symbol);
       } else if (foundPair.symbol !== selectedSymbol) {
-        // If we found the pair but the format is different, update to use the format with slash for display
         const displaySymbol = foundPair.displayName || `${foundPair.baseAsset}/${foundPair.quoteAsset}`;
-        console.log('Updating symbol format from', selectedSymbol, 'to', displaySymbol);
         setSelectedSymbol(displaySymbol);
       }
     }

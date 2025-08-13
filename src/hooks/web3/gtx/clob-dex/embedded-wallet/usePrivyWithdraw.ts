@@ -3,46 +3,6 @@ import { encodeFunctionData } from 'viem';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import { useState } from 'react';
 
-/*
-export function usePrivyWithdraw() {
-  const { user } = usePrivy();
-  const { sendTransaction } = useSendTransaction();
-  const [loading, setLoading] = useState(false);
-  const RISE_CHAIN_ID = 11155931;
-
-  const withdraw = async (externalAddress: string, amount: string) => {
-    const embedded = user?.linkedAccounts?.find(
-      a => a.type === 'wallet' || a.type === 'smart_wallet'
-    );
-    if (!embedded) throw new Error('No embedded wallet');
-
-    const units = BigInt(Math.floor(Number(amount) * 10 ** 6));
-    const data = encodeFunctionData({
-      abi: ERC20ABI,
-      functionName: 'transfer',
-      args: [externalAddress, units],
-    });
-
-    setLoading(true);
-    await sendTransaction(
-      {
-        to: '0xa652aede05d70c1aff00249ac05a9d021f9d30c2',
-        value: 0n,
-        data,
-        chainId: RISE_CHAIN_ID,
-      },
-      {
-        address: embedded.address,
-        uiOptions: { showWalletUIs: true },
-      }
-    );
-    setLoading(false);
-  };
-
-  return { withdraw, loading };
-}
-*/
-
 export function usePrivyWithdraw() {
   const { user } = usePrivy();
   const { sendTransaction } = useSendTransaction();
@@ -51,7 +11,7 @@ export function usePrivyWithdraw() {
   const [error, setError] = useState<string | null>(null);
   const RISE_CHAIN_ID = 11155931;
 
-  const withdraw = async (externalAddress: string, amount: string) => {
+  const withdraw = async (externalAddress: string, amount: string, currencyAddress: `0x${string}`) => {
     try {
       setLoading(true);
       setError(null);
@@ -103,7 +63,7 @@ export function usePrivyWithdraw() {
         to: externalAddress,
         amount: amount,
         units: units.toString(),
-        tokenContract: '0xa652aede05d70c1aff00249ac05a9d021f9d30c2'
+        tokenContract: currencyAddress
       });
 
       const data = encodeFunctionData({
@@ -116,7 +76,7 @@ export function usePrivyWithdraw() {
 
       const txResult = await sendTransaction(
         {
-          to: '0xa652aede05d70c1aff00249ac05a9d021f9d30c2',
+          to: currencyAddress,
           value: 0n,
           data,
           chainId: RISE_CHAIN_ID,
