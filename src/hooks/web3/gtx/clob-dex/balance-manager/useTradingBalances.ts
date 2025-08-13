@@ -25,7 +25,10 @@ export const useTradingBalances = (balanceManagerAddress: HexAddress, userAddres
 
   // Get wallet balance (ERC20) - this is our primary and most reliable method
   const getWalletBalance = useCallback(async (currency: HexAddress): Promise<bigint> => {
-    if (!address) return BigInt(0);
+    if (!address) {
+      console.log('[DEBUG_BALANCE] ❌ Hook no address provided');
+      return BigInt(0);
+    }
     
     try {
       setLoading(true);

@@ -7,10 +7,11 @@ import { EXPLORER_URL } from '@/constants/explorer-url';
 import { TradeItem } from '@/graphql/gtx/clob';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
-// import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
-import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePrivyPlaceOrder';
+import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
+import { usePlaceOrder as usePrivyPlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePrivyPlaceOrder';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 import { DepthData, Ticker24hrData } from '@/lib/market-api';
-import { formatNumber } from '@/lib/utils';
 import type { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { RefreshCw, Wallet, X } from 'lucide-react';
@@ -22,9 +23,6 @@ import { useAccount, useChainId, useContractRead } from 'wagmi';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
 import GTXSlider from './slider';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 import GTXTooltip from './tooltip';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
@@ -45,12 +43,33 @@ const PlaceOrder = ({
   ticker24hr,
   refetchAccount,
 }: PlaceOrderProps) => {
-  const { isConnected } = useAccount();
+  const { isConnected, address: wagmiAddress } = useAccount();
   const { isFullyAuthenticated } = usePrivyAuth();
   
   // Check if user is connected via either traditional wallet or Privy
   const effectiveIsConnected = isConnected || isFullyAuthenticated;
-
+  
+  // Determine wallet type and address explicitly
+  // Priority: Privy embedded wallet first, then external wallet (wagmi)
+  let walletType: 'external' | 'embedded' | 'none';
+  let actualAddress: HexAddress | undefined;
+  
+  if (isFullyAuthenticated && address) {
+    // Privy embedded wallet is authenticated and has address - prioritize this
+    walletType = 'embedded';
+    actualAddress = address;
+  } else if (isConnected && wagmiAddress) {
+    // Fall back to external wallet if Privy is not available
+    walletType = 'external';
+    actualAddress = wagmiAddress;
+  } else {
+    // No wallet available
+    walletType = 'none';
+    actualAddress = undefined;
+  }
+  
+  const useEmbeddedWallet = walletType === 'embedded';
+  
   const currentChainId = useChainId();
   const poolManagerAddress = getContractAddress(
     currentChainId,
@@ -149,7 +168,11 @@ const PlaceOrder = ({
   }
 `;
 
-  // Use individual hooks - split for better error isolation
+  // Use the appropriate hook based on wallet type (hooks must be called before any early returns)
+  const externalWalletHook = usePlaceOrder(useEmbeddedWallet ? undefined : actualAddress);
+  const embeddedWalletHook = usePrivyPlaceOrder(useEmbeddedWallet ? actualAddress : undefined);
+  
+  // Choose the correct hook results based on wallet type
   const {
     handlePlaceLimitOrder,
     handlePlaceMarketOrder,
@@ -166,7 +189,7 @@ const PlaceOrder = ({
     marketOrderHash,
     resetLimitOrderState,
     resetMarketOrderState,
-  } = usePlaceOrder(address);
+  } = useEmbeddedWallet ? embeddedWalletHook : externalWalletHook;
 
   const bestBidPrice = useMemo(() => {
     if (depthData?.bids && depthData.bids.length > 0) {
@@ -196,12 +219,15 @@ const PlaceOrder = ({
     loading: balanceLoading,
   } = useTradingBalances(
     balanceManagerAddress,
-    address
+    actualAddress 
   );
+
+  // Move useFeePercentages here with other hooks (before any early returns)
+  const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
 
   // Function to refresh balance manually
   const refreshBalance = useCallback(async () => {
-    if (!address || !selectedPool) return;
+    if (!actualAddress || !selectedPool) return;
 
     setIsManualRefreshing(true);
     try {
@@ -240,7 +266,7 @@ const PlaceOrder = ({
       setIsManualRefreshing(false);
     }
   }, [
-    address,
+    actualAddress,
     selectedPool,
     selectedPool?.quoteDecimals,
     selectedPool?.baseDecimals,
@@ -249,7 +275,7 @@ const PlaceOrder = ({
 
   // Load initial balance
   const loadBalance = useCallback(async () => {
-    if (address && selectedPool) {
+    if (actualAddress && selectedPool) {
       setIsLoadingBalance(true);
       try {
         const relevantCurrency =
@@ -260,6 +286,7 @@ const PlaceOrder = ({
         try {
           const total = await getTotalAvailableBalance(relevantCurrency);
           const formattedBalance = formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals));
+          
           // Round to 6 decimal places to avoid floating point precision issues
           const roundedBalance = Math.round(parseFloat(formattedBalance) * 1000000) / 1000000;
           setAvailableBalance(roundedBalance.toString());
@@ -285,7 +312,7 @@ const PlaceOrder = ({
       }
     }
   }, [
-    address,
+    actualAddress,
     selectedPool,
     selectedPool?.quoteDecimals,
     selectedPool?.baseDecimals,
@@ -522,6 +549,17 @@ const PlaceOrder = ({
     }
   }, [isLimitOrderConfirmed, isMarketOrderConfirmed, refetchAccount]);
 
+  // Early return with loading state if we don't have the actual address yet
+  // (Must be after all hooks are called to follow Rules of Hooks)
+  if (!actualAddress) {
+    console.log('[DEBUG_BALANCE] ⏳ Waiting for wallet address...');
+    return (
+      <div className="p-4 text-center">
+        <div className="animate-pulse">Loading wallet...</div>
+      </div>
+    );
+  }
+
   const handleTransactionError = (error: unknown) => {
     let errorMessage = 'Failed to place order';
 
@@ -539,6 +577,12 @@ const PlaceOrder = ({
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('handleSubmit', e);
     e.preventDefault();
+
+    if (!actualAddress) {
+      console.log('[DEBUG_BALANCE] ❌ No wallet address available for order submission');
+      toast.error('Wallet not connected properly. Please reconnect your wallet.');
+      return;
+    }
 
     if (!selectedPool) {
       console.log('No trading pair selected.');
@@ -601,8 +645,6 @@ const PlaceOrder = ({
   const isConfirming = isLimitOrderConfirming || isMarketOrderConfirming;
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
-
-  const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
 
   if (!mounted)
     return (

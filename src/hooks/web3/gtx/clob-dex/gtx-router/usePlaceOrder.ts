@@ -59,8 +59,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   const [limitOrderHash, setLimitOrderHash] = useState<HexAddress | undefined>(undefined);
   const [marketOrderHash, setMarketOrderHash] = useState<HexAddress | undefined>(undefined);
   
-  // Use provided address or fall back to wagmi address
-  const address = userAddress || wagmiAddress;
+  const address = wagmiAddress; 
 
   const chainId = useChainId()
 
@@ -84,11 +83,14 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       if (!price) throw new Error("Price is required for buy orders");
       
       const baseDecimals = await getTokenDecimals(baseCurrency);
+      const amount = price * quantity / BigInt(10 ** baseDecimals);
+      
       return {
         token: quoteCurrency,
-        amount: price * quantity / BigInt(10 ** baseDecimals)
+        amount
       };
     }
+    
     return {
       token: baseCurrency,
       amount: quantity
@@ -111,7 +113,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       const errorMessage = `Insufficient balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
       toast.error(errorMessage);
       throw new Error(errorMessage);
-    }
+    }    
   };
 
   const writeContractSafe = async (contractCall: any) => {
@@ -163,6 +165,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       }
       
       toast.success('Token approval confirmed');
+    } else {
+      console.log('[ALLOWANCE_CHECK] ✅ Allowance check passed');
     }
   };
 
@@ -315,12 +319,13 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     
     // Simulate first with detailed error handling
     try {
-      await simulateContract(wagmiConfig, {
+      const simulationResult = await simulateContract(wagmiConfig, {
         address: routerAddress,
         abi: GTXRouterABI,
         functionName,
         args,
       });
+      
     } catch (simulationError: any) {
       console.error('[CONTRACT_CALL] ❌ Simulation failed with detailed error:', {
         error: simulationError,
@@ -388,12 +393,14 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     }
 
     // Execute if simulation passes
-    return await writeContractSafe({
+    const txHash = await writeContractSafe({
       address: routerAddress,
       abi: GTXRouterABI,
       functionName,
       args,
     });
+    
+    return txHash;
   };
 
   const handlePreOrderChecks = async (
@@ -411,22 +418,20 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     let requiredAmount: bigint;
     
     if (orderType === 'market' && slippageInfo) {
-      // For market orders, use the deposit amount calculated with slippage
       const { amount } = await getRequiredTokenAndAmount(
         side, baseCurrency, quoteCurrency, quantity, slippageInfo.estimatedPrice
       );
       requiredAmount = amount;
     } else {
-      // For limit orders, use the provided price
+      console.log('[PRE_ORDER_CHECKS] Using limit order pricing');
       const { amount } = await getRequiredTokenAndAmount(
         side, baseCurrency, quoteCurrency, quantity, price
       );
       requiredAmount = amount;
     }
 
-    // Get the required token for balance checks
     const requiredToken = side === OrderSideEnum.BUY ? quoteCurrency : baseCurrency;
-
+    
     await checkBalance(requiredToken, requiredAmount, address);
     await ensureAllowance(requiredToken, requiredAmount, address, chainId);
   };
@@ -472,7 +477,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     }
   }
 
-
   const CreateOrderMutation = (orderType: OrderType, setOrderHash: (hash: HexAddress) => void) => {
     return useMutation({
       mutationFn: async ({
@@ -487,14 +491,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         originalUsdcAmount
       }: OrderParams) => {
         try {
-          console.log(`Placing ${orderType} order:`, {
-            baseCurrency,
-            quoteCurrency,
-            side,
-            quantity: quantity.toString(),
-            price: price?.toString()
-          });
-
           let slippageInfo: SlippageInfo | undefined;
           
           if (orderType === 'market') {
@@ -511,8 +507,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
               userDepositAmount
             );
           }
-
-          // Handle balance checks and approvals
           await handlePreOrderChecks(
             orderType,
             side,
@@ -526,7 +520,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             slippageInfo
           );
 
-          // Execute the order
           const hash = await executeOrder(
             orderType,
             pool,
@@ -557,7 +550,19 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           }
 
         } catch (error) {
-          console.error(`${orderType} order error:`, error);
+          console.error(`[ORDER_MUTATION] ❌ ${orderType} order error:`, error);
+          
+          // Log additional context for debugging
+          console.error(`[ORDER_MUTATION] Error context:`, {
+            orderType,
+            userAddress: address,
+            chainId,
+            baseCurrency,
+            quoteCurrency,
+            side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
+            quantity: quantity.toString(),
+            price: price?.toString()
+          });
           
           // Handle specific error cases with enhanced detection
           if (error instanceof Error) {

@@ -121,7 +121,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       const errorMessage = `Insufficient balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
       toast.error(errorMessage);
       throw new Error(errorMessage);
-    }
+    }    
   };
 
   const writeContractWithPrivy = async (contractCall: {
@@ -143,29 +143,44 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         const provider = await wallet.getEthereumProvider();
         const walletClient = createWalletClient({
           account: address,
-          chain: getChain(chainId), // You'll need to import getChain from your wagmi config
+          chain: getChain(chainId),
           transport: custom(provider),
         });
 
+        // Get the current nonce to avoid nonce conflicts
+        const nonce = await provider.request({
+          method: 'eth_getTransactionCount',
+          params: [address, 'pending']
+        }) as number;
+        
         const hash = await walletClient.writeContract({
           address: contractCall.address,
           abi: contractCall.abi,
           functionName: contractCall.functionName,
           args: contractCall.args,
+          nonce: nonce,
         });
 
         return hash as HexAddress;
       }
 
       // Method 2: Try the newer getWalletClient method (if available)
-      if (typeof wallet.getWalletClient === 'function') {
-        const walletClient = await wallet.getWalletClient();
-
+      if ('getWalletClient' in wallet && typeof (wallet as any).getWalletClient === 'function') {
+        const walletClient = await (wallet as any).getWalletClient();
+        
+        // Get the current nonce to avoid nonce conflicts
+        const provider = await (wallet as any).getEthereumProvider();
+        const nonce = await provider.request({
+          method: 'eth_getTransactionCount',
+          params: [address, 'pending']
+        }) as number;
+        
         const hash = await walletClient.writeContract({
           address: contractCall.address,
           abi: contractCall.abi,
           functionName: contractCall.functionName,
           args: contractCall.args,
+          nonce: nonce,
         });
 
         return hash as HexAddress;
@@ -259,7 +274,15 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           args: [pool.baseCurrency, pool.quoteCurrency, 1],
         }) as BestSellPrice;
         estimatedPrice = bestSellPrice.price;
+        
+        if (estimatedPrice === 0n) {
+          console.warn('No sell orders available for BUY market order slippage calculation');
+          throw new Error('No sell orders available for market buy order');
+        }
       } else {
+        if (quantity === 0n) {
+          throw new Error('Invalid quantity for market sell order');
+        }
         estimatedPrice = minOutAmount * BigInt(10 ** 18) / quantity;
       }
       
@@ -282,9 +305,18 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           args: [pool.baseCurrency, pool.quoteCurrency, 0], 
         }) as BestSellPrice;
         
-        const baseDecimals = await getTokenDecimals(pool.baseCurrency);
-        const expectedUSDC = bestBuyPrice.price * quantity / BigInt(10 ** baseDecimals);
-        actualSlippage = Number((expectedUSDC - minOutAmount) * BigInt(10000) / expectedUSDC) / 100;
+        if (bestBuyPrice.price === 0n) {
+          console.warn('No buy orders available for SELL market order slippage calculation');
+          actualSlippage = 0;
+        } else {
+          const baseDecimals = await getTokenDecimals(pool.baseCurrency);
+          const expectedUSDC = bestBuyPrice.price * quantity / BigInt(10 ** baseDecimals);
+          if (expectedUSDC > 0n) {
+            actualSlippage = Number((expectedUSDC - minOutAmount) * BigInt(10000) / expectedUSDC) / 100;
+          } else {
+            actualSlippage = 0;
+          }
+        }
       }
       
       actualSlippage = Math.max(0, actualSlippage);
@@ -347,39 +379,55 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       if (side === OrderSideEnum.BUY && address) {
         try {
           const requiredToken = pool.quoteCurrency; 
-          const balance = await readContract(wagmiConfig, {
-            address: requiredToken,
-            abi: erc20Abi,
-            functionName: 'balanceOf',
-            args: [address],
-          }) as bigint;
-          
-          const allowance = await readContract(wagmiConfig, {
-            address: requiredToken,
-            abi: erc20Abi,
-            functionName: 'allowance',
-            args: [address, getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress],
-          }) as bigint;
-          
           const requiredAmount = functionName === 'placeMarketOrder' ? args[3] as bigint : quantity;
-          if (allowance < requiredAmount) {
-            throw new Error('Insufficient allowance!');
-          }
+          
+          await ensureAllowance(requiredToken, requiredAmount, address, chainId);
         } catch (error) {
-          console.error('[CONTRACT_CALL] Failed to check user balance/allowance:', error);
+          console.error('[CONTRACT_CALL] Failed to ensure allowance:', error);
           throw error;
         }
       }
     }
     
-    // Simulate first with detailed error handling
+    // Quick balance/allowance verification before simulation
+    if (orderType === 'market' && side === OrderSideEnum.BUY && address) {
+      try {
+        const pool = args[0] as { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
+        const depositAmount = args[3] as bigint;
+
+        const balance = await readContract(wagmiConfig, {
+          address: pool.quoteCurrency,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [address],
+        }) as bigint;
+        
+        const balanceManager = getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress;
+        const allowance = await readContract(wagmiConfig, {
+          address: pool.quoteCurrency,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address, balanceManager],
+        }) as bigint;
+      
+        if (balance < depositAmount) {
+          console.error(`[DEBUG_FINAL_VERIFICATION] ❌ INSUFFICIENT BALANCE! Need ${formatUnits(depositAmount, 6)} USDC, have ${formatUnits(balance, 6)} USDC`);
+        }
+        if (allowance < depositAmount) {
+          console.error(`[DEBUG_FINAL_VERIFICATION] ❌ INSUFFICIENT ALLOWANCE! Need ${formatUnits(depositAmount, 6)} USDC allowance, have ${formatUnits(allowance, 6)} USDC`);
+        }
+      } catch (verificationError) {
+        console.error(`[DEBUG_FINAL_VERIFICATION] ❌ Error during final verification:`, verificationError);
+      }
+    }
+    
     try {
-      console.log('simulatedContract');
       await simulateContract(wagmiConfig, {
         address: routerAddress,
         abi: GTXRouterABI,
         functionName,
         args,
+        account: address,
       });
     } catch (simulationError: any) {
       console.error('[CONTRACT_CALL] ❌ Simulation failed with detailed error:', {
@@ -394,19 +442,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           args: args.map(arg => typeof arg === 'bigint' ? arg.toString() : arg)
         }
       });
-      
-      // Try to extract more specific error information
-      if (simulationError?.cause?.data) {
-        console.error('[CONTRACT_CALL] 🔍 Raw error data:', simulationError.cause.data);
-      }
-      
-      if (simulationError?.shortMessage) {
-        console.error('[CONTRACT_CALL] 📝 Short message:', simulationError.shortMessage);
-      }
 
-      // Try a direct static call to get better error info
       try {
-        console.log('[CONTRACT_CALL] 🔍 Attempting direct static call for better error details...');
         await readContract(wagmiConfig, {
           address: routerAddress,
           abi: GTXRouterABI,
@@ -424,24 +461,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
 
       // Check if the amounts make sense
       if (orderType === 'market') {
-        const depositAmount = args[3] as bigint;
-        const minOut = args[4] as bigint;
-        const quantity = args[1] as bigint;
-        
-        console.error('[CONTRACT_CALL] 🚨 Market order parameter analysis:', {
-          side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
-          quantity: quantity.toString(),
-          depositAmount: depositAmount.toString(),
-          minOut: minOut.toString(),
-          suspiciousRatios: {
-            quantityVsDeposit: quantity === depositAmount ? 'SAME' : 'DIFFERENT',
-            minOutVsDeposit: side === OrderSideEnum.SELL ? 
-              `${minOut.toString()} USDC for ${depositAmount.toString()} wei ETH - ratio: ${Number(minOut) / Number(depositAmount)}` :
-              'N/A for BUY orders',
-            possibleIssue: side === OrderSideEnum.SELL && Number(minOut) < Number(depositAmount) / Number(1000000000000000n) ? 
-              'MIN_OUT_TOO_LOW - expecting ~3600 USDC but getting ~3.6 USDC' : 'RATIO_OK'
-          }
-        });
+        // Could add additional validation here if needed
       }
       
       throw simulationError;
@@ -471,13 +491,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     let requiredAmount: bigint;
     
     if (orderType === 'market' && slippageInfo) {
-      // For market orders, use the deposit amount calculated with slippage
       const { amount } = await getRequiredTokenAndAmount(
         side, baseCurrency, quoteCurrency, quantity, slippageInfo.estimatedPrice
       );
       requiredAmount = amount;
     } else {
-      // For limit orders, use the provided price
       const { amount } = await getRequiredTokenAndAmount(
         side, baseCurrency, quoteCurrency, quantity, price
       );
@@ -525,7 +543,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         
         // Calculate delay with exponential backoff
         const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), maxDelay);
-        console.log(`Waiting ${delay}ms before retry...`);
         
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -551,15 +568,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           if (!user || !wallet || !address) {
             throw new Error('Please connect your wallet first');
           }
-
-          console.log(`Placing ${orderType} order:`, {
-            baseCurrency,
-            quoteCurrency,
-            side,
-            quantity: quantity.toString(),
-            price: price?.toString(),
-            walletType: wallet.walletClientType,
-          });
 
           let slippageInfo: SlippageInfo | undefined;
           
@@ -623,15 +631,14 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           }
 
         } catch (error) {
-          console.error(`${orderType} order error:`, error);
           
           // Handle specific error cases with enhanced detection
           if (error instanceof Error) {
             const errorStr = error.toString();
-            const errorMessage = error.message || '';
             
             // Check for common revert reasons
-            if (errorStr.includes('0xfb8f41b2')) {
+            if (errorStr.includes('0x7939f424')) {
+            } else if (errorStr.includes('0xfb8f41b2')) {
               toast.error("Insufficient balance for this order. Please deposit more funds.");
             } else if (errorStr.includes('SlippageTooHigh')) {
               toast.error("Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.");
@@ -647,15 +654,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             } else {
               toast.error(error.message || `Failed to place ${orderType} order`);
             }
-            
-            // Log additional error context for debugging
-            console.error(`[${orderType.toUpperCase()}_ORDER] 🚨 Enhanced error context:`, {
-              errorType: error.constructor.name,
-              errorMessage: errorMessage,
-              isRevertError: errorStr.includes('reverted'),
-              hasErrorCode: error.hasOwnProperty('code'),
-              errorData: error.hasOwnProperty('data') ? (error as any).data : undefined
-            });
           }
           
           throw error;
@@ -773,15 +771,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         const baseDecimals = await getTokenDecimals(pool.baseCurrency);
         baseCurrencyQuantity = quoteCurrencyToSpend * BigInt(10 ** baseDecimals) / bestSellPrice.price;
 
-        // CRITICAL FIX: Don't use the estimated quantity for the contract call
-        // Let the contract calculate the actual quantity based on available liquidity
-
-        console.log('🔧 BUY Order Debug:', {
-          userWantsToSpend: formatUnits(quoteCurrencyToSpend, 6) + ' USDC',
-          estimatedETHReceive: formatUnits(baseCurrencyQuantity, 18) + ' ETH',
-          currentPrice: formatUnits(bestSellPrice.price, 6) + ' USDC/ETH',
-          actualDepositAmount: formatUnits(actualDepositAmount, 6) + ' USDC',
-        });
       } catch (error) {
         console.error('Failed to get market price:', error);
         throw new Error('Failed to get current market price');
@@ -789,12 +778,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     } else {
       // SELL order: user specifies how much ETH to sell
       baseCurrencyQuantity = inputQuantity;
-      actualDepositAmount = inputQuantity; // For sells, deposit the ETH amount
-
-      console.log('🔧 SELL Order Debug:', {
-        userWantsToSell: formatUnits(baseCurrencyQuantity, 18) + ' ETH',
-        depositAmount: formatUnits(actualDepositAmount, 18) + ' ETH',
-      });
+      actualDepositAmount = inputQuantity; 
     }
 
     // CRITICAL: Pre-validate the amounts make sense
@@ -861,6 +845,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           functionName: 'getBestPrice',
           args: [pool.baseCurrency, pool.quoteCurrency, 1],
         }) as BestSellPrice;
+        
+        if (bestSellPrice.price === 0n) {
+          console.warn('No sell orders available in order book for slippage calculation');
+          return null;
+        }
         
         const baseDecimals = await getTokenDecimals(pool.baseCurrency);
         baseCurrencyQuantity = inputQuantity * BigInt(10 ** baseDecimals) / bestSellPrice.price;

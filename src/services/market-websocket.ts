@@ -375,8 +375,6 @@ export class MarketWebSocket {
       
       // Add validation to ensure data is a valid WebSocketEvent
       if (data && typeof data === 'object') {
-        console.log('[MARKET-WS] Message:', data);
-        
         // Notify all handlers with the validated data
         for (const handler of this.messageHandlers) {
           try {
@@ -385,8 +383,6 @@ export class MarketWebSocket {
             console.error('[MARKET-WS] Error in message handler:', handlerError);
           }
         }
-      } else {
-        console.warn('[MARKET-WS] Invalid message format:', data);
       }
     } catch (error) {
       console.error('[MARKET-WS] Error parsing message:', error, 'Raw data:', event.data);
