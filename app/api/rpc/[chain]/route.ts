@@ -117,6 +117,8 @@ function getRpcUrl(chain: string): string | null {
 		'rise-sepolia': 'https://testnet.riselabs.xyz',
 		conduit: 'https://odyssey.ithaca.xyz',
 		monad: 'https://testnet-rpc.monad.xyz',
+		'rari-testnet': 'https://rari.caff.testnet.espresso.network',
+		'appchain-testnet': 'https://appchain.caff.testnet.espresso.network',
 	};
 
 	return rpcUrls[chain] || null;

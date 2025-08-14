@@ -11,6 +11,8 @@ export const CHAIN_IDS = {
   CONDUIT: 911867,
   RISE_SEPOLIA: 11155931,
   MONAD_TESTNET: 10143,
+  RARI_TESTNET: 1918988905,
+  APPCHAIN_TESTNET: 4661,
 };
 
 // Get the current chain ID from contract-address.json or fallback to environment variable
@@ -61,6 +63,18 @@ export const CONTRACT_ADDRESSES = {
   [CHAIN_IDS.RISE_SEPOLIA]: {
     ROUTER_ADDRESS: '0x' as const,  // Replace with Rise Sepolia address
     ORACLE_ADDRESS: '0x' as const,  // Replace with Rise Sepolia address
+  },
+
+  // Rari Testnet
+  [CHAIN_IDS.RARI_TESTNET]: {
+    ROUTER_ADDRESS: '0x' as const,  // Replace with Rari Testnet address
+    ORACLE_ADDRESS: '0x' as const,  // Replace with Rari Testnet address
+  },
+
+  // Appchain Testnet
+  [CHAIN_IDS.APPCHAIN_TESTNET]: {
+    ROUTER_ADDRESS: '0x' as const,  // Replace with Appchain Testnet address
+    ORACLE_ADDRESS: '0x' as const,  // Replace with Appchain Testnet address
   },
 };
 
