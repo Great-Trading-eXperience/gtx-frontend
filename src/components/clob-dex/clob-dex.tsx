@@ -812,6 +812,7 @@ export default function ClobDex() {
             poolId={selectedPoolId}
             selectedPool={selectedPool}
             ticker24hr={ticker24hr}
+            isLoading={poolsLoading || isLoadingTicker24hr}
           />
           <ChartComponent
             address={effectiveAddress}
@@ -846,6 +847,7 @@ export default function ClobDex() {
             depthData={depthData}
             ticker24hr={ticker24hr}
             refetchAccount={refetchAccount}
+            isLoading={poolsLoading || isLoadingTicker24hr}
           />
         </div>
       </div>
@@ -869,6 +871,7 @@ export default function ClobDex() {
         marketAllOrdersData={marketAllOrdersData}
         marketAllOrdersLoading={marketAllOrdersLoading}
         refetchFn={refetchAccount}
+        isLoading={poolsLoading || marketAccountLoading || marketOpenOrdersLoading || tradeHistoryLoading}
       />
     </QueryClientProvider>
   );
