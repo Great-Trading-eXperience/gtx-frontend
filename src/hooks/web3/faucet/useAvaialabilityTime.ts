@@ -19,6 +19,7 @@ interface UseAvailabilityTimeResult {
 
 export const useAvailabilityTime = (
     faucetAddress: HexAddress,
+    userAddress?: HexAddress,
     options: UseAvailabilityTimeOptions = {}
 ): UseAvailabilityTimeResult => {
     const { debounceTime = 1000, enabled = true } = options;
@@ -35,10 +36,12 @@ export const useAvailabilityTime = (
     }, [debounceTime]);
 
     const fetchAvailabilityTime = useCallback(async () => {
-        if (!faucetAddress || !enabled) {
+        if (!faucetAddress || !userAddress || !enabled) {
             setLoading(false);
             return;
         }
+
+        console.log('[useAvailabilityTime] Fetching availability time for address:', userAddress);
 
         setLoading(true);
         setError(null);
@@ -50,8 +53,10 @@ export const useAvailabilityTime = (
                 abi: FaucetABI,
                 functionName: 'getAvailabilityTime',
                 args: [],
+                account: userAddress,
             });
 
+            console.log('[useAvailabilityTime] Result for address', userAddress, ':', result);
             setAvailabilityTime(result as bigint);
         } catch (err: unknown) {
             const error = err instanceof Error
@@ -59,11 +64,11 @@ export const useAvailabilityTime = (
                 : new Error('Failed to fetch availabilityTime');
 
             setError(error);
-            console.error('Error fetching M0 availabilityTime:', error);
+            console.error('[useAvailabilityTime] Error fetching availabilityTime for address', userAddress, ':', error);
         } finally {
             setLoading(false);
         }
-    }, [faucetAddress, enabled]);
+    }, [faucetAddress, userAddress, enabled]);
 
     const refreshAvailabilityTime = useCallback(async () => {
         await fetchAvailabilityTime();
@@ -71,7 +76,7 @@ export const useAvailabilityTime = (
 
     useEffect(() => {
         setIsStale(true);
-    }, [faucetAddress]);
+    }, [faucetAddress, userAddress]);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;

@@ -11,7 +11,7 @@ import { getIndexerUrl } from "@/constants/urls/urls-config"
 import { queryFaucetTokenss, queryRequestTokenss } from "@/graphql/faucet/faucet.query"
 import { useFaucetCooldown } from "@/hooks/web3/faucet/useFaucetCooldown"
 import { useLastRequestTime } from "@/hooks/web3/faucet/useLastRequestTime"
-import { useRequestToken } from "@/hooks/web3/faucet/useRequestToken"
+import { usePrivyRequestToken } from "@/hooks/web3/faucet/usePrivyRequestToken"
 import { useBalance } from "@/hooks/web3/token/useBalance"
 import type { HexAddress } from "@/types/general/address"
 import type { Token } from "@/types/tokens/token"
@@ -24,13 +24,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
 import { readContract } from "@wagmi/core"
 import { request } from "graphql-request"
-import { Calendar, Clock, Droplets, Hexagon, History, Wallet } from "lucide-react"
+import { Calendar, Clock, Droplets, ExternalLink, Hexagon, History, RefreshCw, Wallet } from "lucide-react"
 import { DateTime } from "luxon"
 import type { NextPage } from "next"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { formatUnits } from "viem"
 import { useAccount, useChainId } from "wagmi"
+import { useWallets } from "@privy-io/react-auth"
 import * as z from "zod"
 import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
 import GradientLoader from "../gradient-loader/gradient-loader"
@@ -48,6 +49,11 @@ const GTXFaucet: NextPage = () => {
   const { isConnected } = useAccount()
   const [showConnectionLoader, setShowConnectionLoader] = useState(false)
   const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
+  
+  // Transaction status
+  const [txStatus, setTxStatus] = useState<string | null>(null)
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -80,7 +86,21 @@ const GTXFaucet: NextPage = () => {
   const { watch } = form
   const selectedTokenAddress = watch("token")
 
-  const { address: userAddress } = useAccount()
+  const { address: wagmiAddress } = useAccount()
+  const { wallets } = useWallets()
+  
+  // Get Privy wallet address (prioritize embedded wallet)
+  const privyWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0]
+  const userAddress = privyWallet?.address || wagmiAddress
+
+  // Log which address is being used
+  useEffect(() => {
+    if (userAddress) {
+      console.log('[Faucet] Using address:', userAddress);
+      console.log('[Faucet] Address source:', privyWallet?.address ? 'Privy wallet' : 'Wagmi address');
+      console.log('[Faucet] Privy wallet type:', privyWallet?.walletClientType);
+    }
+  }, [userAddress, privyWallet?.address, privyWallet?.walletClientType])
 
   const [availableTokens, setAvailableTokens] = useState<Record<string, Token>>({})
 
@@ -88,6 +108,7 @@ const GTXFaucet: NextPage = () => {
     userAddress as HexAddress,
     selectedTokenAddress as HexAddress,
   )
+
   const chainId = useChainId();
   const defaultChainId = Number(DEFAULT_CHAIN);
   const faucetAddress = getContractAddress(chainId ?? defaultChainId, ContractName.faucet) as HexAddress
@@ -96,10 +117,35 @@ const GTXFaucet: NextPage = () => {
     faucetAddress,
     selectedTokenAddress as HexAddress,
   )
-  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime()
+  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress)
   const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress)
 
-  const { isAlertOpen: isAlertRequestTokenOpen, handleRequestToken } = useRequestToken()
+  const { 
+    isAlertOpen: isAlertRequestTokenOpen, 
+    handleRequestToken,
+    isRequestTokenPending,
+    isRequestTokenConfirming,
+    isRequestTokenConfirmed,
+    requestTokenHash,
+    requestTokenError
+  } = usePrivyRequestToken(userAddress as HexAddress)
+
+  // Update processing state based on token request state
+  useEffect(() => {
+    if (isRequestTokenPending) {
+      setIsProcessing(true)
+      setTxStatus('Preparing token request...')
+    } else if (isRequestTokenConfirming) {
+      setTxStatus('Confirming transaction...')
+    } else if (isRequestTokenConfirmed && requestTokenHash) {
+      setTxHash(requestTokenHash)
+      setTxStatus('Token request completed successfully!')
+      setIsProcessing(false)
+    } else if (requestTokenError) {
+      setTxStatus(`Token request failed: ${requestTokenError.message}`)
+      setIsProcessing(false)
+    }
+  }, [isRequestTokenPending, isRequestTokenConfirming, isRequestTokenConfirmed, requestTokenHash, requestTokenError])
 
   const {
     data: faucetTokensData,
@@ -155,6 +201,7 @@ const GTXFaucet: NextPage = () => {
         faucetTokensData.faucetTokenss.items.map(async (faucetToken) => {
           let tokenName = ""
           let tokenSymbol = ""
+          let tokenDecimals = 18
 
           try {
             const tokenNameResult = await readContract(wagmiConfig, {
@@ -171,16 +218,25 @@ const GTXFaucet: NextPage = () => {
               args: [],
             })
 
+            const tokenDecimalsResult = await readContract(wagmiConfig, {
+              address: faucetToken.token,
+              abi: TokenABI,
+              functionName: "decimals",
+              args: [],
+            })
+
             tokenName = tokenNameResult as string
             tokenSymbol = tokenSymbolResult as string
+            tokenDecimals = tokenDecimalsResult as number
           } catch (err: unknown) {
-            console.log("Error fetching token name of", faucetToken.token, err)
+            console.log("Error fetching token metadata of", faucetToken.token, err)
           }
 
           availableTokens[faucetToken.token] = {
             address: faucetToken.token,
             name: tokenName,
             symbol: tokenSymbol,
+            decimals: tokenDecimals,
           }
         }),
       )
@@ -282,6 +338,27 @@ const GTXFaucet: NextPage = () => {
                         </Button>
                       </form>
                     </Form>
+
+                    {/* Status display */}
+                    {txStatus && (
+                      <div className="mt-4 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-200">{txStatus}</div>
+                          {isProcessing && <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />}
+                        </div>
+                        {txHash && (
+                          <a
+                            href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            View On Explorer
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Stats Grid */}
@@ -296,8 +373,8 @@ const GTXFaucet: NextPage = () => {
                         <div>
                           <p className="text-sm text-white/70">Faucet Balance</p>
                           <p className="text-lg font-medium text-white">
-                            {faucetBalance
-                              ? `${formatNumber(Number(formatUnits(BigInt(faucetBalance), 18)), {
+                            {faucetBalance && availableTokens[selectedTokenAddress]
+                              ? `${formatNumber(Number(formatUnits(BigInt(faucetBalance), availableTokens[selectedTokenAddress].decimals)), {
 
                                 decimals: 2,
                                 compact: true,
@@ -352,8 +429,8 @@ const GTXFaucet: NextPage = () => {
                         <div>
                           <p className="text-sm text-white/70">Your Balance</p>
                           <p className="text-lg font-medium text-white">
-                            {userBalance
-                              ? `${formatNumber(Number(formatUnits(BigInt(userBalance), 18)), {
+                            {userBalance && availableTokens[selectedTokenAddress]
+                              ? `${formatNumber(Number(formatUnits(BigInt(userBalance), availableTokens[selectedTokenAddress].decimals)), {
                                 decimals: 2,
                                 compact: true,
                               })} ${availableTokens[selectedTokenAddress]?.symbol}`
