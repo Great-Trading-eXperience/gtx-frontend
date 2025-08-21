@@ -9,6 +9,7 @@ import { ClobDexComponentProps } from '../clob-dex';
 import EnhancedOrderBookDex from '../orderbook-dex/orderbook-dex';
 import RecentTradesComponent from '../recent-trade/recent-trade';
 import { DepthData } from '@/lib/market-api';
+import MarketDataTabsSkeleton from './market-data-tabs-skeleton';
 
 export interface MarketDataTabsProps extends ClobDexComponentProps {
   address: HexAddress | undefined;
@@ -32,6 +33,11 @@ const MarketDataTabs = ({
   trades,
   tradesLoading
 }: MarketDataTabsProps) => {
+  // Show skeleton when pools are loading or no data is available yet
+  if (poolsLoading || (!selectedPool && !depthData && trades.length === 0)) {
+    return <MarketDataTabsSkeleton />;
+  }
+
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
       <Tabs defaultValue="orderbook" className="w-full">

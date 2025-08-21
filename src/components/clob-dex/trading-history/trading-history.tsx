@@ -16,6 +16,7 @@ import { ClobDexComponentProps } from '../clob-dex';
 import BalancesHistoryTable from './balances';
 import OrderHistoryTable from './orders';
 import TradeHistoryTable from './trades';
+import TradingHistorySkeleton from './trading-history-skeleton';
 
 export interface TradingHistoryProps extends ClobDexComponentProps {
   balanceData: BalanceItem[];
@@ -34,6 +35,7 @@ export interface TradingHistoryProps extends ClobDexComponentProps {
   marketAllOrdersData?: OrderData[];
   marketAllOrdersLoading?: boolean;
   refetchFn?: () => void;
+  isLoading?: boolean;
 }
 
 export default function TradingHistory({
@@ -55,9 +57,15 @@ export default function TradingHistory({
   marketOpenOrdersLoading,
   marketAllOrdersData,
   marketAllOrdersLoading,
-  refetchFn
+  refetchFn,
+  isLoading = false
 }: TradingHistoryProps) {
   const { isConnected } = useAccount();
+
+  // Show skeleton when component is loading or when major data is loading
+  if (isLoading || (!address && (balancesLoading || ordersLoading || tradesLoading))) {
+    return <TradingHistorySkeleton />;
+  }
 
   const solidColorConfig = {
     backgroundColor: 'bg-transparent',
