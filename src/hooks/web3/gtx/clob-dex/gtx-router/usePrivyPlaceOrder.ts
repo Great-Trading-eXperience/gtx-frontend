@@ -147,100 +147,28 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           transport: custom(provider),
         });
 
-        // Get the current nonce using latest confirmed + pending count
-        const confirmedNonce = await provider.request({
-          method: 'eth_getTransactionCount',
-          params: [address, 'latest']
-        }) as number;
-        
-        const pendingNonce = await provider.request({
-          method: 'eth_getTransactionCount',
-          params: [address, 'pending']
-        }) as number;
-        
-        // Use the highest nonce to avoid conflicts
-        const nonce = Math.max(confirmedNonce, pendingNonce);
-        
-        console.log(`[NONCE_DEBUG] Confirmed: ${confirmedNonce}, Pending: ${pendingNonce}, Using: ${nonce}`);
-        
-        // Retry mechanism for nonce conflicts
-        let currentNonce = nonce;
-        let maxRetries = 3;
-        
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-          try {
-            const hash = await walletClient.writeContract({
-              address: contractCall.address,
-              abi: contractCall.abi,
-              functionName: contractCall.functionName,
-              args: contractCall.args,
-              nonce: currentNonce,
-            });
-            return hash as HexAddress;
-          } catch (error: any) {
-            if (attempt === maxRetries - 1) throw error; // Last attempt, throw the error
-            
-            // Check if it's a nonce error
-            const errorStr = error.toString();
-            if (errorStr.includes('nonce too low') || errorStr.includes('NONCE_EXPIRED')) {
-              console.log(`[NONCE_RETRY] Attempt ${attempt + 1} failed with nonce ${currentNonce}, retrying with ${currentNonce + 1}`);
-              currentNonce += 1;
-              continue;
-            }
-            throw error; // Not a nonce error, throw immediately
-          }
-        }
+        // Let wallet client handle nonce automatically
+        const hash = await walletClient.writeContract({
+          address: contractCall.address,
+          abi: contractCall.abi,
+          functionName: contractCall.functionName,
+          args: contractCall.args,
+        });
+        return hash as HexAddress;
       }
 
       // Method 2: Try the newer getWalletClient method (if available)
       if ('getWalletClient' in wallet && typeof (wallet as any).getWalletClient === 'function') {
         const walletClient = await (wallet as any).getWalletClient();
         
-        // Get the current nonce using latest confirmed + pending count
-        const provider = await (wallet as any).getEthereumProvider();
-        
-        const confirmedNonce = await provider.request({
-          method: 'eth_getTransactionCount',
-          params: [address, 'latest']
-        }) as number;
-        
-        const pendingNonce = await provider.request({
-          method: 'eth_getTransactionCount',
-          params: [address, 'pending']
-        }) as number;
-        
-        // Use the highest nonce to avoid conflicts
-        const nonce = Math.max(confirmedNonce, pendingNonce);
-        
-        console.log(`[NONCE_DEBUG] Method2 - Confirmed: ${confirmedNonce}, Pending: ${pendingNonce}, Using: ${nonce}`);
-        
-        // Retry mechanism for nonce conflicts
-        let currentNonce = nonce;
-        let maxRetries = 3;
-        
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-          try {
-            const hash = await walletClient.writeContract({
-              address: contractCall.address,
-              abi: contractCall.abi,
-              functionName: contractCall.functionName,
-              args: contractCall.args,
-              nonce: currentNonce,
-            });
-            return hash as HexAddress;
-          } catch (error: any) {
-            if (attempt === maxRetries - 1) throw error; // Last attempt, throw the error
-            
-            // Check if it's a nonce error
-            const errorStr = error.toString();
-            if (errorStr.includes('nonce too low') || errorStr.includes('NONCE_EXPIRED')) {
-              console.log(`[NONCE_RETRY] Method2 - Attempt ${attempt + 1} failed with nonce ${currentNonce}, retrying with ${currentNonce + 1}`);
-              currentNonce += 1;
-              continue;
-            }
-            throw error; // Not a nonce error, throw immediately
-          }
-        }
+        // Let wallet client handle nonce automatically  
+        const hash = await walletClient.writeContract({
+          address: contractCall.address,
+          abi: contractCall.abi,
+          functionName: contractCall.functionName,
+          args: contractCall.args,
+        });
+        return hash as HexAddress;
       }
 
       // Method 3: Fallback to using wagmi's writeContract with account override
