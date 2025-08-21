@@ -9,16 +9,19 @@ import { useMemo } from 'react';
 import { formatUnits } from 'viem';
 import { ClobDexComponentProps } from '../clob-dex';
 import { PairDropdown } from './pair-dropdown';
+import MarketWidgetSkeleton from './market-widget-skeleton';
 
 export interface MarketDataWidgetProps extends ClobDexComponentProps {
   poolId: string | null;
   selectedPool?: ProcessedPoolItem;
   ticker24hr?: Ticker24hrData;
+  isLoading?: boolean;
 }
 
 export default function MarketDataWidget({
   selectedPool,
   ticker24hr,
+  isLoading = false,
 }: MarketDataWidgetProps) {
   const router = useRouter();
 
@@ -29,6 +32,10 @@ export default function MarketDataWidget({
 
   const handlePoolChange = (poolId: string) => {
     router.push(`/spot/${poolId}`);
+  }
+
+  if (isLoading || (!selectedPool && !ticker24hr)) {
+    return <MarketWidgetSkeleton />;
   }
 
   return (

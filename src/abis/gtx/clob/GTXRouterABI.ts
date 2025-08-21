@@ -92,6 +92,40 @@ const abi = [
       },
       {
         type: "function",
+        name: "calculateMinOutForSwap",
+        inputs: [
+          {
+            name: "srcCurrency",
+            type: "address",
+            internalType: "Currency",
+          },
+          {
+            name: "dstCurrency",
+            type: "address",
+            internalType: "Currency",
+          },
+          {
+            name: "inputAmount",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "slippageToleranceBps",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+        outputs: [
+          {
+            name: "minOutputAmount",
+            type: "uint128",
+            internalType: "uint128",
+          },
+        ],
+        stateMutability: "view",
+      },
+      {
+        type: "function",
         name: "cancelOrder",
         inputs: [
           {

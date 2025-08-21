@@ -24,6 +24,7 @@ import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
 import GTXSlider from './slider';
 import GTXTooltip from './tooltip';
+import PlaceOrderSkeleton from './place-order-skeleton';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -32,6 +33,7 @@ export interface PlaceOrderProps extends ClobDexComponentProps {
   depthData?: DepthData | null;
   ticker24hr?: Ticker24hrData;
   refetchAccount: () => void;
+  isLoading?: boolean;
 }
 
 const PlaceOrder = ({
@@ -42,6 +44,7 @@ const PlaceOrder = ({
   depthData,
   ticker24hr,
   refetchAccount,
+  isLoading = false,
 }: PlaceOrderProps) => {
   const { isConnected, address: wagmiAddress } = useAccount();
   const { isFullyAuthenticated } = usePrivyAuth();
@@ -551,13 +554,9 @@ const PlaceOrder = ({
 
   // Early return with loading state if we don't have the actual address yet
   // (Must be after all hooks are called to follow Rules of Hooks)
-  if (!actualAddress) {
+  if (!actualAddress || isLoading) {
     console.log('[DEBUG_BALANCE] ⏳ Waiting for wallet address...');
-    return (
-      <div className="p-4 text-center">
-        <div className="animate-pulse">Loading wallet...</div>
-      </div>
-    );
+    return <PlaceOrderSkeleton />;
   }
 
   const handleTransactionError = (error: unknown) => {
@@ -646,15 +645,8 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
   const orderError = limitSimulateError || marketSimulateError;
 
-  if (!mounted)
-    return (
-      <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl border border-gray-800/50 shadow-lg">
-        <div className="flex items-center gap-2 text-gray-300">
-          <RefreshCw className="w-5 h-5 animate-spin" />
-          <span>Loading trading pairs...</span>
-        </div>
-      </div>
-    );
+  if (!mounted || !selectedPool)
+    return <PlaceOrderSkeleton />;
 
   return (
     <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">

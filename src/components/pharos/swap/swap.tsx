@@ -1,28 +1,16 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { ArrowUpDown, ChevronRight, ExternalLink, Wallet, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from "sonner";
-import { formatUnits, parseUnits } from 'viem';
+import { useAccount } from 'wagmi';
 
-// import TokenNetworkSelector from './TokenNetworkSelector';
 import type { HexAddress } from '@/types/general/address';
-import { useCrossChainPharos } from '@/hooks/web3/pharos/useCrossChain';
-import { useCrossChainOrderPharos, OrderAction, isNativeToken } from '@/hooks/web3/pharos/useCrossChainOrder';
-import TokenNetworkSelector from './token-network-selector';
-import { SwapProgressDialog } from './swap-progress-dialog';
 
-// Types for token and network selection
-export interface Network {
-  id: string;
-  name: string;
-  icon: string;
-}
-
+// Type for token selection
 export interface Token {
   id: string;
   name: string;
@@ -32,43 +20,26 @@ export interface Token {
   description?: string;
 }
 
-const CrossChainOrderForm: React.FC = () => {
+const SwapForm: React.FC = () => {
   const { address, isConnected } = useAccount();
-  const {
-    currentNetwork,
-    currentDomain,
-    remoteDomain,
-    currentRouter,
-    remoteRouter,
-    getTokens,
-    getDomainId,
-    getRouterAddressForNetwork,
-    estimateGasPayment,
-    isTokenSupportedOnNetwork,
-    getEquivalentTokenOnNetwork
-  } = useCrossChainPharos();
 
-  // State for networks
-  const [sourceNetworkId, setSourceNetworkId] = useState<string>(currentNetwork);
-  const [destNetworkId, setDestNetworkId] = useState<string>(
-    currentNetwork === 'arbitrum-sepolia' ? 'gtxpresso' : 'arbitrum-sepolia'
-  );
-  const [sourceNetworkRouter, setSourceNetworkRouter] = useState<HexAddress>(currentRouter);
+  // Processing state for swap
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [txHash, setTxHash] = useState<HexAddress | null>(null);
 
-  // State for swap progress
-  const [isSwapProgressDialogOpen, setSwapProgressDialogOpen] = useState(false)
-
-  // State for tokens and amounts
-  const [sourceTokensList, setSourceTokensList] = useState<Record<string, HexAddress>>(getTokens(sourceNetworkId));
-  const [destTokensList, setDestTokensList] = useState<Record<string, HexAddress>>(getTokens(destNetworkId));
+  // State for tokens and amounts - simplified for single network swap
+  const availableTokens: Record<string, HexAddress> = {
+    'WETH': '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73' as HexAddress,
+    'USDC': '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' as HexAddress,
+    'NATIVE': '0x0000000000000000000000000000000000000000' as HexAddress
+  };
   const [amount, setAmount] = useState<string>('');
   const [estimatedReceived, setEstimatedReceived] = useState<string>('0');
   const [minReceived, setMinReceived] = useState<string>('0');
-  const [gasFeesEth, setGasFeesEth] = useState<string>('0.0005');
+  const [gasFeesEth] = useState<string>('0.0005');
 
   // Transaction status
   const [txStatus, setTxStatus] = useState<string | null>(null);
-  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Token selector state
   const [selectorOpen, setSelectorOpen] = useState<boolean>(false);
@@ -77,86 +48,21 @@ const CrossChainOrderForm: React.FC = () => {
   // Client-side rendering state
   const [isClient, setIsClient] = useState(false);
 
-  // Initialize cross-chain order hook
-  const {
-    createOrder,
-    getOrderStatus,
-    isProcessing,
-    txHash,
-    error
-  } = useCrossChainOrderPharos(sourceNetworkRouter);
-
-  // Networks for the selector
-  const sourceNetworks: Network[] = [
-    {
-      id: 'arbitrum-sepolia',
-      name: 'Arbitrum Sepolia',
-      icon: '/network/arbitrum-spolia.png'
-    }
-  ];
-
-  const destNetworks: Network[] = [
-    {
-      id: 'arbitrum-sepolia',
-      name: 'Arbitrum Sepolia',
-      icon: '/network/arbitrum-spolia.png'
-    },
-    {
-      id: 'pharos',
-      name: 'Pharos',
-      icon: '/network/pharos.png'
-    }
-  ];
+  // Network info - fixed to Arbitrum Sepolia
+  const networkInfo = {
+    id: 'arbitrum-sepolia',
+    name: 'Arbitrum Sepolia',
+    icon: '/network/arbitrum-spolia.png'
+  };
 
   // Set isClient to true after component mounts
   useEffect(() => {
     setIsClient(true);
-    return () => {
-      // Clear any intervals on unmount
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
-      }
-    };
-  }, [statusCheckInterval]);
-
-  // Update source network router when source network changes
-  useEffect(() => {
-    if (sourceNetworkId) {
-      const router = getRouterAddressForNetwork(sourceNetworkId);
-      setSourceNetworkRouter(router);
-      setSourceTokensList(getTokens(sourceNetworkId));
-      console.log(`Updated source network router to: ${router} for network ${sourceNetworkId}`);
-    }
-  }, [sourceNetworkId, getRouterAddressForNetwork, getTokens]);
-
-  // Update destination tokens when dest network changes
-  useEffect(() => {
-    if (destNetworkId) {
-      setDestTokensList(getTokens(destNetworkId));
-      console.log(`Updated destination network to: ${destNetworkId}`);
-    }
-  }, [destNetworkId, getTokens]);
-
-  // Update gas fees when networks change
-  useEffect(() => {
-    const updateGasFees = async () => {
-      if (sourceNetworkId && destNetworkId) {
-        try {
-          const gasEstimate = await estimateGasPayment(sourceNetworkId, destNetworkId);
-          setGasFeesEth(gasEstimate);
-        } catch (error) {
-          console.warn('Failed to estimate gas fees, using default', error);
-          setGasFeesEth('0.0005');
-        }
-      }
-    };
-    updateGasFees();
-  }, [sourceNetworkId, destNetworkId, estimateGasPayment]);
+  }, []);
 
   // Convert token addresses to Token objects for selector
-  const convertTokensForSelector = (tokenAddresses: Record<string, HexAddress>, networkId: string): Token[] => {
+  const convertTokensForSelector = (tokenAddresses: Record<string, HexAddress>): Token[] => {
     return Object.entries(tokenAddresses)
-      .filter(([_, address]) => !!address) // Only include tokens with a defined address
       .map(([symbol, address]) => {
         // Map token symbols to icon filenames
         const iconMap: Record<string, string> = {
@@ -203,25 +109,8 @@ const CrossChainOrderForm: React.FC = () => {
     return nameMap[symbol] || symbol;
   };
 
-  // Prepare tokens for selector
-  const tokensByNetwork: Record<string, Token[]> = {
-    'arbitrum-sepolia': convertTokensForSelector(getTokens('arbitrum-sepolia'), 'arbitrum-sepolia'),
-    'pharos': convertTokensForSelector(getTokens('pharos'), 'pharos')
-  };
-
-  // Initialize with Arbitrum Sepolia as the source network
-  useEffect(() => {
-    setSourceNetworkId('arbitrum-sepolia');
-    setSourceNetworkRouter(getRouterAddressForNetwork('arbitrum-sepolia'));
-  }, []);
-
-  // Default network selections
-  const [sourceNetwork, setSourceNetwork] = useState<Network>(
-    sourceNetworks.find(n => n.id === sourceNetworkId) || sourceNetworks[0]
-  );
-  const [destNetwork, setDestNetwork] = useState<Network>(
-    destNetworks.find(n => n.id === destNetworkId) || destNetworks[1]
-  );
+  // Prepare tokens for selector - single network
+  const availableTokensList: Token[] = convertTokensForSelector(availableTokens);
 
   // Token selections
   const [sourceToken, setSourceToken] = useState<Token | null>(null);
@@ -229,28 +118,28 @@ const CrossChainOrderForm: React.FC = () => {
 
   // Initialize default tokens
   useEffect(() => {
-    if (tokensByNetwork[sourceNetworkId]?.length > 0 && !sourceToken) {
-      // Always use WETH on Arbitrum as source token
-      const defaultToken = tokensByNetwork[sourceNetworkId].find(t => t.symbol === 'WETH');
+    if (availableTokensList.length > 0 && !sourceToken) {
+      // Always use WETH as source token
+      const defaultToken = availableTokensList.find(t => t.symbol === 'WETH');
       if (defaultToken) {
         setSourceToken(defaultToken);
         console.log('Set default source token to WETH:', defaultToken);
       } else {
-        setSourceToken(tokensByNetwork[sourceNetworkId][0]);
+        setSourceToken(availableTokensList[0]);
       }
     }
 
-    if (tokensByNetwork[destNetworkId]?.length > 0 && !destToken) {
+    if (availableTokensList.length > 0 && !destToken) {
       // Default destination token to USDC
-      const defaultToken = tokensByNetwork[destNetworkId].find(t => t.symbol === 'USDC');
+      const defaultToken = availableTokensList.find(t => t.symbol === 'USDC');
       if (defaultToken) {
         setDestToken(defaultToken);
         console.log('Set default destination token to USDC:', defaultToken);
       } else {
-        setDestToken(tokensByNetwork[destNetworkId][0]);
+        setDestToken(availableTokensList[0]);
       }
     }
-  }, [tokensByNetwork, sourceNetworkId, destNetworkId, sourceToken, destToken]);
+  }, [availableTokensList, sourceToken, destToken]);
 
   // Update estimated receive amount when inputs change
   useEffect(() => {
@@ -288,6 +177,7 @@ const CrossChainOrderForm: React.FC = () => {
   };
 
   // Calculate USD values 
+  // TODO
   const getTokenUsdPrice = (symbol: string): number => {
     const priceMap: Record<string, number> = {
       'WETH': 1800,
@@ -344,96 +234,54 @@ const CrossChainOrderForm: React.FC = () => {
     setSelectorOpen(true);
   };
 
-  // Handle token/network selection
-  const handleTokenNetworkSelect = (network: Network, token: Token) => {
+  // Handle token selection
+  const handleTokenSelect = (token: Token) => {
     if (isSellSelector) {
-      // Update source token only (network is fixed to Arbitrum Sepolia)
       setSourceToken(token);
-
-      // Update destination token if needed for compatibility
-      if (destToken && !isTokenSupportedOnNetwork(destToken.address, destNetworkId)) {
-        const equivalentToken = getEquivalentTokenOnNetwork(token.address, sourceNetworkId, destNetworkId);
-        if (equivalentToken) {
-          const newDestToken = tokensByNetwork[destNetworkId].find(t =>
-            t.address.toLowerCase() === equivalentToken.toLowerCase()
-          );
-          if (newDestToken) {
-            setDestToken(newDestToken);
-            toast.info(`Automatically selected ${newDestToken.symbol} as destination token`);
-          }
-        }
-      }
     } else {
-      // Update destination network and token
-      setDestNetwork(network);
       setDestToken(token);
-      setDestNetworkId(network.id);
-
-      // Check if source token is compatible with new destination
-      if (sourceToken && !isTokenSupportedOnNetwork(sourceToken.address, network.id)) {
-        toast.info('Note: The selected token may not be directly supported on the destination chain');
-      }
     }
   };
 
   // Swap source and destination tokens
   const handleSwap = () => {
-    // Only allow swap if tokens exist on both chains
     if (sourceToken && destToken) {
-      // Since we're restricting the source network to Arbitrum Sepolia,
-      // we can only swap tokens if the destination is also Arbitrum Sepolia
-      if (destNetworkId !== 'arbitrum-sepolia') {
-        toast.warning('Cannot swap - source must be Arbitrum Sepolia');
-        return;
-      }
-
-      const sourceTokenSupported = isTokenSupportedOnNetwork(sourceToken.address, destNetworkId);
-      const destTokenSupported = isTokenSupportedOnNetwork(destToken.address, sourceNetworkId);
-
-      if (!sourceTokenSupported || !destTokenSupported) {
-        toast.warning('Cannot swap - tokens are not compatible across chains');
-        return;
-      }
-
-      // Swap tokens only
       const tempToken = sourceToken;
       setSourceToken(destToken);
       setDestToken(tempToken);
     }
   };
 
-  // Check order status periodically
-  const startStatusChecking = (txHashToCheck: HexAddress) => {
-    // Clear any existing interval
-    if (statusCheckInterval) {
-      clearInterval(statusCheckInterval);
+  // Simple swap function - calls GTXRouter.swap
+  const executeSwap = async (
+    _srcTokenAddress: HexAddress,
+    _dstTokenAddress: HexAddress,
+    _srcAmount: string,
+    _minDstAmount: string
+  ) => {
+    try {
+      setIsProcessing(true);
+      setTxStatus('Executing swap...');
+      
+      // This would call the GTXRouter contract's swap function
+      // gtxRouter.swap(Currency.wrap(srcTokenAddress), Currency.wrap(dstTokenAddress), srcAmount, minDstAmount, maxHops, user)
+      
+      // For now, simulate a successful swap
+      const mockTxHash = '0x1234567890abcdef1234567890abcdef12345678' as HexAddress;
+      setTxHash(mockTxHash);
+      setTxStatus('Swap completed successfully!');
+      
+      return { success: true, txHash: mockTxHash };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setTxStatus(`Swap failed: ${errorMessage}`);
+      throw err;
+    } finally {
+      setIsProcessing(false);
     }
-
-    // Set up status checking interval
-    const interval = setInterval(async () => {
-      try {
-        const status = await getOrderStatus(txHashToCheck);
-        setTxStatus(`Order status: ${status}`);
-
-        if (status === 'SETTLED' || status === 'REFUNDED') {
-          clearInterval(interval);
-          setStatusCheckInterval(null);
-        }
-      } catch (error) {
-        console.error("Error checking status:", error);
-      }
-    }, 10000); // Check every 10 seconds
-
-    setStatusCheckInterval(interval);
-
-    // Auto-stop checking after 5 minutes
-    setTimeout(() => {
-      clearInterval(interval);
-      setStatusCheckInterval(null);
-    }, 300000);
   };
 
-  // Handle form submission with updated contract alignment
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -447,92 +295,25 @@ const CrossChainOrderForm: React.FC = () => {
       return;
     }
 
+    if (sourceToken.address === destToken.address) {
+      toast.error('Cannot swap identical tokens');
+      return;
+    }
+
     try {
-      setTxStatus('Creating order...');
-
-      const inputTokenAddress = sourceToken.address;
-      const outputTokenAddress = destToken.address;
-      const recipientAddress = address as HexAddress;
-
-      // Get destination router and domain
-      const destinationRouterAddress = getRouterAddressForNetwork(destNetworkId);
-      const destinationDomainId = getDomainId(destNetworkId);
-
-      // Determine if this is a cross-chain transaction
-      const isCrossChain = sourceNetworkId !== destNetworkId;
-
-      // For cross-chain transactions, we need to set targetDomain
-      // If same chain, set targetDomain to 0 (matches contract behavior)
-      const targetDomainId = isCrossChain ? getDomainId(destNetworkId) : 0;
-
-      // Determine target tokens based on whether this is cross-chain
-      let targetInputTokenAddress: HexAddress;
-      let targetOutputTokenAddress: HexAddress;
-
-      if (targetDomainId === 0) {
-        // If targetDomain is 0, set target tokens to address(0) - follows contract behavior
-        targetInputTokenAddress = '0x0000000000000000000000000000000000000000';
-        targetOutputTokenAddress = '0x0000000000000000000000000000000000000000';
-      } else if (destNetworkId === 'gtxpresso' && sourceNetworkId === 'arbitrum-sepolia') {
-        // Special case for Arbitrum -> GTX
-        targetInputTokenAddress = getTokens('gtxpresso').WETH;
-        targetOutputTokenAddress = getTokens('arbitrum-sepolia').WETH;
-      } else {
-        // Default case - use same tokens
-        targetInputTokenAddress = outputTokenAddress;
-        targetOutputTokenAddress = outputTokenAddress;
-      }
-
-      // Set correct action type:
-      // 0 = Transfer (same chain)
-      // 1 = Swap (cross-chain)
-      const action = isCrossChain ? OrderAction.Swap : OrderAction.Transfer;
-
-      console.log(`Creating order with parameters:`, {
-        router: sourceNetworkRouter,
-        destinationRouter: destinationRouterAddress,
-        destinationDomain: destinationDomainId,
-        targetDomain: targetDomainId,
-        inputToken: inputTokenAddress,
-        outputToken: outputTokenAddress,
-        targetInputToken: targetInputTokenAddress,
-        targetOutputToken: targetOutputTokenAddress,
+      const result = await executeSwap(
+        sourceToken.address,
+        destToken.address,
         amount,
-        action
-      });
-
-      // Create the order with the updated parameters
-      const result = await createOrder({
-        recipient: recipientAddress,
-        inputToken: inputTokenAddress,
-        outputToken: outputTokenAddress,
-        targetInputToken: targetInputTokenAddress,
-        targetOutputToken: targetOutputTokenAddress,
-        amountIn: amount,
-        amountOut: minReceived, // Use min received amount with slippage
-        destinationDomain: destinationDomainId,
-        targetDomain: targetDomainId,
-        destinationRouter: destinationRouterAddress,
-        action: action,
-      });
+        minReceived
+      );
 
       if (result?.success) {
-        setTxStatus('Order created successfully!');
-
-        if (result.txHash) {
-          startStatusChecking(result.txHash);
-          setSwapProgressDialogOpen(true);
-        }
-      } else {
-        const errorMessage = result?.error instanceof Error
-          ? result.error.message
-          : 'Unknown error';
-
-        setTxStatus(`Order creation failed: ${errorMessage}`);
+        toast.success('Swap completed successfully!');
       }
     } catch (err) {
-      console.error('Error submitting order:', err);
-      setTxStatus(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Error executing swap:', err);
+      toast.error('Swap failed');
     }
   };
 
@@ -541,46 +322,14 @@ const CrossChainOrderForm: React.FC = () => {
     ? calculateExchangeRatio(sourceToken.symbol, destToken.symbol)
     : '0';
 
-  // Helper to safely format token display
-  const formatTokenDisplay = (token: Token | null) =>
-    token && token.address
-      ? `${token.name} (${token.symbol}) ${token.address.slice(0, 6)}...${token.address.slice(-4)}`
-      : '';
-
-  const getExplorerUrl = (networkId: string, txHash: string): string => {
-    switch (networkId) {
-      case 'arbitrum-sepolia':
-        return `https://sepolia.arbiscan.io/tx/${txHash}`;
-      case 'pharos':
-        return `https://pharosscan.xyz/tx/${txHash}`;
-      case 'gtxpresso':
-        return `https://gtx-explorer.xyz/tx/${txHash}`;
-      default:
-        // Default fallback to Pharos explorer
-        return `https://pharosscan.xyz/tx/${txHash}`;
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
-      {/* <DotPattern /> */}
       <div className="w-full max-w-md relative z-10">
         <Card className="border-white/20 bg-[#121212] p-4">
-          <div className="mb-2 text-3xl font-bold text-white">Cross-Chain Swap</div>
-          {sourceToken && destToken && (
-            <div className="mb-6 text-blue-500">
-              <span>
-                {`1 ${sourceToken.symbol} = ${exchangeRate} ${destToken.symbol}`}
-              </span>
-              <span className="ml-2 text-xs text-gray-400">
-                (${getTokenUsdPrice(sourceToken.symbol)} → ${getTokenUsdPrice(destToken.symbol)})
-              </span>
-            </div>
-          )}
-
+          <div className="mb-2 text-3xl font-bold text-white">Swap</div>
           {/* Source Section */}
           <div className="mb-2 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-4">
-            <div className="mb-2 text-sm text-gray-400">From {sourceNetwork?.name}</div>
+            <div className="mb-2 text-sm text-gray-400">You pay</div>
             <div className="flex items-center justify-between">
               <input
                 type="text"
@@ -611,22 +360,9 @@ const CrossChainOrderForm: React.FC = () => {
                       ?
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-black bg-[#121212]">
-                    <img
-                      src={sourceNetwork?.icon}
-                      alt={sourceNetwork?.name}
-                      className="h-4 w-4 rounded-full"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.onerror = null;
-                        target.src = "/network/default-network.png";
-                      }}
-                    />
-                  </div>
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-lg font-medium">{sourceToken?.symbol || 'Select'}</span>
-                  <span className="text-xs text-gray-400">{sourceNetwork?.name}</span>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </Button>
@@ -660,7 +396,7 @@ const CrossChainOrderForm: React.FC = () => {
 
           {/* Destination Section */}
           <div className="mb-4 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-4">
-            <div className="mb-2 text-sm text-gray-400">To {destNetwork?.name}</div>
+            <div className="mb-2 text-sm text-gray-400">You receive</div>
             <div className="flex items-center justify-between">
               {isProcessing ? (
                 <Skeleton className="h-10 w-1/2 bg-gray-700/30" />
@@ -695,22 +431,10 @@ const CrossChainOrderForm: React.FC = () => {
                       ?
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-black bg-[#121212]">
-                    <img
-                      src={destNetwork?.icon}
-                      alt={destNetwork?.name}
-                      className="h-4 w-4 rounded-full"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.onerror = null;
-                        target.src = "/network/default-network.png";
-                      }}
-                    />
-                  </div>
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-lg font-medium">{destToken?.symbol || 'Select'}</span>
-                  <span className="text-xs text-gray-400">{destNetwork?.name}</span>
+                  <span className="text-xs text-gray-400">{networkInfo.name}</span>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </Button>
@@ -734,32 +458,16 @@ const CrossChainOrderForm: React.FC = () => {
           <div className="mb-6 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Exchange rate</span>
-                <span className="text-white">
-                  1 {sourceToken?.symbol || '?'} = {exchangeRate} {destToken?.symbol || '?'}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Est. received</span>
                 <span className="text-white">{estimatedReceived} {destToken?.symbol || ''}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              {/* <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Min. received</span>
                 <span className="text-white">{minReceived} {destToken?.symbol || ''}</span>
-              </div>
+              </div> */}
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Fee (0.25%)</span>
+                <span className="text-gray-400">Fee (0.2%)</span>
                 <span className="text-white">{swapFee} {sourceToken?.symbol || ''}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Network fee</span>
-                <span className="text-white">{gasFeesEth} ETH</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Transaction type</span>
-                <span className="text-white">
-                  {sourceNetworkId !== destNetworkId ? 'Cross-chain Swap' : 'Same-chain Transfer'}
-                </span>
               </div>
             </div>
           </div>
@@ -773,20 +481,13 @@ const CrossChainOrderForm: React.FC = () => {
               </div>
               {txHash && (
                 <a
-                  href={getExplorerUrl(sourceNetworkId, txHash)}
+                  href={`https://sepolia.arbiscan.io/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300"
                 >
-                  View on {sourceNetwork?.name} Explorer <ExternalLink className="ml-1 h-3 w-3" />
+                  View on Explorer <ExternalLink className="ml-1 h-3 w-3" />
                 </a>
-              )}
-              {sourceToken && destToken && (
-                <div className="mt-2 text-xs text-gray-400">
-                  {sourceNetworkId !== destNetworkId ?
-                    `Cross-chain from ${sourceToken.symbol} (${sourceNetworkId}) to ${destToken.symbol} (${destNetworkId})` :
-                    `Same-chain transfer from ${sourceToken.symbol} to ${destToken.symbol}`}
-                </div>
               )}
             </div>
           )}
@@ -802,46 +503,59 @@ const CrossChainOrderForm: React.FC = () => {
                 ? 'Connect Wallet'
                 : isProcessing
                   ? 'Processing...'
-                  : sourceNetworkId !== destNetworkId ? 'Cross-Chain Swap' : 'Transfer')
+                  : `Swap`)
               : 'Loading...'}
           </Button>
-
-          {/* Native token warning */}
-          {sourceToken && sourceToken.address === '0x0000000000000000000000000000000000000000' && (
-            <div className="mt-2 text-xs text-amber-500">
-              You&apos;re using a native token. Both the token amount and gas fees will be sent from your wallet.
-            </div>
-          )}
         </Card>
       </div>
 
-      {/* Only render the selector component client-side */}
-      {isClient && (
-        <TokenNetworkSelector
-          open={selectorOpen}
-          onOpenChange={setSelectorOpen}
-          networks={isSellSelector ? sourceNetworks : destNetworks}
-          tokens={tokensByNetwork}
-          initialNetwork={isSellSelector ? sourceNetwork : destNetwork}
-          onSelect={handleTokenNetworkSelect}
-          title={isSellSelector ? "Select source token" : "Select destination token"}
-        />
+      {/* Simple Token Selector Modal */}
+      {isClient && selectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-[#121212] border border-white/20 rounded-xl p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {isSellSelector ? "Select source token" : "Select destination token"}
+              </h3>
+              <button
+                onClick={() => setSelectorOpen(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-2">
+              {availableTokensList.map((token) => (
+                <button
+                  key={token.id}
+                  onClick={() => {
+                    handleTokenSelect(token);
+                    setSelectorOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/10 text-left"
+                >
+                  <img
+                    src={token.icon}
+                    alt={token.symbol}
+                    className="h-8 w-8 rounded-full"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.onerror = null;
+                      target.src = "/tokens/default-token.png";
+                    }}
+                  />
+                  <div>
+                    <div className="text-white font-medium">{token.symbol}</div>
+                    <div className="text-gray-400 text-sm">{token.name}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
-
-      <SwapProgressDialog
-        open={isSwapProgressDialogOpen}
-        onOpenChange={setSwapProgressDialogOpen}
-        sourceChain={sourceNetwork.name}
-        destinationChain={destNetwork.name}
-        sourceToken={formatTokenDisplay(sourceToken)}
-        destinationToken={formatTokenDisplay(destToken)}
-        amount={amount}
-        txHash={txHash}
-        targetDomain={sourceNetworkId !== destNetworkId ? getDomainId(destNetworkId) : 0}
-        action={sourceNetworkId !== destNetworkId ? OrderAction.Swap : OrderAction.Transfer}
-      />
     </div>
   );
 };
 
-export default CrossChainOrderForm;
+export default SwapForm;

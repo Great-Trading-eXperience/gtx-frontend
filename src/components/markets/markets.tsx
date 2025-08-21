@@ -6,10 +6,6 @@ import {
   PoolsPonderResponse,
   poolsQuery,
   PoolsResponse,
-  tradesPonderQuery,
-  TradesPonderResponse,
-  tradesQuery,
-  TradesResponse,
 } from '@/graphql/gtx/clob';
 import {
   MarketData,
@@ -36,10 +32,8 @@ interface MarketListProps {
 
 export default function MarketList({ initialMarketData = [] }: MarketListProps) {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
   const [markets, setMarkets] = useState<MarketData[]>(initialMarketData);
-  const [filteredMarkets, setFilteredMarkets] = useState<MarketData[]>(initialMarketData);
-  const [isLoading, setIsLoading] = useState(initialMarketData.length === 0);
+  const [isLoading, setIsLoading] = useState(true); // Always start with loading true
   const [isProcessingPools, setIsProcessingPools] = useState(
     initialMarketData.length === 0
   );
@@ -48,105 +42,102 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     id: string;
     name: string;
   } | null>(null);
-  const [processedPools, setProcessedPools] = useState<ProcessedPool[]>([]);
-  const [processedTrades, setProcessedTrades] = useState<ProcessedTrade[]>([]);
   const [showWatchlist, setShowWatchlist] = useState(false);
+  
+  const POOLS_PER_PAGE = 20;
 
   const chainId = useChainId();
   const defaultChain = Number(DEFAULT_CHAIN);
 
+  // Force skeleton for 2 seconds using setTimeout
+  setTimeout(() => {
+    setIsLoading(false);
+  }, 2000);
+
   // If initialMarketData is provided, we can skip the initial loading state
   const shouldFetchData = initialMarketData.length === 0;
 
-  // Fetch pools data only if we don't have initial data
+  // Fetch pools data with pagination
   const { data: poolsData, error: poolsError } = useQuery<
     PoolsPonderResponse | PoolsResponse
   >({
-    queryKey: ['pools', String(chainId ?? defaultChain)],
+    queryKey: ['pools', String(chainId ?? defaultChain), 'paginated'],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChain);
       const url = GTX_GRAPHQL_URL(currentChainId);
       if (!url) throw new Error('GraphQL URL not found');
-      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);
+      
+      // Fetch limited data for initial fast loading
+      if (getUseSubgraph()) {
+        const limitedQuery = poolsPonderQuery.replace('query GetPools', 'query GetPools($limit: Int)').replace('items {', 'limit: $limit\n      items {');
+        return await request(url, limitedQuery, { limit: POOLS_PER_PAGE });
+      } else {
+        return await request(url, poolsQuery);
+      }
     },
-    refetchInterval: 30000,
-    staleTime: 60000,
+    refetchInterval: 60000,
+    staleTime: 120000,
     enabled: shouldFetchData,
   });
 
-  // Fetch trades data only if we don't have initial data
-  const { data: tradesData } = useQuery<TradesPonderResponse | TradesResponse>({
-    queryKey: ['trades', String(chainId ?? defaultChain)],
-    queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain);
-      const url = GTX_GRAPHQL_URL(currentChainId);
-      if (!url) throw new Error('GraphQL URL not found');
-      return await request(url, getUseSubgraph() ? tradesQuery : tradesPonderQuery, {
-        limit: 1,
-      });
-    },
-    refetchInterval: 30000,
-    staleTime: 60000,
-    enabled: shouldFetchData, // Only fetch if we don't have initial data
-  });
-
-  // First effect to process raw data
-  useEffect(() => {
-    // Skip processing if we're using initialMarketData and don't have new data
-    if (initialMarketData.length > 0 && !poolsData && !tradesData) {
-      return;
-    }
-
-    const processData = async () => {
-      setIsProcessingPools(true);
-      const pools = await processPools(poolsData);
-      const trades = processTrades(tradesData);
-      setProcessedPools(pools);
-      setProcessedTrades(trades);
+  // Process data when it becomes available
+  if (poolsData && markets.length === 0) {
+    processPools(poolsData).then(pools => {
+      const limitedPools = getUseSubgraph() ? pools : pools.slice(0, POOLS_PER_PAGE);
+      
+      if (limitedPools.length > 0) {
+        // Create market data directly
+        const marketData = limitedPools.map(pool => {
+          return {
+            id: pool.id,
+            name: pool.baseSymbol,
+            pair: pool.quoteSymbol,
+            starred: false,
+            iconInfo: { hasImage: false, imagePath: null, bg: '#000000' },
+            age: new Date(pool.timestamp * 1000).toLocaleDateString(),
+            timestamp: pool.timestamp,
+            price: '0.00', // Will be updated with real data
+            volume: pool.volume || '0',
+            liquidity: pool.maxOrderAmount || '0',
+          };
+        });
+        
+        setMarkets(marketData);
+      }
       setIsProcessingPools(false);
-    };
+    }).catch(error => {
+      console.error('Error processing pools:', error);
+      setIsProcessingPools(false);
+    });
+  }
 
-    processData();
-  }, [poolsData, tradesData, initialMarketData]);
-
-  // Filter data based on search query
-  useEffect(() => {
-    if (markets.length > 0) {
-      let filteredMarkets = markets;
-
-      // Apply watchlist filter if enabled
-      if (showWatchlist) {
-        filteredMarkets = filteredMarkets.filter(item => item.starred);
-      }
-
-      // Apply search query filter
-      if (searchQuery) {
-        const lowercaseQuery = searchQuery.toLowerCase();
-        filteredMarkets = filteredMarkets.filter(
-          item =>
-            item.name.toLowerCase().includes(lowercaseQuery) ||
-            item.pair.toLowerCase().includes(lowercaseQuery)
-        );
-      }
-
-      setFilteredMarkets(filteredMarkets);
+  // Handle errors
+  if (poolsError) {
+    console.error('Error fetching pools:', poolsError);
+    if (isProcessingPools) {
+      setIsProcessingPools(false);
     }
-  }, [searchQuery, markets, showWatchlist]);
+  }
 
-  // Set loading state
-  useEffect(() => {
-    // Skip if we're using initialMarketData
-    if (initialMarketData.length > 0 && !poolsData && !tradesData) {
-      setIsLoading(false);
-      return;
+  // Trades data loading removed for performance - focusing on fast pool loading
+
+  // Data processing is now handled in query onSuccess callbacks
+
+  // Filter markets dynamically without useEffect
+  const getFilteredMarkets = () => {
+    if (markets.length === 0) return [];
+
+    let filtered = markets;
+
+    // Apply watchlist filter if enabled
+    if (showWatchlist) {
+      filtered = filtered.filter(item => item.starred);
     }
 
-    if (poolsData && tradesData) {
-      setIsLoading(false);
-    } else if (shouldFetchData) {
-      setIsLoading(true);
-    }
-  }, [poolsData, tradesData, initialMarketData, shouldFetchData]);
+    return filtered;
+  };
+
+  // Removed original loading state logic - now using 2-second forced skeleton
 
   // Prepare data for market search dialog
   const getSearchDialogData = () => {
@@ -201,13 +192,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     );
   };
 
-  // Ensure search dialog data is refreshed when dialog opens
-  useEffect(() => {
-    if (isSearchDialogOpen) {
-      // This will trigger a re-render with the latest market data
-      setFilteredMarkets([...filteredMarkets]);
-    }
-  }, [isSearchDialogOpen]);
+  // Search dialog now uses dynamic data without useEffect
 
   return (
     <div className="px-6 py-12 mx-auto bg-black max-w-7xl">
@@ -282,8 +267,8 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                 </tr>
               </thead>
               <tbody>
-                {filteredMarkets.length > 0 ? (
-                  filteredMarkets.map((item, index) => (
+                {getFilteredMarkets().length > 0 ? (
+                  getFilteredMarkets().map((item, index) => (
                     <tr
                       key={index}
                       className="hover:bg-white/10 cursor-pointer transition-colors duration-200 border-b border-white/5 last:border-0"

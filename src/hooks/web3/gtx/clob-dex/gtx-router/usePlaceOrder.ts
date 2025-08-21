@@ -683,7 +683,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       return;
     }
 
-    let baseCurrencyQuantity: bigint; // Contract always expects base currency quantity
+    let baseCurrencyQuantity: bigint; 
     
     if (side === OrderSideEnum.BUY) {
       const quoteCurrencyToSpend = inputQuantity;

@@ -1,3 +1,5 @@
+const { withSentryConfig } = require("@sentry/nextjs");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: false, // Temporarily disabled for WebSocket testing
@@ -18,6 +20,10 @@ const nextConfig = {
         NEXT_PUBLIC_CLOB_1020201_KLINE_URL: process.env.NEXT_PUBLIC_CLOB_1020201_KLINE_URL,
         NEXT_PUBLIC_CLOB_50002_KLINE_URL: process.env.NEXT_PUBLIC_CLOB_50002_KLINE_URL,
         NEXT_PUBLIC_CLOB_11155931_KLINE_URL: process.env.NEXT_PUBLIC_CLOB_11155931_KLINE_URL,
+        NEXT_PUBLIC_CLOB_1918988905_INDEXER_URL: process.env.NEXT_PUBLIC_CLOB_1918988905_INDEXER_URL,
+        NEXT_PUBLIC_CLOB_4661_INDEXER_URL: process.env.NEXT_PUBLIC_CLOB_4661_INDEXER_URL,
+        NEXT_PUBLIC_CLOB_1918988905_KLINE_URL: process.env.NEXT_PUBLIC_CLOB_1918988905_KLINE_URL,
+        NEXT_PUBLIC_CLOB_4661_KLINE_URL: process.env.NEXT_PUBLIC_CLOB_4661_KLINE_URL,
         NEXT_PUBLIC_GTX_ROUTER_31338_ADDRESS: process.env.NEXT_PUBLIC_GTX_ROUTER_31338_ADDRESS,
         NEXT_PUBLIC_GTX_ROUTER_1020201_ADDRESS: process.env.NEXT_PUBLIC_GTX_ROUTER_1020201_ADDRESS,
         NEXT_PUBLIC_BALANCE_MANAGER_31338_ADDRESS: process.env.NEXT_PUBLIC_BALANCE_MANAGER_31338_ADDRESS,
@@ -42,4 +48,15 @@ const nextConfig = {
     },
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+  silent: true,
+  org: "4509846877306880",
+  project: "4509847025221632",
+}, {
+  widenClientFileUpload: true,
+  transpileClientSDK: true,
+  tunnelRoute: "/monitoring",
+  hideSourceMaps: true,
+  disableLogger: true,
+  automaticVercelMonitors: true,
+});
