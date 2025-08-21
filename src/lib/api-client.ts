@@ -5,7 +5,7 @@ import { getMarketDataApiUrl } from '@/constants/api-config';
 export function getApiClient(chainId: string | number): AxiosInstance {
   const apiClient: AxiosInstance = axios.create({
     baseURL: getMarketDataApiUrl(chainId),
-    timeout: 10000,
+    timeout: 60000,
     headers: {
       'Content-Type': 'application/json',
       'Accept': '*/*',

@@ -6,7 +6,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { erc20Abi, formatUnits, parseAbi } from "viem";
+import { erc20Abi, formatUnits } from "viem";
 import { useChainId } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
@@ -147,20 +147,13 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           transport: custom(provider),
         });
 
-        // Get the current nonce to avoid nonce conflicts
-        const nonce = await provider.request({
-          method: 'eth_getTransactionCount',
-          params: [address, 'pending']
-        }) as number;
-        
+        // Let wallet client handle nonce automatically
         const hash = await walletClient.writeContract({
           address: contractCall.address,
           abi: contractCall.abi,
           functionName: contractCall.functionName,
           args: contractCall.args,
-          nonce: nonce,
         });
-
         return hash as HexAddress;
       }
 
@@ -168,21 +161,13 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       if ('getWalletClient' in wallet && typeof (wallet as any).getWalletClient === 'function') {
         const walletClient = await (wallet as any).getWalletClient();
         
-        // Get the current nonce to avoid nonce conflicts
-        const provider = await (wallet as any).getEthereumProvider();
-        const nonce = await provider.request({
-          method: 'eth_getTransactionCount',
-          params: [address, 'pending']
-        }) as number;
-        
+        // Let wallet client handle nonce automatically  
         const hash = await walletClient.writeContract({
           address: contractCall.address,
           abi: contractCall.abi,
           functionName: contractCall.functionName,
           args: contractCall.args,
-          nonce: nonce,
         });
-
         return hash as HexAddress;
       }
 
@@ -485,7 +470,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     price: bigint | undefined,
     address: HexAddress,
     chainId: number,
-    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
     slippageInfo?: SlippageInfo
   ) => {
     let requiredAmount: bigint;
@@ -596,7 +580,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             price,
             address as HexAddress,
             chainId,
-            pool,
             slippageInfo
           );
 
