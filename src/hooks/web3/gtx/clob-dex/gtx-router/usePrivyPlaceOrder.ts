@@ -6,7 +6,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { erc20Abi, formatUnits, parseAbi } from "viem";
+import { erc20Abi, formatUnits } from "viem";
 import { useChainId } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
@@ -147,43 +147,100 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           transport: custom(provider),
         });
 
-        // Get the current nonce to avoid nonce conflicts
-        const nonce = await provider.request({
+        // Get the current nonce using latest confirmed + pending count
+        const confirmedNonce = await provider.request({
+          method: 'eth_getTransactionCount',
+          params: [address, 'latest']
+        }) as number;
+        
+        const pendingNonce = await provider.request({
           method: 'eth_getTransactionCount',
           params: [address, 'pending']
         }) as number;
         
-        const hash = await walletClient.writeContract({
-          address: contractCall.address,
-          abi: contractCall.abi,
-          functionName: contractCall.functionName,
-          args: contractCall.args,
-          nonce: nonce,
-        });
-
-        return hash as HexAddress;
+        // Use the highest nonce to avoid conflicts
+        const nonce = Math.max(confirmedNonce, pendingNonce);
+        
+        console.log(`[NONCE_DEBUG] Confirmed: ${confirmedNonce}, Pending: ${pendingNonce}, Using: ${nonce}`);
+        
+        // Retry mechanism for nonce conflicts
+        let currentNonce = nonce;
+        let maxRetries = 3;
+        
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const hash = await walletClient.writeContract({
+              address: contractCall.address,
+              abi: contractCall.abi,
+              functionName: contractCall.functionName,
+              args: contractCall.args,
+              nonce: currentNonce,
+            });
+            return hash as HexAddress;
+          } catch (error: any) {
+            if (attempt === maxRetries - 1) throw error; // Last attempt, throw the error
+            
+            // Check if it's a nonce error
+            const errorStr = error.toString();
+            if (errorStr.includes('nonce too low') || errorStr.includes('NONCE_EXPIRED')) {
+              console.log(`[NONCE_RETRY] Attempt ${attempt + 1} failed with nonce ${currentNonce}, retrying with ${currentNonce + 1}`);
+              currentNonce += 1;
+              continue;
+            }
+            throw error; // Not a nonce error, throw immediately
+          }
+        }
       }
 
       // Method 2: Try the newer getWalletClient method (if available)
       if ('getWalletClient' in wallet && typeof (wallet as any).getWalletClient === 'function') {
         const walletClient = await (wallet as any).getWalletClient();
         
-        // Get the current nonce to avoid nonce conflicts
+        // Get the current nonce using latest confirmed + pending count
         const provider = await (wallet as any).getEthereumProvider();
-        const nonce = await provider.request({
+        
+        const confirmedNonce = await provider.request({
+          method: 'eth_getTransactionCount',
+          params: [address, 'latest']
+        }) as number;
+        
+        const pendingNonce = await provider.request({
           method: 'eth_getTransactionCount',
           params: [address, 'pending']
         }) as number;
         
-        const hash = await walletClient.writeContract({
-          address: contractCall.address,
-          abi: contractCall.abi,
-          functionName: contractCall.functionName,
-          args: contractCall.args,
-          nonce: nonce,
-        });
-
-        return hash as HexAddress;
+        // Use the highest nonce to avoid conflicts
+        const nonce = Math.max(confirmedNonce, pendingNonce);
+        
+        console.log(`[NONCE_DEBUG] Method2 - Confirmed: ${confirmedNonce}, Pending: ${pendingNonce}, Using: ${nonce}`);
+        
+        // Retry mechanism for nonce conflicts
+        let currentNonce = nonce;
+        let maxRetries = 3;
+        
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const hash = await walletClient.writeContract({
+              address: contractCall.address,
+              abi: contractCall.abi,
+              functionName: contractCall.functionName,
+              args: contractCall.args,
+              nonce: currentNonce,
+            });
+            return hash as HexAddress;
+          } catch (error: any) {
+            if (attempt === maxRetries - 1) throw error; // Last attempt, throw the error
+            
+            // Check if it's a nonce error
+            const errorStr = error.toString();
+            if (errorStr.includes('nonce too low') || errorStr.includes('NONCE_EXPIRED')) {
+              console.log(`[NONCE_RETRY] Method2 - Attempt ${attempt + 1} failed with nonce ${currentNonce}, retrying with ${currentNonce + 1}`);
+              currentNonce += 1;
+              continue;
+            }
+            throw error; // Not a nonce error, throw immediately
+          }
+        }
       }
 
       // Method 3: Fallback to using wagmi's writeContract with account override
@@ -485,7 +542,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     price: bigint | undefined,
     address: HexAddress,
     chainId: number,
-    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
     slippageInfo?: SlippageInfo
   ) => {
     let requiredAmount: bigint;
@@ -596,7 +652,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             price,
             address as HexAddress,
             chainId,
-            pool,
             slippageInfo
           );
 

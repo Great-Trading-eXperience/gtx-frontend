@@ -10,6 +10,7 @@ import { PrivyAuthButton } from "../auth/privy-auth-button";
 import { usePrivyAuth } from "@/hooks/use-privy-auth";
 import { useWallets } from "@privy-io/react-auth";
 import { useTokenBalance } from "@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf";
+import { useAvailableTokens } from "@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens";
 
 import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
 
@@ -81,8 +82,14 @@ const Header = ({onTogglePanel}: NavbarProps) => {
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
   const embeddedWalletAddress = embeddedWallet?.address || 'Not Created';
 
-  // const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
-  const addressMUSDC = '0x97668aec1d8deaf34d899c4f6683f9ba877485f6';
+  // Get available tokens from pools data
+  const { tokens: availableTokens } = useAvailableTokens();
+  
+  // Find MUSDC token address dynamically
+  const musdcToken = availableTokens.find(token => 
+    token.symbol === 'MUSDC' || token.symbol === 'USDC'
+  );
+  const addressMUSDC = musdcToken?.address;
 
   const {
     formattedBalance: BalanceOfMUSDC,
@@ -135,7 +142,7 @@ const Header = ({onTogglePanel}: NavbarProps) => {
                 <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
                   <Wallet className="w-6 h-6" /> 
                   <span>{formatNumber(Number(BalanceOfMUSDC), { decimals: 2, compact: true, })}</span>
-                  <span>USDC</span>
+                  <span>{musdcToken?.symbol || 'USDC'}</span>
                 </div>
               </div>
             ) : (
