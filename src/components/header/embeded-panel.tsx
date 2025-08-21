@@ -34,6 +34,7 @@ import {
 import { usePathname } from 'next/navigation';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import GTXToast from '../clob-dex/place-order/toast';
+import { formatNumber } from '@/lib/utils';
 
 interface Asset {
   symbol: string;
@@ -240,7 +241,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     assets = [
       {
         symbol: SymbolMUSDC,
-        balance: `${BalanceOfMUSDC} ${SymbolMUSDC}`,
+        balance: `${formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})} ${SymbolMUSDC}`,
         icon: (
           <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
             M
@@ -249,22 +250,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       },
       {
         symbol: SymbolMWETH,
-        balance: `${BalanceOfMWETH} ${SymbolMWETH}`,
+        balance: `${formatNumber(Number(BalanceOfMWETH), {decimals: 2, compact: true})} ${SymbolMWETH}`,
         icon: (
           <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
             M
           </div>
         ),
-      },
-      {
-        symbol: SymbolMWETH,
-        balance: `${BalanceOfMWETH} ${SymbolMWETH}`,
-        icon: (
-          <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            M
-          </div>
-        ),
-      },
+      }
     ];
   }
 
@@ -321,7 +313,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const handlePrivyDeposit = () => {
     setToast({
-      message: `Depositing ${depositAmount} ${quoteCurrency}...`,
+      message: `Depositing ${depositAmount} ${SymbolMUSDC}...`,
       type: 'info',
       loading: true,
       duration: 0,
@@ -336,7 +328,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const handlePrivyWithdraw = () => {
     setToast({
-      message: `Withdrawing ${withdrawAmount} ${quoteCurrency}...`,
+      message: `Withdrawing ${withdrawAmount} ${SymbolMUSDC}...`,
       type: 'info',
       loading: true,
       duration: 0,
@@ -350,18 +342,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   };
 
   useEffect(() => {
-    if (depositloading) {
-      setToast(prevToast =>
-        prevToast?.loading
-          ? {
-              ...prevToast,
-              message:
-                depositCurrentStep || `Depositing ${depositAmount} ${quoteCurrency}...`,
-            }
-          : prevToast
-      );
-    }
-
     if (depositError) {
       setToast({
         message: `Deposit failed: ${depositError}`,
@@ -372,7 +352,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
     if (depositCurrentStep === 'Transaction submitted successfully!') {
       setToast({
-        message: `Deposit of ${depositAmount} ${quoteCurrency} successful!`,
+        message: `Deposit of ${depositAmount} ${SymbolMUSDC} successful!`,
         type: 'success',
         duration: 4000,
         // txHash: depositTxHash, // Add if you have transaction hash
@@ -382,24 +362,10 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       setDepositAmount('');
       refetchMUSDC();
     }
-  }, [depositloading, depositCurrentStep, depositError, depositAmount, quoteCurrency]);
+  }, [depositloading, depositCurrentStep, depositError]);
 
   // Toast management for withdraw flow
   useEffect(() => {
-    if (withdrawLoading) {
-      // Update toast with current step if it's loading
-      setToast(prevToast =>
-        prevToast?.loading
-          ? {
-              ...prevToast,
-              message:
-                withdrawCurrentStep ||
-                `Withdrawing ${withdrawAmount} ${quoteCurrency}...`,
-            }
-          : prevToast
-      );
-    }
-
     if (withdrawError) {
       setToast({
         message: `Withdrawal failed: ${withdrawError}`,
@@ -410,7 +376,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
     if (withdrawCurrentStep === 'Transaction submitted successfully!') {
       setToast({
-        message: `Withdrawal of ${withdrawAmount} ${quoteCurrency} successful!`,
+        message: `Withdrawal of ${withdrawAmount} ${SymbolMUSDC} successful!`,
         type: 'success',
         duration: 4000,
         // txHash: withdrawTxHash, // Add if you have transaction hash
@@ -420,13 +386,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       setWithdrawAmount('');
       refetchMUSDC();
     }
-  }, [
-    withdrawLoading,
-    withdrawCurrentStep,
-    withdrawError,
-    withdrawAmount,
-    quoteCurrency,
-  ]);
+  }, [withdrawLoading, withdrawCurrentStep, withdrawError]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -654,7 +614,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>{BalanceOfMUSDC}</span>
+                    <span>{formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})}</span>
                   </div>
                 </div>
               </div>
@@ -782,7 +742,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>{BalanceOfMUSDC}</span>
+                    <span>{formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})}</span>
                   </div>
                 </div>
               </div>
