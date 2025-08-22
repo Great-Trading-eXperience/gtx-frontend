@@ -33,6 +33,7 @@ import {
 } from '@/graphql/gtx/clob';
 import { usePathname } from 'next/navigation';
 import ERC20ABI from '@/abis/tokens/TokenABI';
+import { formatNumber } from '@/lib/utils';
 
 interface Asset {
   symbol: string;
@@ -43,6 +44,15 @@ interface Asset {
 interface RightPanelProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface ToastProps {
+  message: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+  duration?: number;
+  loading?: boolean;
+  txHash?: string;
+  onClose?: () => void;
 }
 
 function shortenAddress(
@@ -204,6 +214,20 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     tokenSymbol: SymbolMWETH,
     refetchBalance: refetchMWETH,
   } = useTokenBalance(baseCurrency, embeddedWalletAddress as `0x${string}`);
+  /*
+  const {
+    formattedBalance: BalanceOfETH,
+    tokenSymbol: SymbolETH,
+    refetchBalance: refetchETH,
+  } = useTokenBalance(
+    '0xc4CebF58836707611439e23996f4FA4165Ea6A28',
+    embeddedWalletAddress as `0x${string}`
+  );
+  console.log(BalanceOfETH);
+
+  const ethAddress = '0x4200000000000000000000000000000000000006';
+  const wethaddres = '0x567a076beef17758952b05b1bc639e6cdd1a31ec';
+  */
 
   let assets: Asset[] = [];
 
@@ -216,7 +240,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     assets = [
       {
         symbol: SymbolMUSDC,
-        balance: `${BalanceOfMUSDC} ${SymbolMUSDC}`,
+        balance: `${formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})} ${SymbolMUSDC}`,
         icon: (
           <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
             M
@@ -225,15 +249,40 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       },
       {
         symbol: SymbolMWETH,
-        balance: `${BalanceOfMWETH} ${SymbolMWETH}`,
+        balance: `${formatNumber(Number(BalanceOfMWETH), {decimals: 2, compact: true})} ${SymbolMWETH}`,
         icon: (
           <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
             M
           </div>
         ),
-      },
+      }
     ];
   }
+
+  const [selectedDepositToken, setSelectedDepositToken] = useState('MUSDC');
+  const [isDepositDropdownOpen, setIsDepositDropdownOpen] = useState(false);
+  const [selectedWithdrawToken, setSelectedWithdrawToken] = useState('MUSDC');
+  const [isWithdrawDropdownOpen, setIsWithdrawDropdownOpen] = useState(false);
+
+  const tokens = [
+    { symbol: 'MUSDC', name: 'MUSDC', color: 'bg-blue-500', initial: 'M' },
+    { symbol: 'ETH', name: 'ETH', color: 'bg-gray-600', initial: 'E' },
+  ];
+
+  const currentDepositToken = tokens.find(token => token.symbol === selectedDepositToken);
+  const currentWithdrawToken = tokens.find(
+    token => token.symbol === selectedWithdrawToken
+  );
+
+  const handleDepositTokenSelect = (tokenSymbol: string) => {
+    setSelectedDepositToken(tokenSymbol);
+    setIsDepositDropdownOpen(false);
+  };
+
+  const handleWithdrawTokenSelect = (tokenSymbol: string) => {
+    setSelectedWithdrawToken(tokenSymbol);
+    setIsWithdrawDropdownOpen(false);
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -259,7 +308,16 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     resetState: withdrawResetState,
   } = usePrivyWithdraw();
 
+  const [toast, setToast] = useState<ToastProps | null>(null);
+
   const handlePrivyDeposit = () => {
+    setToast({
+      message: `Depositing ${depositAmount} ${SymbolMUSDC}...`,
+      type: 'info',
+      loading: true,
+      duration: 0,
+    });
+
     privyDeposit(depositAmount, quoteCurrency);
     setTimeout(() => {
       refetchMUSDC();
@@ -268,6 +326,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   };
 
   const handlePrivyWithdraw = () => {
+    setToast({
+      message: `Withdrawing ${withdrawAmount} ${SymbolMUSDC}...`,
+      type: 'info',
+      loading: true,
+      duration: 0,
+    });
+
     privyWithdraw(withdrawWallet, withdrawAmount, quoteCurrency);
     setTimeout(() => {
       refetchMUSDC();
@@ -281,20 +346,16 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       setDepositAmount('');
       refetchMUSDC();
     }
+  }, [depositCurrentStep]);
 
+  // Toast management for withdraw flow
+  useEffect(() => {
     if (withdrawCurrentStep === 'Transaction submitted successfully!') {
       withdrawResetState();
       setWithdrawAmount('');
       refetchMUSDC();
     }
-  }, [
-    depositCurrentStep,
-    withdrawCurrentStep,
-    refetchMUSDC,
-    refetchMWETH,
-    depositResetState,
-    withdrawResetState,
-  ]);
+  }, [withdrawCurrentStep]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -307,7 +368,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
@@ -316,7 +376,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         aria-hidden={!isOpen} // Hide from accessibility tree when invisible
       ></div>
 
-      {/* Right Panel */}
       <aside
         ref={panelRef}
         className={`fixed top-0 right-0 h-full w-[] bg-[#18191B] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out
@@ -327,7 +386,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         aria-modal="true"
         aria-label="Side navigation panel"
       >
-        {/* Wallet Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-xl font-semibold">GTX Wallet</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded">
@@ -335,7 +393,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Wallet Info */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -385,7 +442,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Wallet Tabs */}
         <div className="flex border-b border-gray-700">
           {(['Asset', 'Deposit', 'Withdraw'] as const).map(tab => (
             <button
@@ -402,7 +458,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           ))}
         </div>
 
-        {/* Wallet Content */}
         <div className="flex-1 overflow-y-auto h-96">
           {activeTab === 'Asset' && (
             <div className="p-4">
@@ -450,23 +505,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Asset List Header */}
-              {/* <div className="flex items-center justify-between mb-3 text-sm text-gray-400">
-                <div className="flex items-center gap-1">
-                  <span>Asset</span>
-                  <span className="border-b border-dotted border-gray-400">--------</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <DollarSign size={14} />
-                  <span>Balance</span>
-                  <TrendingDown size={14} />
-                  <span className="border-b border-dotted border-gray-400">
-                    -----------
-                  </span>
-                </div>
-              </div> */}
-
-              {/* Asset List */}
               <div className="space-y-3">
                 {assets.map((asset, index) => (
                   <div key={index} className="flex items-center justify-between py-2">
@@ -483,26 +521,54 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
           {activeTab === 'Deposit' && (
             <div className="p-4">
-              {/* From Connected Wallet */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">
                   From connected wallet: {shortenAddress(externalWalletAddress)}
                 </div>
 
-                {/* Token Selection */}
                 <div className="mb-4 p-4 border border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        {/* <img
-                          src="/network/rise.svg"
-                          alt="Logo Rise"
-                          height={12}
-                          width={12}
-                        /> */}
-                        M
+                    <div className="relative">
+                      <div
+                        className="flex items-center gap-3 cursor-pointer hover:bg-gray-800 rounded-lg p-2 -m-2 transition-colors"
+                        onClick={() => setIsDepositDropdownOpen(!isDepositDropdownOpen)}
+                      >
+                        <div
+                          className={`w-8 h-8 ${currentDepositToken?.color} rounded-full flex items-center justify-center text-white font-medium`}
+                        >
+                          {currentDepositToken?.initial}
+                        </div>
+                        <span className="text-white font-medium">
+                          {currentDepositToken?.name}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            isDepositDropdownOpen ? 'rotate-180' : ''
+                          }`}
+                        />
                       </div>
-                      <span className="text-white font-medium">MUSDC</span>
+
+                      {isDepositDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[140px] z-10">
+                          {tokens.map(token => (
+                            <div
+                              key={token.symbol}
+                              className="flex items-center gap-3 p-3 hover:bg-gray-700 cursor-pointer first:rounded-t-lg last:rounded-b-lg transition-colors"
+                              onClick={() => handleDepositTokenSelect(token.symbol)}
+                            >
+                              <div
+                                className={`w-6 h-6 ${token.color} rounded-full flex items-center justify-center text-white text-sm font-medium`}
+                              >
+                                {token.initial}
+                              </div>
+                              <span className="text-white font-medium">{token.name}</span>
+                              {selectedDepositToken === token.symbol && (
+                                <div className="w-2 h-2 bg-blue-400 rounded-full ml-auto"></div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <input
                       type="number"
@@ -515,22 +581,19 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* Fee Display */}
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>{BalanceOfMUSDC}</span>
+                    <span>{formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Arrow Down */}
               <div className="flex justify-center mb-6">
                 <div className="p-2">
                   <ChevronDown size={36} className="text-[#00B4C8]" />
                 </div>
               </div>
 
-              {/* To Your GTX Wallet */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">To your GTX wallet</div>
                 <div className="border border-gray-600 rounded-lg p-3 flex items-center justify-between">
@@ -546,12 +609,12 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Deposit Button */}
               <button
                 onClick={handlePrivyDeposit}
                 className="w-full bg-[#0078D4] hover:bg-[#0064C8] text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200"
               >
-                {depositloading && depositCurrentStep !== 'Transaction submitted successfully!' ? (
+                {depositloading &&
+                depositCurrentStep !== 'Transaction submitted successfully!' ? (
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Depositing...</span>
@@ -567,7 +630,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
           {activeTab === 'Withdraw' && (
             <div className="p-4">
-              {/* From Your GTX Wallet */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">From your GTX wallet</div>
                 <div className="border border-gray-600 rounded-lg p-3 flex items-center justify-between">
@@ -583,36 +645,60 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Arrow Down */}
               <div className="flex justify-center mb-6">
                 <div className="p-2">
                   <ChevronDown size={36} className="text-[#00B4C8]" />
                 </div>
               </div>
 
-              {/* Send To Section */}
               <div className="mb-6">
                 <div className="text-sm text-gray-400 mb-3">
                   Send to login wallet: {shortenAddress(externalWalletAddress)}
                 </div>
 
-                {/* Token and Amount */}
                 <div className="mb-4 p-4 border border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        {/* <img
-                          src="/network/rise.svg"
-                          alt="Logo Rise"
-                          height={12}
-                          width={12}
-                        /> */}
-                        M
+                    <div className="relative">
+                      <div
+                        className="flex items-center gap-3 cursor-pointer hover:bg-gray-800 rounded-lg p-2 -m-2 transition-colors"
+                        onClick={() => setIsWithdrawDropdownOpen(!isWithdrawDropdownOpen)}
+                      >
+                        <div
+                          className={`w-8 h-8 ${currentWithdrawToken?.color} rounded-full flex items-center justify-center text-white font-medium`}
+                        >
+                          {currentWithdrawToken?.initial}
+                        </div>
+                        <span className="text-white font-medium">
+                          {currentWithdrawToken?.name}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            isWithdrawDropdownOpen ? 'rotate-180' : ''
+                          }`}
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">MUSDC</span>
-                        <ChevronDown size={16} className="text-gray-400" />
-                      </div>
+
+                      {isWithdrawDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[140px] z-10">
+                          {tokens.map(token => (
+                            <div
+                              key={token.symbol}
+                              className="flex items-center gap-3 p-3 hover:bg-gray-700 cursor-pointer first:rounded-t-lg last:rounded-b-lg transition-colors"
+                              onClick={() => handleWithdrawTokenSelect(token.symbol)}
+                            >
+                              <div
+                                className={`w-6 h-6 ${token.color} rounded-full flex items-center justify-center text-white text-sm font-medium`}
+                              >
+                                {token.initial}
+                              </div>
+                              <span className="text-white font-medium">{token.name}</span>
+                              {selectedWithdrawToken === token.symbol && (
+                                <div className="w-2 h-2 bg-blue-400 rounded-full ml-auto"></div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <input
                       type="number"
@@ -623,15 +709,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* Fee Display */}
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>{BalanceOfMUSDC}</span>
+                    <span>{formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Withdraw to Different Wallet Option */}
               <div className="mb-6">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
@@ -656,7 +740,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                   <span>Withdraw to a different wallet</span>
                 </label>
 
-                {/* Different Wallet Address Input */}
                 {withdrawToDifferentWallet && (
                   <div className="mt-3">
                     <input
@@ -670,7 +753,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 )}
               </div>
 
-              {/* Send Button */}
               <button
                 onClick={handlePrivyWithdraw}
                 disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
@@ -680,7 +762,8 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                     : 'bg-[#0078D4] hover:bg-[#0064C8] text-white'
                 }`}
               >
-                {withdrawLoading && withdrawCurrentStep !== 'Transaction submitted successfully!' ? (
+                {withdrawLoading &&
+                withdrawCurrentStep !== 'Transaction submitted successfully!' ? (
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Processing...</span>
@@ -695,7 +778,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* Wallet Footer Buttons */}
         <div className="p-4 border-t border-gray-700 flex gap-3">
           <button
             onClick={exportWallet}
