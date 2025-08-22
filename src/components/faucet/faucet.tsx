@@ -24,7 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
 import { readContract } from "@wagmi/core"
 import { request } from "graphql-request"
-import { Calendar, Clock, Droplets, ExternalLink, Hexagon, History, RefreshCw, Wallet } from "lucide-react"
+import { Calendar, Clock, Droplets, ExternalLink, History, RefreshCw, Wallet, TrendingUp } from "lucide-react"
 import { DateTime } from "luxon"
 import type { NextPage } from "next"
 import { useEffect, useState } from "react"
@@ -262,99 +262,89 @@ const GTXFaucet: NextPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Hexagonal Grid Pattern */}
-      <DotPattern />
-
-      {/* Animated particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-full h-full">
-          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400/40 rounded-full animate-pulse blur-[2px]"></div>
-          <div className="absolute top-3/4 left-1/2 w-1.5 h-1.5 bg-blue-400/40 rounded-full animate-pulse delay-75 blur-[1px]"></div>
-          <div className="absolute top-1/2 right-1/4 w-2 h-2 bg-blue-300/40 rounded-full animate-pulse delay-150 blur-[2px]"></div>
-          <div className="absolute bottom-1/4 right-1/3 w-1.5 h-1.5 bg-blue-300/40 rounded-full animate-pulse delay-300 blur-[1px]"></div>
-          <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-blue-400/40 rounded-full animate-pulse delay-500 blur-[1px]"></div>
-        </div>
+    <div className="px-6 py-12 mx-auto bg-black min-h-screen">
+      {/* Dot Pattern Background */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <DotPattern />
       </div>
 
-      {/* Main Content */}
-      <main className="relative z-10 container mx-auto px-6 py-12">
+      <div className="relative z-10 max-w-7xl mx-auto">
         {isConnected ? (
-          <div className="space-y-6 w-full max-w-7xl mx-auto">
-            {/* Hero Section */}
-            <div className="text-center max-w-2xl mx-auto relative">
-              <div className="inline-flex items-center justify-center mb-6 relative">
-                <div className="absolute inset-0 bg-blue-500/10 blur-[32px] rounded-full"></div>
-                <div className="relative">
-                  <Hexagon className="w-16 h-16 text-blue-600 absolute -left-1 -top-1 opacity-20" />
-                  <Droplets className="w-14 h-14 text-blue-500 relative z-10" />
-                </div>
+          <div className="flex flex-col gap-8">
+            {/* Header Section */}
+            <h2 className="text-white text-4xl font-bold tracking-tight text-start">
+              Test Token Faucet
+              <br />
+              <span className="text-white/70 text-base font-normal mt-2 block">
+                Request test tokens for your blockchain development and testing needs.
+              </span>
+            </h2>
+
+            {/* Main Faucet Card */}
+            <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
+              {/* Header with Icon */}
+              <div className="flex items-center gap-3 p-6 border-b border-white/10">
+                <TrendingUp className="w-5 h-5 text-white/70" />
+                <span className="text-white font-medium text-lg">Request Tokens</span>
               </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 bg-clip-text text-transparent mb-4 drop-shadow-[0_0_15px_rgba(56,189,248,0.1)]">
-                GTX Test Token Faucet
-              </h1>
-              <p className="text-white/80">Request test tokens for your blockchain development journey</p>
-            </div>
 
-            <Card className="border-0 bg-[#121212] backdrop-blur-xl shadow-[0_0_15px_rgba(56,189,248,0.03)] border border-white/20">
-              <CardContent className="p-8">
-                <div className="grid md:grid-cols-2 gap-8">
+              <div className="p-6">
+                <div className="grid lg:grid-cols-2 gap-8">
+                  {/* Token Request Form */}
                   <div className="space-y-6">
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
-                        <FormField
-                          control={form.control}
-                          name="token"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-300">Select Token</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="bg-[#1A1A1A] border-white/20 focus:ring-blue-400/20 hover:border-blue-500/40 transition-all">
-                                    <SelectValue placeholder="Choose a token" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-[#1A1A1A] border-white/10">
-                                  {Object.keys(availableTokens)?.map((key) => (
-                                    <SelectItem
-                                      key={availableTokens[key].address}
-                                      value={availableTokens[key].address}
-                                      className="hover:bg-blue-500/10"
-                                    >
-                                      {availableTokens[key].name} - {availableTokens[key].symbol}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormItem>
-                          )}
-                        />
-
-                        <Button
-                          type="submit"
-                          className="w-full rounded-md bg-gradient-to-r hover:from-blue-500 hover:to-blue-600 from-blue-600 to-blue-700 text-white h-10 shadow-[0_0_15px_rgba(56,189,248,0.15)] hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] transition-all"
+                    <div className="space-y-6">
+                      <div>
+                        <label className="text-white/70 text-sm font-medium uppercase tracking-wider block mb-3">
+                          Select Token
+                        </label>
+                        <select
+                          value={selectedTokenAddress}
+                          onChange={(e) => form.setValue('token', e.target.value)}
+                          className="w-full h-12 bg-black/40 border border-white/20 text-white hover:border-white/40 focus:ring-1 focus:ring-white/40 focus:border-white/40 rounded-xl px-4 appearance-none cursor-pointer"
                         >
-                          Request Tokens
-                        </Button>
-                      </form>
-                    </Form>
+                          <option value="" disabled>Choose a token to request</option>
+                          {Object.keys(availableTokens)?.map((key) => (
+                            <option
+                              key={availableTokens[key].address}
+                              value={availableTokens[key].address}
+                              className="bg-black text-white"
+                            >
+                              {availableTokens[key].name} ({availableTokens[key].symbol})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    {/* Status display */}
+                      <Button
+                        onClick={() => onSubmit({ token: selectedTokenAddress })}
+                        disabled={isProcessing || isRequestTokenPending || isRequestTokenConfirming || !selectedTokenAddress}
+                        className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl transition-colors"
+                      >
+                        {isRequestTokenPending
+                          ? 'Confirming in Wallet...'
+                          : isRequestTokenConfirming
+                            ? 'Confirming...'
+                            : isProcessing
+                              ? 'Processing...'
+                              : 'Request Tokens'}
+                      </Button>
+                    </div>
+
+                    {/* Status Display */}
                     {txStatus && (
-                      <div className="mt-4 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-4">
+                      <div className="bg-black/40 border border-white/10 rounded-xl p-4">
                         <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-200">{txStatus}</div>
-                          {isProcessing && <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />}
+                          <div className="text-sm text-white/90">{txStatus}</div>
+                          {isProcessing && <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />}
                         </div>
                         {txHash && (
                           <a
                             href={`https://sepolia.arbiscan.io/tx/${txHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                            className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
                           >
-                            View On Explorer
-                            <ExternalLink className="h-3 w-3" />
+                            View on Explorer <ExternalLink className="ml-1 w-3 h-3" />
                           </a>
                         )}
                       </div>
@@ -363,19 +353,16 @@ const GTXFaucet: NextPage = () => {
 
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#1A1A1A] rounded-lg p-2 border border-white/20 hover:border-blue-500/40 transition-colors group">
+                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-blue-500/10 blur-[12px] rounded-full group-hover:bg-blue-500/20 transition-colors"></div>
-                          <Hexagon className="w-10 h-10 text-blue-500/20 absolute -left-1 -top-1" />
-                          <Wallet className="w-8 h-8 text-blue-400 relative z-10" />
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <Wallet className="w-5 h-5 text-blue-400" />
                         </div>
-                        <div>
-                          <p className="text-sm text-white/70">Faucet Balance</p>
-                          <p className="text-lg font-medium text-white">
+                        <div className="flex-1">
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Faucet Balance</p>
+                          <p className="text-white font-mono text-sm">
                             {faucetBalance && availableTokens[selectedTokenAddress]
                               ? `${formatNumber(Number(formatUnits(BigInt(faucetBalance), availableTokens[selectedTokenAddress].decimals)), {
-
                                 decimals: 2,
                                 compact: true,
                               })} ${availableTokens[selectedTokenAddress]?.symbol}`
@@ -385,50 +372,44 @@ const GTXFaucet: NextPage = () => {
                       </div>
                     </div>
 
-                    <div className="bg-[#1A1A1A] rounded-lg p-2 border border-white/20 hover:border-blue-500/40 transition-colors group">
+                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-blue-500/10 blur-[12px] rounded-full group-hover:bg-blue-500/20 transition-colors"></div>
-                          <Hexagon className="w-10 h-10 text-blue-500/20 absolute -left-1 -top-1" />
-                          <Clock className="w-8 h-8 text-blue-400 relative z-10" />
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-blue-400" />
                         </div>
-                        <div>
-                          <p className="text-sm text-white/70">Cooldown</p>
-                          <p className="text-lg font-medium text-white">
+                        <div className="flex-1">
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Cooldown</p>
+                          <p className="text-white font-mono text-sm">
                             {faucetCooldown ? `${faucetCooldown}s` : "-"}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-[#1A1A1A] rounded-lg p-2 border border-white/20 hover:border-blue-500/40 transition-colors group">
+                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-blue-500/10 blur-[12px] rounded-full group-hover:bg-blue-500/20 transition-colors"></div>
-                          <Hexagon className="w-10 h-10 text-blue-500/20 absolute -left-1 -top-1" />
-                          <Calendar className="w-8 h-8 text-blue-400 relative z-10" />
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <Calendar className="w-5 h-5 text-blue-400" />
                         </div>
-                        <div>
-                          <p className="text-sm text-white/70">Last Request</p>
-                          <p className="text-lg font-medium text-white">
+                        <div className="flex-1">
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Last Request</p>
+                          <p className="text-white font-mono text-sm">
                             {lastRequestTime
-                              ? DateTime.fromMillis(Number(lastRequestTime) * 1000).toFormat("HH:mm d LLLL yyyy")
+                              ? DateTime.fromMillis(Number(lastRequestTime) * 1000).toFormat("dd/MM/yy")
                               : "-"}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-[#1A1A1A] rounded-lg p-2 border border-white/20 hover:border-blue-500/40 transition-colors group">
+                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-blue-500/10 blur-[12px] rounded-full group-hover:bg-blue-500/20 transition-colors"></div>
-                          <Hexagon className="w-10 h-10 text-blue-500/20 absolute -left-1 -top-1" />
-                          <Wallet className="w-8 h-8 text-blue-400 relative z-10" />
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <Wallet className="w-5 h-5 text-blue-400" />
                         </div>
-                        <div>
-                          <p className="text-sm text-white/70">Your Balance</p>
-                          <p className="text-lg font-medium text-white">
+                        <div className="flex-1">
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Your Balance</p>
+                          <p className="text-white font-mono text-sm">
                             {userBalance && availableTokens[selectedTokenAddress]
                               ? `${formatNumber(Number(formatUnits(BigInt(userBalance), availableTokens[selectedTokenAddress].decimals)), {
                                 decimals: 2,
@@ -441,51 +422,47 @@ const GTXFaucet: NextPage = () => {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Transaction History */}
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500/10 blur-[16px] rounded-full"></div>
-                  <Hexagon className="w-12 h-12 text-blue-500/20 absolute -left-1 -top-1" />
-                  <History className="w-10 h-10 text-blue-400 relative z-10" />
-                </div>
-                <h2 className="text-2xl font-semibold text-white">Transaction History</h2>
+                <History className="w-6 h-6 text-white/70" />
+                <h3 className="text-white text-2xl font-bold tracking-tight">Transaction History</h3>
               </div>
 
-              <Card className="border-0 bg-[#121212] backdrop-blur-xl border border-white/10">
-                <CardContent className="p-6">
+              <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
+                <div className="p-6">
                   <DataTable
                     data={faucetRequestsData?.faucetRequestss.items ?? []}
                     columns={requestTokenColumns()}
                     handleRefresh={() => { }}
                     isLoading={faucetRequestsIsLoading}
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
           <div className="min-h-[60vh] flex items-center justify-center">
-            <Card className="border-0 bg-[#121212] backdrop-blur-xl max-w-md w-full shadow-[0_0_30px_rgba(56,189,248,0.03)] border border-white/20">
-              <CardContent className="p-12 text-center">
-                <div className="relative inline-block mb-8">
-                  <div className="absolute inset-0 bg-blue-500/10 blur-[24px] rounded-full"></div>
-                  <Hexagon className="w-20 h-20 text-blue-500/20 absolute -left-2 -top-2" />
-                  <Droplets className="w-16 h-16 text-blue-500 relative z-10" />
+            <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm max-w-md w-full">
+              <div className="p-12 text-center">
+                <div className="flex items-center justify-center mb-8">
+                  <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <Droplets className="w-10 h-10 text-blue-400" />
+                  </div>
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent mb-4">
+                <h2 className="text-white text-3xl font-bold tracking-tight mb-4">
                   Connect Wallet
                 </h2>
-                <p className="text-white/80 mb-8">Connect your wallet to access the faucet</p>
+                <p className="text-white/70 mb-8">Connect your wallet to access the test token faucet</p>
                 <ButtonConnectWallet />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }
