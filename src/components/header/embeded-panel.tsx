@@ -33,7 +33,6 @@ import {
 } from '@/graphql/gtx/clob';
 import { usePathname } from 'next/navigation';
 import ERC20ABI from '@/abis/tokens/TokenABI';
-import GTXToast from '../clob-dex/place-order/toast';
 import { formatNumber } from '@/lib/utils';
 
 interface Asset {
@@ -342,51 +341,21 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   };
 
   useEffect(() => {
-    if (depositError) {
-      setToast({
-        message: `Deposit failed: ${depositError}`,
-        type: 'error',
-        duration: 5000,
-      });
-    }
-
     if (depositCurrentStep === 'Transaction submitted successfully!') {
-      setToast({
-        message: `Deposit of ${depositAmount} ${SymbolMUSDC} successful!`,
-        type: 'success',
-        duration: 4000,
-        // txHash: depositTxHash, // Add if you have transaction hash
-      });
-
       depositResetState();
       setDepositAmount('');
       refetchMUSDC();
     }
-  }, [depositloading, depositCurrentStep, depositError]);
+  }, [depositCurrentStep]);
 
   // Toast management for withdraw flow
   useEffect(() => {
-    if (withdrawError) {
-      setToast({
-        message: `Withdrawal failed: ${withdrawError}`,
-        type: 'error',
-        duration: 5000,
-      });
-    }
-
     if (withdrawCurrentStep === 'Transaction submitted successfully!') {
-      setToast({
-        message: `Withdrawal of ${withdrawAmount} ${SymbolMUSDC} successful!`,
-        type: 'success',
-        duration: 4000,
-        // txHash: withdrawTxHash, // Add if you have transaction hash
-      });
-
       withdrawResetState();
       setWithdrawAmount('');
       refetchMUSDC();
     }
-  }, [withdrawLoading, withdrawCurrentStep, withdrawError]);
+  }, [withdrawCurrentStep]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -826,11 +795,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
       </aside>
-      {toast && (
-        <div className="fixed bottom-24 right-[36rem] z-50">
-          <GTXToast {...toast} onClose={() => setToast(null)} />
-        </div>
-      )}
     </>
   );
 };

@@ -8,7 +8,6 @@ import "../styles/globals.css";
 import Head from "next/head";
 import { ReactNode, useEffect, useState } from "react";
 import { NextPage } from "next/types";
-import { ToastProvider } from "@/components/ui/toast";
 import { Toaster } from "@/components/ui/toaster";
 import LandingHeader from "@/components/header/landing-header";
 import { useRouter } from "next/router";
@@ -17,6 +16,8 @@ import MobileWarningModal from "@/components/header/mobile-warning-modal";
 import Providers from "@/providers/privy-provider";
 import { ClientOnly } from "@/components/client-only";
 import EmbededPanel from "@/components/header/embeded-panel";
+import { ToastProvider } from "@/components/clob-dex/place-order/toastContext";
+import ToastContainer from "@/components/clob-dex/place-order/toastContainer";
 
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;
@@ -160,6 +161,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
             <ToastProvider>
               <AppLayout>
                 {page}
+                <ToastContainer />
               </AppLayout>
             </ToastProvider>
           </ThemeProvider>
