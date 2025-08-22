@@ -20,6 +20,7 @@ interface UseLastRequestTimeResult {
 }
 
 export const useLastRequestTime = (
+    userAddress?: HexAddress,
     options: UseLastRequestTimeOptions = {}
 ): UseLastRequestTimeResult => {
     const { debounceTime = 1000, enabled = true } = options;
@@ -38,10 +39,12 @@ export const useLastRequestTime = (
     }, [debounceTime]);
 
     const fetchLastRequestTime = useCallback(async () => {
-        if (!enabled) {
+        if (!enabled || !userAddress) {
             setLoading(false);
             return;
         }
+
+        console.log('[useLastRequestTime] Fetching last request time for address:', userAddress);
 
         setLoading(true);
         setError(null);
@@ -53,8 +56,10 @@ export const useLastRequestTime = (
                 abi: FaucetABI,
                 functionName: 'getLastRequestTime',
                 args: [],
+                account: userAddress,
             });
 
+            console.log('[useLastRequestTime] Result for address', userAddress, ':', result);
             setLastRequestTime(result as bigint);
         } catch (err: unknown) {
             const error = err instanceof Error
@@ -62,11 +67,11 @@ export const useLastRequestTime = (
                 : new Error('Failed to fetch lastRequestTime');
 
             setError(error);
-            console.error('Error fetching M0 lastRequestTime:', error);
+            console.error('[useLastRequestTime] Error fetching lastRequestTime for address', userAddress, ':', error);
         } finally {
             setLoading(false);
         }
-    }, [enabled]);
+    }, [enabled, userAddress, chainId]);
 
     const refreshLastRequestTime = useCallback(async () => {
         await fetchLastRequestTime();
@@ -74,7 +79,7 @@ export const useLastRequestTime = (
 
     useEffect(() => {
         setIsStale(true);
-    }, []);
+    }, [userAddress]);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;

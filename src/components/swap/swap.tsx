@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet } from 'lucide-react';
+import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet, Settings, TrendingUp } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { toast } from "sonner";
 import { useAccount, useChainId } from 'wagmi';
@@ -136,26 +136,48 @@ const SwapForm: React.FC = () => {
   const convertTokensForSelector = (tokenAddresses: Record<string, HexAddress>): Token[] => {
     return Object.entries(tokenAddresses)
       .map(([symbol, address]) => {
-        // Map token symbols to icon filenames
-        const iconMap: Record<string, string> = {
-          'WETH': 'eth.png',
-          'mWETH': 'eth.png',
-          'ETH': 'eth.png',
-          'BTC': 'bitcoin.png',
-          'WBTC': 'bitcoin.png',
-          'mWBTC': 'bitcoin.png',
-          'DOGE': 'doge.png',
-          'LINK': 'link.png',
-          'PEPE': 'pepe.png',
-          'TRUMP': 'trump.png',
-          'USDC': 'usdc.png',
-          'MUSDC': 'usdc.png',
-          'SHIB': 'shiba.png',
-          'FLOKI': 'floki.png',
-          'NATIVE': 'eth.png'
+        // Map token symbols to icon filenames with precise matching
+        const getTokenIcon = (tokenSymbol: string): string => {
+          // Exact symbol matches first
+          const exactMatches: Record<string, string> = {
+            'WETH': 'eth.png',
+            'mWETH': 'eth.png', 
+            'ETH': 'eth.png',
+            'NATIVE': 'eth.png',
+            'BTC': 'bitcoin.png',
+            'WBTC': 'bitcoin.png',
+            'mWBTC': 'bitcoin.png',
+            'USDC': 'usdc.png',
+            'MUSDC': 'usdc.png',
+            'DOGE': 'doge.png',
+            'LINK': 'link.png',
+            'PEPE': 'pepe.png',
+            'TRUMP': 'trump.png',
+            'SHIB': 'shiba.png',
+            'FLOKI': 'floki.png'
+          };
+
+          // Check for exact match first
+          if (exactMatches[tokenSymbol]) {
+            return exactMatches[tokenSymbol];
+          }
+
+          // If no exact match, check for partial matches
+          if (tokenSymbol.includes('ETH') || tokenSymbol.includes('WETH')) {
+            return 'eth.png';
+          }
+          if (tokenSymbol.includes('BTC') || tokenSymbol.includes('WBTC')) {
+            return 'bitcoin.png';
+          }
+          if (tokenSymbol.includes('USDC')) {
+            return 'usdc.png';
+          }
+
+          // Default fallback
+          return `${tokenSymbol.toLowerCase()}.png`;
         };
 
-        const iconFilename = iconMap[symbol] || `${symbol.toLowerCase()}.png`;
+        const iconFilename = getTokenIcon(symbol);
 
         return {
           id: symbol.toLowerCase(),
@@ -227,11 +249,52 @@ const SwapForm: React.FC = () => {
       return convertTokensForSelector({});
     }
 
+    // Helper function to get proper icon for any token symbol
+    const getTokenIcon = (tokenSymbol: string): string => {
+      // Exact symbol matches first
+      const exactMatches: Record<string, string> = {
+        'WETH': 'eth.png',
+        'mWETH': 'eth.png', 
+        'ETH': 'eth.png',
+        'NATIVE': 'eth.png',
+        'BTC': 'bitcoin.png',
+        'WBTC': 'bitcoin.png',
+        'mWBTC': 'bitcoin.png',
+        'USDC': 'usdc.png',
+        'MUSDC': 'usdc.png',
+        'DOGE': 'doge.png',
+        'LINK': 'link.png',
+        'PEPE': 'pepe.png',
+        'TRUMP': 'trump.png',
+        'SHIB': 'shiba.png',
+        'FLOKI': 'floki.png'
+      };
+
+      // Check for exact match first
+      if (exactMatches[tokenSymbol]) {
+        return exactMatches[tokenSymbol];
+      }
+
+      // If no exact match, check for partial matches
+      if (tokenSymbol.includes('ETH') || tokenSymbol.includes('WETH')) {
+        return 'eth.png';
+      }
+      if (tokenSymbol.includes('BTC') || tokenSymbol.includes('WBTC')) {
+        return 'bitcoin.png';
+      }
+      if (tokenSymbol.includes('USDC')) {
+        return 'usdc.png';
+      }
+
+      // Default fallback
+      return `${tokenSymbol.toLowerCase()}.png`;
+    };
+
     return availableTokensFromPools.map(token => ({
       id: token.symbol.toLowerCase(),
       name: token.name || token.symbol,
       symbol: token.symbol,
-      icon: `/tokens/${token.icon}`,
+      icon: `/tokens/${getTokenIcon(token.symbol)}`,
       address: token.address as HexAddress,
       description: token.address.slice(0, 6) + '...' + token.address.slice(-4),
       decimals: token.decimals
@@ -608,228 +671,256 @@ const SwapForm: React.FC = () => {
     : '0';
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black p-4">
-      <DotPattern />
-      <div className="w-full max-w-lg relative z-10">
-        <Card className="border-white/20 bg-[#121212] p-6">
-          <div className="mb-2 text-3xl font-bold text-white">Swap</div>
-          {/* Source Section */}
-          <div className="mb-2 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-5">
-            <div className="mb-2 text-sm text-gray-400">You pay</div>
-            <div className="flex items-center justify-between">
-              <input
-                type="text"
-                value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                placeholder="0.0"
-                className="w-1/2 bg-transparent text-4xl font-medium text-white outline-none"
-              />
-              <Button
-                variant="outline"
-                onClick={() => openTokenSelector(true)}
-                className="flex h-12 items-center gap-2 rounded-full border-blue-500/20 bg-blue-500/10 px-4 text-white hover:bg-blue-500/20"
-              >
-                <div className="relative">
-                  {sourceToken ? (
-                    <img
-                      src={sourceToken.icon}
-                      alt={sourceToken.symbol}
-                      className="h-8 w-8 rounded-full"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.onerror = null;
-                        target.src = "/tokens/default-token.png";
-                      }}
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500">
-                      ?
-                    </div>
-                  )}
+    <div className="px-6 py-12 mx-auto bg-black min-h-screen">
+      {/* Dot Pattern Background */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <DotPattern />
+      </div>
+      
+      <div className="relative z-10 max-w-2xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-8">
+          <h2 className="text-white text-4xl font-bold tracking-tight">
+            Token Swap
+            <br />
+            <span className="text-white/70 text-base font-normal mt-2 block">
+              Exchange tokens with best rates and minimal slippage
+            </span>
+          </h2>
+        </div>
+
+        {/* Main Swap Card */}
+        <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm overflow-hidden">
+          
+
+          <div className="p-6 space-y-4">
+            {/* Source Token Input */}
+            <div className="bg-black/40 border border-white/10 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-white/70 text-sm font-medium uppercase tracking-wider">You Pay</span>
+                <div className="flex items-center gap-2 text-sm text-white/60">
+                  <Wallet className="w-4 h-4" />
+                  <span>
+                    Balance: {isClient
+                      ? (effectiveIsConnected
+                        ? (isSourceBalanceLoading
+                          ? "Loading..."
+                          : isSourceBalanceError
+                            ? "Error"
+                            : `${sourceTokenBalance || '0'}`)
+                        : "Connect wallet")
+                      : "Loading..."}
+                  </span>
                 </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-lg font-medium">{sourceToken?.symbol || 'Select'}</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </Button>
-            </div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-sm text-gray-400">${sourceUsdValue.toFixed(2)}</div>
-              <div className="flex items-center text-sm text-blue-400">
-                <Wallet className="mr-1 h-4 w-4" />
-                <span>
-                  {isClient
-                    ? (effectiveIsConnected
-                      ? (isSourceBalanceLoading
-                        ? "Loading..."
-                        : isSourceBalanceError
-                          ? "Error"
-                          : `${sourceTokenBalance || '0'} ${sourceToken?.symbol || ''}`)
-                      : "Connect wallet")
-                    : "Loading..."}
-                </span>
               </div>
-            </div>
-          </div>
-
-          {/* Swap Button */}
-          <div className="relative flex justify-center">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleTokenSwap}
-              className="absolute -top-4 z-10 h-8 w-8 rounded-full border-white/10 bg-[#121212] text-gray-400 hover:bg-blue-600/20 hover:text-white transition-colors"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Destination Section */}
-          <div className="mb-4 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-5">
-            <div className="mb-2 text-sm text-gray-400">You receive</div>
-            <div className="flex items-center justify-between">
-              {isProcessing ? (
-                <Skeleton className="h-10 w-1/2 bg-gray-700/30" />
-              ) : (
+              
+              <div className="flex items-center justify-between">
                 <input
                   type="text"
-                  value={estimatedReceived}
-                  readOnly
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
                   placeholder="0.0"
-                  className="w-1/2 bg-transparent text-4xl font-medium text-white outline-none"
+                  className="flex-1 bg-transparent text-3xl font-medium text-white outline-none placeholder-white/40"
                 />
-              )}
+                
+                <Button
+                  variant="outline"
+                  onClick={() => openTokenSelector(true)}
+                  className="flex items-center gap-3 h-12 px-4 border-white/20 bg-white/5 text-white hover:bg-white/10 rounded-xl"
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30" style={{ backgroundColor: '#000000' }}>
+                    {sourceToken ? (
+                      <img
+                        src={sourceToken.icon}
+                        alt={sourceToken.symbol}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          target.src = "/tokens/default-token.png";
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full bg-black text-white">
+                        <span className="font-bold text-xs">?</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-white font-medium">{sourceToken?.symbol || 'Select'}</span>
+                    <span className="text-white/60 text-xs">{sourceToken?.name || 'Token'}</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-white/60" />
+                </Button>
+              </div>
+              
+              <div className="mt-3 text-sm text-white/60">
+                ≈ ${sourceUsdValue.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Swap Arrow Button */}
+            <div className="flex justify-center">
               <Button
                 variant="outline"
-                onClick={() => openTokenSelector(false)}
-                className="flex h-12 items-center gap-2 rounded-full border-white/10 bg-white/5 px-4 text-white hover:bg-white/10"
+                size="icon"
+                onClick={handleTokenSwap}
+                className="w-10 h-10 rounded-full border-white/20 bg-black/60 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
               >
-                <div className="relative">
-                  {destToken ? (
-                    <img
-                      src={destToken.icon}
-                      alt={destToken.symbol}
-                      className="h-8 w-8 rounded-full"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.onerror = null;
-                        target.src = "/tokens/default-token.png";
-                      }}
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500">
-                      ?
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-lg font-medium">{destToken?.symbol || 'Select'}</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ArrowUpDown className="w-5 h-5" />
               </Button>
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-sm text-gray-400">${destUsdValue.toFixed(2)}</div>
-              <div className="flex items-center text-sm text-gray-400">
-                <Wallet className="mr-1 h-4 w-4" />
-                <span>
-                  {isClient
-                    ? (effectiveIsConnected
-                      ? (isDestBalanceLoading
-                        ? "Loading..."
-                        : isDestBalanceError
-                          ? "Error"
-                          : `${destTokenBalance || '0'} ${destToken?.symbol || ''}`)
-                      : "Connect wallet")
-                    : "Loading..."}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Transaction Details */}
-          <div className="mb-6 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-5">
-            <div className="space-y-2">
-              {/* <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Exchange rate</span>
-                <span className="text-white">
-                  1 {sourceToken?.symbol || '?'} = {exchangeRate} {destToken?.symbol || '?'}
-                </span>
-              </div> */}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Slippage tolerance</span>
-                <span className="text-white">{(slippageBps / 100).toFixed(1)}%</span>
+            {/* Destination Token Output */}
+            <div className="bg-black/40 border border-white/10 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-white/70 text-sm font-medium uppercase tracking-wider">You Receive</span>
+                <div className="flex items-center gap-2 text-sm text-white/60">
+                  <Wallet className="w-4 h-4" />
+                  <span>
+                    Balance: {isClient
+                      ? (effectiveIsConnected
+                        ? (isDestBalanceLoading
+                          ? "Loading..."
+                          : isDestBalanceError
+                            ? "Error"
+                            : `${destTokenBalance || '0'}`)
+                        : "Connect wallet")
+                      : "Loading..."}
+                  </span>
+                </div>
               </div>
-              {/* <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Min. received</span>
-                <span className="text-white">{minReceived} {destToken?.symbol || ''}</span>
-              </div> */}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Fee (0.25%)</span>
-                <span className="text-white">{swapFee} {sourceToken?.symbol || ''}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Status display */}
-          {txStatus && (
-            <div className="mb-4 rounded-xl border border-white/10 bg-[#1A1A1A]/50 p-4">
+              
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-200">{txStatus}</div>
-                {isProcessing && <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />}
-              </div>
-              {txHash && (
-                <a
-                  href={`https://sepolia.arbiscan.io/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300"
+                {isProcessing || isCalculatingMinOut ? (
+                  <Skeleton className="h-10 w-32 bg-white/10" />
+                ) : (
+                  <input
+                    type="text"
+                    value={estimatedReceived}
+                    readOnly
+                    placeholder="0.0"
+                    className="flex-1 bg-transparent text-3xl font-medium text-white outline-none placeholder-white/40"
+                  />
+                )}
+                
+                <Button
+                  variant="outline"
+                  onClick={() => openTokenSelector(false)}
+                  className="flex items-center gap-3 h-12 px-4 border-white/20 bg-white/5 text-white hover:bg-white/10 rounded-xl"
                 >
-                  View on Explorer <ExternalLink className="ml-1 h-3 w-3" />
-                </a>
-              )}
+                  <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30" style={{ backgroundColor: '#000000' }}>
+                    {destToken ? (
+                      <img
+                        src={destToken.icon}
+                        alt={destToken.symbol}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          target.src = "/tokens/default-token.png";
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full bg-black text-white">
+                        <span className="font-bold text-xs">?</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-white font-medium">{destToken?.symbol || 'Select'}</span>
+                    <span className="text-white/60 text-xs">{destToken?.name || 'Token'}</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-white/60" />
+                </Button>
+              </div>
+              
+              <div className="mt-3 text-sm text-white/60">
+                ≈ ${destUsdValue.toFixed(2)}
+              </div>
             </div>
-          )}
 
-          {/* Action Button */}
-          <Button
-            className="w-full bg-blue-600 py-6 text-lg font-medium text-white hover:bg-blue-700 disabled:bg-blue-600/50"
-            onClick={handleSubmit}
-            disabled={isProcessing || isSwapPending || isSwapConfirming || !amount || !sourceToken || !destToken || !effectiveIsConnected || !hasValidDecimals}
-          >
-            {isClient
-              ? (!effectiveIsConnected
-                ? 'Connect Wallet'
-                : !hasValidDecimals
-                  ? 'Error: Missing Token Info'
-                  : isSwapPending
-                    ? 'Confirming in Wallet...'
-                    : isSwapConfirming
-                      ? 'Confirming...'
-                      : isProcessing
-                        ? 'Processing...'
-                        : `Swap`)
-              : 'Loading...'}
-          </Button>
-        </Card>
+            {/* Transaction Details */}
+            <div className="bg-black/20 border border-white/10 rounded-xl p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/70">Slippage tolerance</span>
+                  <span className="text-white">{(slippageBps / 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/70">Fee (0.25%)</span>
+                  <span className="text-white">{swapFee} {sourceToken?.symbol || ''}</span>
+                </div>
+                {/* <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/70">Min. received</span>
+                  <span className="text-white">{minReceived} {destToken?.symbol || ''}</span>
+                </div> */}
+              </div>
+            </div>
+
+            {/* Status Display */}
+            {txStatus && (
+              <div className="bg-black/40 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-white/90">{txStatus}</div>
+                  {isProcessing && <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />}
+                </div>
+                {txHash && (
+                  <a
+                    href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    View on Explorer <ExternalLink className="ml-1 w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Action Button */}
+            <Button
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl transition-colors"
+              onClick={handleSubmit}
+              disabled={isProcessing || isSwapPending || isSwapConfirming || !amount || !sourceToken || !destToken || !effectiveIsConnected || !hasValidDecimals}
+            >
+              {isClient
+                ? (!effectiveIsConnected
+                  ? 'Connect Wallet'
+                  : !hasValidDecimals
+                    ? 'Error: Missing Token Info'
+                    : isSwapPending
+                      ? 'Confirming in Wallet...'
+                      : isSwapConfirming
+                        ? 'Confirming...'
+                        : isProcessing
+                          ? 'Processing...'
+                          : `Swap ${sourceToken?.symbol || ''} for ${destToken?.symbol || ''}`)
+                : 'Loading...'}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Simple Token Selector Modal */}
+      {/* Token Selector Modal */}
       {isClient && selectorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[#121212] border border-white/20 rounded-xl p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-black/90 border border-white/20 rounded-xl shadow-[0_0_50px_rgba(255,255,255,0.1)] max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
               <h3 className="text-xl font-bold text-white">
                 {isSellSelector ? "Select source token" : "Select destination token"}
               </h3>
               <button
                 onClick={() => setSelectorOpen(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-white/60 hover:text-white transition-colors text-2xl leading-none"
               >
                 ×
               </button>
             </div>
-            <div className="space-y-2">
+            
+            {/* Token List */}
+            <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
               {availableTokensList.map((token) => (
                 <button
                   key={token.id}
@@ -837,21 +928,24 @@ const SwapForm: React.FC = () => {
                     handleTokenSelect(token);
                     setSelectorOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/10 text-left"
+                  className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/10 transition-colors text-left border border-transparent hover:border-white/10"
                 >
-                  <img
-                    src={token.icon}
-                    alt={token.symbol}
-                    className="h-8 w-8 rounded-full"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      target.onerror = null;
-                      target.src = "/tokens/default-token.png";
-                    }}
-                  />
-                  <div>
-                    <div className="text-white font-medium">{token.symbol}</div>
-                    <div className="text-gray-400 text-sm">{token.name}</div>
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-white/30" style={{ backgroundColor: '#000000' }}>
+                    <img
+                      src={token.icon}
+                      alt={token.symbol}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.onerror = null;
+                        target.src = "/tokens/default-token.png";
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-white font-medium text-lg">{token.symbol}</div>
+                    <div className="text-white/60 text-sm">{token.name}</div>
+                    <div className="text-white/40 text-xs">{token.description}</div>
                   </div>
                 </button>
               ))}
