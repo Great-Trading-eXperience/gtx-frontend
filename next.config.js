@@ -55,4 +55,6 @@ module.exports = withSentryConfig(nextConfig, {
   hideSourceMaps: true,
   disableLogger: true,
   automaticVercelMonitors: true,
+  disableClientWebpackPlugin: true,
+  disableServerWebpackPlugin: true,
 });

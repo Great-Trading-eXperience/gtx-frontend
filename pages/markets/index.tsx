@@ -29,8 +29,6 @@ export async function getStaticProps() {
 }
 
 const Markets = ({ initialMarketData }: MarketsProps) => {
-  console.log('initialMarketData', initialMarketData)
-
   const [mounted, setMounted] = useState(false);
   const [isComingSoon, setIsComingSoon] = useState(false);
 

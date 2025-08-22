@@ -92,10 +92,8 @@ const Header = ({onTogglePanel}: NavbarProps) => {
   const addressMUSDC = musdcToken?.address;
 
   const {
-    formattedBalance: BalanceOfMUSDC,
-    tokenSymbol: SymbolMUSDC,
-    refetchBalance: refetchMUSDC,
-  } = useTokenBalance(addressMUSDC, embeddedWalletAddress as `0x${string}`);
+    formattedBalance: balanceOfMUSDC
+  } = useTokenBalance(addressMUSDC as `0x${string}`, embeddedWalletAddress as `0x${string}`);
 
   return (
     <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20">
@@ -141,7 +139,7 @@ const Header = ({onTogglePanel}: NavbarProps) => {
               <div>
                 <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
                   <Wallet className="w-6 h-6" /> 
-                  <span>{formatNumber(Number(BalanceOfMUSDC), { decimals: 2, compact: true, })}</span>
+                  <span>{formatNumber(Number(balanceOfMUSDC), { decimals: 2, compact: true, })}</span>
                   <span>{musdcToken?.symbol || 'USDC'}</span>
                 </div>
               </div>
