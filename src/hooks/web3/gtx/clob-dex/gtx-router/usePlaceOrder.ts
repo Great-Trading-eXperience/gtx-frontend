@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { useEffectiveChainId } from "@/utils/chain-override";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 
 const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
@@ -61,7 +62,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   
   const address = wagmiAddress; 
 
-  const chainId = useChainId()
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   const resetLimitOrderState = useCallback(() => {
     setLimitOrderHash(undefined);

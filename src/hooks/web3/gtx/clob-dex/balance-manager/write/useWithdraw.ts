@@ -6,6 +6,7 @@ import { waitForTransaction, writeContract } from '@wagmi/core';
 import { useCallback, useState } from 'react';
 import { TransactionReceipt } from 'viem';
 import { useChainId } from 'wagmi';
+import { useEffectiveChainId } from '@/utils/chain-override';
 
 // Withdraw hook
 interface WithdrawParams {
@@ -30,7 +31,8 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const chainId = useChainId()
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   const withdraw = useCallback(
     async ({ currency, amount, user }: WithdrawParams): Promise<TransactionReceipt> => {

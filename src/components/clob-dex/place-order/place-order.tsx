@@ -73,32 +73,18 @@ const PlaceOrder = ({
   
   const useEmbeddedWallet = walletType === 'embedded';
   
-  const currentChainId = useChainId();
+  const currentChainId = chainId || useChainId(); // Use prop chainId first, fallback to hook
   const poolManagerAddress = getContractAddress(
     currentChainId,
     ContractName.clobPoolManager
   ) as HexAddress;
 
-  const { data: pool } = useContractRead({
-    address: poolManagerAddress,
-    abi: poolManagerABI,
-    functionName: 'getPool',
-    args: [
-      {
-        baseCurrency: selectedPool?.baseTokenAddress as HexAddress,
-        quoteCurrency: selectedPool?.quoteTokenAddress as HexAddress,
-      },
-    ],
-    chainId: currentChainId,
-  }) as {
-    data:
-      | {
-          baseCurrency: HexAddress;
-          quoteCurrency: HexAddress;
-          orderBook: HexAddress;
-        }
-      | undefined;
-  };
+  // Use selectedPool data directly instead of contract call to avoid zero address issues
+  const pool = selectedPool ? {
+    baseCurrency: selectedPool.baseTokenAddress as HexAddress,
+    quoteCurrency: selectedPool.quoteTokenAddress as HexAddress,
+    orderBook: selectedPool.orderBook as HexAddress,
+  } : undefined;
 
   const [orderType, setOrderType] = useState<'limit' | 'market'>('market');
   const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); 

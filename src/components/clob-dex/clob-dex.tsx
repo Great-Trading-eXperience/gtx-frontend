@@ -753,8 +753,11 @@ export default function ClobDex() {
           processedPoolsArray.find(
             p =>
               p.coin?.toLowerCase() === 'weth/usdc' ||
+              p.coin?.toLowerCase() === 'mweth/musdc' ||
               (p.baseSymbol?.toLowerCase() === 'weth' &&
-                p.quoteSymbol?.toLowerCase() === 'usdc')
+                p.quoteSymbol?.toLowerCase() === 'usdc') ||
+              (p.baseSymbol?.toLowerCase() === 'mweth' &&
+                p.quoteSymbol?.toLowerCase() === 'musdc')
           ) || processedPoolsArray[0];
       }
 
