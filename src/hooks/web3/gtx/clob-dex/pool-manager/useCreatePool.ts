@@ -4,6 +4,7 @@ import { HexAddress } from '@/types/general/address';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useChainId, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { useEffectiveChainId } from '@/utils/chain-override';
 
 // Define the TradingRules type to match the smart contract structure
 type TradingRules = {
@@ -17,7 +18,8 @@ type TradingRules = {
 export const useCreatePool = () => {
   const [isCreatePoolAlertOpen, setIsCreatePoolAlertOpen] = useState(false);
 
-  const chainId = useChainId();
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   // CreatePool transaction hooks
   const {

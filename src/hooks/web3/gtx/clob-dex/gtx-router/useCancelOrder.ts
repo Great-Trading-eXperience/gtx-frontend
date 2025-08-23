@@ -7,12 +7,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { useEffectiveChainId } from "@/utils/chain-override";
 
 export const useCancelOrder = () => {
   const { address } = useAccount();
   const [cancelOrderHash, setCancelOrderHash] = useState<HexAddress | undefined>(undefined);
   const [errorAlreadyShown, setErrorAlreadyShown] = useState(false); // Flag to track if error was shown
-  const chainId = useChainId();
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   const {
     mutateAsync: cancelOrder,

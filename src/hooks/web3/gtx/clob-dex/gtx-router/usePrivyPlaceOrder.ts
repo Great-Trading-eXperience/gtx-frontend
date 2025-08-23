@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useChainId } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
+import { useEffectiveChainId } from "@/utils/chain-override";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 import { createWalletClient, custom } from "viem";
 import { writeContract } from "wagmi/actions";
@@ -72,7 +73,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
   const address = userAddress || (wallet?.address as HexAddress);
 
-  const chainId = useChainId()
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   const resetLimitOrderState = useCallback(() => {
     setLimitOrderHash(undefined);

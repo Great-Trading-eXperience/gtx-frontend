@@ -7,12 +7,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { useChainId } from 'wagmi';
+import { useEffectiveChainId } from '@/utils/chain-override';
 
 export const useRequestToken = (
 ) => {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
-    const chainId = useChainId();
+    const currentChainId = useChainId();
+    const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
     const {
         data: requestTokenHash,

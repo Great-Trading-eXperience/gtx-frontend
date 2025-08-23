@@ -10,6 +10,8 @@ import {
   LogOut,
   CreditCard,
   RefreshCw,
+  Wifi,
+  Check,
 } from 'lucide-react';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
@@ -33,6 +35,9 @@ import {
 } from '@/graphql/gtx/clob';
 import { usePathname } from 'next/navigation';
 import ERC20ABI from '@/abis/tokens/TokenABI';
+import { wagmiConfig } from '@/configs/wagmi';
+import { getContractAddress, ContractName } from '@/constants/contract/contract-address';
+import { toast } from 'sonner';
 
 interface Asset {
   symbol: string;
@@ -100,6 +105,76 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       setwithdrawWallet(externalWallet.address);
     }
   }, [externalWallet]);
+
+  // Chain management functionality
+  const availableChains = wagmiConfig.chains.map(chain => ({
+    id: chain.id,
+    name: chain.name,
+    shortName: chain.name.split(' ')[0], // "Rise Testnet" -> "Rise"
+    testnet: chain.testnet || false
+  }));
+
+  const parseChainId = (chainId: string | undefined): number | undefined => {
+    if (!chainId) return undefined;
+    return parseInt(chainId.replace('eip155:', ''));
+  };
+
+  const embeddedWalletChainId = parseChainId(embeddedWallet?.chainId);
+  const externalWalletChainId = parseChainId(externalWallet?.chainId);
+  const currentChain = availableChains.find(chain => chain.id === embeddedWalletChainId);
+
+  const [switchingChain, setSwitchingChain] = useState(false);
+
+  const switchEmbeddedChain = async (targetChainId: number): Promise<boolean> => {
+    if (!embeddedWallet) {
+      toast.error('No embedded wallet found');
+      return false;
+    }
+    
+    if (embeddedWalletChainId === targetChainId) {
+      toast.info('Already on the selected network');
+      return true;
+    }
+
+    setSwitchingChain(true);
+    try {
+      await embeddedWallet.switchChain(targetChainId);
+      
+      const chainInfo = availableChains.find(chain => chain.id === targetChainId);
+      toast.success(`Switched to ${chainInfo?.name || `Chain ${targetChainId}`}`);
+      
+      // Refresh balances after successful chain switch
+      setTimeout(() => {
+        refetchMUSDC();
+        refetchMWETH();
+      }, 1000);
+      
+      return true;
+    } catch (error: any) {
+      console.error('Failed to switch chain:', error);
+      
+      if (error.message?.includes('not configured')) {
+        toast.error('Network not supported');
+      } else if (error.message?.includes('rejected') || error.message?.includes('denied')) {
+        toast.error('Network switch cancelled');
+      } else {
+        toast.error('Failed to switch network');
+      }
+      return false;
+    } finally {
+      setSwitchingChain(false);
+    }
+  };
+
+  // Get token addresses for current chain (with fallback)
+  const getTokenAddressForChain = (chainId: number | undefined, contractName: ContractName) => {
+    try {
+      return chainId ? getContractAddress(chainId, contractName) : null;
+    } catch (error) {
+      console.warn(`No ${contractName} address for chain ${chainId}`);
+      return null;
+    }
+  };
 
   const { selectedPoolId, setSelectedPoolId, setBaseDecimals, setQuoteDecimals } = useMarketStore();
   const [mounted, setMounted] = useState(false);
@@ -370,6 +445,38 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               <QrCode size={16} className="text-gray-400" />
               <Edit3 size={16} className="text-gray-400" />
             </div>
+            
+            {/* Network Switcher */}
+            <div className="relative">
+              <select
+                value={embeddedWalletChainId || 11155931}
+                onChange={(e) => switchEmbeddedChain(parseInt(e.target.value))}
+                disabled={switchingChain}
+                className="bg-gray-700 text-white text-xs border border-gray-600 rounded px-2 py-1 pr-6 appearance-none focus:outline-none focus:border-blue-500 disabled:opacity-50"
+              >
+                {availableChains.map(chain => (
+                  <option key={chain.id} value={chain.id}>
+                    {chain.shortName}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-1 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                {switchingChain ? (
+                  <RefreshCw size={10} className="animate-spin text-gray-400" />
+                ) : (
+                  <ChevronDown size={10} className="text-gray-400" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Current Network Info */}
+          <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+            <Wifi size={12} />
+            <span>{currentChain?.name || 'Unknown Network'}</span>
+            {currentChain?.testnet && (
+              <span className="bg-yellow-600 text-yellow-100 px-1 py-0.5 rounded text-xs">Testnet</span>
+            )}
           </div>
 
           <div className="mt-3 border border-gray-600 rounded-lg p-3 flex items-center justify-between">
