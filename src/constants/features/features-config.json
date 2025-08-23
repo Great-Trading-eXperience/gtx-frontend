@@ -11,6 +11,7 @@
       "LANDING_PAGE_PHAROS": false,
       "ENABLED_TABS_EARN": false,
       "ENABLED_TABS_VEGTX": true,
-      "ENABLED_TABS_PERPETUAL": false
+      "ENABLED_TABS_PERPETUAL": false,
+      "CROSSCHAIN_DEPOSIT_ENABLED": false
     }
   }

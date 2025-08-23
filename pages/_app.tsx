@@ -22,6 +22,7 @@ import ToastContainer from "@/components/clob-dex/place-order/toastContainer";
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;
 const RISE_SEPOLIA_CHAIN_ID = 11155931;
+const RARI_TESTNET_CHAIN_ID = 1918988905;
 const CONDUIT_CHAIN_ID = 911867;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
@@ -140,7 +141,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     }>
       <Providers>
         <RainbowKitProvider
-          initialChain={RISE_SEPOLIA_CHAIN_ID}
+          initialChain={RARI_TESTNET_CHAIN_ID}
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",

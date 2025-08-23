@@ -1,9 +1,16 @@
-import { riseTestnet } from '@/configs/wagmi'
+import { rariTestnet, riseTestnet } from '@/configs/wagmi'
 import { createConfig, http } from 'wagmi'
 
+// export const wagmiConfig = createConfig({
+//   chains: [riseTestnet],
+//   transports: {
+//     [riseTestnet.id]: http()
+//   },
+// }) 
+
 export const wagmiConfig = createConfig({
-  chains: [riseTestnet],
+  chains: [rariTestnet],
   transports: {
-    [riseTestnet.id]: http()
+    [rariTestnet.id]: http()
   },
 }) 

@@ -18,6 +18,7 @@ import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBa
 import GTXTooltip from '../clob-dex/place-order/tooltip';
 import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
 import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
+import { useCrosschainDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useCrosschainDeposit';
 import { useMarketStore } from '@/store/market-store';
 import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
 import { useQuery } from '@tanstack/react-query';
@@ -39,6 +40,7 @@ import { wagmiConfig } from '@/configs/wagmi';
 import { getContractAddress, ContractName } from '@/constants/contract/contract-address';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
+import { FEATURE_FLAGS } from '@/constants/features/features-config';
 
 interface Asset {
   symbol: string;
@@ -376,6 +378,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     resetState: depositResetState,
   } = usePrivyDeposit();
   const {
+    deposit: crosschainDeposit,
+    loading: crosschainDepositLoading,
+    currentStep: crosschainDepositCurrentStep,
+    error: crosschainDepositError,
+    resetState: crosschainDepositResetState,
+  } = useCrosschainDeposit();
+  const {
     withdraw: privyWithdraw,
     loading: withdrawLoading,
     currentStep: withdrawCurrentStep,
@@ -393,7 +402,12 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       duration: 0,
     });
 
-    privyDeposit(depositAmount, quoteCurrency);
+    if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+      crosschainDeposit(depositAmount, quoteCurrency, embeddedWalletAddress as `0x${string}`);
+    } else {
+      privyDeposit(depositAmount, quoteCurrency);
+    }
+    
     setTimeout(() => {
       refetchMUSDC();
       refetchMWETH();
@@ -416,12 +430,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   };
 
   useEffect(() => {
-    if (depositCurrentStep === 'Transaction submitted successfully!') {
+    if (depositCurrentStep === 'Transaction submitted successfully!' || crosschainDepositCurrentStep === 'Crosschain deposit submitted successfully!') {
       depositResetState();
+      crosschainDepositResetState();
       setDepositAmount('');
       refetchMUSDC();
     }
-  }, [depositCurrentStep]);
+  }, [depositCurrentStep, crosschainDepositCurrentStep]);
 
   // Toast management for withdraw flow
   useEffect(() => {
@@ -720,15 +735,15 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                 onClick={handlePrivyDeposit}
                 className="w-full bg-[#0078D4] hover:bg-[#0064C8] text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200"
               >
-                {depositloading &&
-                depositCurrentStep !== 'Transaction submitted successfully!' ? (
+                {(depositloading && depositCurrentStep !== 'Transaction submitted successfully!') || 
+                (crosschainDepositLoading && crosschainDepositCurrentStep !== 'Crosschain deposit submitted successfully!') ? (
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Depositing...</span>
+                    <span>{FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED ? 'Processing Crosschain Deposit...' : 'Depositing...'}</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <span>Deposit</span>
+                    <span>{FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED ? 'Crosschain Deposit' : 'Deposit'}</span>
                   </div>
                 )}
               </button>

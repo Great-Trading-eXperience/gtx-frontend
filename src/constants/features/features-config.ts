@@ -12,6 +12,7 @@ interface FeatureFlags {
     ENABLED_TABS_EARN: boolean;
     ENABLED_TABS_VEGTX: boolean;
     ENABLED_TABS_PERPETUAL: boolean;
+    CROSSCHAIN_DEPOSIT_ENABLED: boolean;
 }
 
 interface FeaturesConfig {

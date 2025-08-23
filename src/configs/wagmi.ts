@@ -29,30 +29,30 @@ export const conduitChain: Chain = {
 	testnet: true,
 };
 
-export const riseTestnet: Chain = {
-	id: 11155931,
-	name: 'Rise Testnet',
-	nativeCurrency: {
-		decimals: 18,
-		name: 'ETH',
-		symbol: 'ETH',
-	},
-	rpcUrls: {
-		default: {
-			http: ['/api/rpc/rise-sepolia'],
-		},
-		public: {
-			http: ['/api/rpc/rise-sepolia'],
-		},
-	},
-	blockExplorers: {
-		default: {
-			name: 'Rise Explorer',
-			url: 'https://testnet-explorer.riselabs.xyz',
-		},
-	},
-	testnet: true,
-};
+// export const riseTestnet: Chain = {
+// 	id: 11155931,
+// 	name: 'Rise Testnet',
+// 	nativeCurrency: {
+// 		decimals: 18,
+// 		name: 'ETH',
+// 		symbol: 'ETH',
+// 	},
+// 	rpcUrls: {
+// 		default: {
+// 			http: ['/api/rpc/rise-sepolia'],
+// 		},
+// 		public: {
+// 			http: ['/api/rpc/rise-sepolia'],
+// 		},
+// 	},
+// 	blockExplorers: {
+// 		default: {
+// 			name: 'Rise Explorer',
+// 			url: 'https://testnet-explorer.riselabs.xyz',
+// 		},
+// 	},
+// 	testnet: true,
+// };
 
 export const rariTestnet: Chain = {
 	id: 1918988905,
@@ -105,9 +105,12 @@ export const appchainTestnet: Chain = {
 };
 
 export const wagmiConfig = createConfig({
-	chains: [riseTestnet, rariTestnet, appchainTestnet],
+	chains: [
+		// riseTestnet,
+		rariTestnet,
+		appchainTestnet],
 	transports: {
-		[riseTestnet.id]: http(riseTestnet.rpcUrls.default.http[0]),
+		// [riseTestnet.id]: http(riseTestnet.rpcUrls.default.http[0]),
 		[rariTestnet.id]: http(rariTestnet.rpcUrls.default.http[0]),
 		[appchainTestnet.id]: http(appchainTestnet.rpcUrls.default.http[0]),
 	},
