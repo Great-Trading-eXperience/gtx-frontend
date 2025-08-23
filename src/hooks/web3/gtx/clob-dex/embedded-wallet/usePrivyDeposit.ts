@@ -2,6 +2,7 @@ import { usePrivy, useWallets, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData } from 'viem';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import { useState } from 'react';
+import { useToast } from '@/components/clob-dex/place-order/toastContext';
 
 export function usePrivyDeposit() {
   const { user } = usePrivy();
@@ -10,8 +11,14 @@ export function usePrivyDeposit() {
   const [currentStep, setCurrentStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const RISE_CHAIN_ID = 11155931;
+  const { showToast, updateToast } = useToast();
 
   const deposit = async (amount: string, currencyAddress: `0x${string}`) => {
+    const toastId = showToast({
+      type: 'loading',
+      message: 'Processing deposit...',
+    });
+
     try {
       setLoading(true);
       setError(null);
@@ -25,36 +32,32 @@ export function usePrivyDeposit() {
       setCurrentStep('Searching for wallets...');
       console.log('Available wallets:', wallets);
 
-      const external = wallets.find(
-        w => {
-          console.log('Checking wallet:', w);
-          return (
-            w &&
-            w.walletClientType !== 'privy' &&
-            w.chainId &&
-            typeof w.chainId === 'string' &&
-            w.chainId.startsWith('eip155:11155931') &&
-            w.address &&
-            typeof w.address === 'string' &&
-            w.address.startsWith('0x')
-          );
-        }
-      );
+      const external = wallets.find(w => {
+        console.log('Checking wallet:', w);
+        return (
+          w &&
+          w.walletClientType !== 'privy' &&
+          w.chainId &&
+          typeof w.chainId === 'string' &&
+          w.chainId.startsWith('eip155:11155931') &&
+          w.address &&
+          typeof w.address === 'string' &&
+          w.address.startsWith('0x')
+        );
+      });
 
-      const embedded = wallets.find(
-        w => {
-          return (
-            w &&
-            w.walletClientType === 'privy' &&
-            w.chainId &&
-            typeof w.chainId === 'string' &&
-            w.chainId.startsWith('eip155:11155931') &&
-            w.address &&
-            typeof w.address === 'string' &&
-            w.address.startsWith('0x')
-          );
-        }
-      );
+      const embedded = wallets.find(w => {
+        return (
+          w &&
+          w.walletClientType === 'privy' &&
+          w.chainId &&
+          typeof w.chainId === 'string' &&
+          w.chainId.startsWith('eip155:11155931') &&
+          w.address &&
+          typeof w.address === 'string' &&
+          w.address.startsWith('0x')
+        );
+      });
 
       console.log('External wallet:', external);
       console.log('Embedded wallet:', embedded);
@@ -86,7 +89,7 @@ export function usePrivyDeposit() {
       setCurrentStep('Connecting to wallet provider...');
 
       const provider = await external.getEthereumProvider();
-      
+
       if (!provider) {
         throw new Error('Failed to get Ethereum provider from external wallet');
       }
@@ -122,19 +125,27 @@ export function usePrivyDeposit() {
       });
 
       setCurrentStep('Transaction submitted successfully!');
+      updateToast(toastId, {
+        type: 'success',
+        message: 'Deposit successful!',
+      });
       console.log('Transaction sent:', txHash);
-      
+
       // Reset after a short delay
       setTimeout(() => {
         setCurrentStep('');
       }, 3000);
 
       return txHash;
-
     } catch (error) {
       console.error('Deposit error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
+      updateToast(toastId, {
+        type: 'error',
+        message: 'Deposit failed. Please try again.',
+      });
       setCurrentStep('');
       throw error;
     } finally {
@@ -148,11 +159,11 @@ export function usePrivyDeposit() {
     setError(null);
   };
 
-  return { 
-    deposit, 
-    loading, 
-    currentStep, 
-    error, 
-    resetState 
+  return {
+    deposit,
+    loading,
+    currentStep,
+    error,
+    resetState,
   };
 }

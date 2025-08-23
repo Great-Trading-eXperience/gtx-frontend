@@ -1004,14 +1004,14 @@ const PlaceOrder = ({
       )}
 
       {/* Notification Dialog */}
-      <NotificationDialog
+      {/* <NotificationDialog
         isOpen={showNotification}
         onClose={() => setShowNotification(false)}
         message={notificationMessage}
         isSuccess={notificationSuccess}
         txHash={notificationTxHash}
         explorerBaseUrl={EXPLORER_URL(chainId ?? defaultChainId)}
-      />
+      /> */}
     </div>
   );
 };
