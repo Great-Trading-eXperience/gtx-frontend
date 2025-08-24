@@ -14,6 +14,9 @@ export function usePrivyDeposit() {
   const { showToast, updateToast } = useToast();
 
   const deposit = async (amount: string, currencyAddress: `0x${string}`) => {
+    console.log('🔵 usePrivyDeposit: Regular deposit hook called');
+    console.log('🔵 usePrivyDeposit: Amount:', amount, 'Currency:', currencyAddress);
+    
     const toastId = showToast({
       type: 'loading',
       message: 'Processing deposit...',
@@ -22,7 +25,8 @@ export function usePrivyDeposit() {
     try {
       setLoading(true);
       setError(null);
-      setCurrentStep('Initializing deposit...');
+      setCurrentStep('Initializing regular deposit...');
+      console.log('🔵 usePrivyDeposit: Starting regular deposit process');
 
       // Add more defensive checks
       if (!wallets || wallets.length === 0) {
@@ -46,27 +50,19 @@ export function usePrivyDeposit() {
         );
       });
 
-      const embedded = wallets.find(w => {
-        return (
-          w &&
-          w.walletClientType === 'privy' &&
-          w.chainId &&
-          typeof w.chainId === 'string' &&
-          w.chainId.startsWith('eip155:11155931') &&
-          w.address &&
-          typeof w.address === 'string' &&
-          w.address.startsWith('0x')
-        );
-      });
+      // Get the embedded wallet following the same pattern as usePrivyPlaceOrder
+      const embedded = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
+      const embeddedAddress = embedded?.address;
 
       console.log('External wallet:', external);
       console.log('Embedded wallet:', embedded);
+      console.log('Embedded address:', embeddedAddress);
 
       if (!external) {
         throw new Error('External wallet not found or not properly configured');
       }
 
-      if (!embedded || !embedded.address) {
+      if (!embedded || !embeddedAddress) {
         throw new Error('Embedded wallet not found or missing address');
       }
 
@@ -83,7 +79,7 @@ export function usePrivyDeposit() {
       const data = encodeFunctionData({
         abi: ERC20ABI,
         functionName: 'transfer',
-        args: [embedded.address, units],
+        args: [embeddedAddress, units],
       });
 
       setCurrentStep('Connecting to wallet provider...');
@@ -129,7 +125,8 @@ export function usePrivyDeposit() {
         type: 'success',
         message: 'Deposit successful!',
       });
-      console.log('Transaction sent:', txHash);
+      console.log('🔵 usePrivyDeposit: Regular deposit transaction sent:', txHash);
+      console.log('🔵 usePrivyDeposit: Regular deposit completed successfully');
 
       // Reset after a short delay
       setTimeout(() => {
@@ -138,7 +135,7 @@ export function usePrivyDeposit() {
 
       return txHash;
     } catch (error) {
-      console.error('Deposit error:', error);
+      console.error('🔵 usePrivyDeposit: Regular deposit error:', error);
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);

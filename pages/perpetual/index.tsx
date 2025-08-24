@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Perpetual from "@/components/perpetual/perpetual";
 import { Hexagon, Droplets, LineChart, ChartBarBig } from "lucide-react";
-import { FEATURE_FLAGS } from "@/constants/contract/contract-address";
+import { FEATURE_FLAGS } from "@/constants/features/features-config";
 
 const PerpetualPage = () => {
     // Use state to track both the value and whether we've mounted

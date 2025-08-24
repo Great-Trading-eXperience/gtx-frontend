@@ -12,6 +12,6 @@
       "ENABLED_TABS_EARN": false,
       "ENABLED_TABS_VEGTX": true,
       "ENABLED_TABS_PERPETUAL": false,
-      "CROSSCHAIN_DEPOSIT_ENABLED": false
+      "CROSSCHAIN_DEPOSIT_ENABLED": true
     }
   }

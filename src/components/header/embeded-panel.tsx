@@ -1,51 +1,51 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  X,
-  Copy,
-  QrCode,
-  Edit3,
-  Search,
-  ChevronDown,
-  Key,
-  LogOut,
-  CreditCard,
-  RefreshCw,
-  Wifi,
-  Check,
-} from 'lucide-react';
-import { useWallets, usePrivy } from '@privy-io/react-auth';
-import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
-import GTXTooltip from '../clob-dex/place-order/tooltip';
-import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
-import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
-import { useCrosschainDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useCrosschainDeposit';
-import { useMarketStore } from '@/store/market-store';
-import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
-import { useQuery } from '@tanstack/react-query';
+import { wagmiConfig } from '@/configs/wagmi';
+import { ContractName, DEFAULT_CHAIN, getContractAddress } from '@/constants/contract/contract-address';
+import { FEATURE_FLAGS, getCoreChain, getSupportedCrosschainDepositChainNames, isCrosschainSupportedChain, shouldUseCoreChainBalance } from '@/constants/features/features-config';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { getUseSubgraph } from '@/utils/env';
-import request from 'graphql-request';
-import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
-import { useChainId, useReadContract } from 'wagmi';
 import {
+  PoolItem as GraphQLPoolItem,
   poolsPonderQuery,
   PoolsPonderResponse,
   poolsQuery,
   PoolsResponse,
-  PoolItem as GraphQLPoolItem,
 } from '@/graphql/gtx/clob';
-import { usePathname } from 'next/navigation';
-import ERC20ABI from '@/abis/tokens/TokenABI';
-import { wagmiConfig } from '@/configs/wagmi';
-import { getContractAddress, ContractName } from '@/constants/contract/contract-address';
-import { toast } from 'sonner';
+import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
+import { useBalanceManagerBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceManagerBalance';
+import { useCrosschainDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useCrosschainDeposit';
+import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
+import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
 import { formatNumber } from '@/lib/utils';
-import { FEATURE_FLAGS } from '@/constants/features/features-config';
+import { useMarketStore } from '@/store/market-store';
+import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
+import { getUseSubgraph } from '@/utils/env';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useQuery } from '@tanstack/react-query';
+import request from 'graphql-request';
+import {
+  ChevronDown,
+  Copy,
+  CreditCard,
+  Edit3,
+  Key,
+  LogOut,
+  QrCode,
+  RefreshCw,
+  Search,
+  Wifi,
+  X
+} from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import React, { useEffect, useRef, useState } from 'react';
+import { toast as toastSonner } from 'sonner';
+import { useChainId, useReadContract } from 'wagmi';
+import ERC20ABI from '@/abis/tokens/TokenABI';
+import GTXTooltip from '../clob-dex/place-order/tooltip';
 
 interface Asset {
   symbol: string;
   balance: string;
   icon: React.ReactNode;
+  address?: string;
 }
 
 interface RightPanelProps {
@@ -119,12 +119,17 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   }, [externalWallet]);
 
   // Chain management functionality
-  const availableChains = wagmiConfig.chains.map(chain => ({
+  const allChains = wagmiConfig.chains.map(chain => ({
     id: chain.id,
     name: chain.name,
     shortName: chain.name.split(' ')[0], // "Rise Testnet" -> "Rise"
     testnet: chain.testnet || false
   }));
+
+  // Filter chains based on crosschain deposit feature
+  const availableChains = FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+    ? allChains.filter(chain => isCrosschainSupportedChain(chain.id))
+    : allChains;
 
   const parseChainId = (chainId: string | undefined): number | undefined => {
     if (!chainId) return undefined;
@@ -139,12 +144,22 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const switchEmbeddedChain = async (targetChainId: number): Promise<boolean> => {
     if (!embeddedWallet) {
-      toast.error('No embedded wallet found');
+      setToast({
+        message: 'No embedded wallet found',
+        type: 'error',
+        loading: false,
+        duration: 5000,
+      });
       return false;
     }
     
     if (embeddedWalletChainId === targetChainId) {
-      toast.info('Already on the selected network');
+      setToast({
+        message: 'Already on the selected network',
+        type: 'info',
+        loading: false,
+        duration: 3000,
+      });
       return true;
     }
 
@@ -153,12 +168,16 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       await embeddedWallet.switchChain(targetChainId);
       
       const chainInfo = availableChains.find(chain => chain.id === targetChainId);
-      toast.success(`Switched to ${chainInfo?.name || `Chain ${targetChainId}`}`);
+      setToast({
+        message: `Switched to ${chainInfo?.name || `Chain ${targetChainId}`}`,
+        type: 'success',
+        loading: false,
+        duration: 3000,
+      });
       
       // Refresh balances after successful chain switch
       setTimeout(() => {
-        refetchMUSDC();
-        refetchMWETH();
+        refetchAllBalances();
       }, 1000);
       
       return true;
@@ -166,11 +185,11 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       console.error('Failed to switch chain:', error);
       
       if (error.message?.includes('not configured')) {
-        toast.error('Network not supported');
+        toastSonner.error('Network not supported');
       } else if (error.message?.includes('rejected') || error.message?.includes('denied')) {
-        toast.error('Network switch cancelled');
+        toastSonner.error('Network switch cancelled');
       } else {
-        toast.error('Failed to switch network');
+        toastSonner.error('Failed to switch network');
       }
       return false;
     } finally {
@@ -275,89 +294,467 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   }, []);
 
   const baseCurrency = selectedPool?.baseTokenAddress as HexAddress;
-  const quoteCurrency = selectedPool?.quoteTokenAddress as HexAddress; //0x97668aec1d8deaf34d899c4f6683f9ba877485f6
+  const quoteCurrency = selectedPool?.quoteTokenAddress as HexAddress;
 
-  const addressMWETH = '0x05d889798a21c3838d7ff6f67cd46b576dab2174';
-  // const addressMUSDC = '0xa652aede05d70c1aff00249ac05a9d021f9d30c2';
-  const addressMUSDC = '0x97668aec1d8deaf34d899c4f6683f9ba877485f6';
+  const balanceDisplayChainId = getCoreChain();
+  
+  // Get token addresses for the balance display chain
+  const getTokenAddressForBalanceChain = (contractName: ContractName) => {
+    try {
+      return balanceDisplayChainId ? getContractAddress(balanceDisplayChainId, contractName) : quoteCurrency;
+    } catch (error) {
+      console.warn(`No ${contractName} address for chain ${balanceDisplayChainId}, using fallback`);
+      return contractName === ContractName.usdc ? quoteCurrency : baseCurrency;
+    }
+  };
 
-  const {
-    formattedBalance: BalanceOfMUSDC,
-    tokenSymbol: SymbolMUSDC,
-    refetchBalance: refetchMUSDC,
-  } = useTokenBalance(quoteCurrency, embeddedWalletAddress as `0x${string}`);
-  const {
-    formattedBalance: BalanceOfMWETH,
-    tokenSymbol: SymbolMWETH,
-    refetchBalance: refetchMWETH,
-  } = useTokenBalance(baseCurrency, embeddedWalletAddress as `0x${string}`);
-  /*
-  const {
-    formattedBalance: BalanceOfETH,
-    tokenSymbol: SymbolETH,
-    refetchBalance: refetchETH,
-  } = useTokenBalance(
-    '0xc4CebF58836707611439e23996f4FA4165Ea6A28',
-    embeddedWalletAddress as `0x${string}`
+  // Extract unique tokens from pools data
+  const [uniqueTokens, setUniqueTokens] = useState<Array<{
+    address: HexAddress;
+    symbol: string;
+    decimals: number;
+    isQuote: boolean;
+  }>>([]);
+
+  useEffect(() => {
+    if (!poolsData || !selectedPool) return;
+
+    const pools = 'pools' in poolsData ? poolsData.pools : poolsData.poolss.items;
+    const processedPools = pools.map(pool => processPool(pool));
+    
+    // Extract unique tokens (base and quote) from all pools
+    const tokenMap = new Map<string, {address: HexAddress, symbol: string, decimals: number, isQuote: boolean}>();
+    
+    processedPools.forEach(pool => {
+      // Add base token
+      if (pool.baseTokenAddress && pool.baseSymbol) {
+        tokenMap.set(pool.baseTokenAddress.toLowerCase(), {
+          address: pool.baseTokenAddress as HexAddress,
+          symbol: pool.baseSymbol,
+          decimals: pool.baseDecimals ?? 18,
+          isQuote: false
+        });
+      }
+      
+      // Add quote token
+      if (pool.quoteTokenAddress && pool.quoteSymbol) {
+        tokenMap.set(pool.quoteTokenAddress.toLowerCase(), {
+          address: pool.quoteTokenAddress as HexAddress,
+          symbol: pool.quoteSymbol,
+          decimals: pool.quoteDecimals ?? 6,
+          isQuote: true
+        });
+      }
+    });
+
+    setUniqueTokens(Array.from(tokenMap.values()));
+  }, [poolsData, selectedPool]);
+
+  // Hardcoded token mapping for crosschain deposits
+  // Source wallet uses appchain addresses, destination wallet (GTX) uses rari addresses
+  const HARDCODED_TOKENS = [
+    // USDT
+    {
+      address: '0xf2dc96d3e25f06e7458fF670Cf1c9218bBb71D9d' as HexAddress, // rari address for destination
+      symbol: 'USDT',
+      decimals: 6,
+      isQuote: true,
+      chainId: embeddedWalletChainId || balanceDisplayChainId,
+      sourceAddress: '0x1362Dd75d8F1579a0Ebd62DF92d8F3852C3a7516' as HexAddress // appchain for source
+    },
+    // WETH  
+    {
+      address: '0x3ffE82D34548b9561530AFB0593d52b9E9446fC8' as HexAddress, // rari address for destination
+      symbol: 'WETH',
+      decimals: 18,
+      isQuote: false,
+      chainId: embeddedWalletChainId || balanceDisplayChainId,
+      sourceAddress: '0x02950119C4CCD1993f7938A55B8Ab8384C3CcE4F' as HexAddress // appchain for source
+    },
+    // WBTC
+    {
+      address: '0xd99813A6152dBB2026b2Cd4298CF88fAC1bCf748' as HexAddress, // rari address for destination
+      symbol: 'WBTC', 
+      decimals: 8,
+      isQuote: false,
+      chainId: embeddedWalletChainId || balanceDisplayChainId,
+      sourceAddress: '0xb2e9Eabb827b78e2aC66bE17327603778D117d18' as HexAddress // appchain for source
+    }
+  ];
+
+  // For crosschain: use ONLY hardcoded tokens, ignore pool tokens completely
+  // For non-crosschain: use only pool tokens
+  const allUniqueTokens = FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+    ? HARDCODED_TOKENS
+    : uniqueTokens;
+
+
+  // Get up to 5 tokens for balance hooks (to respect React hooks rules)
+  // Use allUniqueTokens which includes hardcoded tokens
+  const token0 = allUniqueTokens[0];
+  const token1 = allUniqueTokens[1];
+  const token2 = allUniqueTokens[2];
+  const token3 = allUniqueTokens[3];
+  const token4 = allUniqueTokens[4];
+
+  // Create hooks for token 0 (GTX wallet balances)
+  const token0Balance = useTokenBalance(
+    token0?.address,
+    embeddedWalletAddress as `0x${string}`,
+    balanceDisplayChainId
   );
-  console.log(BalanceOfETH);
+  const token0BalanceManager = useBalanceManagerBalance(
+    embeddedWalletAddress as `0x${string}`,
+    token0?.address,
+    balanceDisplayChainId,
+    token0?.decimals || 18
+  );
+  
+  // Create hooks for token 0 (External wallet balances)
+  // Use sourceAddress for crosschain tokens (source wallet), otherwise use regular address
+  const token0ExternalBalance = useTokenBalance(
+    (token0 as any)?.sourceAddress || token0?.address,
+    externalWalletAddress as `0x${string}`,
+    embeddedWalletChainId || balanceDisplayChainId
+  );
+  
+  // Create hooks for token 0 (BalanceManager on connected chain - for crosschain deposits)
+  const token0ExternalBalanceManager = useBalanceManagerBalance(
+    externalWalletAddress as `0x${string}`,
+    (token0 as any)?.sourceAddress || token0?.address,
+    embeddedWalletChainId || balanceDisplayChainId,
+    token0?.decimals || 18
+  );
 
-  const ethAddress = '0x4200000000000000000000000000000000000006';
-  const wethaddres = '0x567a076beef17758952b05b1bc639e6cdd1a31ec';
-  */
+  // Create hooks for token 1 (GTX wallet balances)
+  const token1Balance = useTokenBalance(
+    token1?.address,
+    embeddedWalletAddress as `0x${string}`,
+    balanceDisplayChainId
+  );
+  const token1BalanceManager = useBalanceManagerBalance(
+    embeddedWalletAddress as `0x${string}`,
+    token1?.address,
+    balanceDisplayChainId,
+    token1?.decimals || 18
+  );
+  
+  // Create hooks for token 1 (External wallet balances)
+  const token1ExternalBalance = useTokenBalance(
+    (token1 as any)?.sourceAddress || token1?.address,
+    externalWalletAddress as `0x${string}`,
+    embeddedWalletChainId || balanceDisplayChainId
+  );
+  
+  // Create hooks for token 1 (BalanceManager on connected chain - for crosschain deposits)
+  const token1ExternalBalanceManager = useBalanceManagerBalance(
+    externalWalletAddress as `0x${string}`,
+    (token1 as any)?.sourceAddress || token1?.address,
+    embeddedWalletChainId || balanceDisplayChainId,
+    token1?.decimals || 18
+  );
+
+  // Create hooks for token 2 (GTX wallet balances)
+  const token2Balance = useTokenBalance(
+    token2?.address,
+    embeddedWalletAddress as `0x${string}`,
+    balanceDisplayChainId
+  );
+  const token2BalanceManager = useBalanceManagerBalance(
+    embeddedWalletAddress as `0x${string}`,
+    token2?.address,
+    balanceDisplayChainId,
+    token2?.decimals || 18
+  );
+  
+  // Create hooks for token 2 (External wallet balances)
+  const token2ExternalBalance = useTokenBalance(
+    (token2 as any)?.sourceAddress || token2?.address,
+    externalWalletAddress as `0x${string}`,
+    embeddedWalletChainId || balanceDisplayChainId
+  );
+  
+  // Create hooks for token 2 (BalanceManager on connected chain - for crosschain deposits)
+  const token2ExternalBalanceManager = useBalanceManagerBalance(
+    externalWalletAddress as `0x${string}`,
+    (token2 as any)?.sourceAddress || token2?.address,
+    embeddedWalletChainId || balanceDisplayChainId,
+    token2?.decimals || 18
+  );
+
+  // Create hooks for token 3 (GTX wallet balances)
+  const token3Balance = useTokenBalance(
+    token3?.address,
+    embeddedWalletAddress as `0x${string}`,
+    balanceDisplayChainId
+  );
+  const token3BalanceManager = useBalanceManagerBalance(
+    embeddedWalletAddress as `0x${string}`,
+    token3?.address,
+    balanceDisplayChainId,
+    token3?.decimals || 18
+  );
+  
+  // Create hooks for token 3 (External wallet balances)
+  const token3ExternalBalance = useTokenBalance(
+    (token3 as any)?.sourceAddress || token3?.address,
+    externalWalletAddress as `0x${string}`,
+    embeddedWalletChainId || balanceDisplayChainId
+  );
+  
+  // Create hooks for token 3 (BalanceManager on connected chain - for crosschain deposits)
+  const token3ExternalBalanceManager = useBalanceManagerBalance(
+    externalWalletAddress as `0x${string}`,
+    (token3 as any)?.sourceAddress || token3?.address,
+    embeddedWalletChainId || balanceDisplayChainId,
+    token3?.decimals || 18
+  );
+
+  // Create hooks for token 4 (GTX wallet balances)
+  const token4Balance = useTokenBalance(
+    token4?.address,
+    embeddedWalletAddress as `0x${string}`,
+    balanceDisplayChainId
+  );
+  const token4BalanceManager = useBalanceManagerBalance(
+    embeddedWalletAddress as `0x${string}`,
+    token4?.address,
+    balanceDisplayChainId,
+    token4?.decimals || 18
+  );
+  
+  // Create hooks for token 4 (External wallet balances)
+  const token4ExternalBalance = useTokenBalance(
+    (token4 as any)?.sourceAddress || token4?.address,
+    externalWalletAddress as `0x${string}`,
+    embeddedWalletChainId || balanceDisplayChainId
+  );
+  
+  // Create hooks for token 4 (BalanceManager on connected chain - for crosschain deposits)
+  const token4ExternalBalanceManager = useBalanceManagerBalance(
+    externalWalletAddress as `0x${string}`,
+    (token4 as any)?.sourceAddress || token4?.address,
+    embeddedWalletChainId || balanceDisplayChainId,
+    token4?.decimals || 18
+  );
+
+  // Aggregate token balances
+  const tokenBalances = [
+    token0 && {
+      token: token0,
+      tokenBalance: token0Balance.formattedBalance,
+      balanceManagerBalance: token0BalanceManager.formattedBalance,
+      externalBalance: token0ExternalBalance.formattedBalance,
+      externalBalanceManagerBalance: token0ExternalBalanceManager.formattedBalance,
+      displayBalance: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+        ? token0BalanceManager.formattedBalance 
+        : token0Balance.formattedBalance,
+      symbol: token0Balance.tokenSymbol || token0.symbol,
+      refetch: () => {
+        token0Balance.refetchBalance();
+        token0ExternalBalance.refetchBalance();
+        token0ExternalBalanceManager.refetch();
+        if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+          token0BalanceManager.refetch();
+        }
+      }
+    },
+    token1 && {
+      token: token1,
+      tokenBalance: token1Balance.formattedBalance,
+      balanceManagerBalance: token1BalanceManager.formattedBalance,
+      externalBalance: token1ExternalBalance.formattedBalance,
+      externalBalanceManagerBalance: token1ExternalBalanceManager.formattedBalance,
+      displayBalance: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+        ? token1BalanceManager.formattedBalance 
+        : token1Balance.formattedBalance,
+      symbol: token1Balance.tokenSymbol || token1.symbol,
+      refetch: () => {
+        token1Balance.refetchBalance();
+        token1ExternalBalance.refetchBalance();
+        token1ExternalBalanceManager.refetch();
+        if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+          token1BalanceManager.refetch();
+        }
+      }
+    },
+    token2 && {
+      token: token2,
+      tokenBalance: token2Balance.formattedBalance,
+      balanceManagerBalance: token2BalanceManager.formattedBalance,
+      externalBalance: token2ExternalBalance.formattedBalance,
+      externalBalanceManagerBalance: token2ExternalBalanceManager.formattedBalance,
+      displayBalance: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+        ? token2BalanceManager.formattedBalance 
+        : token2Balance.formattedBalance,
+      symbol: token2Balance.tokenSymbol || token2.symbol,
+      refetch: () => {
+        token2Balance.refetchBalance();
+        token2ExternalBalance.refetchBalance();
+        token2ExternalBalanceManager.refetch();
+        if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+          token2BalanceManager.refetch();
+        }
+      }
+    },
+    token3 && {
+      token: token3,
+      tokenBalance: token3Balance.formattedBalance,
+      balanceManagerBalance: token3BalanceManager.formattedBalance,
+      externalBalance: token3ExternalBalance.formattedBalance,
+      externalBalanceManagerBalance: token3ExternalBalanceManager.formattedBalance,
+      displayBalance: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+        ? token3BalanceManager.formattedBalance 
+        : token3Balance.formattedBalance,
+      symbol: token3Balance.tokenSymbol || token3.symbol,
+      refetch: () => {
+        token3Balance.refetchBalance();
+        token3ExternalBalance.refetchBalance();
+        token3ExternalBalanceManager.refetch();
+        if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+          token3BalanceManager.refetch();
+        }
+      }
+    },
+    token4 && {
+      token: token4,
+      tokenBalance: token4Balance.formattedBalance,
+      balanceManagerBalance: token4BalanceManager.formattedBalance,
+      externalBalance: token4ExternalBalance.formattedBalance,
+      externalBalanceManagerBalance: token4ExternalBalanceManager.formattedBalance,
+      displayBalance: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
+        ? token4BalanceManager.formattedBalance 
+        : token4Balance.formattedBalance,
+      symbol: token4Balance.tokenSymbol || token4.symbol,
+      refetch: () => {
+        token4Balance.refetchBalance();
+        token4ExternalBalance.refetchBalance();
+        token4ExternalBalanceManager.refetch();
+        if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+          token4BalanceManager.refetch();
+        }
+      }
+    }
+  ].filter(Boolean); // Remove null entries
+
+  // Unified refetch function for all balances
+  const refetchAllBalances = () => {
+    tokenBalances.forEach(tb => tb.refetch());
+  };
 
   let assets: Asset[] = [];
 
-  if (
-    BalanceOfMUSDC !== null &&
-    SymbolMUSDC !== null &&
-    BalanceOfMWETH !== null &&
-    SymbolMWETH !== null
-  ) {
-    assets = [
-      {
-        symbol: SymbolMUSDC,
-        balance: `${formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})} ${SymbolMUSDC}`,
-        icon: (
-          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            M
-          </div>
-        ),
-      },
-      {
-        symbol: SymbolMWETH,
-        balance: `${formatNumber(Number(BalanceOfMWETH), {decimals: 2, compact: true})} ${SymbolMWETH}`,
-        icon: (
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            M
-          </div>
-        ),
-      }
-    ];
+  console.log('💰 Dynamic Balance Display Info (Always Core Chain):', {
+    balanceDisplayChainId,
+    embeddedWalletChainId,
+    coreChain: getCoreChain(),
+    userAddress: embeddedWalletAddress,
+    crosschainEnabled: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED,
+    uniqueTokensCount: uniqueTokens.length,
+    uniqueTokens: uniqueTokens.map(t => ({ symbol: t.symbol, address: t.address })),
+    tokenBalances: tokenBalances.map(tb => ({
+      symbol: tb.symbol,
+      tokenBalance: tb.tokenBalance,
+      balanceManagerBalance: tb.balanceManagerBalance,
+      displayBalance: tb.displayBalance,
+    })),
+  });
+
+  // Create assets dynamically from all unique tokens found in pools
+  if (tokenBalances.length > 0) {
+    assets = tokenBalances
+      .filter(tb => tb.displayBalance !== null && tb.symbol !== null)
+      .map((tb, index) => {
+        const colorMap = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-yellow-500', 'bg-indigo-500'];
+        const color = colorMap[index % colorMap.length];
+        
+        return {
+          symbol: tb.symbol,
+          balance: `${formatNumber(Number(tb.displayBalance), {decimals: 2, compact: true})} ${tb.symbol}`,
+          address: tb.token.address,
+          icon: (
+            <div className={`w-6 h-6 ${color} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
+              {tb.symbol?.charAt(0)?.toUpperCase() || 'T'}
+            </div>
+          ),
+        };
+      });
   }
 
-  const [selectedDepositToken, setSelectedDepositToken] = useState('MUSDC');
+  const [selectedDepositTokenAddress, setSelectedDepositTokenAddress] = useState('');
   const [isDepositDropdownOpen, setIsDepositDropdownOpen] = useState(false);
-  const [selectedWithdrawToken, setSelectedWithdrawToken] = useState('MUSDC');
+  const [selectedWithdrawTokenAddress, setSelectedWithdrawTokenAddress] = useState('');
   const [isWithdrawDropdownOpen, setIsWithdrawDropdownOpen] = useState(false);
 
-  const tokens = [
-    { symbol: 'MUSDC', name: 'MUSDC', color: 'bg-blue-500', initial: 'M' },
-    { symbol: 'ETH', name: 'ETH', color: 'bg-gray-600', initial: 'E' },
-  ];
+  // Generate tokens dynamically from merged unique tokens
+  const tokens = allUniqueTokens.map((token, index) => {
+    const colorMap = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-yellow-500', 'bg-indigo-500'];
+    return {
+      symbol: token.symbol,
+      name: token.symbol,
+      color: colorMap[index % colorMap.length],
+      initial: token.symbol.charAt(0).toUpperCase(),
+      address: token.address,
+      decimals: token.decimals,
+    };
+  });
 
-  const currentDepositToken = tokens.find(token => token.symbol === selectedDepositToken);
+
+  // Set default selected tokens when tokens are loaded
+  useEffect(() => {
+    if (tokens.length > 0 && !selectedDepositTokenAddress) {
+      // For crosschain: prefer hardcoded USDT, then quote tokens
+      // For non-crosschain: prefer quote tokens from pools
+      let defaultToken;
+      if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
+        // For crosschain, prefer USDT (check by symbol since addresses vary by chain)
+        const hardcodedUSDT = tokens.find(t => t.symbol === 'USDT');
+        const quoteToken = tokens.find(t => allUniqueTokens.find(ut => ut.address === t.address)?.isQuote);
+        defaultToken = hardcodedUSDT || quoteToken || tokens[0];
+      } else {
+        const quoteToken = tokens.find(t => allUniqueTokens.find(ut => ut.address === t.address)?.isQuote);
+        defaultToken = quoteToken || tokens[0];
+      }
+      console.log('🚀 Setting default token:', { 
+        crosschainEnabled: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED,
+        defaultToken: defaultToken.address, 
+        symbol: defaultToken.symbol,
+        tokensLength: tokens.length 
+      });
+      setSelectedDepositTokenAddress(defaultToken.address);
+      setSelectedWithdrawTokenAddress(defaultToken.address);
+    }
+  }, [tokens.length, selectedDepositTokenAddress, allUniqueTokens.length]);
+
+  const currentDepositToken = tokens.find(token => token.address === selectedDepositTokenAddress);
   const currentWithdrawToken = tokens.find(
-    token => token.symbol === selectedWithdrawToken
+    token => token.address === selectedWithdrawTokenAddress
   );
 
-  const handleDepositTokenSelect = (tokenSymbol: string) => {
-    setSelectedDepositToken(tokenSymbol);
+  // Debug logging
+  console.log('🎯 Current token state:', {
+    selectedDepositTokenAddress,
+    selectedDepositTokenSymbol: currentDepositToken?.symbol,
+    currentDepositTokenAddress: currentDepositToken?.address,
+    tokensAvailable: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
+    uniqueTokensCount: uniqueTokens.length
+  });
+
+  const handleDepositTokenSelect = (tokenAddress: string) => {
+    const selectedToken = tokens.find(t => t.address === tokenAddress);
+    console.log('🔄 Token selection:', { 
+      selectedAddress: tokenAddress, 
+      selectedSymbol: selectedToken?.symbol,
+      currentSelectedAddress: selectedDepositTokenAddress,
+      tokensLength: tokens.length,
+      tokens: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' }))
+    });
+    setSelectedDepositTokenAddress(tokenAddress);
     setIsDepositDropdownOpen(false);
   };
 
-  const handleWithdrawTokenSelect = (tokenSymbol: string) => {
-    setSelectedWithdrawToken(tokenSymbol);
+  const handleWithdrawTokenSelect = (tokenAddress: string) => {
+    setSelectedWithdrawTokenAddress(tokenAddress);
     setIsWithdrawDropdownOpen(false);
   };
 
@@ -384,6 +781,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     error: crosschainDepositError,
     resetState: crosschainDepositResetState,
   } = useCrosschainDeposit();
+  
   const {
     withdraw: privyWithdraw,
     loading: withdrawLoading,
@@ -394,38 +792,190 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const [toast, setToast] = useState<ToastProps | null>(null);
 
-  const handlePrivyDeposit = () => {
+  const handlePrivyDeposit = async () => {
+    console.log('⚡ handlePrivyDeposit: Deposit handler called');
+    console.log('⚡ handlePrivyDeposit: CROSSCHAIN_DEPOSIT_ENABLED:', FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED);
+    
     setToast({
-      message: `Depositing ${depositAmount} ${SymbolMUSDC}...`,
+      message: `Depositing ${depositAmount} ${currentDepositToken?.symbol || 'token'}...`,
       type: 'info',
       loading: true,
       duration: 0,
     });
 
     if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
-      crosschainDeposit(depositAmount, quoteCurrency, embeddedWalletAddress as `0x${string}`);
+      console.log('⚡ handlePrivyDeposit: Using CROSSCHAIN DEPOSIT FLOW');
+      
+      // For crosschain deposits, use the selected chain from the chain selector
+      // This is the chain the user wants to deposit from (where ChainBalanceManager should be)
+      const selectedChainId = embeddedWalletChainId || defaultChainId; // Chain selected in the UI
+      const userExternalChainId = externalWalletChainId;
+      
+      console.log('⚡ handlePrivyDeposit: selectedChainId (from UI):', selectedChainId);
+      console.log('⚡ handlePrivyDeposit: userExternalChainId (current wallet):', userExternalChainId);
+      console.log('⚡ handlePrivyDeposit: embeddedWalletChainId:', embeddedWalletChainId);
+      console.log('⚡ handlePrivyDeposit: defaultChainId:', defaultChainId);
+      
+      // Validate that the selected chain supports crosschain deposits
+      if (!isCrosschainSupportedChain(selectedChainId)) {
+        console.log('⚡ handlePrivyDeposit: Selected chain not supported for crosschain deposits:', selectedChainId);
+        const supportedChains = getSupportedCrosschainDepositChainNames().join(', ');
+        setToast({
+          message: `Selected chain doesn't support crosschain deposits. Please select a supported chain: ${supportedChains}`,
+          type: 'error',
+          loading: false,
+          duration: 8000,
+        });
+        return;
+      }
+      
+      // Check if external wallet needs to switch chains
+      if (userExternalChainId && userExternalChainId !== selectedChainId) {
+        console.log('⚡ handlePrivyDeposit: External wallet chain mismatch, attempting to switch');
+        console.log('⚡ handlePrivyDeposit: From chain:', userExternalChainId, 'To chain:', selectedChainId);
+        
+        if (!externalWallet) {
+          setToast({
+            message: 'External wallet not found. Please connect your wallet.',
+            type: 'error',
+            loading: false,
+            duration: 5000,
+          });
+          return;
+        }
+        
+        try {
+          setToast({
+            message: 'Switching external wallet to the selected chain...',
+            type: 'info',
+            loading: true,
+            duration: 0,
+          });
+          
+          console.log('⚡ handlePrivyDeposit: Requesting chain switch to:', selectedChainId);
+          
+          // First try to switch to the chain
+          try {
+            await externalWallet.switchChain(selectedChainId);
+            console.log('⚡ handlePrivyDeposit: Chain switch successful');
+          } catch (switchError: any) {
+            console.log('⚡ handlePrivyDeposit: Chain switch failed, trying to add chain first:', switchError);
+            
+            // If switch fails, try to add the chain first
+            if (switchError.message?.includes('Unrecognized chain ID') || switchError.code === 4902) {
+              console.log('⚡ handlePrivyDeposit: Adding chain to wallet first');
+              
+              // Get chain configuration
+              const wagmiChain = wagmiConfig.chains.find(chain => chain.id === selectedChainId);
+              
+              if (!wagmiChain) {
+                throw new Error(`Chain configuration not found for chain ID ${selectedChainId}`);
+              }
+              
+              // Get the actual RPC URL based on the mapping from route.ts
+              const getRpcUrl = (chainId: number): string => {
+                const rpcMapping: Record<number, string> = {
+                  4661: 'https://appchain.caff.testnet.espresso.network', // appchain-testnet
+                  1918988905: 'https://rari.caff.testnet.espresso.network', // rari-testnet
+                  11155931: 'https://testnet.riselabs.xyz', // rise-sepolia
+                  911867: 'https://odyssey.ithaca.xyz', // conduit
+                };
+                return rpcMapping[chainId] || wagmiChain.rpcUrls.default.http[0];
+              };
+              
+              const actualRpcUrl = getRpcUrl(selectedChainId);
+              console.log('⚡ handlePrivyDeposit: Using RPC URL for chain', selectedChainId, ':', actualRpcUrl);
+              
+              // Add the chain to MetaMask
+              const provider = await externalWallet.getEthereumProvider();
+              await provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: `0x${selectedChainId.toString(16)}`,
+                  chainName: wagmiChain.name,
+                  nativeCurrency: {
+                    name: wagmiChain.nativeCurrency.name,
+                    symbol: wagmiChain.nativeCurrency.symbol,
+                    decimals: wagmiChain.nativeCurrency.decimals,
+                  },
+                  rpcUrls: [actualRpcUrl],
+                  blockExplorerUrls: wagmiChain.blockExplorers ? [wagmiChain.blockExplorers.default.url] : [],
+                }],
+              });
+              
+              console.log('⚡ handlePrivyDeposit: Chain added successfully, now switching');
+              
+              // Now try to switch again
+              await externalWallet.switchChain(selectedChainId);
+              console.log('⚡ handlePrivyDeposit: Chain switch successful after adding');
+            } else {
+              throw switchError;
+            }
+          }
+          
+          setToast({
+            message: 'Chain switched successfully. Proceeding with crosschain deposit...',
+            type: 'success',
+            loading: false,
+            duration: 3000,
+          });
+          
+          // Wait a moment for the chain switch to be reflected
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+        } catch (error) {
+          console.error('⚡ handlePrivyDeposit: Chain switch failed:', error);
+          setToast({
+            message: 'Failed to switch chain. Please manually add and switch your wallet to Appchain Testnet and try again.',
+            type: 'error',
+            loading: false,
+            duration: 8000,
+          });
+          return;
+        }
+      }
+      
+      // Find the selected token address for deposit
+      const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
+      const tokenAddress = selectedToken?.address || (uniqueTokens.find(t => t.isQuote)?.address || uniqueTokens[0]?.address);
+      
+      console.log('⚡ handlePrivyDeposit: Chain validation passed, calling crosschainDeposit hook');
+      console.log('⚡ handlePrivyDeposit: Parameters - amount:', depositAmount, 'token:', tokenAddress, 'recipient:', embeddedWalletAddress, 'chain:', selectedChainId);
+      
+      try {
+        crosschainDeposit(depositAmount, tokenAddress, embeddedWalletAddress as `0x${string}`, selectedChainId);
+        console.log('⚡ handlePrivyDeposit: crosschainDeposit function called successfully');
+      } catch (error) {
+        console.error('⚡ handlePrivyDeposit: Error calling crosschainDeposit:', error);
+      }
     } else {
-      privyDeposit(depositAmount, quoteCurrency);
+      console.log('⚡ handlePrivyDeposit: Using REGULAR DEPOSIT FLOW');
+      // Find the selected token address for deposit
+      const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
+      const tokenAddress = selectedToken?.address || (uniqueTokens.find(t => t.isQuote)?.address || uniqueTokens[0]?.address);
+      privyDeposit(depositAmount, tokenAddress);
     }
     
     setTimeout(() => {
-      refetchMUSDC();
-      refetchMWETH();
+      refetchAllBalances();
     }, 1000);
   };
 
   const handlePrivyWithdraw = () => {
     setToast({
-      message: `Withdrawing ${withdrawAmount} ${SymbolMUSDC}...`,
+      message: `Withdrawing ${withdrawAmount} ${currentWithdrawToken?.symbol || 'token'}...`,
       type: 'info',
       loading: true,
       duration: 0,
     });
 
-    privyWithdraw(withdrawWallet, withdrawAmount, quoteCurrency);
+    // Find the selected token address for withdraw
+    const selectedToken = tokens.find(t => t.address === selectedWithdrawTokenAddress);
+    const tokenAddress = selectedToken?.address || (uniqueTokens.find(t => t.isQuote)?.address || uniqueTokens[0]?.address);
+    
+    privyWithdraw(withdrawWallet, withdrawAmount, tokenAddress);
     setTimeout(() => {
-      refetchMUSDC();
-      refetchMWETH();
+      refetchAllBalances();
     }, 1000);
   };
 
@@ -434,7 +984,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       depositResetState();
       crosschainDepositResetState();
       setDepositAmount('');
-      refetchMUSDC();
+      refetchAllBalances();
     }
   }, [depositCurrentStep, crosschainDepositCurrentStep]);
 
@@ -443,18 +993,18 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     if (withdrawCurrentStep === 'Transaction submitted successfully!') {
       withdrawResetState();
       setWithdrawAmount('');
-      refetchMUSDC();
+      refetchAllBalances();
     }
   }, [withdrawCurrentStep]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      refetchMUSDC();
-      refetchMWETH();
+      refetchAllBalances();
+      refetchAllBalances();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [refetchMUSDC, refetchMWETH]);
+  }, [refetchAllBalances]);
 
   return (
     <>
@@ -628,11 +1178,29 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="space-y-3">
-                {assets.map((asset, index) => (
-                  <div key={index} className="flex items-center justify-between py-2">
+                {assets.map((asset) => (
+                  <div key={asset.address || asset.symbol} className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
                       {asset.icon}
-                      <span className="font-medium">{asset.symbol}</span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{asset.symbol}</span>
+                          {asset.address && (
+                            <button
+                              onClick={() => copyToClipboard(asset.address!)}
+                              className="p-1 hover:bg-gray-700 rounded opacity-70 hover:opacity-100 transition-opacity"
+                              title={`Copy ${asset.symbol} address`}
+                            >
+                              <Copy size={12} className="text-gray-400" />
+                            </button>
+                          )}
+                        </div>
+                        {asset.address && (
+                          <span className="text-gray-400 text-xs font-mono">
+                            {`${asset.address.slice(0, 6)}...${asset.address.slice(-4)}`}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <span className="text-gray-300">{asset.balance}</span>
                   </div>
@@ -660,9 +1228,16 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                         >
                           {currentDepositToken?.initial}
                         </div>
-                        <span className="text-white font-medium">
-                          {currentDepositToken?.name}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-white font-medium">
+                            {currentDepositToken?.name}
+                          </span>
+                          {currentDepositToken?.address && (
+                            <span className="text-gray-400 text-xs font-mono">
+                              {`${currentDepositToken.address.slice(0, 6)}...${currentDepositToken.address.slice(-4)}`}
+                            </span>
+                          )}
+                        </div>
                         <ChevronDown
                           className={`w-4 h-4 text-gray-400 transition-transform ${
                             isDepositDropdownOpen ? 'rotate-180' : ''
@@ -671,20 +1246,39 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                       </div>
 
                       {isDepositDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[140px] z-10">
+                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[230px] z-10">
                           {tokens.map(token => (
                             <div
-                              key={token.symbol}
+                              key={token.address}
                               className="flex items-center gap-3 p-3 hover:bg-gray-700 cursor-pointer first:rounded-t-lg last:rounded-b-lg transition-colors"
-                              onClick={() => handleDepositTokenSelect(token.symbol)}
+                              onClick={() => handleDepositTokenSelect(token.address)}
                             >
                               <div
                                 className={`w-6 h-6 ${token.color} rounded-full flex items-center justify-center text-white text-sm font-medium`}
                               >
                                 {token.initial}
                               </div>
-                              <span className="text-white font-medium">{token.name}</span>
-                              {selectedDepositToken === token.symbol && (
+                              <div className="flex flex-col flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-medium">{token.name}</span>
+                                  {token.address && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(token.address);
+                                      }}
+                                      className="p-1 hover:bg-gray-600 rounded opacity-70 hover:opacity-100 transition-opacity"
+                                      title={`Copy ${token.name} address`}
+                                    >
+                                      <Copy size={10} className="text-gray-400" />
+                                    </button>
+                                  )}
+                                </div>
+                                <span className="text-gray-400 text-xs font-mono">
+                                  {token.address ? `${token.address.slice(0, 6)}...${token.address.slice(-4)}` : ''}
+                                </span>
+                              </div>
+                              {selectedDepositTokenAddress === token.address && (
                                 <div className="w-2 h-2 bg-blue-400 rounded-full ml-auto"></div>
                               )}
                             </div>
@@ -705,7 +1299,14 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>{formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})}</span>
+                    <span>{(() => {
+                      const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
+                      const tokenBalance = tokenBalances.find(tb => tb.token.address === selectedToken?.address);
+                      // Source wallet should ALWAYS show ERC20 balance (what user actually has in their external wallet)
+                      // This is what they can deposit from, regardless of crosschain or regular deposits
+                      const sourceBalance = tokenBalance?.externalBalance; // External wallet ERC20 balance
+                      return formatNumber(Number(sourceBalance || '0'), {decimals: 2, compact: true});
+                    })()}</span>
                   </div>
                 </div>
               </div>
@@ -717,17 +1318,55 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="mb-6">
-                <div className="text-sm text-gray-400 mb-3">To your GTX wallet</div>
-                <div className="border border-gray-600 rounded-lg p-3 flex items-center justify-between">
-                  <span className="text-sm text-gray-300 font-mono break-all">
-                    {embeddedWalletAddress}
-                  </span>
+                <div className="text-sm text-gray-400 mb-3 flex items-center justify-between">
+                  <span>To your GTX wallet: {shortenAddress(embeddedWalletAddress)}</span>
                   <button
                     onClick={() => copyToClipboard(embeddedWalletAddress)}
                     className="ml-2 p-1 hover:bg-gray-700 rounded"
+                    title="Copy GTX wallet address"
                   >
-                    <Copy size={16} className="text-gray-400" />
+                    <Copy size={14} className="text-gray-400" />
                   </button>
+                </div>
+                
+                <div className="mb-4 p-4 border border-gray-600 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="relative">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 ${currentDepositToken?.color} rounded-full flex items-center justify-center text-white font-medium`}
+                        >
+                          {currentDepositToken?.initial}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-white font-medium">
+                            {currentDepositToken?.name}
+                          </span>
+                          {currentDepositToken?.address && (
+                            <span className="text-gray-400 text-xs font-mono">
+                              {`${currentDepositToken.address.slice(0, 6)}...${currentDepositToken.address.slice(-4)}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-right font-medium w-full ml-4 text-gray-300">
+                      {(() => {
+                        const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
+                        const tokenBalance = tokenBalances.find(tb => tb.token.address === selectedToken?.address);
+                        return formatNumber(Number(tokenBalance?.displayBalance || '0'), {decimals: 2, compact: true});
+                      })()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <CreditCard size={14} />
+                    <span>{(() => {
+                      const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
+                      const tokenBalance = tokenBalances.find(tb => tb.token.address === selectedToken?.address);
+                      return formatNumber(Number(tokenBalance?.displayBalance || '0'), {decimals: 2, compact: true});
+                    })()}</span>
+                  </div>
                 </div>
               </div>
 
@@ -801,20 +1440,39 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                       </div>
 
                       {isWithdrawDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[140px] z-10">
+                        <div className="absolute top-full left-0 mt-2 bg-gray-800 rounded-lg shadow-lg border border-gray-700 min-w-[230px] z-10">
                           {tokens.map(token => (
                             <div
-                              key={token.symbol}
+                              key={token.address}
                               className="flex items-center gap-3 p-3 hover:bg-gray-700 cursor-pointer first:rounded-t-lg last:rounded-b-lg transition-colors"
-                              onClick={() => handleWithdrawTokenSelect(token.symbol)}
+                              onClick={() => handleWithdrawTokenSelect(token.address)}
                             >
                               <div
                                 className={`w-6 h-6 ${token.color} rounded-full flex items-center justify-center text-white text-sm font-medium`}
                               >
                                 {token.initial}
                               </div>
-                              <span className="text-white font-medium">{token.name}</span>
-                              {selectedWithdrawToken === token.symbol && (
+                              <div className="flex flex-col flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-medium">{token.name}</span>
+                                  {token.address && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(token.address);
+                                      }}
+                                      className="p-1 hover:bg-gray-600 rounded opacity-70 hover:opacity-100 transition-opacity"
+                                      title={`Copy ${token.name} address`}
+                                    >
+                                      <Copy size={10} className="text-gray-400" />
+                                    </button>
+                                  )}
+                                </div>
+                                <span className="text-gray-400 text-xs font-mono">
+                                  {token.address ? `${token.address.slice(0, 6)}...${token.address.slice(-4)}` : ''}
+                                </span>
+                              </div>
+                              {selectedWithdrawTokenAddress === token.address && (
                                 <div className="w-2 h-2 bg-blue-400 rounded-full ml-auto"></div>
                               )}
                             </div>
@@ -833,7 +1491,11 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CreditCard size={14} />
-                    <span>{formatNumber(Number(BalanceOfMUSDC), {decimals: 2, compact: true})}</span>
+                    <span>{(() => {
+                      const selectedToken = tokens.find(t => t.address === selectedWithdrawTokenAddress);
+                      const tokenBalance = tokenBalances.find(tb => tb.token.address === selectedToken?.address);
+                      return formatNumber(Number(tokenBalance?.displayBalance || '0'), {decimals: 2, compact: true});
+                    })()}</span>
                   </div>
                 </div>
               </div>

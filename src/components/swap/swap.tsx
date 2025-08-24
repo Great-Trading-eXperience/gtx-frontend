@@ -211,43 +211,43 @@ const SwapForm: React.FC = () => {
 
   // Prepare tokens for selector - dynamically from pools
   const availableTokensList: Token[] = useMemo(() => {
-    if (!availableTokensFromPools || availableTokensFromPools.length === 0) {
-      // Fallback tokens for Rise Sepolia (chain 11155931) when GraphQL doesn't return tokens
-      if (currentChainId === 11155931) {
-        console.log('[SWAP] 🔄 Using fallback token list for Rise Sepolia');
-        const fallbackTokens: Token[] = [
-          {
-            id: 'musdc',
-            name: 'Mock USD Coin',
-            symbol: 'MUSDC',
-            icon: '/tokens/usdc.png',
-            address: '0xC004514803F58b09eee24471BC9EfF3D1087CffF' as HexAddress,
-            description: '0xC004...CffF',
-            decimals: 6
-          },
-          {
-            id: 'mwbtc',
-            name: 'Mock Wrapped Bitcoin',
-            symbol: 'mWBTC',
-            icon: '/tokens/bitcoin.png',
-            address: '0xdDbe918dcA0F0B876c2Dff6ff3db4FA0C943A293' as HexAddress,
-            description: '0xdDbe...A293',
-            decimals: 8
-          },
-          {
-            id: 'mweth',
-            name: 'Mock Wrapped Ethereum',
-            symbol: 'mWETH',
-            icon: '/tokens/eth.png',
-            address: '0xbb66130EED9BD4ea584cf283d34E49E8d4d69e99' as HexAddress,
-            description: '0xbb66...e99',
-            decimals: 18
-          }
-        ];
-        return fallbackTokens;
-      }
-      return convertTokensForSelector({});
-    }
+    // if (!availableTokensFromPools || availableTokensFromPools.length === 0) {
+    //   // Fallback tokens for Rise Sepolia (chain 11155931) when GraphQL doesn't return tokens
+    //   if (currentChainId === 11155931) {
+    //     console.log('[SWAP] 🔄 Using fallback token list for Rise Sepolia');
+    //     const fallbackTokens: Token[] = [
+    //       {
+    //         id: 'musdc',
+    //         name: 'Mock USD Coin',
+    //         symbol: 'MUSDC',
+    //         icon: '/tokens/usdc.png',
+    //         address: '0xC004514803F58b09eee24471BC9EfF3D1087CffF' as HexAddress,
+    //         description: '0xC004...CffF',
+    //         decimals: 6
+    //       },
+    //       {
+    //         id: 'mwbtc',
+    //         name: 'Mock Wrapped Bitcoin',
+    //         symbol: 'mWBTC',
+    //         icon: '/tokens/bitcoin.png',
+    //         address: '0xdDbe918dcA0F0B876c2Dff6ff3db4FA0C943A293' as HexAddress,
+    //         description: '0xdDbe...A293',
+    //         decimals: 8
+    //       },
+    //       {
+    //         id: 'mweth',
+    //         name: 'Mock Wrapped Ethereum',
+    //         symbol: 'mWETH',
+    //         icon: '/tokens/eth.png',
+    //         address: '0xbb66130EED9BD4ea584cf283d34E49E8d4d69e99' as HexAddress,
+    //         description: '0xbb66...e99',
+    //         decimals: 18
+    //       }
+    //     ];
+    //     return fallbackTokens;
+    //   }
+    //   return convertTokensForSelector({});
+    // }
 
     // Helper function to get proper icon for any token symbol
     const getTokenIcon = (tokenSymbol: string): string => {

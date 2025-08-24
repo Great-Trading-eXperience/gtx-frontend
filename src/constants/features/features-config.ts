@@ -71,3 +71,36 @@ export function getEnabledTabs(): string[] {
         .filter(([feature, enabled]) => feature.startsWith(tabPrefix) && enabled)
         .map(([feature]) => feature.replace(tabPrefix, '').toLowerCase());
 }
+
+// Helper function to check if a chain supports crosschain deposits
+export function isCrosschainSupportedChain(chainId: number): boolean {
+    // Only chains with ChainBalanceManager contracts support crosschain deposits
+    const supportedCrosschainDepositChains = [4661]; // Appchain Testnet
+    return supportedCrosschainDepositChains.includes(chainId);
+}
+
+// Helper function to get supported crosschain deposit chains
+export function getSupportedCrosschainDepositChains(): number[] {
+    return [4661]; // Appchain Testnet
+}
+
+// Helper function to get human-readable names for supported crosschain chains
+export function getSupportedCrosschainDepositChainNames(): string[] {
+    const chainNames: Record<number, string> = {
+        4661: 'Appchain Testnet',
+    };
+    return getSupportedCrosschainDepositChains().map(chainId => chainNames[chainId] || `Chain ${chainId}`);
+}
+
+// Core chain configuration - the main chain where balances are shown for crosschain deposits
+export const CORE_CHAIN = 1918988905; 
+
+// Helper function to get the core chain ID
+export function getCoreChain(): number {
+    return CORE_CHAIN;
+}
+
+// Helper function to check if crosschain deposit is enabled and should use core chain balances
+export function shouldUseCoreChainBalance(): boolean {
+    return FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED;
+}
