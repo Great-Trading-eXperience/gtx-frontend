@@ -1,18 +1,17 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
+import { useToast } from "@/components/clob-dex/place-order/toastContext";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
+import { useEffectiveChainId } from "@/utils/chain-override";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { erc20Abi, formatUnits } from "viem";
+import { createWalletClient, custom, erc20Abi, formatUnits } from "viem";
 import { useChainId } from "wagmi";
-import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
-import { useEffectiveChainId } from "@/utils/chain-override";
+import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
-import { createWalletClient, custom } from "viem";
-import { writeContract } from "wagmi/actions";
 
 const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
   try {

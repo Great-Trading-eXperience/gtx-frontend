@@ -5,6 +5,7 @@ export enum ContractName {
     clobBalanceManager = "PROXY_BALANCEMANAGER",
     clobPoolManager = "PROXY_POOLMANAGER",
     clobRouter = "PROXY_ROUTER",
+    chainBalanceManager = "PROXY_CHAINBALANCEMANAGER",
     openIntentRouter = "OPEN_INTENT_ROUTER",
     usdc = "USDC",
     weth = "WETH",
@@ -73,11 +74,12 @@ export function getContractAddress(
 
     const address = chainContracts[contractName];
 
-    if (!address) {
-        throw new Error(
-            `Contract ${contractName} not found for chain ID ${chainIdString}`
-        );
-    }
+    // TODO: remove this
+    // if (!address) {
+    //     throw new Error(
+    //         `Contract ${contractName} not found for chain ID ${chainIdString}`
+    //     );
+    // }
 
-    return address;
+    return address || '';
 }

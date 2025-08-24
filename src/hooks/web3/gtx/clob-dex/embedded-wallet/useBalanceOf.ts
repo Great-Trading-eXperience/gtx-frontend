@@ -1,5 +1,5 @@
 import ERC20ABI from '@/abis/tokens/TokenABI';
-import { parseUnits, formatUnits } from 'viem';
+import { formatUnits } from 'viem';
 import { useReadContract } from 'wagmi';
 
 interface UseTokenBalanceResult {
@@ -14,7 +14,8 @@ interface UseTokenBalanceResult {
 
 export const useTokenBalance = (
   tokenAddress: `0x${string}` | undefined,
-  walletAddress: `0x${string}` | undefined
+  walletAddress: `0x${string}` | undefined,
+  chainId?: number
 ): UseTokenBalanceResult => {
   const {
     data: decimals,
@@ -25,6 +26,10 @@ export const useTokenBalance = (
     address: tokenAddress,
     abi: ERC20ABI,
     functionName: 'decimals',
+    chainId,
+    query: {
+      enabled: !!(tokenAddress && walletAddress),
+    }
   });
 
   const {
@@ -37,19 +42,31 @@ export const useTokenBalance = (
     address: tokenAddress,
     abi: ERC20ABI,
     functionName: 'balanceOf',
-    args: [walletAddress as `0x${string}`],
+    args: walletAddress ? [walletAddress] : undefined,
+    chainId,
+    query: {
+      enabled: !!(tokenAddress && walletAddress),
+    }
   });
 
   const { data: tokenNameData } = useReadContract({
     address: tokenAddress,
     abi: ERC20ABI,
     functionName: 'name',
+    chainId,
+    query: {
+      enabled: !!(tokenAddress && walletAddress),
+    }
   });
 
   const { data: tokenSymbolData } = useReadContract({
     address: tokenAddress,
     abi: ERC20ABI,
     functionName: 'symbol',
+    chainId,
+    query: {
+      enabled: !!(tokenAddress && walletAddress),
+    }
   });
 
   const isLoading = isLoadingDecimals || isLoadingBalance;
@@ -66,11 +83,10 @@ export const useTokenBalance = (
   let formattedBalance: string | null = null;
   if (!isLoading && !isError && rawBalance !== null && rawBalance !== undefined && typeof decimals === 'number') {
     try {
-      formattedBalance = formatUnits(rawBalance, decimals);
+      formattedBalance = formatUnits(rawBalance as bigint, decimals);
     } catch (e) {
       console.error("Error formatting balance:", e);
       formattedBalance = 'Formatting Error';
-      // Optionally, set a specific error for formatting issues
       if (!combinedError) {
         combinedError = e instanceof Error ? e : new Error("Failed to format balance.");
       }
@@ -79,8 +95,8 @@ export const useTokenBalance = (
 
   return {
     formattedBalance,
-    tokenName: tokenNameData || null,
-    tokenSymbol: tokenSymbolData || null,
+    tokenName: (tokenNameData as string) || null,
+    tokenSymbol: (tokenSymbolData as string) || null,
     isLoading,
     isError,
     error: combinedError,

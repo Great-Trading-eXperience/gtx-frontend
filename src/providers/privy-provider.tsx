@@ -1,10 +1,10 @@
 'use client';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { appchainTestnet, rariTestnet, wagmiConfig } from '@/configs/wagmi';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider } from '@privy-io/wagmi';
-import { riseTestnet, rariTestnet, appchainTestnet, wagmiConfig } from '@/configs/wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { defineChain } from 'viem';
 
 const queryClient = new QueryClient();
@@ -20,9 +20,10 @@ const privyConfig: PrivyClientConfig = {
     accentColor: '#676FFF',
     logo: '/logo/gtx.png',
   },
-  defaultChain: defineChain(riseTestnet),
+  // defaultChain: defineChain(riseTestnet),
+  defaultChain: defineChain(rariTestnet),
   supportedChains: [
-    defineChain(riseTestnet),
+    // defineChain(riseTestnet),
     defineChain(rariTestnet),
     defineChain(appchainTestnet),
   ],

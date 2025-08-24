@@ -5,11 +5,12 @@
  * via environment variables, without needing to modify individual hooks.
  */
 
-import { riseTestnet, rariTestnet, appchainTestnet } from '@/configs/wagmi';
+// import { riseTestnet, rariTestnet, appchainTestnet } from '@/configs/wagmi';
+import { rariTestnet, appchainTestnet } from '@/configs/wagmi';
 
 // Available chains for override
 const AVAILABLE_CHAINS = {
-  RISE_TESTNET: riseTestnet.id,      // 11155931
+  // RISE_TESTNET: riseTestnet.id,      // 11155931
   RARI_TESTNET: rariTestnet.id,      // 1918988905  
   APPCHAIN_TESTNET: appchainTestnet.id, // 4661
 } as const;
@@ -67,8 +68,8 @@ export function isChainForcingEnabled(): boolean {
  */
 export function getChainName(chainId: number): string {
   switch (chainId) {
-    case AVAILABLE_CHAINS.RISE_TESTNET:
-      return 'Rise Testnet';
+    // case AVAILABLE_CHAINS.RISE_TESTNET:
+    //   return 'Rise Testnet';
     case AVAILABLE_CHAINS.RARI_TESTNET:
       return 'Rari Testnet';
     case AVAILABLE_CHAINS.APPCHAIN_TESTNET:
