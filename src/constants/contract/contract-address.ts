@@ -69,7 +69,8 @@ export function getContractAddress(
     const chainContracts = contractsConfig[chainIdString] as Partial<Record<ContractName, string>>;
 
     if (!chainContracts) {
-        throw new Error(`Chain ID ${chainIdString} not found in configuration`);
+        console.error(`Chain ID ${chainIdString} not found in configuration, returning empty address`);
+        return '';
     }
 
     const address = chainContracts[contractName];
