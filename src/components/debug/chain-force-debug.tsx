@@ -7,13 +7,14 @@ import { useChainId } from 'wagmi';
 import { useEffectiveChainId, getChainName, isChainForcingEnabled } from '@/utils/chain-override';
 
 export default function ChainForceDebug() {
+  const currentChainId = useChainId();
+  const effectiveChainId = useEffectiveChainId(currentChainId);
+  
   // Only show in development
   if (process.env.NODE_ENV !== 'development') {
     return null;
   }
 
-  const currentChainId = useChainId();
-  const effectiveChainId = useEffectiveChainId(currentChainId);
   const isForcing = isChainForcingEnabled();
   const isChainDifferent = currentChainId !== effectiveChainId;
 

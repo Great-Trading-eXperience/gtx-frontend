@@ -228,7 +228,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
 
     if (allowance < requiredAmount) {
       // toast.info('Approving tokens for trading...');
-      const ApprovingToastId = showToast({
+      const approvingToastId = showToast({
         message: 'Approving tokens for trading...',
         type: 'loading',
       });
@@ -246,7 +246,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
 
       if (approvalReceipt.status !== 'success') {
         // toast.error('Token approval failed');
-        updateToast(ApprovingToastId, {
+        updateToast(approvingToastId, {
           message: 'Token approval failed',
           type: 'error',
         });
@@ -254,7 +254,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       }
 
       // toast.success('Token approval confirmed');
-      updateToast(ApprovingToastId, {
+      updateToast(approvingToastId, {
         message: 'Token approval confirmed',
         type: 'success',
       });
