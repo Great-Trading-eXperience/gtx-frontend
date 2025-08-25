@@ -1,17 +1,22 @@
-import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
-import { useToast } from "@/components/clob-dex/place-order/toastContext";
-import { wagmiConfig } from "@/configs/wagmi";
-import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
-import { HexAddress } from "@/types/general/address";
-import { useEffectiveChainId } from "@/utils/chain-override";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useMutation } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import { createWalletClient, custom, erc20Abi, formatUnits } from "viem";
-import { useChainId } from "wagmi";
-import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
+import GTXRouterABI from '@/abis/gtx/clob/GTXRouterABI';
+import { useToast } from '@/components/clob-dex/place-order/toastContext';
+import { wagmiConfig } from '@/configs/wagmi';
+import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
+import { HexAddress } from '@/types/general/address';
+import { useEffectiveChainId } from '@/utils/chain-override';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useMutation } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
+import { createWalletClient, custom, erc20Abi, formatUnits } from 'viem';
+import { useChainId } from 'wagmi';
+import {
+  readContract,
+  simulateContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from 'wagmi/actions';
+import { OrderSideEnum, TimeInForceEnum } from '../../../../../../lib/enums/clob.enum';
 
 const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
   try {
@@ -128,7 +133,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
 
       const errorMessage = `Insufficient balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
-      toast.error(errorMessage);
+      // toast.error(errorMessage);
+      showToast({
+        message: errorMessage,
+        type: 'error',
+      });
       throw new Error(errorMessage);
     }
   };
@@ -218,7 +227,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     });
 
     if (allowance < requiredAmount) {
-      toast.info('Approving tokens for trading...');
+      // toast.info('Approving tokens for trading...');
+      const approvingToastId = showToast({
+        message: 'Approving tokens for trading...',
+        type: 'loading',
+      });
 
       const approvalHash = await writeContractWithPrivy({
         address: token,
@@ -232,11 +245,19 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       });
 
       if (approvalReceipt.status !== 'success') {
-        toast.error('Token approval failed');
+        // toast.error('Token approval failed');
+        updateToast(approvingToastId, {
+          message: 'Token approval failed',
+          type: 'error',
+        });
         throw new Error('Token approval failed');
       }
 
-      toast.success('Token approval confirmed');
+      // toast.success('Token approval confirmed');
+      updateToast(approvingToastId, {
+        message: 'Token approval confirmed',
+        type: 'success',
+      });
     }
   };
 
@@ -680,6 +701,10 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
 
           setOrderHash(hash);
           // toast.success(`${orderType} order submitted. Waiting for confirmation...`);
+          updateToast(toastId, {
+            message: `${orderType} order submitted. Waiting for confirmation...`,
+            type: 'info',
+          });
 
           const receipt = await waitForTransactionReceiptWithRetry(hash, {
             maxAttempts: 5,
@@ -712,24 +737,49 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             if (errorStr.includes('0x7939f424')) {
             } else if (errorStr.includes('0xfb8f41b2')) {
               // toast.error("Insufficient balance for this order. Please deposit more funds.");
+              updateToast(toastId, {
+                type: 'error',
+                message:
+                  'Insufficient balance for this order. Please deposit more funds.',
+              });
             } else if (errorStr.includes('SlippageTooHigh')) {
               // toast.error("Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Order failed due to high slippage.',
+              });
             } else if (errorStr.includes('InsufficientLiquidity')) {
               // toast.error("Insufficient liquidity in the order book for this order size.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient liquidity in the order book for this order size.',
+              });
             } else if (errorStr.includes('InvalidPool')) {
               // toast.error("Invalid trading pool. Please refresh and try again.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Invalid trading pool. Please refresh and try again.',
+              });
             } else if (errorStr.includes('TransactionReceiptNotFoundError')) {
               // toast.error("Transaction is taking longer than expected. Please check your transaction status manually.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Transaction is taking longer than expected.',
+              });
             } else if (errorStr.includes('reverted') && !errorStr.includes('reason')) {
               // Generic revert without specific reason
               // toast.error(`Contract execution failed. This might be due to insufficient balance, slippage, or market conditions. Check console for details.`);
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Contract execution failed.',
+              });
             } else {
               // toast.error(error.message || `Failed to place ${orderType} order`);
+              updateToast(toastId, {
+                type: 'error',
+                message: `Failed to place ${orderType} order`,
+              });
             }
-            updateToast(toastId, {
-              type: 'error',
-              message: 'Place order failed',
-            });
           }
 
           throw error;
@@ -767,17 +817,29 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     timeInForce: TimeInForceEnum = TimeInForceEnum.GTC
   ) => {
     if (!user || !wallet || !address) {
-      toast.error('Please connect your wallet first');
+      // toast.error('Please connect your wallet first');
+      showToast({
+        message: 'Please connect your wallet first',
+        type: 'error',
+      });
       return;
     }
 
     if (price <= 0n) {
-      toast.error('Price must be greater than zero');
+      // toast.error('Price must be greater than zero');
+      showToast({
+        message: 'Price must be greater than zero',
+        type: 'error',
+      });
       return;
     }
 
     if (quantity <= 0n) {
-      toast.error('Quantity must be greater than zero');
+      // toast.error('Quantity must be greater than zero');
+      showToast({
+        message: 'Quantity must be greater than zero',
+        type: 'error',
+      });
       return;
     }
 
@@ -813,12 +875,20 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     slippageBps: number = 500
   ) => {
     if (!user || !wallet || !address) {
-      toast.error('Please connect your wallet first');
+      // toast.error('Please connect your wallet first');
+      showToast({
+        message: 'Please connect your wallet first',
+        type: 'error',
+      });
       return;
     }
 
     if (inputQuantity <= 0n) {
-      toast.error('Quantity must be greater than zero');
+      // toast.error('Quantity must be greater than zero');
+      showToast({
+        message: 'Quantity must be greater than zero',
+        type: 'error',
+      });
       return;
     }
 

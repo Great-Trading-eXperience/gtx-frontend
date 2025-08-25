@@ -12,21 +12,17 @@ const ToastContainer: React.FC = () => {
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return (
-          <CheckCircle className={`w-4 h-4 text-green-500`} />
-        );
+        return <CheckCircle className={`w-4 h-4 text-green-500`} />;
       case 'error':
-        return (
-          <XCircle className={`w-4 h-4 text-red-500`} />
-        );
+        return <XCircle className={`w-4 h-4 text-red-500`} />;
       case 'loading':
         return (
           <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
         );
+      case 'info':
+        return <AlertCircle className={`w-4 h-4 text-blue-500`} />;
       default:
-        return (
-          <AlertCircle className={`w-4 h-4 text-gray-500`} />
-        );
+        return <AlertCircle className={`w-4 h-4 text-gray-500`} />;
     }
   };
 
@@ -37,6 +33,8 @@ const ToastContainer: React.FC = () => {
       case 'error':
         return 'border-l-red-500';
       case 'loading':
+        return 'border-l-blue-500';
+      case 'info':
         return 'border-l-blue-500';
       default:
         return 'border-l-gray-500';

@@ -40,6 +40,7 @@ import { toast as toastSonner } from 'sonner';
 import { useChainId, useReadContract } from 'wagmi';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import GTXTooltip from '../clob-dex/place-order/tooltip';
+import { useToast } from '../clob-dex/place-order/toastContext';
 
 interface Asset {
   symbol: string;
@@ -111,6 +112,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   const [withdrawToDifferentWallet, setWithdrawToDifferentWallet] = useState(false);
   const [withdrawWallet, setwithdrawWallet] = useState(externalWalletAddress);
   const [depositAmount, setDepositAmount] = useState<string>('');
+  const { showToast, updateToast } = useToast();
 
   useEffect(() => {
     if (externalWallet) {
@@ -144,20 +146,18 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const switchEmbeddedChain = async (targetChainId: number): Promise<boolean> => {
     if (!embeddedWallet) {
-      setToast({
+      showToast({
         message: 'No embedded wallet found',
         type: 'error',
-        loading: false,
         duration: 5000,
       });
       return false;
     }
     
     if (embeddedWalletChainId === targetChainId) {
-      setToast({
+      showToast({
         message: 'Already on the selected network',
         type: 'info',
-        loading: false,
         duration: 3000,
       });
       return true;
@@ -168,10 +168,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       await embeddedWallet.switchChain(targetChainId);
       
       const chainInfo = availableChains.find(chain => chain.id === targetChainId);
-      setToast({
+      showToast({
         message: `Switched to ${chainInfo?.name || `Chain ${targetChainId}`}`,
         type: 'success',
-        loading: false,
         duration: 3000,
       });
       
@@ -790,17 +789,15 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     resetState: withdrawResetState,
   } = usePrivyWithdraw();
 
-  const [toast, setToast] = useState<ToastProps | null>(null);
+  // const [toast, setToast] = useState<ToastProps | null>(null);
 
   const handlePrivyDeposit = async () => {
     console.log('⚡ handlePrivyDeposit: Deposit handler called');
     console.log('⚡ handlePrivyDeposit: CROSSCHAIN_DEPOSIT_ENABLED:', FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED);
     
-    setToast({
+    const depositToastId = showToast({
       message: `Depositing ${depositAmount} ${currentDepositToken?.symbol || 'token'}...`,
       type: 'info',
-      loading: true,
-      duration: 0,
     });
 
     if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
@@ -820,10 +817,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       if (!isCrosschainSupportedChain(selectedChainId)) {
         console.log('⚡ handlePrivyDeposit: Selected chain not supported for crosschain deposits:', selectedChainId);
         const supportedChains = getSupportedCrosschainDepositChainNames().join(', ');
-        setToast({
+        updateToast(depositToastId, {
           message: `Selected chain doesn't support crosschain deposits. Please select a supported chain: ${supportedChains}`,
           type: 'error',
-          loading: false,
           duration: 8000,
         });
         return;
@@ -835,21 +831,18 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         console.log('⚡ handlePrivyDeposit: From chain:', userExternalChainId, 'To chain:', selectedChainId);
         
         if (!externalWallet) {
-          setToast({
+          updateToast(depositToastId, {
             message: 'External wallet not found. Please connect your wallet.',
             type: 'error',
-            loading: false,
             duration: 5000,
           });
           return;
         }
         
         try {
-          setToast({
+          updateToast(depositToastId, {
             message: 'Switching external wallet to the selected chain...',
-            type: 'info',
-            loading: true,
-            duration: 0,
+            type: 'loading',
           });
           
           console.log('⚡ handlePrivyDeposit: Requesting chain switch to:', selectedChainId);
@@ -913,10 +906,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
             }
           }
           
-          setToast({
+          updateToast(depositToastId, {
             message: 'Chain switched successfully. Proceeding with crosschain deposit...',
             type: 'success',
-            loading: false,
             duration: 3000,
           });
           
@@ -925,10 +917,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
           
         } catch (error) {
           console.error('⚡ handlePrivyDeposit: Chain switch failed:', error);
-          setToast({
+          updateToast(depositToastId, {
             message: 'Failed to switch chain. Please manually add and switch your wallet to Appchain Testnet and try again.',
             type: 'error',
-            loading: false,
             duration: 8000,
           });
           return;
@@ -962,11 +953,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   };
 
   const handlePrivyWithdraw = () => {
-    setToast({
+    showToast({
       message: `Withdrawing ${withdrawAmount} ${currentWithdrawToken?.symbol || 'token'}...`,
       type: 'info',
-      loading: true,
-      duration: 0,
     });
 
     // Find the selected token address for withdraw

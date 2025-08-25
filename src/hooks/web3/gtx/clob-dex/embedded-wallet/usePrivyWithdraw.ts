@@ -18,10 +18,10 @@ export function usePrivyWithdraw() {
     amount: string,
     currencyAddress: `0x${string}`
   ) => {
-    const toastId = showToast({
-      type: 'loading',
-      message: 'Processing withdraw...',
-    });
+    // const toastId = showToast({
+    //   type: 'loading',
+    //   message: 'Processing withdraw...',
+    // });
 
     try {
       setLoading(true);
@@ -96,10 +96,10 @@ export function usePrivyWithdraw() {
       );
 
       setCurrentStep('Transaction submitted successfully!');
-      updateToast(toastId, {
-        type: 'success',
-        message: 'Withdraw successful!',
-      });
+      // updateToast(toastId, {
+      //   type: 'success',
+      //   message: 'Withdraw successful!',
+      // });
       console.log('Withdrawal transaction result:', txResult);
 
       // Reset after a short delay
@@ -115,10 +115,10 @@ export function usePrivyWithdraw() {
           ? error.message
           : 'Unknown error occurred during withdrawal';
       setError(errorMessage);
-      updateToast(toastId, {
-        type: 'error',
-        message: 'Withdraw failed. Please try again.',
-      });
+      // updateToast(toastId, {
+      //   type: 'error',
+      //   message: 'Withdraw failed. Please try again.',
+      // });
       setCurrentStep('');
       throw error;
     } finally {

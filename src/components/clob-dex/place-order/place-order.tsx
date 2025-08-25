@@ -73,7 +73,8 @@ const PlaceOrder = ({
   
   const useEmbeddedWallet = walletType === 'embedded';
   
-  const currentChainId = chainId || useChainId(); // Use prop chainId first, fallback to hook
+  const hookChainId = useChainId();
+  const currentChainId = chainId || hookChainId; // Use prop chainId first, fallback to hook
   const poolManagerAddress = getContractAddress(
     currentChainId,
     ContractName.clobPoolManager
