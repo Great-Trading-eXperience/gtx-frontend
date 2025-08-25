@@ -40,7 +40,7 @@ export const useOrderBookAddress = () => {
       setOrderBookAddress('0x0000000000000000000000000000000000000000');
       console.warn(`No OrderBook address configured for chain ID: ${effectiveChainId} (crosschain: ${crosschainEnabled})`);
     }
-  }, [effectiveChainId, crosschainEnabled]);
+  }, [effectiveChainId, crosschainEnabled, addresses]);
 
   return { orderBookAddress };
 };
