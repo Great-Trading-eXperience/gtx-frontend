@@ -1,3 +1,4 @@
 [build]
 command = "pnpm install && pnpm build"
 publish = ".next"
+environment = { NODE_OPTIONS="--max-old-space-size=4096" }
