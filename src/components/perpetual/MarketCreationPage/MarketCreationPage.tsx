@@ -18,7 +18,7 @@ import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager
 import TokenSelection from './TokenSelection';
 import OracleSources from './OracleSources';
 import { useAccount } from 'wagmi';
-import ButtonConnectWallet from '@/components/button-connect-wallet.tsx/button-connect-wallet';
+import { PrivyAuthButton } from '@/components/auth/privy-auth-button';
 import GradientLoader from '@/components/gradient-loader/gradient-loader';
 import { getTokenAddresses } from '@/helper/token-helper';
 import { HexAddress } from '@/types/general/address';
@@ -311,7 +311,7 @@ const MarketCreationPage: React.FC = () => {
                   Connect Wallet
                 </h2>
                 <p className="text-cyan-100/80 mb-8">Connect your wallet to create a perpetual market</p>
-                <ButtonConnectWallet />
+                <PrivyAuthButton showFullProfile={false} />
               </CardContent>
             </Card>
           </div>

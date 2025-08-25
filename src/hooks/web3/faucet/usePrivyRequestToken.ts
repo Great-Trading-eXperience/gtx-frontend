@@ -190,17 +190,94 @@ export const usePrivyRequestToken = (userAddress?: HexAddress) => {
         }
 
         const faucetAddress = getContractAddress(chainId, ContractName.faucet) as HexAddress;
-        console.log('[usePrivyRequestToken] Using faucet address:', faucetAddress);
+        
+        console.log('[usePrivyRequestToken] Contract call details:', {
+          faucetAddress,
+          chainId,
+          senderAddress: address,
+          receiverAddress,
+          tokenAddress,
+          functionName: 'requestToken',
+          args: [receiverAddress, tokenAddress]
+        });
+
+        // Verify chain configuration
+        const currentChain = getChain(chainId);
+        console.log('[usePrivyRequestToken] Chain configuration:', {
+          chainId,
+          chainName: currentChain.name,
+          rpcUrl: currentChain.rpcUrls.default.http[0],
+          isValidChain: !!currentChain
+        });
+
+        // Verify addresses are valid hex addresses
+        const addressValidation = {
+          faucetAddress: {
+            value: faucetAddress,
+            isValid: /^0x[a-fA-F0-9]{40}$/.test(faucetAddress),
+            length: faucetAddress.length
+          },
+          senderAddress: {
+            value: address,
+            isValid: /^0x[a-fA-F0-9]{40}$/.test(address),
+            length: address.length
+          },
+          receiverAddress: {
+            value: receiverAddress,
+            isValid: /^0x[a-fA-F0-9]{40}$/.test(receiverAddress),
+            length: receiverAddress.length
+          },
+          tokenAddress: {
+            value: tokenAddress,
+            isValid: /^0x[a-fA-F0-9]{40}$/.test(tokenAddress),
+            length: tokenAddress.length
+          }
+        };
+        console.log('[usePrivyRequestToken] Address validation:', addressValidation);
+
+        // Check if any addresses are invalid
+        Object.entries(addressValidation).forEach(([key, validation]) => {
+          if (!validation.isValid) {
+            console.error(`[usePrivyRequestToken] Invalid ${key}:`, validation);
+            throw new Error(`Invalid ${key}: ${validation.value} (length: ${validation.length})`);
+          }
+        });
 
         // Simulate the contract call first
         console.log('[usePrivyRequestToken] Simulating contract call...');
-        await simulateContract(wagmiConfig, {
-          address: faucetAddress,
-          abi: faucetABI,
-          functionName: 'requestToken',
-          args: [receiverAddress, tokenAddress],
-          account: address,
-        });
+        try {
+          await simulateContract(wagmiConfig, {
+            address: faucetAddress,
+            abi: faucetABI,
+            functionName: 'requestToken',
+            args: [receiverAddress, tokenAddress],
+            account: address,
+            chainId: chainId, // Explicitly set chainId
+          });
+        } catch (simulateError: any) {
+          console.error('[usePrivyRequestToken] Contract simulation failed:', {
+            error: simulateError,
+            message: simulateError.message,
+            cause: simulateError.cause,
+            details: simulateError.details,
+            name: simulateError.name,
+            stack: simulateError.stack
+          });
+
+          // Check if it's a chunk loading error (build/bundling issue)
+          if (simulateError.details?.includes('Loading chunk') || simulateError.details?.includes('failed')) {
+            console.error('[usePrivyRequestToken] Detected chunk loading error - this is a build/bundling issue');
+            throw new Error('Application loading error. Please refresh the page and try again.');
+          }
+
+          // Check if faucet address is empty/invalid
+          if (!faucetAddress || faucetAddress === '' || faucetAddress === '0x') {
+            console.error('[usePrivyRequestToken] Faucet address is invalid for chain:', chainId);
+            throw new Error(`Faucet contract not configured for chain ID ${chainId}. Please check contract configuration.`);
+          }
+
+          throw simulateError;
+        }
         console.log('[usePrivyRequestToken] Contract simulation successful');
 
         // Execute the contract call using Privy

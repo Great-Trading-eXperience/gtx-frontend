@@ -1,4 +1,4 @@
-import { rariTestnet, riseTestnet } from '@/configs/wagmi'
+import { rariTestnet } from '@/configs/wagmi'
 import { createConfig, http } from 'wagmi'
 
 // export const wagmiConfig = createConfig({

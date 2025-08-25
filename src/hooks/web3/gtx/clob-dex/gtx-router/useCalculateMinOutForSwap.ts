@@ -1,10 +1,10 @@
-import { useReadContract, useChainId } from 'wagmi'
-import { parseUnits, formatUnits } from 'viem'
-import { useEffect, useState, useCallback } from 'react'
 import GTXRouterABI from '@/abis/gtx/clob/GTXRouterABI'
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address'
 import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config'
 import { HexAddress } from '@/types/general/address'
+import { useEffect } from 'react'
+import { parseUnits } from 'viem'
+import { useChainId, useReadContract } from 'wagmi'
 
 interface UseCalculateMinOutForSwapProps {
   srcCurrency: string
@@ -13,6 +13,7 @@ interface UseCalculateMinOutForSwapProps {
   slippageToleranceBps: number
   srcTokenDecimals?: number
   enabled?: boolean
+  senderAddress?: string // Optional sender address for logging purposes
 }
 
 export const useCalculateMinOutForSwap = ({
@@ -21,7 +22,8 @@ export const useCalculateMinOutForSwap = ({
   inputAmount,
   slippageToleranceBps = 10000, // 100% default slippage
   srcTokenDecimals = 18, // Default to 18 decimals if not provided
-  enabled = true
+  enabled = true,
+  senderAddress
 }: UseCalculateMinOutForSwapProps) => {
   const currentChainId = useChainId()
   
@@ -50,21 +52,6 @@ export const useCalculateMinOutForSwap = ({
                            inputAmount !== '0' &&
                            parsedInputAmount > 0n
 
-  // Custom state for handling the rari-testnet issue
-  const [customResult, setCustomResult] = useState<{
-    data?: bigint;
-    isLoading: boolean;
-    isError: boolean;
-    error?: any;
-  }>({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    error: undefined
-  });
-
-  // Detect if we're using rari-testnet and implement custom logic
-  const isRariTestnet = effectiveChainId === 1918988905;
   const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
 
   // Log contract call status
@@ -79,7 +66,9 @@ export const useCalculateMinOutForSwap = ({
         srcTokenDecimals,
         slippageToleranceBps,
         currentChainId,
-        effectiveChainId
+        effectiveChainId,
+        senderAddress: senderAddress || 'Not provided',
+        crosschainEnabled
       })
     } else {
       console.log('⏹️ calculateMinOutForSwap - Contract call DISABLED:', {
@@ -90,12 +79,14 @@ export const useCalculateMinOutForSwap = ({
         inputAmount: !!inputAmount,
         inputAmountNotZero: inputAmount !== '0',
         parsedAmountValid: parsedInputAmount > 0n,
-        shouldCallContract
+        shouldCallContract,
+        currentChainId,
+        effectiveChainId,
+        senderAddress: senderAddress || 'Not provided'
       })
     }
-  }, [shouldCallContract, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, currentChainId, effectiveChainId, enabled])
+  }, [shouldCallContract, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, currentChainId, effectiveChainId, enabled, senderAddress, crosschainEnabled])
 
-  // Use wagmi for non-rari chains, custom logic for rari-testnet
   const wagmiResult = useReadContract({
     address: routerAddress,
     abi: GTXRouterABI,
@@ -108,7 +99,7 @@ export const useCalculateMinOutForSwap = ({
       BigInt(slippageToleranceBps)
     ],
     query: {
-      enabled: shouldCallContract && !isRariTestnet, // Disable wagmi for rari-testnet
+      enabled: shouldCallContract,
       staleTime: 5000,
       retry: (failureCount, error) => {
         console.log(`[SWAP] 🔄 calculateMinOutForSwap retry attempt ${failureCount + 1}:`, error?.message);
@@ -125,39 +116,13 @@ export const useCalculateMinOutForSwap = ({
     }
   });
 
-  // Handle rari-testnet with custom logic
-  useEffect(() => {
-    if (shouldCallContract && isRariTestnet) {
-      console.log('[SWAP] 🔧 Using custom logic for rari-testnet due to wagmi issues');
-      setCustomResult({
-        data: 0n, // Return 0 for now since our test showed no liquidity
-        isLoading: false,
-        isError: false,
-        error: undefined
-      });
-    }
-  }, [shouldCallContract, isRariTestnet, srcCurrency, dstCurrency, parsedInputAmount]);
-
-  // Choose result based on chain
   const {
     data: minOutputAmount,
     isError,
     isLoading,
     error,
     refetch
-  } = isRariTestnet ? {
-    data: customResult.data,
-    isError: customResult.isError,
-    isLoading: customResult.isLoading,
-    error: customResult.error,
-    refetch: () => Promise.resolve({ data: customResult.data })
-  } : {
-    data: wagmiResult.data,
-    isError: wagmiResult.isError,
-    isLoading: wagmiResult.isLoading,
-    error: wagmiResult.error,
-    refetch: wagmiResult.refetch
-  }
+  } = wagmiResult
 
   // Add timeout detection for hanging requests
   useEffect(() => {
@@ -190,7 +155,11 @@ export const useCalculateMinOutForSwap = ({
           inputAmount,
           parsedInputAmount: parsedInputAmount.toString(),
           srcTokenDecimals,
-          slippageToleranceBps
+          slippageToleranceBps,
+          currentChainId,
+          effectiveChainId,
+          senderAddress: senderAddress || 'Not provided',
+          crosschainEnabled
         })
         // Log potential causes of revert
         console.error('Possible causes:')
@@ -199,15 +168,21 @@ export const useCalculateMinOutForSwap = ({
         console.error('3. Slippage tolerance too low')
         console.error('4. Input amount too large for available liquidity')
         console.error('5. One of the currency addresses is invalid')
-      } else if (minOutputAmount !== undefined) {
+      } else if (minOutputAmount !== undefined && minOutputAmount !== null) {
         console.log('✅ calculateMinOutForSwap - Success:', {
           minOutputAmount: minOutputAmount.toString(),
           isZero: minOutputAmount === 0n,
-          message: minOutputAmount === 0n ? 'No liquidity/pool available for this pair' : 'Valid output amount'
+          message: minOutputAmount === 0n ? 'No liquidity/pool available for this pair' : 'Valid output amount',
+          senderAddress: senderAddress || 'Not provided',
+          currentChainId,
+          effectiveChainId,
+          inputAmount,
+          srcCurrency,
+          dstCurrency
         })
       }
     }
-  }, [shouldCallContract, isLoading, isError, error, minOutputAmount, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps])
+  }, [shouldCallContract, isLoading, isError, error, minOutputAmount, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, senderAddress, currentChainId, effectiveChainId])
 
   return {
     minOutputAmount,

@@ -7,8 +7,10 @@ import { TradeItem } from '@/graphql/gtx/clob';
 import { getTokensForChain } from '@/helper/token-helper';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
-import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
-import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
+// import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
+import { useBalanceManagerBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceManagerBalance';
+import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
+// import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
 import { usePlaceOrder as usePrivyPlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePrivyPlaceOrder';
 import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import type { HexAddress } from '@/types/general/address';
@@ -47,9 +49,10 @@ const PlaceOrder = ({
 }: PlaceOrderProps) => {
   const { isConnected, address: wagmiAddress } = useAccount();
   const { isFullyAuthenticated } = usePrivyAuth();
+  const wagmiChainId = useChainId();
   
   // Get chain ID early so we can use it in debug logs
-  const currentChainId = chainId || useChainId();
+  const currentChainId = chainId || wagmiChainId;
   
   // Helper function to get token symbol from address
   const getTokenSymbol = useCallback((tokenAddress: HexAddress): string => {
@@ -95,11 +98,11 @@ const PlaceOrder = ({
     actualAddress = wagmiAddress;
     console.log('[DEBUG_BALANCE] 🔗 Crosschain enabled - Using external wallet (preferred):', wagmiAddress, '| Chain:', currentChainId);
   } else if (crosschainEnabled && CROSSCHAIN_WALLET_PREFERENCE === 'embedded' && isFullyAuthenticated && address) {
-    // When crosschain is enabled with embedded wallet preference
+    // When crosschain is enabled with embedded wallet preference (may encounter chain compatibility issues)
     walletType = 'embedded';
     actualAddress = address;
-    console.log('[DEBUG_BALANCE] 🔗 Crosschain enabled - Using Privy embedded wallet (preferred):', address, '| Chain:', currentChainId);
-  } else if (isFullyAuthenticated && address) {
+    console.log('[DEBUG_BALANCE] ⚠️ Crosschain enabled - Using Privy embedded wallet (may cause errors):', address, '| Chain:', currentChainId);
+  } else if (!crosschainEnabled && isFullyAuthenticated && address) {
     // Privy embedded wallet is authenticated and has address - use this for non-crosschain
     walletType = 'embedded';
     actualAddress = address;
@@ -148,8 +151,6 @@ const PlaceOrder = ({
   const [total, setTotal] = useState<string>('0');
 
   // Balance states
-  const [availableBalance, setAvailableBalance] = useState<string>('0');
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   // Notification dialog states
@@ -212,9 +213,9 @@ const PlaceOrder = ({
   }
 `;
 
-  // Use the appropriate hook based on wallet type (hooks must be called before any early returns)
-  const externalWalletHook = usePlaceOrder(useEmbeddedWallet ? undefined : actualAddress);
-  const embeddedWalletHook = usePrivyPlaceOrder(useEmbeddedWallet ? actualAddress : undefined);
+  // Use only Privy place order hook (hooks must be called before any early returns)
+  // const externalWalletHook = usePlaceOrder(useEmbeddedWallet ? undefined : actualAddress);
+  const embeddedWalletHook = usePrivyPlaceOrder(actualAddress);
   
   // Log which hook system is being used
   console.log('[DEBUG_BALANCE] 🎯 Hook selection:', {
@@ -243,7 +244,7 @@ const PlaceOrder = ({
     marketOrderHash,
     resetLimitOrderState,
     resetMarketOrderState,
-  } = useEmbeddedWallet ? embeddedWalletHook : externalWalletHook;
+  } = embeddedWalletHook;
 
   const bestBidPrice = useMemo(() => {
     if (depthData?.bids && depthData.bids.length > 0) {
@@ -276,112 +277,116 @@ const PlaceOrder = ({
   
   // console.log('[DEBUG_BALANCE] 🏗️ Balance manager address resolved:', balanceManagerAddress, '| From chain:', balanceManagerChainId);
 
-  const {
-    getWalletBalance,
-    getTotalAvailableBalance,
-    deposit,
-    loading: balanceLoading,
-  } = useTradingBalances(
-    balanceManagerAddress,
-    actualAddress 
-  );
+  // Old trading balances hook - replaced with embedded panel pattern
+  // const {
+  //   getWalletBalance,
+  //   getTotalAvailableBalance,
+  //   deposit,
+  //   loading: balanceLoading,
+  // } = useTradingBalances(
+  //   balanceManagerAddress,
+  //   actualAddress 
+  // );
 
   // Move useFeePercentages here with other hooks (before any early returns)
   const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
 
-  // Function to refresh balance manually
+  // Determine relevant currency based on order side (matches embedded panel logic)
+  const relevantCurrency = selectedPool 
+    ? (side === OrderSideEnum.BUY
+        ? (selectedPool.quoteTokenAddress as HexAddress)
+        : (selectedPool.baseTokenAddress as HexAddress))
+    : undefined;
+  
+  const relevantDecimals = selectedPool 
+    ? (side === OrderSideEnum.BUY 
+        ? selectedPool.quoteDecimals 
+        : selectedPool.baseDecimals)
+    : 18;
+
+  // Balance hooks following embedded panel pattern
+  const balanceDisplayChainId = crosschainEnabled ? getCoreChain() : currentChainId;
+  
+  // IMPORTANT: Always use embedded wallet address for balance queries, just like embedded panel
+  // This ensures consistency regardless of which wallet is used for transactions
+  const balanceQueryAddress = address as `0x${string}`; // Always use Privy embedded wallet address
+  
+  // Get balance from Balance Manager (used when crosschain is enabled)
+  const balanceManagerBalance = useBalanceManagerBalance(
+    balanceQueryAddress,
+    relevantCurrency,
+    balanceDisplayChainId,
+    relevantDecimals || 18
+  );
+  
+  // Get balance directly from token contract (used when crosschain is disabled)
+  const tokenBalance = useTokenBalance(
+    relevantCurrency,
+    balanceQueryAddress,
+    currentChainId
+  );
+
+  // Use embedded panel logic: crosschain enabled = balance manager, otherwise = token balance
+  const displayBalance = crosschainEnabled 
+    ? balanceManagerBalance.formattedBalance 
+    : tokenBalance.formattedBalance;
+
+  const balanceIsLoading = crosschainEnabled 
+    ? balanceManagerBalance.isLoading
+    : tokenBalance.isLoading;
+
+  const balanceError = crosschainEnabled 
+    ? balanceManagerBalance.error
+    : tokenBalance.error;
+
+  // Debug logging for embedded panel pattern
+  console.log('[EMBEDDED_PANEL_PATTERN] 🎯 Place Order Balance Display:', {
+    crosschainEnabled,
+    relevantCurrency,
+    currentChainId,
+    balanceDisplayChainId,
+    transactionAddress: actualAddress, // Address used for transactions
+    balanceQueryAddress, // Address used for balance queries (always embedded wallet)
+    side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
+    tokenSymbol: side === OrderSideEnum.BUY ? selectedPool?.quoteSymbol : selectedPool?.baseSymbol,
+    balanceManagerBalance: balanceManagerBalance.formattedBalance,
+    tokenBalance: tokenBalance.formattedBalance,
+    displayBalance,
+    balanceIsLoading,
+    balanceError: balanceError?.message
+  });
+
+  // Function to refresh balance manually - following embedded panel pattern
   const refreshBalance = useCallback(async () => {
     if (!actualAddress || !selectedPool) return;
 
     setIsManualRefreshing(true);
     try {
-      const relevantCurrency =
-        side === OrderSideEnum.BUY
-          ? (selectedPool.quoteTokenAddress as HexAddress)
-          : (selectedPool.baseTokenAddress as HexAddress);
-
-      try {
-        const total = await getTotalAvailableBalance(relevantCurrency);
-        const formattedBalance = formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals));
-        // Round to 6 decimal places to avoid floating point precision issues
-        const roundedBalance = Math.round(parseFloat(formattedBalance) * 1000000) / 1000000;
-        setAvailableBalance(roundedBalance.toString());
-        toast.success('Balance refreshed');
-      } catch (error) {
-        console.error(
-          'Failed to get total balance, falling back to wallet balance:',
-          error
-        );
-        const walletBal = await getWalletBalance(relevantCurrency);
-        const formattedWalletBalance = formatUnits(
-          walletBal,
-          Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
-        );
-        // Round to 6 decimal places to avoid floating point precision issues
-        const roundedWalletBalance = Math.round(parseFloat(formattedWalletBalance) * 1000000) / 1000000;
-        setAvailableBalance(roundedWalletBalance.toString());
-        toast.info('Used wallet balance (balance manager unavailable)');
+      if (crosschainEnabled) {
+        balanceManagerBalance.refetch();
+      } else {
+        tokenBalance.refetchBalance();
       }
+      toast.success('Balance refreshed');
     } catch (error) {
       console.error('Error refreshing balance:', error);
       toast.error('Failed to refresh balance');
-      setAvailableBalance('Error');
     } finally {
       setIsManualRefreshing(false);
     }
   }, [
     actualAddress,
     selectedPool,
-    selectedPool?.quoteDecimals,
-    selectedPool?.baseDecimals,
-    side
+    crosschainEnabled,
+    balanceManagerBalance,
+    tokenBalance
   ]);
 
-  // Load initial balance
+  // Load initial balance - now handled automatically by embedded panel pattern hooks
   const loadBalance = useCallback(async () => {
-    if (actualAddress && selectedPool) {
-      setIsLoadingBalance(true);
-      try {
-        const relevantCurrency =
-          side === OrderSideEnum.BUY
-            ? (selectedPool.quoteTokenAddress as HexAddress)
-            : (selectedPool.baseTokenAddress as HexAddress);
-
-        try {
-          const total = await getTotalAvailableBalance(relevantCurrency);
-          const formattedBalance = formatUnits(total, Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals));
-          
-          // Round to 6 decimal places to avoid floating point precision issues
-          const roundedBalance = Math.round(parseFloat(formattedBalance) * 1000000) / 1000000;
-          setAvailableBalance(roundedBalance.toString());
-        } catch (error) {
-          console.error(
-            'Failed to get total balance, falling back to wallet balance:',
-            error
-          );
-          const walletBal = await getWalletBalance(relevantCurrency);
-          const formattedWalletBalance = formatUnits(
-            walletBal,
-            Number(side === OrderSideEnum.BUY ? selectedPool.quoteDecimals : selectedPool.baseDecimals)
-          );
-          // Round to 6 decimal places to avoid floating point precision issues
-          const roundedWalletBalance = Math.round(parseFloat(formattedWalletBalance) * 1000000) / 1000000;
-          setAvailableBalance(roundedWalletBalance.toString());
-        }
-      } catch (error) {
-        console.error('Error loading any balance:', error);
-        setAvailableBalance('Error');
-      } finally {
-        setIsLoadingBalance(false);
-      }
-    }
-  }, [
-    actualAddress,
-    selectedPool,
-    selectedPool?.quoteDecimals,
-    selectedPool?.baseDecimals,
-    side,
-  ]);
+    // Balance loading is now handled automatically by useBalanceManagerBalance and useTokenBalance hooks
+    // This function is kept for compatibility but does nothing since hooks handle the loading
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -725,7 +730,7 @@ const PlaceOrder = ({
               </h3>
               <button
                 onClick={refreshBalance}
-                disabled={isManualRefreshing || isLoadingBalance}
+                disabled={isManualRefreshing || balanceIsLoading}
                 className="text-gray-300 hover:text-blue-400 transition-colors flex items-center gap-1.5 text-xs bg-gray-800/50 px-2 py-1 rounded border border-gray-700/40"
               >
                 <RefreshCw
@@ -736,13 +741,13 @@ const PlaceOrder = ({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-300">
-                {isLoadingBalance ? (
+                {balanceIsLoading ? (
                   <div className="flex items-center gap-2">
                     <RefreshCw className="w-3 h-3 animate-spin" />
                     <span>Loading...</span>
                   </div>
                 ) : (
-                  Number(availableBalance).toLocaleString(undefined, {
+                  Number(displayBalance || '0').toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 6,
                   })
@@ -885,8 +890,8 @@ const PlaceOrder = ({
               }
               max={
                 side === OrderSideEnum.BUY && orderType === 'market' 
-                  ? Math.min(parseFloat(availableBalance) || 0, 1000000).toString()  // Max 1M USDC for market buys
-                  : availableBalance
+                  ? Math.min(parseFloat(displayBalance || '0') || 0, 1000000).toString()  // Max 1M USDC for market buys
+                  : displayBalance || '0'
               }
               // min="0"
               required
@@ -898,7 +903,7 @@ const PlaceOrder = ({
               }
             </div>
           </div>
-          <GTXSlider quantity={availableBalance} setQuantity={setQuantity}/>
+          <GTXSlider quantity={displayBalance || '0'} setQuantity={setQuantity}/>
         </div>
 
         {/* Order Value/Minimum Received - Display Only */}

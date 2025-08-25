@@ -1,5 +1,5 @@
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
-import { isFeatureEnabled } from '@/constants/features/features-config';
+import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import {
   poolsPonderQuery,
@@ -49,18 +49,7 @@ const getTokenIcon = (symbol: string): string => {
 // Get full token name
 const getTokenName = (symbol: string): string => {
   const nameMap: Record<string, string> = {
-    'WETH': 'Wrapped Ethereum',
-    'ETH': 'Ethereum',
-    'USDC': 'USD Coin',
-    'WBTC': 'Wrapped Bitcoin',
-    'TRUMP': 'Trump Token',
-    'PEPE': 'Pepe Token',
-    'LINK': 'Chainlink',
-    'DOGE': 'Dogecoin',
-    'SHIB': 'Shiba Inu',
-    'FLOKI': 'Floki Inu',
-    'MATIC': 'Polygon',
-    'AAVE': 'Aave',
+
   };
   return nameMap[symbol] || symbol;
 };
@@ -68,15 +57,18 @@ const getTokenName = (symbol: string): string => {
 export const useAvailableTokens = () => {
   const chainId = useChainId();
   const defaultChain = Number(DEFAULT_CHAIN);
+  
+  // Use core chain when crosschain is enabled
+  const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+  const effectiveChainId = crosschainEnabled ? getCoreChain() : (chainId ?? defaultChain);
 
   // Fetch pools data from GraphQL
   const { data: poolsData, isLoading, error } = useQuery<
     PoolsPonderResponse | PoolsResponse
   >({
-    queryKey: ['pools-for-tokens', String(chainId ?? defaultChain)],
+    queryKey: ['pools-for-tokens', String(effectiveChainId)],
     queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChain);
-      const url = GTX_GRAPHQL_URL(currentChainId);
+      const url = GTX_GRAPHQL_URL(effectiveChainId);
       if (!url) throw new Error('GraphQL URL not found');
       return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);
     },

@@ -36,7 +36,7 @@ export type OrderType = {
 export const poolsPonderQuery = gql`
   ${CurrencyFields}
   query GetPools {
-    poolss {
+    poolss(limit: 2, orderBy: "timestamp", orderDirection: "desc") {
       items {
         baseCurrency {
           ...CurrencyFields

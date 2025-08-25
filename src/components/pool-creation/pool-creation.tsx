@@ -1,6 +1,6 @@
 "use client"
 
-import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "@/components/auth/privy-auth-button"
 import GradientLoader from "@/components/gradient-loader/gradient-loader"
 import { NotificationDialog } from "@/components/notification-dialog/notification-dialog"
 import { Button } from "@/components/ui/button"
@@ -939,7 +939,7 @@ const PoolCreation: React.FC = () => {
                 </div>
                 <h2 className="text-3xl font-bold text-white mb-4">Connect Wallet</h2>
                 <p className="text-gray-300 mb-8">Connect your wallet to create a trading pool</p>
-                <ButtonConnectWallet />
+                <PrivyAuthButton showFullProfile={false} />
               </CardContent>
             </Card>
           </div>

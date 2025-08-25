@@ -3,42 +3,40 @@
 import TokenABI from "@/abis/tokens/TokenABI"
 import { DataTable } from "@/components/table/data-table"
 import { requestTokenColumns } from "@/components/table/faucet/request-token/columns"
-import { Card, CardContent } from "@/components/ui/card"
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { wagmiConfig } from "@/configs/wagmi"
 import { getIndexerUrl } from "@/constants/urls/urls-config"
 import { queryFaucetTokenss, queryRequestTokenss } from "@/graphql/faucet/faucet.query"
 import { useFaucetCooldown } from "@/hooks/web3/faucet/useFaucetCooldown"
 import { useLastRequestTime } from "@/hooks/web3/faucet/useLastRequestTime"
 import { usePrivyRequestToken } from "@/hooks/web3/faucet/usePrivyRequestToken"
+import { useRequestToken } from "@/hooks/web3/faucet/useRequestToken"
 import { useBalance } from "@/hooks/web3/token/useBalance"
 import type { HexAddress } from "@/types/general/address"
 import type { Token } from "@/types/tokens/token"
 
 import { ContractName, DEFAULT_CHAIN, getContractAddress } from "@/constants/contract/contract-address"
-import { shouldFaucetUsePrivy } from "@/constants/features/features-config"
+import { shouldFaucetUsePrivy, shouldFaucetUseStandardHook } from "@/constants/features/features-config"
+import { formatNumber } from "@/lib/utils"
 import { FaucetTokensData } from "@/types/faucet/add-token"
 import { FaucetRequestsData } from "@/types/faucet/request-token"
 import { Button } from "@heroui/react"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useWallets } from "@privy-io/react-auth"
 import { useQuery } from "@tanstack/react-query"
 import { readContract } from "@wagmi/core"
 import { request } from "graphql-request"
-import { Calendar, Clock, Droplets, ExternalLink, History, RefreshCw, Wallet, TrendingUp } from "lucide-react"
+import { Calendar, Clock, Droplets, ExternalLink, History, RefreshCw, TrendingUp, Wallet } from "lucide-react"
 import { DateTime } from "luxon"
 import type { NextPage } from "next"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { formatUnits } from "viem"
 import { useAccount, useChainId } from "wagmi"
-import { useWallets } from "@privy-io/react-auth"
 import * as z from "zod"
-import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "../auth/privy-auth-button"
 import GradientLoader from "../gradient-loader/gradient-loader"
 import { DotPattern } from "../magicui/dot-pattern"
 import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
-import { formatNumber } from "@/lib/utils"
 
 const faucetSchema = z.object({
   token: z.string().min(1),
@@ -130,7 +128,23 @@ const GTXFaucet: NextPage = () => {
   const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress)
   const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress)
 
-  const { 
+  // Conditionally use the appropriate hook based on crosschain feature flag
+  const useCrosschainStandardHook = shouldFaucetUseStandardHook();
+  
+  console.log('[Faucet] Hook selection:', {
+    useCrosschainStandardHook,
+    willUseStandardHook: useCrosschainStandardHook,
+    willUsePrivyHook: !useCrosschainStandardHook
+  });
+
+  // Standard Wagmi hook (used when crosschain is enabled)
+  const standardHookResult = useRequestToken();
+  
+  // Privy hook (used when crosschain is disabled)
+  const privyHookResult = usePrivyRequestToken(userAddress as HexAddress);
+  
+  // Select the appropriate hook result
+  const {
     isAlertOpen: isAlertRequestTokenOpen, 
     handleRequestToken,
     isRequestTokenPending,
@@ -138,7 +152,23 @@ const GTXFaucet: NextPage = () => {
     isRequestTokenConfirmed,
     requestTokenHash,
     requestTokenError
-  } = usePrivyRequestToken(userAddress as HexAddress)
+  } = useCrosschainStandardHook ? {
+    isAlertOpen: standardHookResult.isAlertOpen,
+    handleRequestToken: standardHookResult.handleRequestToken,
+    isRequestTokenPending: standardHookResult.isRequestTokenPending,
+    isRequestTokenConfirming: standardHookResult.isRequestTokenConfirming,
+    isRequestTokenConfirmed: standardHookResult.isRequestTokenConfirmed,
+    requestTokenHash: standardHookResult.requestTokenHash,
+    requestTokenError: undefined // Standard hook doesn't have error in same format
+  } : {
+    isAlertOpen: privyHookResult.isAlertOpen,
+    handleRequestToken: privyHookResult.handleRequestToken,
+    isRequestTokenPending: privyHookResult.isRequestTokenPending,
+    isRequestTokenConfirming: privyHookResult.isRequestTokenConfirming,
+    isRequestTokenConfirmed: privyHookResult.isRequestTokenConfirmed,
+    requestTokenHash: privyHookResult.requestTokenHash,
+    requestTokenError: privyHookResult.requestTokenError
+  };
 
   // Update processing state based on token request state
   useEffect(() => {
@@ -334,16 +364,6 @@ const GTXFaucet: NextPage = () => {
                   Request test tokens
                 </span>
               </h2>
-              
-              {/* Configuration Indicator */}
-              <div className="bg-black/40 border border-white/20 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${shouldUsePrivy ? 'bg-green-400' : 'bg-blue-400'}`}></div>
-                  <span className="text-white/70 text-xs font-medium">
-                    {shouldUsePrivy ? 'Privy Mode' : 'Wagmi Only'}
-                  </span>
-                </div>
-              </div>
             </div>
 
             {/* Main Faucet Card */}
@@ -405,7 +425,7 @@ const GTXFaucet: NextPage = () => {
                         </div>
                         {txHash && (
                           <a
-                            href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                            href={`https://appchaintestnet.explorer.caldera.xyz/tx/${txHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -523,7 +543,7 @@ const GTXFaucet: NextPage = () => {
                   Connect Wallet
                 </h2>
                 <p className="text-white/70 mb-8">Connect your wallet to access the test token faucet</p>
-                <ButtonConnectWallet />
+                <PrivyAuthButton showFullProfile={false} />
               </div>
             </div>
           </div>

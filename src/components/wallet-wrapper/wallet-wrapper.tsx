@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
-import ButtonConnectWallet from '../button-connect-wallet.tsx/button-connect-wallet'
+import { PrivyAuthButton } from '../auth/privy-auth-button'
 import GradientLoader from '../gradient-loader/gradient-loader'
 import { AuthWrapper } from '../auth/auth-wrapper'
 import { usePrivyAuth } from '@/hooks/use-privy-auth'
@@ -60,7 +60,7 @@ const WalletWrapper: React.FC<WalletWrapperProps> = ({ children, usePrivyAuth: e
 
     // Use traditional wallet authentication
     if (!isConnected) {
-        return <ButtonConnectWallet />
+        return <PrivyAuthButton showFullProfile={false} />
     }
 
     return (

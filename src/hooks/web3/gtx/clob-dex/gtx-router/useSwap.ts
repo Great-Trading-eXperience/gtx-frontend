@@ -1,5 +1,5 @@
-import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
 import BalanceManagerABI from "@/abis/gtx/clob/BalanceManagerABI";
+import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { getCoreChain, isFeatureEnabled } from "@/constants/features/features-config";
@@ -8,22 +8,21 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { erc20Abi, formatUnits, parseUnits } from "viem";
+import { createWalletClient, custom, erc20Abi, formatUnits, parseUnits } from "viem";
 import { useChainId } from "wagmi";
-import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
-import { createWalletClient, custom } from "viem";
-import { writeContract } from "wagmi/actions";
+import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 
-const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
+const getTokenDecimals = async (tokenAddress: HexAddress, chainId: number): Promise<number> => {
   try {
     const decimals = await readContract(wagmiConfig, {
       address: tokenAddress,
       abi: erc20Abi,
       functionName: 'decimals',
+      chainId,
     });
     return decimals;
   } catch (error) {
-    console.error(`Failed to fetch decimals for token ${tokenAddress}:`, error);
+    console.error(`[SWAP] Failed to fetch decimals for token ${tokenAddress} on chain ${chainId}:`, error);
     return 18;
   }
 };
@@ -122,7 +121,7 @@ export const useSwap = (userAddress?: HexAddress) => {
     });
 
     if (balance < requiredAmount) {
-      const tokenDecimals = await getTokenDecimals(token);
+      const tokenDecimals = await getTokenDecimals(token, effectiveChainId);
       const formattedBalance = formatUnits(balance, tokenDecimals);
       const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
       
@@ -195,11 +194,12 @@ export const useSwap = (userAddress?: HexAddress) => {
         functionName: contractCall.functionName,
         args: contractCall.args,
         account: address,
+        chainId: effectiveChainId, // Use the correct chain ID
       });
 
       return result as HexAddress;
     } catch (error: any) {
-      console.error('Privy writeContract failed:', error);
+      console.error('[SWAP] Privy writeContract failed:', error);
       throw error;
     }
   };
@@ -232,23 +232,52 @@ export const useSwap = (userAddress?: HexAddress) => {
     });
     
     console.log('[SWAP] 📤 Withdraw transaction hash:', withdrawHash);
+    console.log('[SWAP] ⏳ Waiting for transaction receipt on chain:', effectiveChainId);
     
-    const withdrawReceipt = await waitForTransactionReceipt(wagmiConfig, {
-      hash: withdrawHash,
-      chainId: effectiveChainId,
-    });
+    let withdrawReceipt: any;
     
-    console.log('[SWAP] 📨 Withdraw receipt:', {
-      hash: withdrawHash,
-      status: withdrawReceipt.status,
-      gasUsed: withdrawReceipt.gasUsed?.toString(),
-      chain: effectiveChainId
-    });
-    
-    if (withdrawReceipt.status !== 'success') {
-      console.error('[SWAP] ❌ Token withdrawal failed');
-      toast.error('Token withdrawal failed');
-      throw new Error('Token withdrawal failed');
+    try {
+      withdrawReceipt = await waitForTransactionReceipt(wagmiConfig, {
+        hash: withdrawHash,
+        chainId: effectiveChainId,
+        timeout: 30000, // 30 second timeout (reduced for faster UX on slow chains)
+      });
+      
+      console.log('[SWAP] 📨 Withdraw receipt received:', {
+        hash: withdrawHash,
+        status: withdrawReceipt.status,
+        gasUsed: withdrawReceipt.gasUsed?.toString(),
+        chain: effectiveChainId,
+        blockNumber: withdrawReceipt.blockNumber
+      });
+      
+      if (withdrawReceipt.status !== 'success') {
+        console.error('[SWAP] ❌ Token withdrawal failed');
+        toast.error('Token withdrawal failed');
+        throw new Error('Token withdrawal failed');
+      }
+      
+    } catch (receiptError: any) {
+      console.error('[SWAP] ❌ Error waiting for withdrawal receipt:', {
+        error: receiptError.message,
+        hash: withdrawHash,
+        chainId: effectiveChainId,
+        timeout: receiptError.name === 'TimeoutError'
+      });
+      
+      if (receiptError.name === 'TimeoutError' || receiptError.name === 'WaitForTransactionReceiptTimeoutError' || receiptError.message?.includes('Timed out while waiting for transaction')) {
+        console.warn('[SWAP] ⚠️ Transaction receipt timeout - transaction may still be pending');
+        toast.warning('Withdrawal submitted but taking longer than expected. Continuing with swap...');
+        
+        // Give the transaction a bit more time to process in the background
+        console.log('[SWAP] 🔄 Waiting additional 5 seconds before continuing...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        console.log('[SWAP] 🔄 Continuing swap process despite receipt timeout');
+        return;
+      }
+      
+      throw receiptError;
     }
     
     console.log('[SWAP] ✅ Token withdrawal confirmed');
@@ -261,15 +290,21 @@ export const useSwap = (userAddress?: HexAddress) => {
     address: HexAddress,
     chainId: number
   ) => {
-    // For swaps, we need to approve the router, not the balance manager
-    const spender = getContractAddress(chainId, ContractName.clobRouter) as HexAddress;
+    // Determine the correct spender based on crosschain mode
+    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+    const spender = crosschainEnabled 
+      ? getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress  // Approve Balance Manager for crosschain
+      : getContractAddress(chainId, ContractName.clobRouter) as HexAddress;         // Approve Router for direct swaps
     
     console.log('[SWAP] 🔐 Checking allowance for token:', {
       token,
       owner: address,
-      spender, // Router address (for swap operations)
+      spender, // Balance Manager (crosschain) or Router (direct swap)
+      spenderType: crosschainEnabled ? 'Balance Manager' : 'Router',
       requiredAmount: requiredAmount.toString(),
-      chainId
+      chainId,
+      effectiveChainId,
+      crosschainEnabled
     });
     
     const allowance = await readContract(wagmiConfig, {
@@ -277,6 +312,7 @@ export const useSwap = (userAddress?: HexAddress) => {
       abi: erc20Abi,
       functionName: 'allowance',
       args: [address, spender],
+      chainId, // Use the correct chain ID
     });
 
     console.log('[SWAP] ✅ Allowance check result:', {
@@ -300,7 +336,8 @@ export const useSwap = (userAddress?: HexAddress) => {
       console.log('[SWAP] 📤 Approval transaction hash:', approvalHash);
 
       const approvalReceipt = await waitForTransactionReceipt(wagmiConfig, {
-        hash: approvalHash
+        hash: approvalHash,
+        chainId // Use the correct chain ID
       });
 
       console.log('[SWAP] 📨 Approval receipt:', {
@@ -350,8 +387,8 @@ export const useSwap = (userAddress?: HexAddress) => {
     });
     
     // Convert amounts to proper units
-    const srcTokenDecimals = await getTokenDecimals(srcTokenAddress);
-    const dstTokenDecimals = await getTokenDecimals(dstTokenAddress);
+    const srcTokenDecimals = await getTokenDecimals(srcTokenAddress, effectiveChainId);
+    const dstTokenDecimals = await getTokenDecimals(dstTokenAddress, effectiveChainId);
     
     console.log('[SWAP] 🔢 Token decimals fetched:', {
       srcTokenAddress,
@@ -403,6 +440,7 @@ export const useSwap = (userAddress?: HexAddress) => {
       }
       
       console.log('[SWAP] 📤 Simulation sender address:', address);
+      console.log('[SWAP] 🔗 Simulating contract call on chain:', effectiveChainId);
       
       const simulation = await simulateContract(wagmiConfig, {
         address: routerAddress,
@@ -410,6 +448,7 @@ export const useSwap = (userAddress?: HexAddress) => {
         functionName: 'swap',
         args,
         account: address,
+        chainId: effectiveChainId, // Use the correct chain ID
       });
       console.log('[SWAP] ✅ Simulation successful, result:', simulation.result);
     } catch (simulationError: any) {
@@ -473,6 +512,7 @@ export const useSwap = (userAddress?: HexAddress) => {
         
         const receipt = await waitForTransactionReceipt(wagmiConfig, { 
           hash,
+          chainId: effectiveChainId, // Use the correct chain ID
           timeout: Math.min(20000, timeout - (Date.now() - startTime)) // Dynamic timeout
         });
         
@@ -511,7 +551,7 @@ export const useSwap = (userAddress?: HexAddress) => {
         }
 
         // Convert amounts for balance and allowance checks
-        const srcTokenDecimals = await getTokenDecimals(srcTokenAddress);
+        const srcTokenDecimals = await getTokenDecimals(srcTokenAddress, effectiveChainId);
         const srcAmountWei = parseUnits(srcAmount, srcTokenDecimals);
 
         // Check balance (from Balance Manager if crosschain enabled, otherwise from ERC20)
@@ -541,10 +581,10 @@ export const useSwap = (userAddress?: HexAddress) => {
         toast.success('Swap submitted. Waiting for confirmation...');
 
         const receipt = await waitForTransactionReceiptWithRetry(hash, {
-          maxAttempts: 5,
+          maxAttempts: 3,     // Reduce attempts for faster UX
           initialDelay: 2000, 
-          maxDelay: 10000,   
-          timeout: 120000    
+          maxDelay: 8000,     // Reduce max delay
+          timeout: 45000      // Reduce timeout to 45 seconds
         });
 
         if (receipt && receipt.status === 'success') {
@@ -570,8 +610,10 @@ export const useSwap = (userAddress?: HexAddress) => {
             toast.error("No valid swap path found between these tokens. Please try a different token pair.");
           } else if (errorStr.includes('IdenticalCurrencies')) {
             toast.error("Cannot swap identical tokens.");
-          } else if (errorStr.includes('TransactionReceiptNotFoundError')) {
-            toast.error("Transaction is taking longer than expected. Please check your transaction status manually.");
+          } else if (errorStr.includes('TransactionReceiptNotFoundError') || errorStr.includes('timeout') || errorStr.includes('Timed out')) {
+            toast.warning("Transaction submitted but taking longer than expected. Please check the explorer to verify the transaction status.");
+          } else if (errorStr.includes('insufficient funds for gas') || errorStr.includes('insufficient funds') || errorStr.includes('InsufficientFunds') || errorStr.includes('gas required exceeds allowance')) {
+            toast.error("Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.");
           } else if (errorStr.includes('reverted') && !errorStr.includes('reason')) {
             toast.error('Contract execution failed. This might be due to insufficient balance, slippage, or market conditions.');
           } else {

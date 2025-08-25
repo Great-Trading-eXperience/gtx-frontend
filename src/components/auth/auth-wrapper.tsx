@@ -3,9 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { PrivyAuthButton } from './privy-auth-button';
-import { ButtonConnectWallet } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
-import { Button } from '@/components/ui/button';
-import { ArrowLeftRight } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 interface AuthWrapperProps {
@@ -15,7 +12,6 @@ interface AuthWrapperProps {
 
 export function AuthWrapper({ children, requireWallet = false }: AuthWrapperProps) {
   const { ready, authenticated, isFullyAuthenticated, needsWalletConnection } = usePrivyAuth();
-  const [useTraditionalWallet, setUseTraditionalWallet] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   // Ensure we're only rendering on the client
@@ -53,37 +49,14 @@ export function AuthWrapper({ children, requireWallet = false }: AuthWrapperProp
       </div>
 
       <div className="flex flex-col items-center space-y-4">
-        {/* Toggle between auth methods */}
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setUseTraditionalWallet(!useTraditionalWallet)}
-            className="text-sm"
-          >
-            <ArrowLeftRight className="h-4 w-4 mr-2" />
-            Switch to {useTraditionalWallet ? 'Social Login' : 'Wallet Only'}
-          </Button>
-        </div>
-
         {/* Authentication component */}
-        <div className="flex flex-col items-center space-y-4">
-          {useTraditionalWallet ? (
-            <div className="space-y-2 text-center">
-              <p className="text-sm text-gray-400">Connect with your wallet</p>
-              <ErrorBoundary>
-                <ButtonConnectWallet />
-              </ErrorBoundary>
-            </div>
-          ) : (
-            <div className="space-y-2 text-center">
-              <p className="text-sm text-gray-400">
-                Sign in with social media or wallet
-              </p>
-              <ErrorBoundary>
-                <PrivyAuthButton />
-              </ErrorBoundary>
-            </div>
-          )}
+        <div className="space-y-2 text-center">
+          <p className="text-sm text-gray-400">
+            Sign in with social media or wallet
+          </p>
+          <ErrorBoundary>
+            <PrivyAuthButton />
+          </ErrorBoundary>
         </div>
       </div>
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { QueryClient } from "@tanstack/react-query";
 import GTXFaucet from "@/components/faucet/faucet";
+import { QueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
 
@@ -10,7 +10,7 @@ const Faucet = () => {
     // Use state to track both the value and whether we've mounted
     const [mounted, setMounted] = useState(false);
     const [isComingSoon, setIsComingSoon] = useState(false);
-
+    
     useEffect(() => {
         setMounted(true);
         setIsComingSoon(process.env.NEXT_PUBLIC_COMING_SOON_FAUCET === 'true');

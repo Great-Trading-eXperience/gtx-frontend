@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createWalletClient, custom, erc20Abi, formatUnits } from "viem";
 import { useChainId } from "wagmi";
-import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
 
 // Helper function to get the effective chain ID for contract calls
@@ -367,12 +367,13 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           return hash as HexAddress;
           
         } catch (method1Error) {
-          console.error('[DEBUG_PRIVY_ORDER] ❌ Method 1 failed with error:', {
-            message: (method1Error as any)?.message,
-            name: (method1Error as any)?.name,
-            cause: (method1Error as any)?.cause,
-            stack: (method1Error as any)?.stack?.substring(0, 200) + '...'
-          });
+          console.error('[DEBUG_PRIVY_ORDER] ❌ Method 1 failed with FULL error details:');
+          console.error('[DEBUG_PRIVY_ORDER] 📝 Error message (full):', (method1Error as any)?.message);
+          console.error('[DEBUG_PRIVY_ORDER] 📝 Error name:', (method1Error as any)?.name);
+          console.error('[DEBUG_PRIVY_ORDER] 📝 Error cause:', (method1Error as any)?.cause);
+          console.error('[DEBUG_PRIVY_ORDER] 📝 Error details:', (method1Error as any)?.details);
+          console.error('[DEBUG_PRIVY_ORDER] 📝 Contract revert data:', (method1Error as any)?.cause?.data);
+          console.error('[DEBUG_PRIVY_ORDER] 📝 Contract revert reason:', (method1Error as any)?.cause?.reason);
           console.log('[DEBUG_PRIVY_ORDER] 📝 Method 1 failed, will try other methods...');
           // Continue to try other methods
         }
@@ -410,31 +411,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         console.log('[DEBUG_PRIVY_ORDER] 📝 Method 2 not available (no getWalletClient), trying Method 3');
       }
 
-      console.log('[DEBUG_PRIVY_ORDER] 📝 Trying Method 3 (wagmi fallback)');
+      console.log('[DEBUG_PRIVY_ORDER] 📝 Skipping Method 3 (wagmi fallback) - Using pure Privy approach');
 
-      // Method 3: Fallback to using wagmi's writeContract with account override
-      try {
-        console.log('[DEBUG_PRIVY_ORDER] 📝 Using Method 3: wagmi writeContract fallback');
-        console.log('[DEBUG_PRIVY_ORDER] 📝 Method 3 details | Account:', address, '| Chain config will be determined by wagmi');
-        
-        const result = await writeContract(wagmiConfig, {
-          address: contractCall.address,
-          abi: contractCall.abi,
-          functionName: contractCall.functionName,
-          args: contractCall.args,
-          account: address,
-        });
-
-        console.log('[DEBUG_PRIVY_ORDER] ✅ Method 3 successful | Hash:', result);
-        return result as HexAddress;
-        
-      } catch (method3Error) {
-        console.error('[DEBUG_PRIVY_ORDER] ❌ Method 3 failed:', method3Error);
-        
-        // If we reach here, all methods have failed
-        console.error('[DEBUG_PRIVY_ORDER] 💥 All transaction methods failed');
-        throw method3Error;
-      }
+      // All Privy methods failed, throw a generic error
+      console.error('[DEBUG_PRIVY_ORDER] 💥 All pure Privy transaction methods failed');
+      throw new Error('All Privy transaction methods failed - check logs above for details');
     } catch (error: any) {
       console.error('[DEBUG_PRIVY_ORDER] ❌ Outer catch - All writeContract methods failed');
       console.error('[DEBUG_PRIVY_ORDER] ❌ Final error details:', {
@@ -1085,22 +1066,52 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
 
             // Check for common revert reasons
             if (errorStr.includes('0x7939f424')) {
+              updateToast(toastId, {
+                type: 'error',
+                message: 'No trading pools available for this token pair.',
+              });
             } else if (errorStr.includes('0xfb8f41b2')) {
-              // toast.error("Insufficient balance for this order. Please deposit more funds.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient balance for this order. Please deposit more funds.',
+              });
+            } else if (errorStr.includes('insufficient funds for gas') || errorStr.includes('insufficient funds') || errorStr.includes('InsufficientFunds') || errorStr.includes('gas required exceeds allowance')) {
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.',
+              });
             } else if (errorStr.includes('SlippageTooHigh')) {
-              // toast.error("Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.',
+              });
             } else if (errorStr.includes('InsufficientLiquidity')) {
-              // toast.error("Insufficient liquidity in the order book for this order size.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient liquidity in the order book for this order size.',
+              });
             } else if (errorStr.includes('InvalidPool')) {
-              // toast.error("Invalid trading pool. Please refresh and try again.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Invalid trading pool. Please refresh and try again.',
+              });
             } else if (errorStr.includes('TransactionReceiptNotFoundError')) {
-              // toast.error("Transaction is taking longer than expected. Please check your transaction status manually.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Transaction is taking longer than expected. Please check your transaction status manually.',
+              });
             } else if (errorStr.includes('reverted') && !errorStr.includes('reason')) {
-              // Generic revert without specific reason
-              // toast.error(`Contract execution failed. This might be due to insufficient balance, slippage, or market conditions. Check console for details.`);
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Contract execution failed. This might be due to insufficient balance, slippage, or market conditions.',
+              });
             } else {
-              // toast.error(error.message || `Failed to place ${orderType} order`);
+              updateToast(toastId, {
+                type: 'error',
+                message: error.message || `Failed to place ${orderType} order`,
+              });
             }
+          } else {
             updateToast(toastId, {
               type: 'error',
               message: 'Place order failed',

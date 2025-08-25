@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useAccount } from "wagmi"
 import { BookOpen, History, Wallet, Filter, ChevronDown, TrendingUp, DollarSign } from "lucide-react"
-import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "@/components/auth/privy-auth-button"
 import PositionsHistory from "./positions-history"
 import OpenOrders from "./open-orders"
 import FundingHistory from "./funding-history"
@@ -87,9 +87,9 @@ export default function PerpetualHistory() {
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 text-center">
                     <TrendingUp className="h-10 w-10 text-gray-400" />
                     <p className="text-base text-gray-200">Connect your wallet to see your positions</p>
-                    <ButtonConnectWallet
-                      colors={solidColorConfig}
+                    <PrivyAuthButton
                       className="border border-slate-500 text-sm"
+                      showFullProfile={false}
                     />
                   </div>
                 </div>
@@ -107,9 +107,9 @@ export default function PerpetualHistory() {
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 text-center">
                     <BookOpen className="h-10 w-10 text-gray-400" />
                     <p className="text-base text-gray-200">Connect your wallet to see your open orders</p>
-                    <ButtonConnectWallet
-                      colors={solidColorConfig}
+                    <PrivyAuthButton
                       className="border border-slate-500 text-sm"
+                      showFullProfile={false}
                     />
                   </div>
                 </div>
@@ -127,9 +127,9 @@ export default function PerpetualHistory() {
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 text-center">
                     <History className="h-10 w-10 text-gray-400" />
                     <p className="text-base text-gray-200">Connect your wallet to see your trade history</p>
-                    <ButtonConnectWallet
-                      colors={solidColorConfig}
+                    <PrivyAuthButton
                       className="border border-slate-500 text-sm"
+                      showFullProfile={false}
                     />
                   </div>
                 </div>
@@ -147,9 +147,9 @@ export default function PerpetualHistory() {
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 text-center">
                     <DollarSign className="h-10 w-10 text-gray-400" />
                     <p className="text-base text-gray-200">Connect your wallet to see your funding history</p>
-                    <ButtonConnectWallet
-                      colors={solidColorConfig}
+                    <PrivyAuthButton
                       className="border border-slate-500 text-sm"
+                      showFullProfile={false}
                     />
                   </div>
                 </div>
@@ -167,9 +167,9 @@ export default function PerpetualHistory() {
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-800/30 bg-gray-900/20 p-6 text-center">
                     <Wallet className="h-10 w-10 text-gray-400" />
                     <p className="text-base text-gray-200">Connect your wallet to see your order history</p>
-                    <ButtonConnectWallet
-                      colors={solidColorConfig}
+                    <PrivyAuthButton
                       className="border border-slate-500 text-sm"
+                      showFullProfile={false}
                     />
                   </div>
                 </div>

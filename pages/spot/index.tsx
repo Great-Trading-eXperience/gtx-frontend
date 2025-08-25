@@ -1,8 +1,8 @@
 // app/spot/page.tsx
 'use client';
 
-import { useEffect, useState, Suspense } from "react";
 import ClobDex from "@/components/clob-dex/clob-dex";
+import { useEffect, useState } from "react";
 
 export default function Spot() {
     // Use state to track both the value and whether we've mounted
