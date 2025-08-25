@@ -9,11 +9,19 @@ interface Toast {
   duration?: number; // in milliseconds, optional for loading
 }
 
+interface ToastProps {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'loading' | 'info';
+  duration?: number;
+  txHash?: string;
+}
+
 interface ToastContextType {
-  toasts: Toast[];
-  showToast: (toast: Omit<Toast, 'id'>) => string;
+  toasts: ToastProps[];
+  showToast: (toast: Omit<ToastProps, 'id'>) => string;
   hideToast: (id: string) => void;
-  updateToast: (id: string, updates: Partial<Omit<Toast, 'id'>>) => void;
+  updateToast: (id: string, updates: Partial<Omit<ToastProps, 'id'>>) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -31,14 +39,14 @@ interface ToastProviderProps {
 }
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
 
-  const showToast = useCallback((toast: Omit<Toast, 'id'>) => {
+  const showToast = useCallback((toast: Omit<ToastProps, 'id'>) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const newToast: Toast = {
+    const newToast: ToastProps = {
       ...toast,
       id,
-      duration: toast.duration ?? (toast.type === 'loading' ? undefined : 4000),
+      // duration: toast.duration ?? (toast.type === 'loading' ? undefined : 4000),
     };
 
     setToasts(prev => [...prev, newToast]);
@@ -57,7 +65,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
-  const updateToast = useCallback((id: string, updates: Partial<Omit<Toast, 'id'>>) => {
+  const updateToast = useCallback((id: string, updates: Partial<Omit<ToastProps, 'id'>>) => {
     setToasts(prev =>
       prev.map(toast =>
         toast.id === id

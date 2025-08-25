@@ -17,10 +17,10 @@ export function usePrivyDeposit() {
     console.log('🔵 usePrivyDeposit: Regular deposit hook called');
     console.log('🔵 usePrivyDeposit: Amount:', amount, 'Currency:', currencyAddress);
     
-    const toastId = showToast({
-      type: 'loading',
-      message: 'Processing deposit...',
-    });
+    // const toastId = showToast({
+    //   type: 'loading',
+    //   message: 'Processing deposit...',
+    // });
 
     try {
       setLoading(true);
@@ -121,10 +121,10 @@ export function usePrivyDeposit() {
       });
 
       setCurrentStep('Transaction submitted successfully!');
-      updateToast(toastId, {
-        type: 'success',
-        message: 'Deposit successful!',
-      });
+      // updateToast(toastId, {
+      //   type: 'success',
+      //   message: 'Deposit successful!',
+      // });
       console.log('🔵 usePrivyDeposit: Regular deposit transaction sent:', txHash);
       console.log('🔵 usePrivyDeposit: Regular deposit completed successfully');
 
@@ -139,10 +139,10 @@ export function usePrivyDeposit() {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
-      updateToast(toastId, {
-        type: 'error',
-        message: 'Deposit failed. Please try again.',
-      });
+      // updateToast(toastId, {
+      //   type: 'error',
+      //   message: 'Deposit failed. Please try again.',
+      // });
       setCurrentStep('');
       throw error;
     } finally {
