@@ -49,9 +49,10 @@ const PlaceOrder = ({
 }: PlaceOrderProps) => {
   const { isConnected, address: wagmiAddress } = useAccount();
   const { isFullyAuthenticated } = usePrivyAuth();
+  const wagmiChainId = useChainId();
   
   // Get chain ID early so we can use it in debug logs
-  const currentChainId = chainId || useChainId();
+  const currentChainId = chainId || wagmiChainId;
   
   // Helper function to get token symbol from address
   const getTokenSymbol = useCallback((tokenAddress: HexAddress): string => {
