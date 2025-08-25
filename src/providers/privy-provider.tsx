@@ -1,6 +1,8 @@
 'use client';
 
 import { appchainTestnet, rariTestnet, wagmiConfig } from '@/configs/wagmi';
+import { FEATURE_FLAGS } from '@/constants/features/features-config';
+import { useChainValidator } from '@/hooks/use-chain-validator';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider } from '@privy-io/wagmi';
@@ -9,25 +11,66 @@ import { defineChain } from 'viem';
 
 const queryClient = new QueryClient();
 
-const privyConfig: PrivyClientConfig = {
-  embeddedWallets: {
-    createOnLogin: 'all-users',
-    showWalletUIs: false,
-  },
-  loginMethods: ['google', 'twitter', 'email','wallet'],
-  appearance: {
-    theme: 'dark',
-    accentColor: '#676FFF',
-    logo: '/logo/gtx.png',
-  },
-  // defaultChain: defineChain(riseTestnet),
-  defaultChain: defineChain(rariTestnet),
-  supportedChains: [
-    // defineChain(riseTestnet),
-    defineChain(rariTestnet),
-    defineChain(appchainTestnet),
-  ],
+// Create conditional Privy configuration based on crosschain feature flag
+const createPrivyConfig = (): PrivyClientConfig => {
+  const isCrosschainEnabled = FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED;
+  
+  console.log(`[PRIVY_CONFIG] Crosschain enabled: ${isCrosschainEnabled}`);
+
+  const baseConfig: PrivyClientConfig = {
+    embeddedWallets: {
+      createOnLogin: 'all-users',
+      showWalletUIs: false,
+      requireUserPasswordOnCreate: false,
+      noPromptOnSignature: false,
+    },
+    loginMethods: [
+      // 'google', 
+      // 'twitter', 
+      // 'email',
+      'wallet'
+    ],
+    appearance: {
+      theme: 'dark',
+      accentColor: '#676FFF',
+      logo: '/logo/gtx.png',
+    },
+  };
+
+  if (isCrosschainEnabled) {
+    // When crosschain is enabled, restrict to only Appchain and Rari
+    console.log(`[PRIVY_CONFIG] Restricting chains to Appchain and Rari Testnet only`);
+    
+    return {
+      ...baseConfig,
+      defaultChain: defineChain(appchainTestnet), // Default to appchain for crosschain features
+      supportedChains: [
+        defineChain(rariTestnet),
+        defineChain(appchainTestnet),
+      ],
+    };
+  } else {
+    // When crosschain is disabled, use default Rari testnet configuration
+    console.log(`[PRIVY_CONFIG] Using default configuration with Rari Testnet`);
+    
+    return {
+      ...baseConfig,
+      defaultChain: defineChain(rariTestnet),
+      supportedChains: [
+        defineChain(rariTestnet),
+        defineChain(appchainTestnet),
+      ],
+    };
+  }
 };
+
+const privyConfig = createPrivyConfig();
+
+// Chain validation wrapper component
+function ChainValidatorWrapper({ children }: { children: React.ReactNode }) {
+  useChainValidator();
+  return <>{children}</>;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
@@ -49,7 +92,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
-          {children}
+          <ChainValidatorWrapper>
+            {children}
+          </ChainValidatorWrapper>
         </WagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>

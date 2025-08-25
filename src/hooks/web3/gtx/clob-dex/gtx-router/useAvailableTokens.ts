@@ -49,18 +49,7 @@ const getTokenIcon = (symbol: string): string => {
 // Get full token name
 const getTokenName = (symbol: string): string => {
   const nameMap: Record<string, string> = {
-    'WETH': 'Wrapped Ethereum',
-    'ETH': 'Ethereum',
-    'USDC': 'USD Coin',
-    'WBTC': 'Wrapped Bitcoin',
-    'TRUMP': 'Trump Token',
-    'PEPE': 'Pepe Token',
-    'LINK': 'Chainlink',
-    'DOGE': 'Dogecoin',
-    'SHIB': 'Shiba Inu',
-    'FLOKI': 'Floki Inu',
-    'MATIC': 'Polygon',
-    'AAVE': 'Aave',
+
   };
   return nameMap[symbol] || symbol;
 };

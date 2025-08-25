@@ -1,18 +1,17 @@
+import { usePrivyAuth } from "@/hooks/use-privy-auth";
+import { useTokenBalance } from "@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf";
+import { useAvailableTokens } from "@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens";
+import { cn, formatNumber } from "@/lib/utils";
+import { useWallets } from "@privy-io/react-auth";
 import { Menu, Moon, Sun, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { cn, formatNumber } from "@/lib/utils";
+import { PrivyAuthButton } from "../auth/privy-auth-button";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
-import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet";
-import { PrivyAuthButton } from "../auth/privy-auth-button";
-import { usePrivyAuth } from "@/hooks/use-privy-auth";
-import { useWallets } from "@privy-io/react-auth";
-import { useTokenBalance } from "@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf";
-import { useAvailableTokens } from "@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens";
 
-import { FEATURE_FLAGS, isTabEnabled } from "@/constants/features/features-config";
+import { isTabEnabled } from "@/constants/features/features-config";
 
 interface NavbarProps {
   onTogglePanel: () => void;
@@ -35,11 +34,11 @@ const Header = ({onTogglePanel}: NavbarProps) => {
       label: "Swap",
       enabled: isTabEnabled("SWAP")
     },
-    {
-      destination: "/spot",
-      label: "Spot",
-      enabled: isTabEnabled("SPOT")
-    },
+    // {
+    //   destination: "/spot",
+    //   label: "Spot",
+    //   enabled: isTabEnabled("SPOT")
+    // },
     {
       destination: "/perpetual",
       label: "Perpetual",
@@ -81,6 +80,12 @@ const Header = ({onTogglePanel}: NavbarProps) => {
 
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
   const embeddedWalletAddress = embeddedWallet?.address || 'Not Created';
+  
+  // Helper function to truncate wallet address
+  const truncateAddress = (address: string): string => {
+    if (address === 'Not Created') return address;
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   // Get available tokens from pools data
   const { tokens: availableTokens } = useAvailableTokens();
@@ -141,8 +146,7 @@ const Header = ({onTogglePanel}: NavbarProps) => {
               <div>
                 <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
                   <Wallet className="w-6 h-6" /> 
-                  <span>{formatNumber(Number(BalanceOfMUSDC), { decimals: 2, compact: true, })}</span>
-                  <span>{musdcToken?.symbol || 'USDC'}</span>
+                  <span>{truncateAddress(embeddedWalletAddress)}</span>
                 </div>
               </div>
             ) : (

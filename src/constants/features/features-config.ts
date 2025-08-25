@@ -110,3 +110,8 @@ export function shouldUseCoreChainBalance(): boolean {
 export function shouldFaucetUsePrivy(): boolean {
     return FEATURE_FLAGS.FAUCET_USE_PRIVY;
 }
+
+// Helper function to check if faucet should use standard Wagmi hook when crosschain is enabled
+export function shouldFaucetUseStandardHook(): boolean {
+    return FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED;
+}

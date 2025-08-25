@@ -1,23 +1,23 @@
+import { ClientOnly } from "@/components/client-only";
+import ToastContainer from "@/components/clob-dex/place-order/toastContainer";
+import { ToastProvider } from "@/components/clob-dex/place-order/toastContext";
 import Footer from "@/components/footer/footer";
+import EmbededPanel from "@/components/header/embeded-panel";
 import Header from "@/components/header/header";
+import LandingHeader from "@/components/header/landing-header";
+import MobileWarningModal from "@/components/header/mobile-warning-modal";
+import VeGTXHeader from "@/components/header/vegtx-header";
+import { Toaster } from "@/components/ui/toaster";
+import Providers from "@/providers/privy-provider";
 import { darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { ThemeProvider } from "next-themes";
 import type { AppProps } from "next/app";
-import "../styles/globals.css";
 import Head from "next/head";
-import { ReactNode, useEffect, useState } from "react";
-import { NextPage } from "next/types";
-import { Toaster } from "@/components/ui/toaster";
-import LandingHeader from "@/components/header/landing-header";
 import { useRouter } from "next/router";
-import VeGTXHeader from "@/components/header/vegtx-header";
-import MobileWarningModal from "@/components/header/mobile-warning-modal";
-import Providers from "@/providers/privy-provider";
-import { ClientOnly } from "@/components/client-only";
-import EmbededPanel from "@/components/header/embeded-panel";
-import { ToastProvider } from "@/components/clob-dex/place-order/toastContext";
-import ToastContainer from "@/components/clob-dex/place-order/toastContainer";
+import { NextPage } from "next/types";
+import { ReactNode, useEffect, useState } from "react";
+import "../styles/globals.css";
 
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;

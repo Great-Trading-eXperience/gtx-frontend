@@ -3,6 +3,7 @@ import { wagmiConfig } from "@/configs/wagmi";
 import { HexAddress } from "@/types/general/address";
 import { readContract } from "@wagmi/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useChainId } from "wagmi";
 
 interface UseBalanceOptions {
     debounceTime?: number;
@@ -23,6 +24,7 @@ export const useBalance = (
     options: UseBalanceOptions = {}
 ): UseBalanceResult => {
     const { debounceTime = 1000, enabled = true } = options;
+    const chainId = useChainId();
 
     const [balance, setBalance] = useState<bigint | undefined>(undefined);
     const [loading, setLoading] = useState(true);
@@ -36,7 +38,21 @@ export const useBalance = (
     }, [debounceTime]);
 
     const fetchBalance = useCallback(async () => {
+        const logPrefix = '[ERC20_BALANCE]';
+        
+        console.log(`${logPrefix} Starting balance fetch:`, {
+            userAddress,
+            tokenAddress,
+            chainId,
+            enabled
+        });
+
         if (!userAddress || !tokenAddress || !enabled) {
+            console.log(`${logPrefix} Skipping balance fetch - missing required params:`, {
+                hasUserAddress: !!userAddress,
+                hasTokenAddress: !!tokenAddress,
+                enabled
+            });
             setLoading(false);
             return;
         }
@@ -44,6 +60,13 @@ export const useBalance = (
         setLoading(true);
         setError(null);
         setIsStale(false);
+
+        console.log(`${logPrefix} Calling readContract with:`, {
+            tokenAddress,
+            userAddress,
+            chainId,
+            functionName: 'balanceOf'
+        });
 
         try {
             const result = await readContract(wagmiConfig, {
@@ -53,18 +76,34 @@ export const useBalance = (
                 args: [userAddress],
             });
 
+            console.log(`${logPrefix} Successfully fetched balance:`, {
+                tokenAddress,
+                userAddress,
+                chainId,
+                balance: result?.toString(),
+                rawResult: result
+            });
+
             setBalance(result as bigint);
         } catch (err: unknown) {
             const error = err instanceof Error
                 ? err
                 : new Error('Failed to fetch balance');
 
+            console.error(`${logPrefix} Error fetching balance:`, {
+                tokenAddress,
+                userAddress,
+                chainId,
+                errorName: error.name,
+                errorMessage: error.message,
+                fullError: error
+            });
+
             setError(error);
-            console.error('Error fetching M0 balance:', error);
         } finally {
             setLoading(false);
         }
-    }, [userAddress, tokenAddress, enabled]);
+    }, [userAddress, tokenAddress, enabled, chainId]);
 
     const refreshBalance = useCallback(async () => {
         await fetchBalance();

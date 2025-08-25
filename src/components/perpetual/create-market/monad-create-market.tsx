@@ -11,7 +11,7 @@ import { useAccount } from "wagmi"
 import { toast } from "sonner"
 import { writeContract, waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/configs/wagmi"
-import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "@/components/auth/privy-auth-button"
 
 
 import { getTokenAddresses } from "@/helper/token-helper"
@@ -221,7 +221,7 @@ const hash = await writeContract(wagmiConfig, {
           {!isConnected ? (
             <div className="py-6 text-center">
               <p className="mb-4 text-gray-500">Connect your wallet to create a market</p>
-              <ButtonConnectWallet />
+              <PrivyAuthButton showFullProfile={false} />
             </div>
           ) : (
             <>

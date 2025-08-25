@@ -3,11 +3,15 @@
 
 import { useEffect, useState, Suspense } from "react";
 import ClobDex from "@/components/clob-dex/clob-dex";
+import { useCrosschainForce } from "@/hooks/use-crosschain-force";
 
 export default function Spot() {
     // Use state to track both the value and whether we've mounted
     const [mounted, setMounted] = useState(false);
     const [isComingSoon, setIsComingSoon] = useState(false);
+    
+    // Crosschain force hook - automatically switches to appchain if needed
+    const { isChainCorrect, isCheckingChain, isSwitchingChain } = useCrosschainForce();
 
     useEffect(() => {
         setMounted(true);
@@ -30,6 +34,26 @@ export default function Spot() {
                     </Suspense>
                 </div> */}
                 <ClobDex />
+                
+                {/* Chain switching overlay */}
+                {(isCheckingChain || isSwitchingChain) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-20">
+                        <div className="bg-slate-900/90 backdrop-blur-xl max-w-md w-full shadow-[0_0_30px_rgba(56,189,248,0.15)] border border-cyan-500/20 rounded-xl">
+                            <div className="p-8 text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+                                <h3 className="text-xl font-bold text-white mb-2">
+                                    {isSwitchingChain ? 'Switching Networks' : 'Checking Network'}
+                                </h3>
+                                <p className="text-cyan-100/80">
+                                    {isSwitchingChain 
+                                        ? 'Switching to Appchain Testnet for crosschain features...' 
+                                        : 'Verifying network requirements...'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Coming Soon overlay positioned over the ClobDex */}
                 {isComingSoon && (

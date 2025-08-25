@@ -13,6 +13,7 @@ interface UseCalculateMinOutForSwapProps {
   slippageToleranceBps: number
   srcTokenDecimals?: number
   enabled?: boolean
+  senderAddress?: string // Optional sender address for logging purposes
 }
 
 export const useCalculateMinOutForSwap = ({
@@ -21,15 +22,15 @@ export const useCalculateMinOutForSwap = ({
   inputAmount,
   slippageToleranceBps = 10000, // 100% default slippage
   srcTokenDecimals = 18, // Default to 18 decimals if not provided
-  enabled = true
+  enabled = true,
+  senderAddress
 }: UseCalculateMinOutForSwapProps) => {
   const currentChainId = useChainId()
   
   // Helper function to get the effective chain ID for contract calls
   const getEffectiveChainId = (chainId: number): number => {
-    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
-    const effectiveChainId = crosschainEnabled ? getCoreChain() : chainId;
-    console.log('[SWAP] 🔗 Chain selection | Crosschain enabled:', crosschainEnabled, '| Current chain:', chainId, '| Effective chain:', effectiveChainId);
+    const effectiveChainId = 1918988905; // Always use Rari testnet
+    console.log('[SWAP] 🔗 Chain selection | Always using Rari | Current chain:', chainId, '| Effective chain:', effectiveChainId);
     return effectiveChainId;
   };
   
@@ -79,7 +80,10 @@ export const useCalculateMinOutForSwap = ({
         srcTokenDecimals,
         slippageToleranceBps,
         currentChainId,
-        effectiveChainId
+        effectiveChainId,
+        senderAddress: senderAddress || 'Not provided',
+        crosschainEnabled,
+        isRariTestnet
       })
     } else {
       console.log('⏹️ calculateMinOutForSwap - Contract call DISABLED:', {
@@ -90,10 +94,13 @@ export const useCalculateMinOutForSwap = ({
         inputAmount: !!inputAmount,
         inputAmountNotZero: inputAmount !== '0',
         parsedAmountValid: parsedInputAmount > 0n,
-        shouldCallContract
+        shouldCallContract,
+        currentChainId,
+        effectiveChainId,
+        senderAddress: senderAddress || 'Not provided'
       })
     }
-  }, [shouldCallContract, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, currentChainId, effectiveChainId, enabled])
+  }, [shouldCallContract, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, currentChainId, effectiveChainId, enabled, senderAddress, crosschainEnabled, isRariTestnet])
 
   // Use wagmi for non-rari chains, custom logic for rari-testnet
   const wagmiResult = useReadContract({
@@ -190,7 +197,12 @@ export const useCalculateMinOutForSwap = ({
           inputAmount,
           parsedInputAmount: parsedInputAmount.toString(),
           srcTokenDecimals,
-          slippageToleranceBps
+          slippageToleranceBps,
+          currentChainId,
+          effectiveChainId,
+          senderAddress: senderAddress || 'Not provided',
+          crosschainEnabled,
+          isRariTestnet
         })
         // Log potential causes of revert
         console.error('Possible causes:')
@@ -199,15 +211,21 @@ export const useCalculateMinOutForSwap = ({
         console.error('3. Slippage tolerance too low')
         console.error('4. Input amount too large for available liquidity')
         console.error('5. One of the currency addresses is invalid')
-      } else if (minOutputAmount !== undefined) {
+      } else if (minOutputAmount !== undefined && minOutputAmount !== null) {
         console.log('✅ calculateMinOutForSwap - Success:', {
           minOutputAmount: minOutputAmount.toString(),
           isZero: minOutputAmount === 0n,
-          message: minOutputAmount === 0n ? 'No liquidity/pool available for this pair' : 'Valid output amount'
+          message: minOutputAmount === 0n ? 'No liquidity/pool available for this pair' : 'Valid output amount',
+          senderAddress: senderAddress || 'Not provided',
+          currentChainId,
+          effectiveChainId,
+          inputAmount,
+          srcCurrency,
+          dstCurrency
         })
       }
     }
-  }, [shouldCallContract, isLoading, isError, error, minOutputAmount, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps])
+  }, [shouldCallContract, isLoading, isError, error, minOutputAmount, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, senderAddress, currentChainId, effectiveChainId])
 
   return {
     minOutputAmount,

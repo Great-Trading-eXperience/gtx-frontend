@@ -1,13 +1,12 @@
 import faucetABI from '@/abis/faucet/FaucetABI';
 import { wagmiConfig } from '@/configs/wagmi';
-import { ContractName, FAUCET_ADDRESS, getContractAddress } from '@/constants/contract/contract-address';
+import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { HexAddress } from '@/types/general/address';
+import { useEffectiveChainId } from '@/utils/chain-override';
 import { simulateContract } from '@wagmi/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
-import { useChainId } from 'wagmi';
-import { useEffectiveChainId } from '@/utils/chain-override';
+import { useChainId, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 
 export const useRequestToken = (
 ) => {

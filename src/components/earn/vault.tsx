@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExternalLink } from "lucide-react"
 import Link from "next/link"
-import { ButtonConnectWallet } from "../button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "../auth/privy-auth-button"
 
 interface Pool {
   collateral: string
@@ -67,7 +67,7 @@ export default function Vault({ params }: { params: { vault: string } }) {
             </div>
 
             <div className="flex items-center gap-4">
-              <ButtonConnectWallet />
+              <PrivyAuthButton showFullProfile={false} />
             </div>
           </div>
         </div>

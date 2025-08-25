@@ -869,7 +869,7 @@ const SwapForm: React.FC = () => {
                 </div>
                 {txHash && (
                   <a
-                    href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                    href={`https://testnet.explorer.rarichain.org/tx/${txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"

@@ -1,4 +1,4 @@
-import { DEFAULT_CHAIN, ContractName, getContractAddress } from "@/constants/contract/contract-address";
+import { DEFAULT_CHAIN } from "@/constants/contract/contract-address";
 import { getTokenAddresses } from "@/helper/token-helper";
 import type { HexAddress } from "@/types/general/address";
 
@@ -88,7 +88,7 @@ export const {
 const { WETH: WETH_ADDRESS, WBTC: WBTC_ADDRESS, USDC: USDC_ADDRESS } = getTokenAddresses(CURRENT_CHAIN_ID.toString());
 
 // Export token addresses for convenience
-export { WETH_ADDRESS, WBTC_ADDRESS, USDC_ADDRESS };
+export { USDC_ADDRESS, WBTC_ADDRESS, WETH_ADDRESS };
 
 // Export common token list for the current chain
 export const COMMON_TOKENS = [
@@ -101,7 +101,7 @@ export const COMMON_TOKENS = [
   {
     address: WBTC_ADDRESS as HexAddress,
     symbol: 'WBTC',
-    name: 'Wrapped Bitcoin',
+    name: 'Wrapped Bitcoins',
     decimals: 8
   },
   {
