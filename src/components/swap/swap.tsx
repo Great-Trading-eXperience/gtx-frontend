@@ -1,24 +1,23 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet, Settings, TrendingUp } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
-import { toast } from "sonner";
-import { useAccount, useChainId } from 'wagmi';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useWallets } from '@privy-io/react-auth';
+import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from "sonner";
+import { useAccount, useChainId } from 'wagmi';
 
-import type { HexAddress } from '@/types/general/address';
-import { DotPattern } from '../magicui/dot-pattern';
-import { useSwap } from '@/hooks/web3/gtx/clob-dex/gtx-router/useSwap';
-import { useCalculateMinOutForSwap } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCalculateMinOutForSwap';
-import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
-import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
+import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
+import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
 import { useAvailableTokens } from '@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens';
+import { useCalculateMinOutForSwap } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCalculateMinOutForSwap';
+import { useSwap } from '@/hooks/web3/gtx/clob-dex/gtx-router/useSwap';
+import type { HexAddress } from '@/types/general/address';
 import { formatUnits } from 'viem';
+import { DotPattern } from '../magicui/dot-pattern';
 
 // Type for token selection
 export interface Token {
@@ -73,8 +72,7 @@ const SwapForm: React.FC = () => {
   } = useSwap(actualAddress);
 
   const {
-    getWalletBalance,
-    loading: tradingBalanceLoading,
+    getTotalAvailableBalance,
   } = useTradingBalances(balanceManagerAddress, actualAddress);
 
   // Processing state for swap
@@ -255,13 +253,17 @@ const SwapForm: React.FC = () => {
       const exactMatches: Record<string, string> = {
         'WETH': 'eth.png',
         'mWETH': 'eth.png', 
+        'gsWETH': 'eth.png',
         'ETH': 'eth.png',
         'NATIVE': 'eth.png',
         'BTC': 'bitcoin.png',
         'WBTC': 'bitcoin.png',
         'mWBTC': 'bitcoin.png',
+        'gsWBTC': 'bitcoin.png',
         'USDC': 'usdc.png',
         'MUSDC': 'usdc.png',
+        'USDT': 'usdc.png',
+        'gsUSDT': 'usdc.png',
         'DOGE': 'doge.png',
         'LINK': 'link.png',
         'PEPE': 'pepe.png',
@@ -291,7 +293,7 @@ const SwapForm: React.FC = () => {
     };
 
     return availableTokensFromPools.map(token => ({
-      id: token.symbol.toLowerCase(),
+      id: token.symbol.toLowerCase(), // Use symbol as ID since we now deduplicate at source
       name: token.name || token.symbol,
       symbol: token.symbol,
       icon: `/tokens/${getTokenIcon(token.symbol)}`,
@@ -368,8 +370,8 @@ const SwapForm: React.FC = () => {
             return;
           }
           
-          const sourceBalanceBigInt = await getWalletBalance(sourceToken.address as HexAddress);
-          const destBalanceBigInt = await getWalletBalance(destToken.address as HexAddress);
+          const sourceBalanceBigInt = await getTotalAvailableBalance(sourceToken.address as HexAddress);
+          const destBalanceBigInt = await getTotalAvailableBalance(destToken.address as HexAddress);
           
           console.log('[SWAP] 💰 Raw balances fetched:', {
             sourceBalanceBigInt: sourceBalanceBigInt.toString(),
@@ -430,7 +432,7 @@ const SwapForm: React.FC = () => {
     };
 
     fetchBalances();
-  }, [useEmbeddedWallet, sourceToken, destToken, actualAddress, hasValidDecimals, sourceTokenDecimals, destTokenDecimals, getWalletBalance, externalSourceBalance, externalDestBalance, isExternalSourceLoading, isExternalDestLoading, isExternalSourceError, isExternalDestError]);
+  }, [useEmbeddedWallet, sourceToken, destToken, actualAddress, hasValidDecimals, sourceTokenDecimals, destTokenDecimals, getTotalAvailableBalance, externalSourceBalance, externalDestBalance, isExternalSourceLoading, isExternalDestLoading, isExternalSourceError, isExternalDestError]);
 
   // Debug logging for balance hooks
   useEffect(() => {
@@ -737,7 +739,7 @@ const SwapForm: React.FC = () => {
                         onError={(e) => {
                           const target = e.currentTarget;
                           target.onerror = null;
-                          target.src = "/tokens/default-token.png";
+                          target.src = "/tokens/eth.png";
                         }}
                       />
                     ) : (
@@ -818,7 +820,7 @@ const SwapForm: React.FC = () => {
                         onError={(e) => {
                           const target = e.currentTarget;
                           target.onerror = null;
-                          target.src = "/tokens/default-token.png";
+                          target.src = "/tokens/eth.png";
                         }}
                       />
                     ) : (
@@ -938,7 +940,7 @@ const SwapForm: React.FC = () => {
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.onerror = null;
-                        target.src = "/tokens/default-token.png";
+                        target.src = "/tokens/eth.png";
                       }}
                     />
                   </div>

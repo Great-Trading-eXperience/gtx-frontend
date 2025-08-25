@@ -64,10 +64,10 @@ export const rariTestnet: Chain = {
 	},
 	rpcUrls: {
 		default: {
-			http: ['/api/rpc/rari-testnet'],
+			http: ['https://testnet.rpc.rarichain.org/http'],
 		},
 		public: {
-			http: ['/api/rpc/rari-testnet'],
+			http: ['https://testnet.rpc.rarichain.org/http'],
 		},
 	},
 	blockExplorers: {
@@ -89,10 +89,10 @@ export const appchainTestnet: Chain = {
 	},
 	rpcUrls: {
 		default: {
-			http: ['/api/rpc/appchain-testnet'],
+			http: ['https://appchain.caff.testnet.espresso.network'],
 		},
 		public: {
-			http: ['/api/rpc/appchain-testnet'],
+			http: ['https://appchain.caff.testnet.espresso.network'],
 		},
 	},
 	blockExplorers: {

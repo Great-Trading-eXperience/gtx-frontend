@@ -17,6 +17,7 @@ import type { HexAddress } from "@/types/general/address"
 import type { Token } from "@/types/tokens/token"
 
 import { ContractName, DEFAULT_CHAIN, getContractAddress } from "@/constants/contract/contract-address"
+import { shouldFaucetUsePrivy } from "@/constants/features/features-config"
 import { FaucetTokensData } from "@/types/faucet/add-token"
 import { FaucetRequestsData } from "@/types/faucet/request-token"
 import { Button } from "@heroui/react"
@@ -89,18 +90,27 @@ const GTXFaucet: NextPage = () => {
   const { address: wagmiAddress } = useAccount()
   const { wallets } = useWallets()
   
-  // Get Privy wallet address (prioritize embedded wallet)
+  // Check if faucet should use Privy
+  const shouldUsePrivy = shouldFaucetUsePrivy()
+  
+  // Get user address based on configuration
   const privyWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0]
-  const userAddress = privyWallet?.address || wagmiAddress
+  const userAddress = shouldUsePrivy ? (privyWallet?.address || wagmiAddress) : wagmiAddress
 
   // Log which address is being used
   useEffect(() => {
     if (userAddress) {
+      console.log('[Faucet] Configuration - Use Privy:', shouldUsePrivy);
       console.log('[Faucet] Using address:', userAddress);
-      console.log('[Faucet] Address source:', privyWallet?.address ? 'Privy wallet' : 'Wagmi address');
-      console.log('[Faucet] Privy wallet type:', privyWallet?.walletClientType);
+      
+      if (shouldUsePrivy) {
+        console.log('[Faucet] Address source:', privyWallet?.address ? 'Privy wallet' : 'Wagmi fallback');
+        console.log('[Faucet] Privy wallet type:', privyWallet?.walletClientType);
+      } else {
+        console.log('[Faucet] Address source: Wagmi only (Privy disabled)');
+      }
     }
-  }, [userAddress, privyWallet?.address, privyWallet?.walletClientType])
+  }, [userAddress, privyWallet?.address, privyWallet?.walletClientType, shouldUsePrivy])
 
   const [availableTokens, setAvailableTokens] = useState<Record<string, Token>>({})
 
@@ -189,6 +199,13 @@ const GTXFaucet: NextPage = () => {
     handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress)
   }
 
+  // Hardcoded token mapping for fallback when symbol is empty
+  // Normalized addresses to lowercase for better matching
+  const hardcodedTokenMapping: Record<string, { name: string; symbol: string }> = {
+    "0x1362Dd75d8F1579a0Ebd62DF92d8F3852C3a7516": { name: "Tether USD", symbol: "USDT" },
+    "0x02950119C4CCD1993f7938A55B8Ab8384C3CcE4F": { name: "Wrapped Ether", symbol: "WETH" },
+  }
+
   useEffect(() => {
     if (!faucetTokensData || !mounted) {
       return
@@ -204,11 +221,14 @@ const GTXFaucet: NextPage = () => {
           let tokenDecimals = 18
 
           try {
+            console.log(`[Faucet] Fetching metadata for token ${faucetToken.token} on chain ${chainId}`);
+            
             const tokenNameResult = await readContract(wagmiConfig, {
               address: faucetToken.token,
               abi: TokenABI,
               functionName: "name",
               args: [],
+              chainId: chainId ?? defaultChainId,
             })
 
             const tokenSymbolResult = await readContract(wagmiConfig, {
@@ -216,6 +236,7 @@ const GTXFaucet: NextPage = () => {
               abi: TokenABI,
               functionName: "symbol",
               args: [],
+              chainId: chainId ?? defaultChainId,
             })
 
             const tokenDecimalsResult = await readContract(wagmiConfig, {
@@ -223,21 +244,54 @@ const GTXFaucet: NextPage = () => {
               abi: TokenABI,
               functionName: "decimals",
               args: [],
+              chainId: chainId ?? defaultChainId,
             })
 
-            tokenName = tokenNameResult as string
-            tokenSymbol = tokenSymbolResult as string
-            tokenDecimals = tokenDecimalsResult as number
+            // Check for empty responses
+            if (tokenNameResult && tokenNameResult !== "0x") {
+              tokenName = tokenNameResult as string
+            }
+            if (tokenSymbolResult && tokenSymbolResult !== "0x") {
+              tokenSymbol = tokenSymbolResult as string
+            }
+            if (tokenDecimalsResult) {
+              tokenDecimals = tokenDecimalsResult as number
+            }
+
+            console.log(`[Faucet] Token metadata fetched:`, {
+              address: faucetToken.token,
+              name: tokenName || 'empty',
+              symbol: tokenSymbol || 'empty', 
+              decimals: tokenDecimals
+            });
+
           } catch (err: unknown) {
-            console.log("Error fetching token metadata of", faucetToken.token, err)
+            console.warn(`[Faucet] Error fetching token metadata:`, {
+              chainId: chainId ?? defaultChainId,
+              contractAddress: faucetToken.token,
+              error: err
+            });
+            console.log(`[Faucet] Will attempt to use hardcoded mapping for ${faucetToken.token}`);
           }
 
-          availableTokens[faucetToken.token] = {
+          // Use hardcoded mapping when symbol is empty
+          if (!tokenSymbol && hardcodedTokenMapping[faucetToken.token]) {
+            console.log(`[Faucet] Using hardcoded mapping for ${faucetToken.token}:`, hardcodedTokenMapping[faucetToken.token]);
+            tokenName = hardcodedTokenMapping[faucetToken.token].name
+            tokenSymbol = hardcodedTokenMapping[faucetToken.token].symbol
+          } else if (!tokenSymbol) {
+            console.warn(`[Faucet] No hardcoded mapping found for ${faucetToken.token} on chain ${chainId ?? defaultChainId}`);
+          }
+
+          const finalTokenData = {
             address: faucetToken.token,
             name: tokenName,
             symbol: tokenSymbol,
             decimals: tokenDecimals,
-          }
+          };
+
+          console.log(`[Faucet] Final token data for ${faucetToken.token}:`, finalTokenData);
+          availableTokens[faucetToken.token] = finalTokenData;
         }),
       )
 
@@ -272,13 +326,25 @@ const GTXFaucet: NextPage = () => {
         {isConnected ? (
           <div className="flex flex-col gap-8">
             {/* Header Section */}
-            <h2 className="text-white text-4xl font-bold tracking-tight text-start">
-              Test Token Faucet
-              <br />
-              <span className="text-white/70 text-base font-normal mt-2 block">
-                Request test tokens for your blockchain development and testing needs.
-              </span>
-            </h2>
+            <div className="flex items-start justify-between">
+              <h2 className="text-white text-4xl font-bold tracking-tight text-start">
+                Token Faucet
+                <br />
+                <span className="text-white/70 text-base font-normal mt-2 block">
+                  Request test tokens
+                </span>
+              </h2>
+              
+              {/* Configuration Indicator */}
+              <div className="bg-black/40 border border-white/20 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${shouldUsePrivy ? 'bg-green-400' : 'bg-blue-400'}`}></div>
+                  <span className="text-white/70 text-xs font-medium">
+                    {shouldUsePrivy ? 'Privy Mode' : 'Wagmi Only'}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Main Faucet Card */}
             <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">

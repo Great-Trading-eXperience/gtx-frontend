@@ -30,7 +30,7 @@ export function AllocationRow({ marketToken, allocation }: AllocationRowProps) {
       BONK: "/bonk.png",
       FLOKI: "/floki.png",
     }
-    return icons[symbol.split("_")[1]] || "/default-token.png"
+    return icons[symbol.split("_")[1]] || "/tokens/eth.png"
   }
 
   // Format market name from GTX_TOKEN_USDC to TOKEN/USDC

@@ -21,7 +21,7 @@ export function useUserWebSocket(walletAddress: string | undefined, chainId: num
     if (!walletAddress || !chainId) return;
 
     const effectId = Math.random().toString(36).substr(2, 9);
-    console.log(`[USER-WS] Effect started for ${walletAddress} - ID: ${effectId}`);
+    // console.log(`[USER-WS] Effect started for ${walletAddress} - ID: ${effectId}`);
 
     if (walletAddress !== connectedAddress || chainId !== connectedChainId) {
       setConnectedAddress(walletAddress);
@@ -39,7 +39,7 @@ export function useUserWebSocket(walletAddress: string | undefined, chainId: num
     connect();
 
     return () => {
-      console.log(`[USER-WS] Effect cleanup for ${walletAddress} - ID: ${effectId}`);
+      // console.log(`[USER-WS] Effect cleanup for ${walletAddress} - ID: ${effectId}`);
       ws.disconnect();
       ws.removeMessageHandler(handleMessage);
     };

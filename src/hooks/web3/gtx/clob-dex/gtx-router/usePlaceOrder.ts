@@ -1,4 +1,5 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
+import BalanceManagerABI from "@/abis/gtx/clob/BalanceManagerABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
@@ -11,17 +12,32 @@ import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { useEffectiveChainId } from "@/utils/chain-override";
 import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
+import { isFeatureEnabled, getCoreChain } from "@/constants/features/features-config";
 
-const getTokenDecimals = async (tokenAddress: HexAddress): Promise<number> => {
+// Helper function to get the effective chain ID for contract calls
+const getEffectiveChainId = (currentChainId: number): number => {
+  const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+  const effectiveChainId = crosschainEnabled ? getCoreChain() : currentChainId;
+  console.log('[DEBUG_EXTERNAL_ORDER] 🔗 Chain selection | Crosschain enabled:', crosschainEnabled, '| Current chain:', currentChainId, '| Effective chain:', effectiveChainId);
+  return effectiveChainId;
+};
+
+const getTokenDecimals = async (tokenAddress: HexAddress, chainId?: number): Promise<number> => {
   try {
+    const effectiveChainId = chainId || getCoreChain(); // Default to core chain if not specified
+    console.log('[DEBUG_EXTERNAL_ORDER] 💳 Getting token decimals | Token:', tokenAddress, '| Chain:', effectiveChainId);
+    
     const decimals = await readContract(wagmiConfig, {
       address: tokenAddress,
       abi: erc20Abi,
       functionName: 'decimals',
+      chainId: effectiveChainId,
     });
+    
+    console.log('[DEBUG_EXTERNAL_ORDER] ✅ Token decimals retrieved:', decimals, '| Token:', tokenAddress, '| Chain:', effectiveChainId);
     return decimals;
   } catch (error) {
-    console.error(`Failed to fetch decimals for token ${tokenAddress}:`, error);
+    console.error(`[DEBUG_EXTERNAL_ORDER] ❌ Failed to fetch decimals for token ${tokenAddress} on chain ${chainId}:`, error);
     return 18;
   }
 };
@@ -100,22 +116,53 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
   };
 
   const checkBalance = async (token: HexAddress, requiredAmount: bigint, address: HexAddress) => {
-    const balance = await readContract(wagmiConfig, {
-      address: token,
-      abi: erc20Abi,
-      functionName: 'balanceOf',
-      args: [address],
-    });
+    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+    const effectiveChainId = getEffectiveChainId(chainId);
+    
+    console.log('[DEBUG_EXTERNAL_ORDER] 💰 Checking token balance | Token:', token, '| User:', address, '| Chain:', effectiveChainId, '| Crosschain:', crosschainEnabled);
+    
+    let balance: bigint;
+    
+    // When crosschain is enabled, read from balance manager contract on core chain
+    if (crosschainEnabled) {
+      const balanceManagerAddress = getContractAddress(effectiveChainId, ContractName.clobBalanceManager) as HexAddress;
+      console.log('[DEBUG_EXTERNAL_ORDER] 💰 Reading balance from Balance Manager | Manager:', balanceManagerAddress, '| Chain:', effectiveChainId);
+      
+      balance = await readContract(wagmiConfig, {
+        address: balanceManagerAddress,
+        abi: BalanceManagerABI,
+        functionName: 'getBalance',
+        args: [address, token],
+        chainId: effectiveChainId, // Use core chain for balance manager queries
+      }) as bigint;
+      
+      console.log('[DEBUG_EXTERNAL_ORDER] ✅ Balance Manager balance retrieved:', balance.toString(), '| Required:', requiredAmount.toString(), '| Token:', token, '| Chain:', effectiveChainId);
+    } else {
+      // When crosschain is disabled, read directly from ERC20 contract on current chain
+      console.log('[DEBUG_EXTERNAL_ORDER] 💰 Reading balance directly from ERC20 contract | Token:', token, '| Chain:', effectiveChainId);
+      
+      balance = await readContract(wagmiConfig, {
+        address: token,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address],
+        chainId: effectiveChainId,
+      }) as bigint;
+      
+      console.log('[DEBUG_EXTERNAL_ORDER] ✅ ERC20 balance retrieved:', balance.toString(), '| Required:', requiredAmount.toString(), '| Token:', token, '| Chain:', effectiveChainId);
+    }
 
     if (balance < requiredAmount) {
-      const tokenDecimals = await getTokenDecimals(token);
+      const tokenDecimals = await getTokenDecimals(token, effectiveChainId);
       const formattedBalance = formatUnits(balance, tokenDecimals);
       const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
-      
-      const errorMessage = `Insufficient balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
+      const balanceSource = crosschainEnabled ? 'Balance Manager' : 'ERC20';
+
+      const errorMessage = `Insufficient ${balanceSource} balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
+      console.error('[DEBUG_EXTERNAL_ORDER] ❌ Insufficient balance | Token:', token, '| Source:', balanceSource, '| Chain:', effectiveChainId, '| Error:', errorMessage);
       toast.error(errorMessage);
       throw new Error(errorMessage);
-    }    
+    }
   };
 
   const writeContractSafe = async (contractCall: any) => {
@@ -138,16 +185,23 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     address: HexAddress,
     chainId: number
   ) => {
-    const spender = getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress;
+    const effectiveChainId = getEffectiveChainId(chainId);
+    const spender = getContractAddress(effectiveChainId, ContractName.clobBalanceManager) as HexAddress;
+    
+    console.log('[DEBUG_EXTERNAL_ORDER] 🔐 Checking token allowance | Token:', token, '| User:', address, '| Spender:', spender, '| Chain:', effectiveChainId);
     
     const allowance = await readContract(wagmiConfig, {
       address: token,
       abi: erc20Abi,
       functionName: 'allowance',
       args: [address, spender],
+      chainId: effectiveChainId,
     });
 
+    console.log('[DEBUG_EXTERNAL_ORDER] ✅ Token allowance retrieved:', allowance.toString(), '| Required:', requiredAmount.toString(), '| Chain:', effectiveChainId);
+
     if (allowance < requiredAmount) {
+      console.log('[DEBUG_EXTERNAL_ORDER] 🔄 Approving tokens for trading | Amount:', requiredAmount.toString(), '| Chain:', effectiveChainId);
       toast.info('Approving tokens for trading...');
       
       const approvalHash = await writeContractSafe({
@@ -181,7 +235,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     userDepositAmount?: bigint
   ): Promise<SlippageInfo> => {
     try {
-      const routerAddress = getContractAddress(chainId, ContractName.clobRouter) as HexAddress;
+      const effectiveChainId = getEffectiveChainId(chainId);
+      const routerAddress = getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress;
       
       let depositAmount: bigint;
       if (side === OrderSideEnum.BUY) {
@@ -195,6 +250,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         abi: GTXRouterABI,
         functionName: 'calculateMinOutAmountForMarket',
         args: [pool, depositAmount, side === OrderSideEnum.BUY ? 0 : 1, slippageBps],
+        chainId: effectiveChainId,
       }) as bigint;
    
       let estimatedPrice: bigint;
@@ -204,6 +260,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           abi: GTXRouterABI,
           functionName: 'getBestPrice',
           args: [pool.baseCurrency, pool.quoteCurrency, 1],
+          chainId: effectiveChainId,
         }) as BestSellPrice;
         estimatedPrice = bestSellPrice.price;
       } else {
@@ -212,7 +269,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       
       let actualSlippage: number;
       if (side === OrderSideEnum.BUY) {
-        const baseDecimals = await getTokenDecimals(pool.baseCurrency);
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
         const expectedEthTokens = depositAmount * BigInt(10 ** baseDecimals) / estimatedPrice;
         const actualMinTokens = minOutAmount;
         
@@ -227,9 +284,10 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           abi: GTXRouterABI,
           functionName: 'getBestPrice',
           args: [pool.baseCurrency, pool.quoteCurrency, 0], 
+          chainId: effectiveChainId,
         }) as BestSellPrice;
         
-        const baseDecimals = await getTokenDecimals(pool.baseCurrency);
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
         const expectedUSDC = bestBuyPrice.price * quantity / BigInt(10 ** baseDecimals);
         actualSlippage = Number((expectedUSDC - minOutAmount) * BigInt(10000) / expectedUSDC) / 100;
       }
@@ -264,7 +322,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     chainId: number,
     slippageInfo?: SlippageInfo
   ) => {
-    const routerAddress = getContractAddress(chainId, ContractName.clobRouter) as HexAddress;
+    const effectiveChainId = getEffectiveChainId(chainId);
+    const routerAddress = getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress;
     const sideValue = side === OrderSideEnum.BUY ? 0 : 1;
     
     let functionName: string;
@@ -326,6 +385,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         abi: GTXRouterABI,
         functionName,
         args,
+        chainId: effectiveChainId,
       });
       
     } catch (simulationError: any) {
@@ -359,6 +419,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
           abi: GTXRouterABI,
           functionName,
           args,
+          chainId: effectiveChainId,
         });
       } catch (staticCallError: any) {
         console.error('[CONTRACT_CALL] 🔍 Static call also failed:', {
@@ -400,6 +461,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       abi: GTXRouterABI,
       functionName,
       args,
+      chainId: effectiveChainId,
     });
     
     return txHash;
@@ -685,6 +747,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       return;
     }
 
+    const effectiveChainId = getEffectiveChainId(chainId);
+
     let baseCurrencyQuantity: bigint; 
     
     if (side === OrderSideEnum.BUY) {
@@ -693,10 +757,11 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       try {
         // Get best sell price to convert quote currency to base currency quantity
         const bestSellPrice = await readContract(wagmiConfig, {
-          address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
+          address: getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress,
           abi: GTXRouterABI,
           functionName: 'getBestPrice',
           args: [pool.baseCurrency, pool.quoteCurrency, 1], // Get SELL prices for BUY order
+          chainId: effectiveChainId,
         }) as BestSellPrice;
         
         if (bestSellPrice.price === 0n) {
@@ -704,8 +769,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
         }
         
         // Calculate base currency quantity: quoteCurrencyAmount * 10^baseDecimals / price
-        const baseDecimals = await getTokenDecimals(pool.baseCurrency);
-        const quoteDecimals = await getTokenDecimals(pool.quoteCurrency);
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
+        const quoteDecimals = await getTokenDecimals(pool.quoteCurrency, effectiveChainId);
 
         baseCurrencyQuantity = quoteCurrencyToSpend * BigInt(10 ** baseDecimals) / bestSellPrice.price;
       } catch (error) {
@@ -739,6 +804,8 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
     try {
       if (inputQuantity <= 0n || !address) return null;
       
+      const effectiveChainId = getEffectiveChainId(chainId);
+      
       // For display purposes, we need to convert to base currency quantity for the contract
       let baseCurrencyQuantity: bigint;
       let userDepositAmount: bigint | undefined;
@@ -746,13 +813,14 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
       if (side === OrderSideEnum.BUY) {
         // Convert quote currency input to base currency quantity
         const bestSellPrice = await readContract(wagmiConfig, {
-          address: getContractAddress(chainId, ContractName.clobRouter) as HexAddress,
+          address: getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress,
           abi: GTXRouterABI,
           functionName: 'getBestPrice',
           args: [pool.baseCurrency, pool.quoteCurrency, 1],
+          chainId: effectiveChainId,
         }) as BestSellPrice;
         
-        const baseDecimals = await getTokenDecimals(pool.baseCurrency);
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
         baseCurrencyQuantity = inputQuantity * BigInt(10 ** baseDecimals) / bestSellPrice.price;
         userDepositAmount = inputQuantity; 
       } else {

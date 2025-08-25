@@ -1,6 +1,6 @@
 import { wagmiConfig } from '@/configs/wagmi';
 import { ContractName, DEFAULT_CHAIN, getContractAddress } from '@/constants/contract/contract-address';
-import { FEATURE_FLAGS, getCoreChain, getSupportedCrosschainDepositChainNames, isCrosschainSupportedChain, shouldUseCoreChainBalance } from '@/constants/features/features-config';
+import { FEATURE_FLAGS, getCoreChain, getSupportedCrosschainDepositChainNames, isCrosschainSupportedChain } from '@/constants/features/features-config';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import {
   PoolItem as GraphQLPoolItem,
@@ -9,8 +9,8 @@ import {
   poolsQuery,
   PoolsResponse,
 } from '@/graphql/gtx/clob';
-import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
 import { useBalanceManagerBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceManagerBalance';
+import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
 import { useCrosschainDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useCrosschainDeposit';
 import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
 import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
@@ -37,8 +37,7 @@ import {
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast as toastSonner } from 'sonner';
-import { useChainId, useReadContract } from 'wagmi';
-import ERC20ABI from '@/abis/tokens/TokenABI';
+import { useChainId } from 'wagmi';
 import GTXTooltip from '../clob-dex/place-order/tooltip';
 
 interface Asset {
@@ -412,17 +411,19 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   
   // Create hooks for token 0 (External wallet balances)
   // Use sourceAddress for crosschain tokens (source wallet), otherwise use regular address
+  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
   const token0ExternalBalance = useTokenBalance(
     (token0 as any)?.sourceAddress || token0?.address,
     externalWalletAddress as `0x${string}`,
-    embeddedWalletChainId || balanceDisplayChainId
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
   );
   
   // Create hooks for token 0 (BalanceManager on connected chain - for crosschain deposits)
+  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
   const token0ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
     (token0 as any)?.sourceAddress || token0?.address,
-    embeddedWalletChainId || balanceDisplayChainId,
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
     token0?.decimals || 18
   );
 
@@ -440,17 +441,19 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   );
   
   // Create hooks for token 1 (External wallet balances)
+  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
   const token1ExternalBalance = useTokenBalance(
     (token1 as any)?.sourceAddress || token1?.address,
     externalWalletAddress as `0x${string}`,
-    embeddedWalletChainId || balanceDisplayChainId
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
   );
   
   // Create hooks for token 1 (BalanceManager on connected chain - for crosschain deposits)
+  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
   const token1ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
     (token1 as any)?.sourceAddress || token1?.address,
-    embeddedWalletChainId || balanceDisplayChainId,
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
     token1?.decimals || 18
   );
 
@@ -468,17 +471,19 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   );
   
   // Create hooks for token 2 (External wallet balances)
+  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
   const token2ExternalBalance = useTokenBalance(
     (token2 as any)?.sourceAddress || token2?.address,
     externalWalletAddress as `0x${string}`,
-    embeddedWalletChainId || balanceDisplayChainId
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
   );
   
   // Create hooks for token 2 (BalanceManager on connected chain - for crosschain deposits)
+  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
   const token2ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
     (token2 as any)?.sourceAddress || token2?.address,
-    embeddedWalletChainId || balanceDisplayChainId,
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
     token2?.decimals || 18
   );
 
@@ -496,17 +501,19 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   );
   
   // Create hooks for token 3 (External wallet balances)
+  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
   const token3ExternalBalance = useTokenBalance(
     (token3 as any)?.sourceAddress || token3?.address,
     externalWalletAddress as `0x${string}`,
-    embeddedWalletChainId || balanceDisplayChainId
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
   );
   
   // Create hooks for token 3 (BalanceManager on connected chain - for crosschain deposits)
+  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
   const token3ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
     (token3 as any)?.sourceAddress || token3?.address,
-    embeddedWalletChainId || balanceDisplayChainId,
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
     token3?.decimals || 18
   );
 
@@ -524,17 +531,19 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   );
   
   // Create hooks for token 4 (External wallet balances)
+  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
   const token4ExternalBalance = useTokenBalance(
     (token4 as any)?.sourceAddress || token4?.address,
     externalWalletAddress as `0x${string}`,
-    embeddedWalletChainId || balanceDisplayChainId
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
   );
   
   // Create hooks for token 4 (BalanceManager on connected chain - for crosschain deposits)
+  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
   const token4ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
     (token4 as any)?.sourceAddress || token4?.address,
-    embeddedWalletChainId || balanceDisplayChainId,
+    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
     token4?.decimals || 18
   );
 
@@ -644,22 +653,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   let assets: Asset[] = [];
 
-  console.log('💰 Dynamic Balance Display Info (Always Core Chain):', {
-    balanceDisplayChainId,
-    embeddedWalletChainId,
-    coreChain: getCoreChain(),
-    userAddress: embeddedWalletAddress,
-    crosschainEnabled: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED,
-    uniqueTokensCount: uniqueTokens.length,
-    uniqueTokens: uniqueTokens.map(t => ({ symbol: t.symbol, address: t.address })),
-    tokenBalances: tokenBalances.map(tb => ({
-      symbol: tb.symbol,
-      tokenBalance: tb.tokenBalance,
-      balanceManagerBalance: tb.balanceManagerBalance,
-      displayBalance: tb.displayBalance,
-    })),
-  });
-
   // Create assets dynamically from all unique tokens found in pools
   if (tokenBalances.length > 0) {
     assets = tokenBalances
@@ -732,13 +725,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   );
 
   // Debug logging
-  console.log('🎯 Current token state:', {
-    selectedDepositTokenAddress,
-    selectedDepositTokenSymbol: currentDepositToken?.symbol,
-    currentDepositTokenAddress: currentDepositToken?.address,
-    tokensAvailable: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
-    uniqueTokensCount: uniqueTokens.length
-  });
+  // console.log('🎯 Current token state:', {
+  //   selectedDepositTokenAddress,
+  //   selectedDepositTokenSymbol: currentDepositToken?.symbol,
+  //   currentDepositTokenAddress: currentDepositToken?.address,
+  //   tokensAvailable: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
+  //   uniqueTokensCount: uniqueTokens.length
+  // });
 
   const handleDepositTokenSelect = (tokenAddress: string) => {
     const selectedToken = tokens.find(t => t.address === tokenAddress);
@@ -806,22 +799,22 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
       console.log('⚡ handlePrivyDeposit: Using CROSSCHAIN DEPOSIT FLOW');
       
-      // For crosschain deposits, use the selected chain from the chain selector
-      // This is the chain the user wants to deposit from (where ChainBalanceManager should be)
-      const selectedChainId = embeddedWalletChainId || defaultChainId; // Chain selected in the UI
+      // For crosschain deposits, use the chain where the external wallet is connected as the source chain
+      // This is where the user's tokens are located and where they want to deposit from
+      const sourceChainId = externalWalletChainId || defaultChainId; // Chain where external wallet is connected
       const userExternalChainId = externalWalletChainId;
       
-      console.log('⚡ handlePrivyDeposit: selectedChainId (from UI):', selectedChainId);
+      console.log('⚡ handlePrivyDeposit: sourceChainId (external wallet chain):', sourceChainId);
       console.log('⚡ handlePrivyDeposit: userExternalChainId (current wallet):', userExternalChainId);
       console.log('⚡ handlePrivyDeposit: embeddedWalletChainId:', embeddedWalletChainId);
       console.log('⚡ handlePrivyDeposit: defaultChainId:', defaultChainId);
       
-      // Validate that the selected chain supports crosschain deposits
-      if (!isCrosschainSupportedChain(selectedChainId)) {
-        console.log('⚡ handlePrivyDeposit: Selected chain not supported for crosschain deposits:', selectedChainId);
+      // Validate that the source chain supports crosschain deposits
+      if (!isCrosschainSupportedChain(sourceChainId)) {
+        console.log('⚡ handlePrivyDeposit: Source chain not supported for crosschain deposits:', sourceChainId);
         const supportedChains = getSupportedCrosschainDepositChainNames().join(', ');
         setToast({
-          message: `Selected chain doesn't support crosschain deposits. Please select a supported chain: ${supportedChains}`,
+          message: `Your external wallet is connected to an unsupported chain for crosschain deposits. Please switch to a supported chain: ${supportedChains}`,
           type: 'error',
           loading: false,
           duration: 8000,
@@ -830,9 +823,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       }
       
       // Check if external wallet needs to switch chains
-      if (userExternalChainId && userExternalChainId !== selectedChainId) {
+      if (userExternalChainId && userExternalChainId !== sourceChainId) {
         console.log('⚡ handlePrivyDeposit: External wallet chain mismatch, attempting to switch');
-        console.log('⚡ handlePrivyDeposit: From chain:', userExternalChainId, 'To chain:', selectedChainId);
+        console.log('⚡ handlePrivyDeposit: From chain:', userExternalChainId, 'To chain:', sourceChainId);
         
         if (!externalWallet) {
           setToast({
@@ -852,11 +845,11 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
             duration: 0,
           });
           
-          console.log('⚡ handlePrivyDeposit: Requesting chain switch to:', selectedChainId);
+          console.log('⚡ handlePrivyDeposit: Requesting chain switch to:', sourceChainId);
           
           // First try to switch to the chain
           try {
-            await externalWallet.switchChain(selectedChainId);
+            await externalWallet.switchChain(sourceChainId);
             console.log('⚡ handlePrivyDeposit: Chain switch successful');
           } catch (switchError: any) {
             console.log('⚡ handlePrivyDeposit: Chain switch failed, trying to add chain first:', switchError);
@@ -866,32 +859,32 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               console.log('⚡ handlePrivyDeposit: Adding chain to wallet first');
               
               // Get chain configuration
-              const wagmiChain = wagmiConfig.chains.find(chain => chain.id === selectedChainId);
+              const wagmiChain = wagmiConfig.chains.find(chain => chain.id === sourceChainId);
               
               if (!wagmiChain) {
-                throw new Error(`Chain configuration not found for chain ID ${selectedChainId}`);
+                throw new Error(`Chain configuration not found for chain ID ${sourceChainId}`);
               }
               
               // Get the actual RPC URL based on the mapping from route.ts
               const getRpcUrl = (chainId: number): string => {
                 const rpcMapping: Record<number, string> = {
                   4661: 'https://appchain.caff.testnet.espresso.network', // appchain-testnet
-                  1918988905: 'https://rari.caff.testnet.espresso.network', // rari-testnet
+                  1918988905: 'https://testnet.rpc.rarichain.org/http', // rari-testnet - match route.ts
                   11155931: 'https://testnet.riselabs.xyz', // rise-sepolia
                   911867: 'https://odyssey.ithaca.xyz', // conduit
                 };
                 return rpcMapping[chainId] || wagmiChain.rpcUrls.default.http[0];
               };
               
-              const actualRpcUrl = getRpcUrl(selectedChainId);
-              console.log('⚡ handlePrivyDeposit: Using RPC URL for chain', selectedChainId, ':', actualRpcUrl);
+              const actualRpcUrl = getRpcUrl(sourceChainId);
+              console.log('⚡ handlePrivyDeposit: Using RPC URL for chain', sourceChainId, ':', actualRpcUrl);
               
               // Add the chain to MetaMask
               const provider = await externalWallet.getEthereumProvider();
               await provider.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: `0x${selectedChainId.toString(16)}`,
+                  chainId: `0x${sourceChainId.toString(16)}`,
                   chainName: wagmiChain.name,
                   nativeCurrency: {
                     name: wagmiChain.nativeCurrency.name,
@@ -906,7 +899,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               console.log('⚡ handlePrivyDeposit: Chain added successfully, now switching');
               
               // Now try to switch again
-              await externalWallet.switchChain(selectedChainId);
+              await externalWallet.switchChain(sourceChainId);
               console.log('⚡ handlePrivyDeposit: Chain switch successful after adding');
             } else {
               throw switchError;
@@ -926,7 +919,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         } catch (error) {
           console.error('⚡ handlePrivyDeposit: Chain switch failed:', error);
           setToast({
-            message: 'Failed to switch chain. Please manually add and switch your wallet to Appchain Testnet and try again.',
+            message: 'Failed to switch chain. Please manually switch your external wallet to a supported crosschain deposit chain (Appchain Testnet) and try again.',
             type: 'error',
             loading: false,
             duration: 8000,
@@ -937,13 +930,24 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       
       // Find the selected token address for deposit
       const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
-      const tokenAddress = selectedToken?.address || (uniqueTokens.find(t => t.isQuote)?.address || uniqueTokens[0]?.address);
+      // For crosschain deposits, we need the SOURCE token address (appchain), not destination (rari)
+      const selectedUniqueToken = allUniqueTokens.find(ut => ut.address === selectedToken?.address);
+      const sourceTokenAddress = (selectedUniqueToken as any)?.sourceAddress || selectedToken?.address;
+      const tokenAddress = sourceTokenAddress || (uniqueTokens.find(t => t.isQuote)?.address || uniqueTokens[0]?.address);
       
       console.log('⚡ handlePrivyDeposit: Chain validation passed, calling crosschainDeposit hook');
-      console.log('⚡ handlePrivyDeposit: Parameters - amount:', depositAmount, 'token:', tokenAddress, 'recipient:', embeddedWalletAddress, 'chain:', selectedChainId);
+      console.log('⚡ handlePrivyDeposit: Selected token info:', {
+        selectedTokenAddress: selectedToken?.address,
+        sourceTokenAddress,
+        finalTokenAddress: tokenAddress,
+        tokenSymbol: selectedToken?.symbol
+      });
+      console.log('⚡ handlePrivyDeposit: Parameters - amount:', depositAmount, 'token:', tokenAddress, 'recipient:', embeddedWalletAddress, 'chain:', sourceChainId);
+
+      // return;
       
       try {
-        crosschainDeposit(depositAmount, tokenAddress, embeddedWalletAddress as `0x${string}`, selectedChainId);
+        crosschainDeposit(depositAmount, tokenAddress, embeddedWalletAddress as `0x${string}`, sourceChainId);
         console.log('⚡ handlePrivyDeposit: crosschainDeposit function called successfully');
       } catch (error) {
         console.error('⚡ handlePrivyDeposit: Error calling crosschainDeposit:', error);

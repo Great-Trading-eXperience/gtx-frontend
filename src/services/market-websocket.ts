@@ -467,17 +467,17 @@ export class UserWebSocket {
    */
   public connect(chainId: number): void {
     if (!this.walletAddress) {
-      console.error('[USER-WS] Wallet address is required');
+      // console.error('[USER-WS] Wallet address is required');
       return;
     }
 
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-      console.log('[USER-WS] Already connected or connecting');
+      // console.log('[USER-WS] Already connected or connecting');
       return;
     }
 
     if (this.isConnecting) {
-      console.log('[USER-WS] Connection in progress');
+      // console.log('[USER-WS] Connection in progress');
       return;
     }
 
@@ -493,8 +493,8 @@ export class UserWebSocket {
     try {
       const baseUrl = getWebsocketUrl(chainId);
       const wsUrl = `${baseUrl}/ws/${this.walletAddress}`;
-      console.log('[USER-WS] Base URL:', baseUrl, 'Final URL:', wsUrl);
-      console.log(`[USER-WS] Connecting for ${this.walletAddress}...`, wsUrl, 'chainId:', chainId);
+      // console.log('[USER-WS] Base URL:', baseUrl, 'Final URL:', wsUrl);
+      // console.log(`[USER-WS] Connecting for ${this.walletAddress}...`, wsUrl, 'chainId:', chainId);
       this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = this.handleOpen.bind(this);

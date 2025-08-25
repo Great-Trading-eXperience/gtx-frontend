@@ -14,8 +14,40 @@ export function useCrosschainDeposit() {
   const [error, setError] = useState<string | null>(null);
   const { showToast, updateToast } = useToast();
 
+  // Helper function to get token decimals
+  const getTokenDecimals = async (provider: any, tokenAddress: string): Promise<number> => {
+    try {
+      const data = encodeFunctionData({
+        abi: ERC20ABI,
+        functionName: 'decimals',
+        args: [],
+      });
+      
+      const result = await provider.request({
+        method: 'eth_call',
+        params: [
+          {
+            to: tokenAddress,
+            data,
+          },
+          'latest',
+        ],
+      });
+      
+      if (!result || result === '0x') {
+        console.warn('[CROSSCHAIN-DEPOSIT] Could not fetch decimals for token:', tokenAddress, 'defaulting to 18');
+        return 18; // Default to 18 decimals if call fails
+      }
+      
+      return parseInt(result, 16);
+    } catch (error) {
+      console.warn('[CROSSCHAIN-DEPOSIT] Error fetching token decimals:', error, 'defaulting to 18');
+      return 18; // Default to 18 decimals on error
+    }
+  };
+
   // Helper function to get balance via provider
-  const getBalance = async (provider: any, address: string, tokenAddress?: string): Promise<string> => {
+  const getBalance = async (provider: any, address: string, tokenAddress?: string, tokenDecimals: number = 18): Promise<string> => {
     try {
       if (!tokenAddress) {
         // Get native ETH balance
@@ -23,6 +55,10 @@ export function useCrosschainDeposit() {
           method: 'eth_getBalance',
           params: [address, 'latest'],
         });
+        // Handle empty hex string or invalid response
+        if (!balance || balance === '0x') {
+          return '0';
+        }
         return formatUnits(BigInt(balance), 18);
       } else {
         // Get ERC20 token balance
@@ -42,7 +78,11 @@ export function useCrosschainDeposit() {
             'latest',
           ],
         });
-        return formatUnits(BigInt(balance), 6); // Assuming USDC with 6 decimals
+        // Handle empty hex string or invalid response
+        if (!balance || balance === '0x') {
+          return '0';
+        }
+        return formatUnits(BigInt(balance), tokenDecimals);
       }
     } catch (error) {
       console.error('[CROSSCHAIN-DEPOSIT] Error getting balance:', error);
@@ -64,12 +104,16 @@ export function useCrosschainDeposit() {
     console.log(`[CROSSCHAIN-DEPOSIT] \n=== BALANCE LOG ${phase.toUpperCase()} CROSSCHAIN DEPOSIT ===`);
     
     try {
+      // Get token decimals first
+      const tokenDecimals = await getTokenDecimals(sourceProvider, tokenAddress);
+      console.log(`[CROSSCHAIN-DEPOSIT] Token decimals:`, tokenDecimals);
+      
       // Source chain balances
       console.log(`[CROSSCHAIN-DEPOSIT] \n--- SOURCE CHAIN (${sourceChainId}) BALANCES ---`);
       const sourceExternalNative = await getBalance(sourceProvider, externalAddress);
-      const sourceExternalToken = await getBalance(sourceProvider, externalAddress, tokenAddress);
+      const sourceExternalToken = await getBalance(sourceProvider, externalAddress, tokenAddress, tokenDecimals);
       const sourceEmbeddedNative = await getBalance(sourceProvider, embeddedAddress);
-      const sourceEmbeddedToken = await getBalance(sourceProvider, embeddedAddress, tokenAddress);
+      const sourceEmbeddedToken = await getBalance(sourceProvider, embeddedAddress, tokenAddress, tokenDecimals);
       
       console.log(`[CROSSCHAIN-DEPOSIT] External Wallet (${externalAddress}):`);
       console.log(`[CROSSCHAIN-DEPOSIT]   - Native ETH: ${sourceExternalNative}`);
@@ -82,9 +126,9 @@ export function useCrosschainDeposit() {
       if (destinationProvider && destinationChainId !== sourceChainId) {
         console.log(`[CROSSCHAIN-DEPOSIT] \n--- DESTINATION CHAIN (${destinationChainId}) BALANCES ---`);
         const destExternalNative = await getBalance(destinationProvider, externalAddress);
-        const destExternalToken = await getBalance(destinationProvider, externalAddress, tokenAddress);
+        const destExternalToken = await getBalance(destinationProvider, externalAddress, tokenAddress, tokenDecimals);
         const destEmbeddedNative = await getBalance(destinationProvider, embeddedAddress);
-        const destEmbeddedToken = await getBalance(destinationProvider, embeddedAddress, tokenAddress);
+        const destEmbeddedToken = await getBalance(destinationProvider, embeddedAddress, tokenAddress, tokenDecimals);
         
         console.log(`[CROSSCHAIN-DEPOSIT] External Wallet (${externalAddress}):`);
         console.log(`[CROSSCHAIN-DEPOSIT]   - Native ETH: ${destExternalNative}`);
@@ -188,44 +232,13 @@ export function useCrosschainDeposit() {
         throw new Error(`ChainBalanceManager not available on chain ${sourceChainId}`);
       }
 
-      // Convert amount to proper units (assuming 6 decimals for USDC)
-      const units = BigInt(Math.floor(Number(amount) * 10 ** 6));
-
       console.log('[CROSSCHAIN-DEPOSIT] 🔴 TRANSACTION PARAMETERS:');
       console.log('[CROSSCHAIN-DEPOSIT] 🔴   Token Address:', tokenAddress);
       console.log('[CROSSCHAIN-DEPOSIT] 🔴   Amount (original):', amount);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Amount (units):', units.toString());
       console.log('[CROSSCHAIN-DEPOSIT] 🔴   Recipient Address:', recipientAddress);
       console.log('[CROSSCHAIN-DEPOSIT] 🔴   Sender Address (External Wallet):', external.address);
 
-      // First, we need to approve the ChainBalanceManager to spend the tokens
-      const approveData = encodeFunctionData({
-        abi: ERC20ABI,
-        functionName: 'approve',
-        args: [chainBalanceManagerAddress, units],
-      });
 
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴 APPROVE TRANSACTION DATA:');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Target Contract (Token):', tokenAddress);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Spender (ChainBalanceManager):', chainBalanceManagerAddress);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Amount to approve:', units.toString());
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Encoded data:', approveData);
-
-      // Then, we'll call the deposit function on ChainBalanceManager
-      const depositData = encodeFunctionData({
-        abi: ChainBalanceManagerABI,
-        functionName: 'deposit',
-        args: [tokenAddress, units, recipientAddress],
-      });
-
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴 DEPOSIT TRANSACTION DATA:');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Target Contract (ChainBalanceManager):', chainBalanceManagerAddress);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Function:', 'deposit');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Args:');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴     - tokenAddress:', tokenAddress);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴     - units:', units.toString());
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴     - recipientAddress:', recipientAddress);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Encoded data:', depositData);
 
       setCurrentStep('Connecting to wallet provider...');
 
@@ -236,6 +249,27 @@ export function useCrosschainDeposit() {
       }
 
       console.log('[CROSSCHAIN-DEPOSIT] Provider obtained:', provider);
+
+      // Get token decimals and convert amount to proper units
+      const tokenDecimals = await getTokenDecimals(provider, tokenAddress);
+      const units = BigInt(Math.floor(Number(amount) * 10 ** tokenDecimals));
+      
+      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Token Decimals:', tokenDecimals);
+      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Amount (units):', units.toString());
+
+      // First, we need to approve the ChainBalanceManager to spend the tokens
+      const approveData = encodeFunctionData({
+        abi: ERC20ABI,
+        functionName: 'approve',
+        args: [chainBalanceManagerAddress, units],
+      });
+
+      // Then, we'll call the deposit function on ChainBalanceManager
+      const depositData = encodeFunctionData({
+        abi: ChainBalanceManagerABI,
+        functionName: 'deposit',
+        args: [tokenAddress, units, recipientAddress],
+      });
 
       // Check if provider has request method
       if (!provider.request || typeof provider.request !== 'function') {
@@ -312,14 +346,13 @@ export function useCrosschainDeposit() {
 
       setCurrentStep('Please confirm the crosschain deposit in your wallet...');
 
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴 SENDING DEPOSIT TRANSACTION:');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Method: eth_sendTransaction');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   From (Sender):', external.address);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   To (ChainBalanceManager):', chainBalanceManagerAddress);
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Value:', '0x0');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Data:', depositData);
       console.log('[CROSSCHAIN-DEPOSIT] 🔴   Function Call: deposit(tokenAddress, units, recipientAddress)');
-      console.log('[CROSSCHAIN-DEPOSIT] 🔴   Function Args: [', tokenAddress, ',', units.toString(), ',', recipientAddress, ']');
+      console.log('[CROSSCHAIN-DEPOSIT]     Chain ID:', sourceChainId);
+      console.log('[CROSSCHAIN-DEPOSIT]     Balance Manager:', chainBalanceManagerAddress);
+      console.log('[CROSSCHAIN-DEPOSIT]     Sender:', external.address);
+      console.log('[CROSSCHAIN-DEPOSIT]     Function Args: [ tokenAddress:', tokenAddress);
+      console.log('[CROSSCHAIN-DEPOSIT]                       units:', units.toString());
+      console.log('[CROSSCHAIN-DEPOSIT]                       recipientAddress:', recipientAddress, ']');
 
       // Send deposit transaction to ChainBalanceManager
       // External wallet calls deposit(), tokens go from external -> ChainBalanceManager -> recipient (embedded wallet)

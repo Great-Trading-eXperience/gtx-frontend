@@ -28,14 +28,17 @@ export const usePrivyRequestToken = (userAddress?: HexAddress) => {
 
   // Log wallet information
   useEffect(() => {
+    const faucetAddress = getContractAddress(chainId, ContractName.faucet);
     console.log('[usePrivyRequestToken] Wallet info:', {
       userAddress,
       walletAddress: wallet?.address,
       walletType: wallet?.walletClientType,
       finalAddress: address,
-      walletsCount: wallets.length
+      walletsCount: wallets.length,
+      chainId,
+      faucetAddress
     });
-  }, [userAddress, wallet?.address, wallet?.walletClientType, address, wallets.length]);
+  }, [userAddress, wallet?.address, wallet?.walletClientType, address, wallets.length, chainId]);
 
   const resetRequestTokenState = useCallback(() => {
     setRequestTokenHash(undefined);
@@ -238,7 +241,9 @@ export const usePrivyRequestToken = (userAddress?: HexAddress) => {
         if (error instanceof Error) {
           const errorStr = error.toString();
           
-          if (errorStr.includes('CooldownActive')) {
+          if (errorStr.includes('insufficient funds') || errorStr.includes('Wallet has insufficient funds')) {
+            toast.error("Your wallet doesn't have enough ETH for gas fees. Please add ETH to your wallet and try again.");
+          } else if (errorStr.includes('CooldownActive')) {
             toast.error("Faucet cooldown is still active. Please wait before requesting again.");
           } else if (errorStr.includes('InsufficientBalance')) {
             toast.error("Faucet has insufficient balance for this token.");

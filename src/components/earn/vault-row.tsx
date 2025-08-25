@@ -54,7 +54,7 @@ export function VaultRow({ vault, onClick }: VaultRowProps) {
       FLOKI: "/floki.png",
       // Add more mappings as needed
     }
-    return icons[symbol] || "/default-token.png"
+    return icons[symbol] || "/tokens/eth.png"
   }
 
   // Format market name from GTX_TOKEN_USDC to TOKEN/USDC

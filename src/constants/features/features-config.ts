@@ -13,6 +13,7 @@ interface FeatureFlags {
     ENABLED_TABS_VEGTX: boolean;
     ENABLED_TABS_PERPETUAL: boolean;
     CROSSCHAIN_DEPOSIT_ENABLED: boolean;
+    FAUCET_USE_PRIVY: boolean;
 }
 
 interface FeaturesConfig {
@@ -103,4 +104,9 @@ export function getCoreChain(): number {
 // Helper function to check if crosschain deposit is enabled and should use core chain balances
 export function shouldUseCoreChainBalance(): boolean {
     return FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED;
+}
+
+// Helper function to check if faucet should use Privy wallet
+export function shouldFaucetUsePrivy(): boolean {
+    return FEATURE_FLAGS.FAUCET_USE_PRIVY;
 }

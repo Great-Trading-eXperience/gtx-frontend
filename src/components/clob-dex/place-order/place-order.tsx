@@ -1,16 +1,15 @@
 'use client';
 
-import poolManagerABI from '@/abis/gtx/clob/PoolManagerABI';
-import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
-import { EXPLORER_URL } from '@/constants/explorer-url';
+import { getCoreChain, isFeatureEnabled } from '@/constants/features/features-config';
 import { TradeItem } from '@/graphql/gtx/clob';
+import { getTokensForChain } from '@/helper/token-helper';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
+import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
 import { usePlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePlaceOrder';
 import { usePlaceOrder as usePrivyPlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePrivyPlaceOrder';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 import { DepthData, Ticker24hrData } from '@/lib/market-api';
 import type { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
@@ -19,12 +18,12 @@ import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
-import { useAccount, useChainId, useContractRead } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { OrderSideEnum } from '../../../../lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
+import PlaceOrderSkeleton from './place-order-skeleton';
 import GTXSlider from './slider';
 import GTXTooltip from './tooltip';
-import PlaceOrderSkeleton from './place-order-skeleton';
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;
@@ -49,31 +48,75 @@ const PlaceOrder = ({
   const { isConnected, address: wagmiAddress } = useAccount();
   const { isFullyAuthenticated } = usePrivyAuth();
   
+  // Get chain ID early so we can use it in debug logs
+  const currentChainId = chainId || useChainId();
+  
+  // Helper function to get token symbol from address
+  const getTokenSymbol = useCallback((tokenAddress: HexAddress): string => {
+    try {
+      const tokens = getTokensForChain(currentChainId);
+      const token = tokens.find(t => t.address?.toLowerCase() === tokenAddress.toLowerCase());
+      return token?.symbol || `Token(${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)})`;
+    } catch (error) {
+      return `Token(${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)})`;
+    }
+  }, [currentChainId]);
+  
   // Check if user is connected via either traditional wallet or Privy
   const effectiveIsConnected = isConnected || isFullyAuthenticated;
   
   // Determine wallet type and address explicitly
-  // Priority: Privy embedded wallet first, then external wallet (wagmi)
+  // Priority logic:
+  // 1. If crosschain is enabled, use CROSSCHAIN_WALLET_PREFERENCE setting
+  // 2. Otherwise, prioritize Privy embedded wallet first, then external wallet (wagmi)
   let walletType: 'external' | 'embedded' | 'none';
   let actualAddress: HexAddress | undefined;
   
-  if (isFullyAuthenticated && address) {
-    // Privy embedded wallet is authenticated and has address - prioritize this
+  const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+  
+  // 🔧 CROSSCHAIN WALLET CONFIGURATION
+  // Choose which wallet to use when crosschain is enabled:
+  // 
+  // 'external' - Use external wallet (MetaMask/etc) - RECOMMENDED
+  //   ✅ Avoids "Recovery method not supported" errors
+  //   ✅ Better Rari chain compatibility
+  //   ✅ Uses usePlaceOrder.ts hook (now fully crosschain-compatible)
+  //
+  // 'embedded' - Use Privy embedded wallet - FOR TESTING ONLY
+  //   ⚠️  May encounter "Recovery method not supported" errors with Rari chain
+  //   ⚠️  Uses usePrivyPlaceOrder.ts hook (has chain compatibility issues)
+  //   💡 Useful for debugging or comparing implementations
+  const CROSSCHAIN_WALLET_PREFERENCE: 'external' | 'embedded' = 'embedded';
+  
+  // @ts-ignore
+  if (crosschainEnabled && CROSSCHAIN_WALLET_PREFERENCE === 'external' && isConnected && wagmiAddress) {
+    // When crosschain is enabled with external wallet preference
+    walletType = 'external';
+    actualAddress = wagmiAddress;
+    console.log('[DEBUG_BALANCE] 🔗 Crosschain enabled - Using external wallet (preferred):', wagmiAddress, '| Chain:', currentChainId);
+  } else if (crosschainEnabled && CROSSCHAIN_WALLET_PREFERENCE === 'embedded' && isFullyAuthenticated && address) {
+    // When crosschain is enabled with embedded wallet preference
     walletType = 'embedded';
     actualAddress = address;
+    console.log('[DEBUG_BALANCE] 🔗 Crosschain enabled - Using Privy embedded wallet (preferred):', address, '| Chain:', currentChainId);
+  } else if (isFullyAuthenticated && address) {
+    // Privy embedded wallet is authenticated and has address - use this for non-crosschain
+    walletType = 'embedded';
+    actualAddress = address;
+    console.log('[DEBUG_BALANCE] 🔗 Using Privy embedded wallet address:', address, '| Chain:', currentChainId);
   } else if (isConnected && wagmiAddress) {
     // Fall back to external wallet if Privy is not available
     walletType = 'external';
     actualAddress = wagmiAddress;
+    console.log('[DEBUG_BALANCE] 🔗 Using external wallet address:', wagmiAddress, '| Chain:', currentChainId);
   } else {
     // No wallet available
     walletType = 'none';
     actualAddress = undefined;
+    console.log('[DEBUG_BALANCE] 🔗 No wallet available | Chain:', currentChainId);
   }
   
   const useEmbeddedWallet = walletType === 'embedded';
-  
-  const currentChainId = chainId || useChainId(); // Use prop chainId first, fallback to hook
   const poolManagerAddress = getContractAddress(
     currentChainId,
     ContractName.clobPoolManager
@@ -85,6 +128,18 @@ const PlaceOrder = ({
     quoteCurrency: selectedPool.quoteTokenAddress as HexAddress,
     orderBook: selectedPool.orderBook as HexAddress,
   } : undefined;
+
+  // Debug log pool information with token symbols
+  useEffect(() => {
+    if (pool && selectedPool) {
+      const baseSymbol = getTokenSymbol(pool.baseCurrency);
+      const quoteSymbol = getTokenSymbol(pool.quoteCurrency);
+      // console.log('[DEBUG_BALANCE] 📊 Trading pair initialized:', `${baseSymbol}/${quoteSymbol}`, '| Chain:', currentChainId);
+      // console.log('[DEBUG_BALANCE] 📊 Base token:', baseSymbol, '(' + pool.baseCurrency + ')');
+      // console.log('[DEBUG_BALANCE] 📊 Quote token:', quoteSymbol, '(' + pool.quoteCurrency + ')');
+      // console.log('[DEBUG_BALANCE] 📊 Order book:', pool.orderBook);
+    }
+  }, [pool, selectedPool, getTokenSymbol, currentChainId]);
 
   const [orderType, setOrderType] = useState<'limit' | 'market'>('market');
   const [side, setSide] = useState<OrderSideEnum>(OrderSideEnum.BUY); 
@@ -161,6 +216,16 @@ const PlaceOrder = ({
   const externalWalletHook = usePlaceOrder(useEmbeddedWallet ? undefined : actualAddress);
   const embeddedWalletHook = usePrivyPlaceOrder(useEmbeddedWallet ? actualAddress : undefined);
   
+  // Log which hook system is being used
+  console.log('[DEBUG_BALANCE] 🎯 Hook selection:', {
+    useEmbeddedWallet,
+    walletType,
+    crosschainEnabled,
+    crosschainWalletPreference: crosschainEnabled ? CROSSCHAIN_WALLET_PREFERENCE : 'N/A',
+    actualAddress: actualAddress?.slice(0, 6) + '...' + actualAddress?.slice(-4),
+    hookUsed: useEmbeddedWallet ? 'usePrivyPlaceOrder (embedded)' : 'usePlaceOrder (external)'
+  });
+  
   // Choose the correct hook results based on wallet type
   const {
     handlePlaceLimitOrder,
@@ -196,10 +261,20 @@ const PlaceOrder = ({
     return undefined;
   }, [depthData]);
 
+  // Get balance manager address from the appropriate chain
+  // When crosschain is enabled, use core chain; otherwise use current chain
+  const balanceManagerChainId = crosschainEnabled ? getCoreChain() : (chainId ?? defaultChainId);
+  
+  // console.log('[DEBUG_BALANCE] 🏗️ Getting balance manager address | Crosschain enabled:', crosschainEnabled);
+  // console.log('[DEBUG_BALANCE] 🏗️ Current chain:', chainId ?? defaultChainId);
+  // console.log('[DEBUG_BALANCE] 🏗️ Balance manager chain:', balanceManagerChainId);
+  
   const balanceManagerAddress = getContractAddress(
-    chainId ?? defaultChainId,
+    balanceManagerChainId,
     ContractName.clobBalanceManager
-  ) as HexAddress
+  ) as HexAddress;
+  
+  // console.log('[DEBUG_BALANCE] 🏗️ Balance manager address resolved:', balanceManagerAddress, '| From chain:', balanceManagerChainId);
 
   const {
     getWalletBalance,
@@ -541,7 +616,7 @@ const PlaceOrder = ({
   // Early return with loading state if we don't have the actual address yet
   // (Must be after all hooks are called to follow Rules of Hooks)
   if (!actualAddress || isLoading) {
-    console.log('[DEBUG_BALANCE] ⏳ Waiting for wallet address...');
+    // console.log('[DEBUG_BALANCE] ⏳ Waiting for wallet address... | Chain:', currentChainId);
     return <PlaceOrderSkeleton />;
   }
 
@@ -564,7 +639,7 @@ const PlaceOrder = ({
     e.preventDefault();
 
     if (!actualAddress) {
-      console.log('[DEBUG_BALANCE] ❌ No wallet address available for order submission');
+      // console.log('[DEBUG_BALANCE] ❌ No wallet address available for order submission | Chain:', currentChainId);
       toast.error('Wallet not connected properly. Please reconnect your wallet.');
       return;
     }
@@ -640,7 +715,7 @@ const PlaceOrder = ({
         {inputStyles}
       </style>
 
-      {/* <div className="flex flex-col w-full gap-3 mb-3">
+      <div className="flex flex-col w-full gap-3 mb-3">
         {effectiveIsConnected && selectedPool && (
           <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
             <div className="flex items-center justify-between mb-2">
@@ -667,9 +742,9 @@ const PlaceOrder = ({
                     <span>Loading...</span>
                   </div>
                 ) : (
-                  formatNumber(Number(availableBalance), {
-                    decimals: 2,
-                    compact: true,
+                  Number(availableBalance).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 6,
                   })
                 )}
               </span>
@@ -679,7 +754,7 @@ const PlaceOrder = ({
             </div>
           </div>
         )}
-      </div> */}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}
@@ -813,7 +888,7 @@ const PlaceOrder = ({
                   ? Math.min(parseFloat(availableBalance) || 0, 1000000).toString()  // Max 1M USDC for market buys
                   : availableBalance
               }
-              min="0"
+              // min="0"
               required
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">

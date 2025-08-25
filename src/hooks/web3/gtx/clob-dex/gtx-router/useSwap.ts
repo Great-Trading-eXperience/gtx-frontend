@@ -1,6 +1,8 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
+import BalanceManagerABI from "@/abis/gtx/clob/BalanceManagerABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
+import { getCoreChain, isFeatureEnabled } from "@/constants/features/features-config";
 import { HexAddress } from "@/types/general/address";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useMutation } from "@tanstack/react-query";
@@ -48,31 +50,75 @@ export const useSwap = (userAddress?: HexAddress) => {
   const wallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
   const address = userAddress || (wallet?.address as HexAddress);
 
-  const chainId = useChainId();
+  const currentChainId = useChainId();
+  
+  // Helper function to get the effective chain ID for contract calls
+  const getEffectiveChainId = (chainId: number): number => {
+    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+    const effectiveChainId = crosschainEnabled ? getCoreChain() : chainId;
+    console.log('[SWAP] 🔗 Chain selection | Crosschain enabled:', crosschainEnabled, '| Current chain:', chainId, '| Effective chain:', effectiveChainId);
+    return effectiveChainId;
+  };
+  
+  const effectiveChainId = getEffectiveChainId(currentChainId);
 
   const resetSwapState = useCallback(() => {
     setSwapHash(undefined);
   }, []);
 
   const checkBalance = async (token: HexAddress, requiredAmount: bigint, address: HexAddress) => {
+    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+    
     console.log('[SWAP] 💳 Checking balance for token:', {
       token,
       requiredAmount: requiredAmount.toString(),
-      userAddress: address
+      userAddress: address,
+      crosschainEnabled
     });
     
-    const balance = await readContract(wagmiConfig, {
-      address: token,
-      abi: erc20Abi,
-      functionName: 'balanceOf',
-      args: [address],
-    });
+    let balance: bigint;
+    let balanceSource: string;
+    
+    if (crosschainEnabled) {
+      // When crosschain is enabled, check balance from Balance Manager
+      const balanceManagerAddress = getContractAddress(
+        effectiveChainId,
+        ContractName.clobBalanceManager
+      ) as HexAddress;
+      
+      console.log('[SWAP] 💰 Reading balance from Balance Manager | Manager:', balanceManagerAddress, '| Chain:', effectiveChainId);
+      
+      balance = await readContract(wagmiConfig, {
+        address: balanceManagerAddress,
+        abi: BalanceManagerABI,
+        functionName: 'getBalance',
+        args: [address, token],
+        chainId: effectiveChainId,
+      }) as bigint;
+      
+      balanceSource = 'Balance Manager';
+    } else {
+      // When crosschain is disabled, check direct ERC20 balance
+      console.log('[SWAP] 💰 Reading balance directly from ERC20 | Token:', token, '| Chain:', effectiveChainId);
+      
+      balance = await readContract(wagmiConfig, {
+        address: token,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address],
+        chainId: effectiveChainId,
+      }) as bigint;
+      
+      balanceSource = 'ERC20';
+    }
 
     console.log('[SWAP] 💰 Balance check result:', {
       token,
       balance: balance.toString(),
       requiredAmount: requiredAmount.toString(),
-      sufficient: balance >= requiredAmount
+      sufficient: balance >= requiredAmount,
+      source: balanceSource,
+      chain: effectiveChainId
     });
 
     if (balance < requiredAmount) {
@@ -80,11 +126,12 @@ export const useSwap = (userAddress?: HexAddress) => {
       const formattedBalance = formatUnits(balance, tokenDecimals);
       const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
       
-      const errorMessage = `Insufficient balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
+      const errorMessage = `Insufficient ${balanceSource} balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
       console.error('[SWAP] ❌ Insufficient balance:', {
         token,
         balance: formattedBalance,
         required: formattedRequired,
+        source: balanceSource,
         decimals: tokenDecimals
       });
       toast.error(errorMessage);
@@ -104,14 +151,14 @@ export const useSwap = (userAddress?: HexAddress) => {
     
     try {
       // Switch to the correct chain first
-      await wallet.switchChain(chainId);
+      await wallet.switchChain(effectiveChainId);
 
       // Method 1: Try the standard getEthereumProvider approach (most common)
       if ('getEthereumProvider' in wallet) {
         const provider = await wallet.getEthereumProvider();
         const walletClient = createWalletClient({
           account: address,
-          chain: getChain(chainId),
+          chain: getChain(effectiveChainId),
           transport: custom(provider),
         });
 
@@ -157,18 +204,70 @@ export const useSwap = (userAddress?: HexAddress) => {
     }
   };
 
+  const withdrawFromBalanceManager = async (
+    token: HexAddress,
+    amount: bigint,
+    address: HexAddress
+  ) => {
+    const balanceManagerAddress = getContractAddress(
+      effectiveChainId,
+      ContractName.clobBalanceManager
+    ) as HexAddress;
+    
+    console.log('[SWAP] 📤 Withdrawing from Balance Manager:', {
+      token,
+      amount: amount.toString(),
+      userAddress: address,
+      balanceManager: balanceManagerAddress,
+      chain: effectiveChainId
+    });
+    
+    toast.info('Withdrawing tokens from Balance Manager for swap...');
+    
+    const withdrawHash = await writeContractWithPrivy({
+      address: balanceManagerAddress,
+      abi: BalanceManagerABI,
+      functionName: 'withdraw',
+      args: [token, amount],
+    });
+    
+    console.log('[SWAP] 📤 Withdraw transaction hash:', withdrawHash);
+    
+    const withdrawReceipt = await waitForTransactionReceipt(wagmiConfig, {
+      hash: withdrawHash,
+      chainId: effectiveChainId,
+    });
+    
+    console.log('[SWAP] 📨 Withdraw receipt:', {
+      hash: withdrawHash,
+      status: withdrawReceipt.status,
+      gasUsed: withdrawReceipt.gasUsed?.toString(),
+      chain: effectiveChainId
+    });
+    
+    if (withdrawReceipt.status !== 'success') {
+      console.error('[SWAP] ❌ Token withdrawal failed');
+      toast.error('Token withdrawal failed');
+      throw new Error('Token withdrawal failed');
+    }
+    
+    console.log('[SWAP] ✅ Token withdrawal confirmed');
+    toast.success('Tokens withdrawn from Balance Manager');
+  };
+
   const ensureAllowance = async (
     token: HexAddress,
     requiredAmount: bigint,
     address: HexAddress,
     chainId: number
   ) => {
-    const spender = getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress;
+    // For swaps, we need to approve the router, not the balance manager
+    const spender = getContractAddress(chainId, ContractName.clobRouter) as HexAddress;
     
     console.log('[SWAP] 🔐 Checking allowance for token:', {
       token,
       owner: address,
-      spender, // BalanceManager address (tokens are deposited here, not to Router)
+      spender, // Router address (for swap operations)
       requiredAmount: requiredAmount.toString(),
       chainId
     });
@@ -228,7 +327,7 @@ export const useSwap = (userAddress?: HexAddress) => {
     minDstAmount: string,
     maxHops: number = 3
   ) => {
-    const routerAddress = getContractAddress(chainId, ContractName.clobRouter) as HexAddress;
+    const routerAddress = getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress;
     
     console.log('[SWAP] 🔍 Execute swap called with parameters:', {
       srcTokenAddress,
@@ -238,7 +337,7 @@ export const useSwap = (userAddress?: HexAddress) => {
       maxHops,
       userAddress: address,
       routerAddress,
-      chainId
+      chainId: effectiveChainId
     });
     
     // Log wallet and connection status
@@ -246,7 +345,7 @@ export const useSwap = (userAddress?: HexAddress) => {
       walletType: wallet?.walletClientType,
       walletAddress: wallet?.address,
       connectedAddress: address,
-      chainId,
+      chainId: effectiveChainId,
       isEmbeddedWallet: wallet?.walletClientType === 'privy'
     });
     
@@ -415,11 +514,19 @@ export const useSwap = (userAddress?: HexAddress) => {
         const srcTokenDecimals = await getTokenDecimals(srcTokenAddress);
         const srcAmountWei = parseUnits(srcAmount, srcTokenDecimals);
 
-        // Check balance
+        // Check balance (from Balance Manager if crosschain enabled, otherwise from ERC20)
         await checkBalance(srcTokenAddress, srcAmountWei, address as HexAddress);
+        
+        const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+        
+        if (crosschainEnabled) {
+          // Crosschain flow: withdraw from Balance Manager first, then approve router
+          console.log('[SWAP] ⚡ Crosschain enabled - withdrawing from Balance Manager first');
+          await withdrawFromBalanceManager(srcTokenAddress, srcAmountWei, address as HexAddress);
+        }
 
-        // Ensure allowance for swap
-        await ensureAllowance(srcTokenAddress, srcAmountWei, address as HexAddress, chainId);
+        // Ensure allowance for router (always needed for swap, regardless of crosschain)
+        await ensureAllowance(srcTokenAddress, srcAmountWei, address as HexAddress, effectiveChainId);
 
         // Execute the swap
         const hash = await executeSwap(

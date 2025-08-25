@@ -81,7 +81,7 @@ export default function TokenNetworkSelector({
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.currentTarget
     target.onerror = null
-    target.src = "/tokens/default-token.png"
+    target.src = "/tokens/eth.png"
   }
 
   return (

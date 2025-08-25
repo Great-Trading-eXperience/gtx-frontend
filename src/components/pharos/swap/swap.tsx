@@ -352,7 +352,7 @@ const SwapForm: React.FC = () => {
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.onerror = null;
-                        target.src = "/tokens/default-token.png";
+                        target.src = "/tokens/eth.png";
                       }}
                     />
                   ) : (
@@ -423,7 +423,7 @@ const SwapForm: React.FC = () => {
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.onerror = null;
-                        target.src = "/tokens/default-token.png";
+                        target.src = "/tokens/eth.png";
                       }}
                     />
                   ) : (
@@ -541,7 +541,7 @@ const SwapForm: React.FC = () => {
                     onError={(e) => {
                       const target = e.currentTarget;
                       target.onerror = null;
-                      target.src = "/tokens/default-token.png";
+                      target.src = "/tokens/eth.png";
                     }}
                   />
                   <div>
