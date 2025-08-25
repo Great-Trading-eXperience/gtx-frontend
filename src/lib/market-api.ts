@@ -197,7 +197,7 @@ export const fetchTrades = async (symbol: string, limit: number = 500, userAddre
   }
   
   try {
-    const data = await apiGet<TradeData[]>(chainId, userAddress ? `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}&user=${userAddress}` : `/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
+    const data = await apiGet<TradeData[]>(chainId, userAddress ? `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}&user=${userAddress}` : `/api/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
     return data || [];
   } catch (error) {
     console.error(`Error fetching trades for ${symbol}:`, error);

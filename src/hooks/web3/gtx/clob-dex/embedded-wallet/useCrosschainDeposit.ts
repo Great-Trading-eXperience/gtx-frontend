@@ -400,10 +400,28 @@ export function useCrosschainDeposit() {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
-      updateToast(toastId, {
-        type: 'error',
-        message: 'Crosschain deposit failed. Please try again.',
-      });
+      
+      // Handle gas fund errors specifically
+      if (error instanceof Error) {
+        const errorStr = error.toString();
+        if (errorStr.includes('insufficient funds for gas') || errorStr.includes('insufficient funds') || errorStr.includes('InsufficientFunds') || errorStr.includes('gas required exceeds allowance')) {
+          updateToast(toastId, {
+            type: 'error',
+            message: 'Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.',
+          });
+        } else {
+          updateToast(toastId, {
+            type: 'error',
+            message: 'Crosschain deposit failed. Please try again.',
+          });
+        }
+      } else {
+        updateToast(toastId, {
+          type: 'error',
+          message: 'Crosschain deposit failed. Please try again.',
+        });
+      }
+      
       setCurrentStep('');
       throw error;
     } finally {

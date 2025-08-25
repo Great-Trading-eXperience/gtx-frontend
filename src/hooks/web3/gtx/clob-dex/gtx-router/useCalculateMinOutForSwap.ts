@@ -1,10 +1,10 @@
-import { useReadContract, useChainId } from 'wagmi'
-import { parseUnits, formatUnits } from 'viem'
-import { useEffect, useState, useCallback } from 'react'
 import GTXRouterABI from '@/abis/gtx/clob/GTXRouterABI'
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address'
 import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config'
 import { HexAddress } from '@/types/general/address'
+import { useEffect } from 'react'
+import { parseUnits } from 'viem'
+import { useChainId, useReadContract } from 'wagmi'
 
 interface UseCalculateMinOutForSwapProps {
   srcCurrency: string
@@ -29,8 +29,9 @@ export const useCalculateMinOutForSwap = ({
   
   // Helper function to get the effective chain ID for contract calls
   const getEffectiveChainId = (chainId: number): number => {
-    const effectiveChainId = 1918988905; // Always use Rari testnet
-    console.log('[SWAP] 🔗 Chain selection | Always using Rari | Current chain:', chainId, '| Effective chain:', effectiveChainId);
+    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+    const effectiveChainId = crosschainEnabled ? getCoreChain() : chainId;
+    console.log('[SWAP] 🔗 Chain selection | Crosschain enabled:', crosschainEnabled, '| Current chain:', chainId, '| Effective chain:', effectiveChainId);
     return effectiveChainId;
   };
   
@@ -51,21 +52,6 @@ export const useCalculateMinOutForSwap = ({
                            inputAmount !== '0' &&
                            parsedInputAmount > 0n
 
-  // Custom state for handling the rari-testnet issue
-  const [customResult, setCustomResult] = useState<{
-    data?: bigint;
-    isLoading: boolean;
-    isError: boolean;
-    error?: any;
-  }>({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    error: undefined
-  });
-
-  // Detect if we're using rari-testnet and implement custom logic
-  const isRariTestnet = effectiveChainId === 1918988905;
   const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
 
   // Log contract call status
@@ -82,8 +68,7 @@ export const useCalculateMinOutForSwap = ({
         currentChainId,
         effectiveChainId,
         senderAddress: senderAddress || 'Not provided',
-        crosschainEnabled,
-        isRariTestnet
+        crosschainEnabled
       })
     } else {
       console.log('⏹️ calculateMinOutForSwap - Contract call DISABLED:', {
@@ -100,9 +85,8 @@ export const useCalculateMinOutForSwap = ({
         senderAddress: senderAddress || 'Not provided'
       })
     }
-  }, [shouldCallContract, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, currentChainId, effectiveChainId, enabled, senderAddress, crosschainEnabled, isRariTestnet])
+  }, [shouldCallContract, routerAddress, srcCurrency, dstCurrency, inputAmount, parsedInputAmount, slippageToleranceBps, currentChainId, effectiveChainId, enabled, senderAddress, crosschainEnabled])
 
-  // Use wagmi for non-rari chains, custom logic for rari-testnet
   const wagmiResult = useReadContract({
     address: routerAddress,
     abi: GTXRouterABI,
@@ -115,7 +99,7 @@ export const useCalculateMinOutForSwap = ({
       BigInt(slippageToleranceBps)
     ],
     query: {
-      enabled: shouldCallContract && !isRariTestnet, // Disable wagmi for rari-testnet
+      enabled: shouldCallContract,
       staleTime: 5000,
       retry: (failureCount, error) => {
         console.log(`[SWAP] 🔄 calculateMinOutForSwap retry attempt ${failureCount + 1}:`, error?.message);
@@ -132,39 +116,13 @@ export const useCalculateMinOutForSwap = ({
     }
   });
 
-  // Handle rari-testnet with custom logic
-  useEffect(() => {
-    if (shouldCallContract && isRariTestnet) {
-      console.log('[SWAP] 🔧 Using custom logic for rari-testnet due to wagmi issues');
-      setCustomResult({
-        data: 0n, // Return 0 for now since our test showed no liquidity
-        isLoading: false,
-        isError: false,
-        error: undefined
-      });
-    }
-  }, [shouldCallContract, isRariTestnet, srcCurrency, dstCurrency, parsedInputAmount]);
-
-  // Choose result based on chain
   const {
     data: minOutputAmount,
     isError,
     isLoading,
     error,
     refetch
-  } = isRariTestnet ? {
-    data: customResult.data,
-    isError: customResult.isError,
-    isLoading: customResult.isLoading,
-    error: customResult.error,
-    refetch: () => Promise.resolve({ data: customResult.data })
-  } : {
-    data: wagmiResult.data,
-    isError: wagmiResult.isError,
-    isLoading: wagmiResult.isLoading,
-    error: wagmiResult.error,
-    refetch: wagmiResult.refetch
-  }
+  } = wagmiResult
 
   // Add timeout detection for hanging requests
   useEffect(() => {
@@ -201,8 +159,7 @@ export const useCalculateMinOutForSwap = ({
           currentChainId,
           effectiveChainId,
           senderAddress: senderAddress || 'Not provided',
-          crosschainEnabled,
-          isRariTestnet
+          crosschainEnabled
         })
         // Log potential causes of revert
         console.error('Possible causes:')

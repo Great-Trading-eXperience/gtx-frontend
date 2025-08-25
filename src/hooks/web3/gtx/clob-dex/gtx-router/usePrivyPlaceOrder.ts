@@ -1066,22 +1066,52 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
 
             // Check for common revert reasons
             if (errorStr.includes('0x7939f424')) {
+              updateToast(toastId, {
+                type: 'error',
+                message: 'No trading pools available for this token pair.',
+              });
             } else if (errorStr.includes('0xfb8f41b2')) {
-              // toast.error("Insufficient balance for this order. Please deposit more funds.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient balance for this order. Please deposit more funds.',
+              });
+            } else if (errorStr.includes('insufficient funds for gas') || errorStr.includes('insufficient funds') || errorStr.includes('InsufficientFunds') || errorStr.includes('gas required exceeds allowance')) {
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.',
+              });
             } else if (errorStr.includes('SlippageTooHigh')) {
-              // toast.error("Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.',
+              });
             } else if (errorStr.includes('InsufficientLiquidity')) {
-              // toast.error("Insufficient liquidity in the order book for this order size.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Insufficient liquidity in the order book for this order size.',
+              });
             } else if (errorStr.includes('InvalidPool')) {
-              // toast.error("Invalid trading pool. Please refresh and try again.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Invalid trading pool. Please refresh and try again.',
+              });
             } else if (errorStr.includes('TransactionReceiptNotFoundError')) {
-              // toast.error("Transaction is taking longer than expected. Please check your transaction status manually.");
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Transaction is taking longer than expected. Please check your transaction status manually.',
+              });
             } else if (errorStr.includes('reverted') && !errorStr.includes('reason')) {
-              // Generic revert without specific reason
-              // toast.error(`Contract execution failed. This might be due to insufficient balance, slippage, or market conditions. Check console for details.`);
+              updateToast(toastId, {
+                type: 'error',
+                message: 'Contract execution failed. This might be due to insufficient balance, slippage, or market conditions.',
+              });
             } else {
-              // toast.error(error.message || `Failed to place ${orderType} order`);
+              updateToast(toastId, {
+                type: 'error',
+                message: error.message || `Failed to place ${orderType} order`,
+              });
             }
+          } else {
             updateToast(toastId, {
               type: 'error',
               message: 'Place order failed',

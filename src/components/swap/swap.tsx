@@ -576,7 +576,7 @@ const SwapForm: React.FC = () => {
   const destUsdValue = estimatedReceived && destToken ? Number.parseFloat(estimatedReceived || '0') * destUsdPrice : 0;
 
   // Calculate fees
-  const swapFee = amount && sourceToken ? (Number.parseFloat(amount || '0') * 0.0025).toFixed(6) : '0';
+  const swapFee = amount && sourceToken ? (Number.parseFloat(amount || '0') * 0.002).toFixed(6) : '0';
 
   // Handle amount change with validation
   const handleAmountChange = (value: string) => {
@@ -850,7 +850,7 @@ const SwapForm: React.FC = () => {
                   <span className="text-white">{(slippageBps / 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Fee (0.25%)</span>
+                  <span className="text-white/70">Fee (0.2%)</span>
                   <span className="text-white">{swapFee} {sourceToken?.symbol || ''}</span>
                 </div>
                 {/* <div className="flex items-center justify-between text-sm">

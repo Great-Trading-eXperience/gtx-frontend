@@ -7,6 +7,7 @@
 
 // import { riseTestnet, rariTestnet, appchainTestnet } from '@/configs/wagmi';
 import { rariTestnet, appchainTestnet } from '@/configs/wagmi';
+import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
 
 // Available chains for override
 const AVAILABLE_CHAINS = {
@@ -39,11 +40,12 @@ function getForcedChainId(): number | null {
 
 /**
  * Get the chain ID to use for contract interactions
- * Returns forced chain if configured, otherwise returns the current chain
+ * Priority: 1. Forced chain (env var), 2. Core chain (if crosschain enabled), 3. Current chain
  */
 export function getEffectiveChainId(currentChainId: number): number {
   const forcedChainId = getForcedChainId();
   
+  // First priority: Environment variable chain forcing
   if (forcedChainId !== null) {
     // Log chain override for debugging
     if (process.env.NODE_ENV === 'development' && forcedChainId !== currentChainId) {
@@ -53,14 +55,25 @@ export function getEffectiveChainId(currentChainId: number): number {
     return forcedChainId;
   }
   
+  // Second priority: Crosschain feature flag
+  const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+  if (crosschainEnabled) {
+    const coreChainId = getCoreChain();
+    if (process.env.NODE_ENV === 'development' && coreChainId !== currentChainId) {
+      console.log(`[CHAIN_OVERRIDE] Using core chain ${coreChainId} (crosschain enabled) instead of current chain ${currentChainId}`);
+    }
+    return coreChainId;
+  }
+  
+  // Default: Use current chain
   return currentChainId;
 }
 
 /**
- * Check if chain forcing is enabled
+ * Check if chain forcing is enabled (either via env var or crosschain feature flag)
  */
 export function isChainForcingEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_FORCE_CHAIN_ID !== undefined;
+  return process.env.NEXT_PUBLIC_FORCE_CHAIN_ID !== undefined || isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
 }
 
 /**

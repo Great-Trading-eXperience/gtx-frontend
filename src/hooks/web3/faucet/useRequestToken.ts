@@ -49,7 +49,18 @@ export const useRequestToken = (
             setIsAlertOpen(true);
         } catch (error) {
             console.error('Transaction error:', error);
-            toast.error(error instanceof Error ? error.message : 'Transaction failed. Please try again.');
+            
+            // Handle gas fund errors specifically
+            if (error instanceof Error) {
+                const errorStr = error.toString();
+                if (errorStr.includes('insufficient funds for gas') || errorStr.includes('insufficient funds') || errorStr.includes('InsufficientFunds') || errorStr.includes('gas required exceeds allowance')) {
+                    toast.error('Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.');
+                } else {
+                    toast.error(error.message || 'Transaction failed. Please try again.');
+                }
+            } else {
+                toast.error('Transaction failed. Please try again.');
+            }
         }
     };
 
