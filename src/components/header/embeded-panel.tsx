@@ -1073,7 +1073,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
             </div>
             
             {/* Network Switcher */}
-            <div className="relative">
+            {/* <div className="relative">
               <select
                 value={embeddedWalletChainId || 11155931}
                 onChange={(e) => switchEmbeddedChain(parseInt(e.target.value))}
@@ -1093,7 +1093,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                   <ChevronDown size={10} className="text-gray-400" />
                 )}
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Current Network Info */}

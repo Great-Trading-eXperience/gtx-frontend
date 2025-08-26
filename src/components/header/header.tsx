@@ -125,7 +125,7 @@ const ChainDropdown: React.FC = () => {
           width: buttonRect.width,
           zIndex: 9999,
         }}
-        className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl"
+        className="bg-[#18191B] border border-gray-600 rounded-lg shadow-xl"
       >
         <div className="py-1">
           {networks.map((network) => (
@@ -151,7 +151,7 @@ const ChainDropdown: React.FC = () => {
       <button
         ref={buttonRef}
         onClick={handleToggle}
-        className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center justify-between transition-colors duration-200 min-w-[200px]"
+        className="border border-gray-600 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500 px-4 py-2 rounded-lg flex items-center justify-between transition-colors duration-200 min-w-[200px]"
       >
         <div className="flex items-center space-x-3">
           <span className="font-medium text-sm">{selectedNetwork.name}</span>
