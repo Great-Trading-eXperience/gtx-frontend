@@ -2,7 +2,7 @@ import { WebSocketProvider } from '@/contexts/websocket-context';
 
 export const metadata = {
   title: 'GTX - Great Trading eXperience',
-  description: 'Decentralized trading platform',
+  description: 'Crosschain Crosschain Decentralized CLOB',
 }
 
 export default function RootLayout({

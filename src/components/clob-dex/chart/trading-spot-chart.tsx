@@ -226,6 +226,12 @@ function TradingSpotChart({ chainId, height = 500, selectedPoolId = null }: Trad
     staleTime: 0,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    onSuccess: () => {
+      console.log('[RPC-DEBUG] 📊 trading-spot-chart.tsx - Chart data refetch completed');
+    },
+    onError: (error) => {
+      console.error('[RPC-DEBUG] 📊 trading-spot-chart.tsx - Chart data refetch error:', error);
+    },
   })
 
   // Update UTC time every second

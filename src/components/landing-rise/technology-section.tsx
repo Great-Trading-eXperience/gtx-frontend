@@ -17,20 +17,20 @@ export function TechnologySection() {
 
     const techFeatures: TechFeature[] = [
         {
-            title: "High-Performance Order Book",
-            description: "Experience seamless trading powered by Rise chain's exceptional performance. Our order book leverages red-black trees and linked lists for efficient matching.",
+            title: "Fully On-Chain",
+            description: "Complete transparency with 100% on-chain order matching and settlement. Every trade is verifiable and auditable on the blockchain with zero off-chain components.",
             icon: Code2,
             details:
-                "Our high-performance order book is optimized for speed and efficiency, consistently maintaining 2ms latency even under high load conditions. The system can process up to 100,000 orders per second, ensuring your trades execute without delays during even the most volatile market conditions.",
-            stats: ["2ms Latency", "100k Orders/sec"],
+                "Unlike hybrid solutions that rely on off-chain matching engines, our platform operates entirely on-chain. All orders, matching logic, and settlements are transparent and verifiable on the blockchain. This ensures complete decentralization, eliminates counterparty risk, and provides unprecedented transparency in trade execution.",
+            stats: ["100% On-Chain", "Verifiable"],
         },
         {
-            title: "Open Architecture",
-            description: "Fully permissionless system allowing anyone to create markets, provide liquidity, and participate in the ecosystem.",
+            title: "Crosschain Orderbook",
+            description: "Eliminate fragmented liquidity across any EVM chains. Trade without moving funds from your favourite chain.",
             icon: Puzzle,
             details:
-                "Our platform's open architecture enables developers, traders, and institutions to build custom solutions without requiring approval or special access. This permissionless approach creates a truly decentralized ecosystem where innovation can flourish and market opportunities remain accessible to all participants.",
-            stats: ["Permissionless", "Composable"],
+                "Our crosschain orderbook eliminates fragmented liquidity across any EVM chains with a transparent matching engine. Trade without moving any funds on your favourite chain while feeling the high performance of our core deployed blockchain. Experience optimal execution across all supported networks without compromising on speed or security.",
+            stats: ["Crosschain", "Transparent"],
         },
     ]
 
@@ -50,11 +50,11 @@ export function TechnologySection() {
                     <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
                         Built for {" "}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-                            Performance
+                            Transparency
                         </span>
                     </h2>
                     <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                        Powered by advanced technologies that set new standards for decentralized trading
+                        Powered by fully decentralized technologies that ensure complete transparency and verifiability
                     </p>
                 </motion.div>
 

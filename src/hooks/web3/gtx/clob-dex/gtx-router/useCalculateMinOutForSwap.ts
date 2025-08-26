@@ -52,6 +52,16 @@ export const useCalculateMinOutForSwap = ({
                            inputAmount !== '0' &&
                            parsedInputAmount > 0n
 
+  // Log every time the hook is invoked
+  console.log('[RPC-DEBUG] 🔍 useCalculateMinOutForSwap invoked:', {
+    enabled,
+    srcCurrency,
+    dstCurrency,
+    inputAmount,
+    shouldCallContract,
+    senderAddress: senderAddress || 'Not provided'
+  });
+
   const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
 
   // Log contract call status
@@ -102,7 +112,7 @@ export const useCalculateMinOutForSwap = ({
       enabled: shouldCallContract,
       staleTime: 5000,
       retry: (failureCount, error) => {
-        console.log(`[SWAP] 🔄 calculateMinOutForSwap retry attempt ${failureCount + 1}:`, error?.message);
+        console.log(`[RPC-DEBUG] 🔄 useCalculateMinOutForSwap retry attempt ${failureCount + 1}:`, error?.message);
         if (error?.message?.includes('reverted')) {
           return false
         }
@@ -113,6 +123,12 @@ export const useCalculateMinOutForSwap = ({
       },
       refetchInterval: false,
       refetchOnWindowFocus: false,
+      onSuccess: () => {
+        console.log('[RPC-DEBUG] ✅ useCalculateMinOutForSwap - Contract call successful');
+      },
+      onError: (error) => {
+        console.error('[RPC-DEBUG] ❌ useCalculateMinOutForSwap - Contract call error:', error);
+      },
     }
   });
 

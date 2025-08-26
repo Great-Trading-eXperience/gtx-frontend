@@ -1,8 +1,8 @@
 "use client"
 
+import { AnimatePresence, motion } from "framer-motion"
+import { ChevronDown, Clock, DollarSign, Lock, ShieldAlert } from "lucide-react"
 import React, { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Clock, DollarSign, Lock, ShieldAlert, ChevronDown } from "lucide-react"
 
 interface Problem {
   icon: React.ElementType
@@ -24,36 +24,36 @@ export function ProblemsSection() {
 
   const problems: Problem[] = [
     {
-      icon: Clock,
-      title: "Slow Execution",
+      icon: Lock,
+      title: "Fragmented Liquidity",
       description:
-        "Traditional exchanges often suffer from delayed order execution, causing missed opportunities and slippage during volatile market conditions.",
+        "Liquidity is scattered across multiple chains, leading to poor price discovery and increased slippage for traders.",
       solution:
-        "Our high-performance matching engine executes trades in milliseconds, ensuring you never miss an opportunity due to technical limitations.",
+        "Our crosschain orderbook unifies liquidity across all EVM chains, ensuring better prices and reduced slippage for every trade.",
+    },
+    {
+      icon: Clock,
+      title: "Lack of Transparency",
+      description:
+        "Centralized exchanges operate as black boxes with opaque order matching, hidden market manipulation, and unclear fee structures that disadvantage traders.",
+      solution:
+        "Our decentralized exchange ensures complete transparency with on-chain order matching, open-source smart contracts, and clear fee structures.",
     },
     {
       icon: ShieldAlert,
-      title: "Security Risks",
+      title: "AMM Slippage",
       description:
-        "Many platforms have experienced breaches, putting user funds at risk and eroding trust in the trading ecosystem.",
+        "AMMs suffer from significant slippage on large trades due to bonding curve mechanics, causing traders to lose substantial value especially during volatile markets.",
       solution:
-        "Multi-layer security with cold storage, regular security audits, and insurance coverage for digital assets provides peace of mind.",
+        "Our Central Limit Order Book (CLOB) provides traditional limit orders with zero slippage, ensuring you get exactly the price you expect.",
     },
     {
       icon: DollarSign,
-      title: "High Fees",
+      title: "Capital Inefficiency",
       description:
-        "Hidden fees and high transaction costs eat into trading profits, making it difficult to maintain profitability, especially for frequent traders.",
+        "Traders need to maintain separate balances on multiple chains, locking up capital and preventing optimal portfolio management across different networks.",
       solution:
-        "Transparent fee structure with some of the lowest rates in the industry and volume-based discounts for active traders.",
-    },
-    {
-      icon: Lock,
-      title: "KYC Barriers",
-      description:
-        "Lengthy verification processes delay account setup and trading, creating friction and preventing immediate market participation.",
-      solution:
-        "No KYC required for basic trading with progressive verification only when needed, allowing instant access to markets.",
+        "Trade across any EVM chain without moving funds. Keep all your capital on your preferred chain while accessing liquidity from all supported networks.",
     },
   ]
 

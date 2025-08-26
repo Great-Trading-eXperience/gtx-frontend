@@ -237,6 +237,12 @@ function PerpetualChartComponent({ height = 620 }: PerpetualChartComponentProps)
     staleTime: 0,
     refetchOnWindowFocus: true,
     enabled: !!selectedTokenAddress, // Only run the query if we have a token address
+    onSuccess: () => {
+      console.log('[RPC-DEBUG] 📊 perpetual-chart.tsx - Chart data refetch completed');
+    },
+    onError: (error) => {
+      console.error('[RPC-DEBUG] 📊 perpetual-chart.tsx - Chart data refetch error:', error);
+    },
   })
 
   // Create and update chart
