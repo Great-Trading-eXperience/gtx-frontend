@@ -3,7 +3,7 @@
 import TokenABI from "@/abis/tokens/TokenABI"
 import { DataTable } from "@/components/table/data-table"
 import { requestTokenColumns } from "@/components/table/faucet/request-token/columns"
-import { wagmiConfig } from "@/configs/wagmi"
+import { appchainTestnet, wagmiConfig } from "@/configs/wagmi"
 import { getIndexerUrl } from "@/constants/urls/urls-config"
 import { queryFaucetTokenss, queryRequestTokenss } from "@/graphql/faucet/faucet.query"
 import { useFaucetCooldown } from "@/hooks/web3/faucet/useFaucetCooldown"
@@ -37,6 +37,7 @@ import { PrivyAuthButton } from "../auth/privy-auth-button"
 import GradientLoader from "../gradient-loader/gradient-loader"
 import { DotPattern } from "../magicui/dot-pattern"
 import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
+import { switchChain } from 'wagmi/actions';
 
 const faucetSchema = z.object({
   token: z.string().min(1),
@@ -119,7 +120,59 @@ const GTXFaucet: NextPage = () => {
 
   const chainId = useChainId();
   const defaultChainId = Number(DEFAULT_CHAIN);
+  const isAppchainConnected = chainId === appchainTestnet.id;
   const faucetAddress = getContractAddress(chainId ?? defaultChainId, ContractName.faucet) as HexAddress
+
+  const checkAndSwitchToAppchain = async () => {
+    if (isAppchainConnected) {
+      return { success: true, message: 'Already connected to Appchain' };
+    }
+
+    try {
+      if (switchChain) {
+        await switchChain(wagmiConfig, {chainId : appchainTestnet.id});
+        return { success: true, message: 'Switched to Appchain successfully' };
+      }
+    } catch (error: any) {
+      console.log('Chain not found, attempting to add...', error);
+    }
+
+    return await addAppchainToWallet();
+  };
+
+
+  const addAppchainToWallet = async () => {
+    if (!window.ethereum) {
+      throw new Error('MetaMask not installed');
+    }
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId: `0x${appchainTestnet.id.toString(16)}`, // Convert to hex
+            chainName: appchainTestnet.name,
+            nativeCurrency: appchainTestnet.nativeCurrency,
+            rpcUrls: appchainTestnet.rpcUrls.default.http,
+            blockExplorerUrls: [appchainTestnet.blockExplorers?.default.url],
+          },
+        ],
+      });
+
+      return { success: true, message: 'Appchain added and switched successfully' };
+    } catch (error: any) {
+      if (error.code === 4001) {
+        throw new Error('User rejected the request');
+      }
+      throw new Error(`Failed to add chain: ${error.message}`);
+    }
+  };
+
+  const handleSwitchChain = async () => {
+    const result = await checkAndSwitchToAppchain();
+    console.log(result);
+  }
 
   const { balance: faucetBalance, error: faucetBalanceError } = useBalance(
     faucetAddress,
@@ -237,7 +290,7 @@ const GTXFaucet: NextPage = () => {
   }
 
   useEffect(() => {
-    if (!faucetTokensData || !mounted) {
+    if (!faucetTokensData || !mounted || !isAppchainConnected) {
       return
     }
 
@@ -329,7 +382,7 @@ const GTXFaucet: NextPage = () => {
     }
 
     fetchTokensData()
-  }, [faucetTokensData, mounted])
+  }, [faucetTokensData, mounted, isAppchainConnected])
 
   useEffect(() => {
     if (mounted) {
@@ -343,6 +396,31 @@ const GTXFaucet: NextPage = () => {
 
   if (!mounted || isLoading) {
     return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />
+  }
+
+  if (!isAppchainConnected && !isLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm max-w-md w-full">
+          <div className="p-12 text-center">
+            <div className="flex items-center justify-center mb-8">
+              <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <Droplets className="w-10 h-10 text-blue-400" />
+              </div>
+            </div>
+            <h2 className="text-white text-3xl font-bold tracking-tight mb-4">
+              Wrong Chain
+            </h2>
+            <p className="text-white/70 mb-8">
+              You must to use appchain to get faucet
+            </p>
+            <button onClick={() => handleSwitchChain()} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl px-4 py-2">
+              Switch Chain
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
