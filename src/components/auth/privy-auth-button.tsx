@@ -5,13 +5,19 @@ import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { Wallet, LogOut, Link, User, Mail, Globe, Copy, Check } from 'lucide-react';
 import { CustomAvatar } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
 import { useState, useEffect } from 'react';
+import { useChainId } from 'wagmi';
+import { appchainTestnet, wagmiConfig } from '@/configs/wagmi';
+import { switchChain } from 'wagmi/actions';
 
 interface PrivyAuthButtonProps {
   className?: string;
   showFullProfile?: boolean;
 }
 
-export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuthButtonProps) {
+export function PrivyAuthButton({
+  className,
+  showFullProfile = true,
+}: PrivyAuthButtonProps) {
   const {
     ready,
     authenticated,
@@ -44,6 +50,62 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
     }
   };
 
+  // handle login with add app chain in external wallet
+  const chainId = useChainId();
+  const isAppchainConnected = chainId === appchainTestnet.id;
+
+  const checkAndSwitchToAppchain = async () => {
+    if (isAppchainConnected) {
+      return { success: true, message: 'Already connected to Appchain' };
+    }
+
+    try {
+      if (switchChain) {
+        await switchChain(wagmiConfig, {chainId : appchainTestnet.id});
+        return { success: true, message: 'Switched to Appchain successfully' };
+      }
+    } catch (error: any) {
+      console.log('Chain not found, attempting to add...', error);
+    }
+
+    return await addAppchainToWallet();
+  };
+
+
+  const addAppchainToWallet = async () => {
+    if (!window.ethereum) {
+      throw new Error('MetaMask not installed');
+    }
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId: `0x${appchainTestnet.id.toString(16)}`, // Convert to hex
+            chainName: appchainTestnet.name,
+            nativeCurrency: appchainTestnet.nativeCurrency,
+            rpcUrls: appchainTestnet.rpcUrls.default.http,
+            blockExplorerUrls: [appchainTestnet.blockExplorers?.default.url],
+          },
+        ],
+      });
+
+      return { success: true, message: 'Appchain added and switched successfully' };
+    } catch (error: any) {
+      if (error.code === 4001) {
+        throw new Error('User rejected the request');
+      }
+      throw new Error(`Failed to add chain: ${error.message}`);
+    }
+  };
+
+  const handleLogin = async () => {
+    const result = await checkAndSwitchToAppchain();
+    console.log(result);
+    login();
+  }
+
   // Don't render until we're on the client and Privy is ready
   if (!isClient || !ready) {
     return (
@@ -57,8 +119,10 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
   if (!authenticated) {
     return (
       <Button
-        onClick={login}
-        className={`bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all rounded-lg text-sm font-bold ${className || ''}`}
+        onClick={handleLogin}
+        className={`bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all rounded-lg text-sm font-bold ${
+          className || ''
+        }`}
       >
         <Wallet className="mr-2 h-4 w-4" />
         Connect
@@ -72,7 +136,9 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
       <Button
         onClick={logout}
         variant="outline"
-        className={`text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all ${className || ''}`}
+        className={`text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all ${
+          className || ''
+        }`}
       >
         <LogOut className="mr-2 h-4 w-4" />
         Sign Out
@@ -94,7 +160,11 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
             {authenticationMethod === 'wallet' ? (
               <>
                 <Wallet className="mr-2 h-4 w-4" />
-{walletAddress ? `${String(walletAddress).slice(0, 6)}...${String(walletAddress).slice(-4)}` : 'Wallet'}
+                {walletAddress
+                  ? `${String(walletAddress).slice(0, 6)}...${String(walletAddress).slice(
+                      -4
+                    )}`
+                  : 'Wallet'}
               </>
             ) : authenticationMethod === 'google_oauth' ? (
               <>
@@ -109,7 +179,9 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
             ) : (
               <>
                 <User className="mr-2 h-4 w-4" />
-                {socialLoginMethod ? String(socialLoginMethod).replace('_oauth', '').toUpperCase() : 'Social'}
+                {socialLoginMethod
+                  ? String(socialLoginMethod).replace('_oauth', '').toUpperCase()
+                  : 'Social'}
               </>
             )}
           </Button>
@@ -160,7 +232,9 @@ export function PrivyAuthButton({ className, showFullProfile = true }: PrivyAuth
     <Button
       onClick={logout}
       variant="outline"
-      className={`text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all ${className || ''}`}
+      className={`text-sm font-bold rounded-lg bg-[#1A1A1A] border-white/20 hover:border-red-500/40 hover:bg-red-500/10 transition-all ${
+        className || ''
+      }`}
     >
       <LogOut className="mr-2 h-4 w-4" />
       Sign Out
