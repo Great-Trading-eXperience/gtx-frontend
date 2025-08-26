@@ -133,6 +133,12 @@ function ChartComponent({ height = 430 }: ChartComponentProps) {
     refetchInterval: 5000,
     staleTime: 0,
     refetchOnWindowFocus: true,
+    onSuccess: () => {
+      console.log('[RPC-DEBUG] 📊 chart-select-time.tsx - Chart data refetch completed');
+    },
+    onError: (error) => {
+      console.error('[RPC-DEBUG] 📊 chart-select-time.tsx - Chart data refetch error:', error);
+    },
   })
 
   // Update UTC time every second

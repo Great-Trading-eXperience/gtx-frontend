@@ -1,7 +1,7 @@
 "use client";
 
-import { Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import { Zap, Link, Globe } from "lucide-react";
 
 interface FeatureCardProps {
   title: string;
@@ -42,9 +42,9 @@ const features = [
     "Spot Trading",
     "Order Books",
     "Smart Contracts",
-    "Multi-Chain",
-    "No KYC",
-    "Low Fees",
+    "Cross-Chain",
+    "Unified Liquidity",
+    "Transparent Fees",
 ];
 
 const parentVariants = {
@@ -71,8 +71,8 @@ export function RiseFeaturesSection() {
         <section className="py-20 relative z-10">
             <div className="max-w-screen-xl mx-auto px-4">
                 <h2 className="text-4xl md:text-5xl font-bold text-center mt-6 max-w-5xl m-auto">
-                    Where power meets{" "}
-                    <span className="text-blue-400">simplicity</span>
+                    Trade across chains with{" "}
+                    <span className="text-blue-400">unified liquidity</span>
                 </h2>
                 <motion.div
                     variants={parentVariants}
@@ -87,8 +87,8 @@ export function RiseFeaturesSection() {
                             viewport={{ once: true, amount: 0.2 }}
                         >
                             <FeatureCard
-                                title="Real-time trading"
-                                description="Execute trades instantly with our high-performance matching engine"
+                                title="Crosschain Orderbook"
+                                description="Unified liquidity across all EVM chains without moving your funds"
                                 className="md:col-span-2 lg:col-span-1"
                             >
                                 <div className="aspect-video flex items-center justify-center">
@@ -96,8 +96,13 @@ export function RiseFeaturesSection() {
                                         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-400/20 rounded-full animate-pulse"></div>
                                         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-blue-400/30 rounded-full"></div>
                                         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                                            <Zap size={50} className="text-blue-400" />
+                                            <Link size={50} className="text-blue-400" />
                                         </div>
+                                        {/* Chain connection lines */}
+                                        <div className="absolute top-4 left-4 w-4 h-4 bg-blue-400/60 rounded-full"></div>
+                                        <div className="absolute top-4 right-4 w-4 h-4 bg-blue-400/60 rounded-full"></div>
+                                        <div className="absolute bottom-4 left-4 w-4 h-4 bg-blue-400/60 rounded-full"></div>
+                                        <div className="absolute bottom-4 right-4 w-4 h-4 bg-blue-400/60 rounded-full"></div>
                                     </div>
                                 </div>
                             </FeatureCard>
@@ -110,8 +115,8 @@ export function RiseFeaturesSection() {
                             viewport={{ once: true, amount: 0.2 }}
                         >
                             <FeatureCard
-                                title="Market analytics"
-                                description="Advanced charting and data analysis for informed trading decisions"
+                                title="Transparent Matching"
+                                description="On-chain order matching with complete visibility and no hidden fees"
                                 className="md:col-span-2 lg:col-span-1 group transition duration-500"
                             >
                                 <div className="aspect-video flex items-center justify-center">
@@ -141,19 +146,19 @@ export function RiseFeaturesSection() {
                             viewport={{ once: true, amount: 0.2 }}
                         >
                             <FeatureCard
-                                title="Advanced order types"
-                                description="Full control with limit, market, stop-loss, and trailing orders"
+                                title="Any EVM Chain"
+                                description="Deposit and trade from Ethereum, Arbitrum, Base, or any supported network"
                                 className="group md:col-span-2 md:col-start-2 lg:col-span-1 lg:col-start-auto"
                             >
-                                <div className="aspect-video flex justify-center items-center gap-4">
-                                    <Key className="w-28 outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1">
-                                        market
+                                <div className="aspect-video flex justify-center items-center gap-2">
+                                    <Key className="w-20 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1">
+                                        ETH
                                     </Key>
-                                    <Key className="outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-150">
-                                        limit
+                                    <Key className="w-20 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-150">
+                                        ARB
                                     </Key>
-                                    <Key className="outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-300">
-                                        stop
+                                    <Key className="w-20 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-300">
+                                        BASE
                                     </Key>
                                 </div>
                             </FeatureCard>

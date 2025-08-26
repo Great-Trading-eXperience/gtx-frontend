@@ -9,7 +9,27 @@ import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { defineChain } from 'viem';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        if (error?.message?.includes('429') || error?.message?.includes('Too Many Requests')) {
+          return false;
+        }
+        
+        if (error?.message?.includes('timeout') || error?.message?.includes('ERR_TIMED_OUT')) {
+          return false;
+        }
+        
+        return failureCount < 1; 
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), 
+      staleTime: 30000, 
+      gcTime: 300000, 
+      refetchOnWindowFocus: false, 
+    },
+  },
+});
 
 // Create conditional Privy configuration based on crosschain feature flag
 const createPrivyConfig = (): PrivyClientConfig => {

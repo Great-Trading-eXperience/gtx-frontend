@@ -19,6 +19,73 @@ import { NextPage } from "next/types";
 import { ReactNode, useEffect, useState } from "react";
 import "../styles/globals.css";
 
+// RPC Request logging and rate limiting for debugging 429 errors
+if (typeof window !== 'undefined') {
+  const originalFetch = window.fetch;
+  let requestCount = 0;
+  let rateLimitedUntil = 0;
+  const MAX_REQUESTS_PER_SECOND = 10; // Conservative limit
+  const RATE_LIMIT_WINDOW = 1000; // 1 second
+  
+  // Request counter reset
+  setInterval(() => {
+    requestCount = 0;
+  }, RATE_LIMIT_WINDOW);
+  
+  window.fetch = function(...args) {
+    const [input, init] = args;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url || 'unknown';
+    const now = Date.now();
+    
+    // Check if we're currently rate limited
+    if (now < rateLimitedUntil) {
+      console.warn('[RPC-DEBUG] 🚫 Request blocked - in rate limit cooldown period');
+      return Promise.reject(new Error('Rate limited - too many requests'));
+    }
+    
+    // Client-side rate limiting for RPC calls
+    if (url.includes('appchain.caff.testnet.espresso.network') || 
+        url.includes('testnet.rpc.rarichain.org') || 
+        url.includes('rpc')) {
+      
+      requestCount++;
+      
+      console.log('[RPC-DEBUG] 🌐 RPC Request:', {
+        url,
+        method: init?.method || 'GET',
+        timestamp: new Date().toISOString(),
+        requestCount,
+        stack: new Error().stack?.split('\n')[2]?.trim() || 'Unknown caller'
+      });
+      
+      // If too many requests, add a delay
+      if (requestCount > MAX_REQUESTS_PER_SECOND) {
+        console.warn(`[RPC-DEBUG] ⚠️ Too many requests (${requestCount}/${MAX_REQUESTS_PER_SECOND}), adding delay`);
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(originalFetch.apply(this, args));
+          }, 1000); // 1 second delay
+        });
+      }
+    }
+    
+    return originalFetch.apply(this, args).then(response => {
+      // Handle 429 errors with backoff
+      if (response.status === 429 && url.includes('appchain.caff.testnet.espresso.network')) {
+        rateLimitedUntil = now + 30000; // 30 second cooldown
+        console.error('[RPC-DEBUG] 🚫 429 Rate Limited - entering 30s cooldown:', {
+          url,
+          status: response.status,
+          timestamp: new Date().toISOString(),
+          cooldownUntil: new Date(rateLimitedUntil).toISOString(),
+          stack: new Error().stack?.split('\n')[2]?.trim() || 'Unknown caller'
+        });
+      }
+      return response;
+    });
+  };
+}
+
 // Monad Testnet chain ID
 const MONAD_TESTNET_CHAIN_ID = 10143;
 const RISE_SEPOLIA_CHAIN_ID = 11155931;
@@ -111,8 +178,6 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isPanelOpen]);
 
-  console.log(isPanelOpen);
-
   return (
     <>
       {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header onTogglePanel={togglePanel} />}
@@ -149,7 +214,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
         >
           <Head>
             <title>GTX - Great Trading eXperience | Decentralized Perpetual & Spot Trading</title>
-            <meta name="description" content="The Most Capital Efficient Decentralized Trading Platform" />
+            <meta name="description" content="The Most Capital Efficient Crosschain Decentralized CLOB" />
             <link rel="icon" type="image/png" href="/logo/gtx.png" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
           </Head>

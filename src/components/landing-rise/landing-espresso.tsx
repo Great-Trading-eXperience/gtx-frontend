@@ -2,10 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import {
-    BarChart2,
-    ExternalLink,
-    LineChart,
-    Wallet
+    ExternalLink
 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -16,52 +13,12 @@ import { ProblemsSection } from "./problem-section"
 import { TechnologySection } from "./technology-section"
 import { TradingStepsSection } from "./trading-step-section"
 
-export function LandingRise() {
+export function LandingEspresso() {
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
         setMounted(true)
     }, [])
-
-    const tradingSteps = [
-        {
-            title: "Create Account",
-            description: "Connect your wallet and access all features instantly with no KYC required",
-            icon: Wallet,
-            step: 1,
-        },
-        {
-            title: "Start Trading",
-            description: "Access spot markets with deep liquidity and competitive fees",
-            icon: LineChart,
-            step: 2,
-        },
-        {
-            title: "Manage Positions",
-            description: "Monitor your portfolio and manage risk with advanced trading tools",
-            icon: BarChart2,
-            step: 3,
-        },
-    ]
-
-    const problems = [
-        {
-            title: "Inefficient Capital Utilization",
-            description: "AMMs require deep liquidity to minimize slippage, leading to inefficient capital allocation",
-        },
-        {
-            title: "High Impermanent Loss",
-            description: "Liquidity providers often suffer from impermanent loss due to volatile price movements",
-        },
-        {
-            title: "Price Manipulation",
-            description: "AMMs are vulnerable to front-running and sandwich attacks, harming traders",
-        },
-        {
-            title: "Restricted Market Listings",
-            description: "Centralized exchanges limit listings, making it difficult for emerging assets to gain liquidity",
-        },
-    ]
 
     return (
         <main className="text-white min-h-screen overflow-hidden bg-black">

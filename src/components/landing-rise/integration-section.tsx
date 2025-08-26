@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
-import { ShieldCheck } from "lucide-react"
+import { ShieldCheck } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 interface Integration {
   name: string;
   description: string;
@@ -85,41 +85,47 @@ IntegrationColumn.displayName = 'IntegrationColumn';
 export function RiseIntegrationsSection() {
   // Mock integrations data
   const integrations = [
-    {
-      icon: "/images/metamask.png",
-      name: "Metamask",
-      description: "Connect your Metamask wallet for secure and easy transactions"
-    },
+    // {
+    //   icon: "/images/metamask.png",
+    //   name: "Metamask",
+    //   description: "Connect your Metamask wallet for secure and easy transactions"
+    // },
     // {
     //   icon: "/images/coinbase.png",
     //   name: "Coinbase",
     //   description: "Integration with Coinbase for seamless funds transfer and trading"
     // },
-    {
-      icon: "/images/rise.jpg",
-      name: "Rise Chain",
-      description: 'The fastest blockchain, secured by Ethereum.',
-    },
-    {
-      icon: "/images/tradingview.png",
-      name: "TradingView",
-      description: "Powerful charting capabilities powered by TradingView"
-    },
+    // {
+    //   icon: "/images/rise.jpg",
+    //   name: "Rise Chain",
+    //   description: 'The fastest blockchain, secured by Ethereum.',
+    // },
+
     {
       icon: "/images/espresso.png",
       name: "Espresso Network",
       description: 'A confirmation layer built to support cross-chain composability.',
     },
-    // {
-    //   icon: "/images/binance.png",
-    //   name: "Binance",
-    //   description: "Access Binance liquidity pools through our platform"
-    // },
     {
-      icon: "/images/chainlink.png",
-      name: "Chainlink",
-      description: "Price oracle integration through Chainlink network"
+      icon: "/images/hyperlane.png",
+      name: "Hyperlane",
+      description: "Cross-chain composability through Hyperlane network"
     },
+    {
+      icon: "/images/privy.jpg",
+      name: "Privy",
+      description: "Secure wallet integration for private key management"
+    },
+    {
+      icon: "/images/ponder.png",
+      name: "Ponder",
+      description: "Fast, reliable, and maintainable backend software in crypto"
+    },
+    {
+      icon: "/images/tradingview.png",
+      name: "TradingView",
+      description: "Powerful charting capabilities powered by TradingView"
+    }
   ]
 
   return (
@@ -139,12 +145,8 @@ export function RiseIntegrationsSection() {
             <h3 className="text-2xl md:text-3xl font-bold mb-6">
               Play well with <span className="text-blue-500">others</span>
             </h3>
-            <p className="text-gray-300 mb-6">
-              Rise connects seamlessly with your favorite trading tools and platforms. 
-              It&apos;s easy to plug into any workflow and collaborate across your preferred services.
-            </p>
             <ul className="space-y-4">
-              {integrations.slice(0, 3).map((integration, index) => (
+              {integrations.slice(0, 5).map((integration, index) => (
                 <li key={index} className="flex items-start">
                   <div className="w-6 h-6 rounded-full bg-blue-900/30 border border-blue-800/30 flex items-center justify-center mr-3 mt-1">
                     <span className="text-xs text-blue-500">✓</span>

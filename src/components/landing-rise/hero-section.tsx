@@ -1,9 +1,9 @@
 "use client"
 
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { ExternalLink, ArrowRight, ChevronRight, Users, BarChart4, Zap, Globe, Shield, ArrowRightCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
+import { ArrowRightCircle, BarChart4, ExternalLink, Globe, Shield, Users, Zap } from "lucide-react"
+import Link from "next/link"
 import { useRef, useState } from "react"
 
 export function HeroSection() {
@@ -20,9 +20,9 @@ export function HeroSection() {
     ]
 
     const features = [
-        { icon: Zap, text: "Lightning Fast" },
-        { icon: Shield, text: "Secure Trading" },
-        { icon: Globe, text: "Global Access" },
+        { icon: Zap, text: "Crosschain Trading" },
+        { icon: Shield, text: "Transparent Matching" },
+        { icon: Globe, text: "Unified Liquidity" },
     ]
 
     return (
@@ -49,7 +49,7 @@ export function HeroSection() {
                         >
                             <div className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full border border-blue-500/30 bg-blue-900/20 text-blue-400 text-xs sm:text-sm font-medium">
                                 <span className="mr-2 size-2 rounded-full bg-blue-400"></span>
-                                Decentralized Trading Platform
+                                Crosschain Decentralized CLOB
                             </div>
 
                             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
@@ -60,8 +60,7 @@ export function HeroSection() {
                             </h2>
 
                             <p className="text-base sm:text-lg md:text-xl text-gray-300">
-                                A decentralized finance protocol enabling permissionless spot trading with plans to expand into perpetual
-                                markets. Trade with confidence on our secure platform.
+                                Trade across any EVM chain without moving your funds. Unified liquidity, transparent execution.
                             </p>
 
                             <div className="flex flex-wrap gap-3 sm:gap-4 pt-2">

@@ -1,28 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  ArrowRight,
-  BarChart2,
-  LineChart,
-  Wallet,
-  ArrowUpRight,
-  CheckCircle2,
-  ShieldCheck,
-  Code2,
-  Terminal,
-  Puzzle,
-  Layers,
-  Users,
-  TrendingUp,
-  ArrowRightCircle,
-  ExternalLink,
-} from "lucide-react"
+import BlurText from "@/blocks/TextAnimations/BlurText/BlurText"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+    ArrowRightCircle,
+    ArrowUpRight,
+    BarChart2,
+    Code2,
+    ExternalLink,
+    Layers,
+    LineChart,
+    Puzzle,
+    ShieldCheck,
+    Terminal,
+    Users,
+    Wallet
+} from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { BlockchainBackground } from "./blockchain-background"
-import BlurText from "@/blocks/TextAnimations/BlurText/BlurText"
 
 export function RiseLandingPage() {
   const [mounted, setMounted] = useState(false)
@@ -108,7 +105,7 @@ export function RiseLandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-1">
               <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-900 text-blue-100 font-semibold rounded-full z-60 relative overflow-hidden mb-5">
-                Decentralized Trading Platform
+                Crosschain Decentralized CLOB
               </div>
               <BlurText
                 text="Great Trading"
@@ -125,8 +122,7 @@ export function RiseLandingPage() {
                 className="text-5xl md:text-6xl font-bold text-blue-600/80"
               />
               <p className="text-xl text-gray-300 pt-5">
-                A decentralized finance protocol enabling permissionless spot trading with plans to expand into
-                perpetual markets.
+                Trade across any EVM chain without moving your funds. Unified liquidity, transparent execution.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 <Link href="/markets" target="_blank">
@@ -360,19 +356,19 @@ export function RiseLandingPage() {
                 icon: Code2,
               },
               {
-                title: "Secure Trading",
+                title: "Transparent Matching",
                 description:
-                  "Built with industry-leading security measures to protect your assets and ensure safe trading",
+                  "On-chain order matching with complete transparency - no hidden fees or market manipulation",
                 icon: ShieldCheck,
               },
               {
-                title: "Fast Execution",
-                description: "Lightning-fast trade execution with real-time market data and instant order processing",
+                title: "Unified Liquidity",
+                description: "Access liquidity from all supported EVM chains in a single orderbook for better prices",
                 icon: Terminal,
               },
               {
-                title: "Open Architecture",
-                description: "Fully permissionless system allowing anyone to create markets and provide liquidity",
+                title: "Crosschain Orderbook",
+                description: "Eliminate fragmented liquidity across any EVM chains. Trade without moving funds from your favourite chain",
                 icon: Puzzle,
               },
             ].map((tech, index) => (

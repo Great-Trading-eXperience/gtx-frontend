@@ -9,10 +9,7 @@ import {
 } from '@/graphql/gtx/clob';
 import {
   MarketData,
-  ProcessedPool,
-  ProcessedTrade,
-  processPools,
-  processTrades
+  processPools
 } from '@/lib/market-data';
 import { getUseSubgraph } from '@/utils/env';
 import { useQuery } from '@tanstack/react-query';
@@ -49,20 +46,25 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
   const chainId = useChainId();
   const defaultChain = Number(DEFAULT_CHAIN);
 
-  // Force skeleton for 2 seconds using setTimeout
-  setTimeout(() => {
-    setIsLoading(false);
-  }, 2000);
+  // Use useEffect for timer to prevent running on every render
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []); // Run only once on mount
 
   // If initialMarketData is provided, we can skip the initial loading state
   const shouldFetchData = initialMarketData.length === 0;
 
-  // Fetch pools data with pagination
-  const { data: poolsData, error: poolsError } = useQuery<
+  // Fetch pools data with pagination and better error handling
+  const { data: poolsData, error: poolsError, isLoading: isQueryLoading } = useQuery<
     PoolsPonderResponse | PoolsResponse
   >({
     queryKey: ['pools', String(chainId ?? defaultChain), 'paginated'],
     queryFn: async () => {
+      console.log('[RPC-DEBUG] 📊 Markets - Fetching pools data');
       const currentChainId = Number(chainId ?? defaultChain);
       const url = GTX_GRAPHQL_URL(currentChainId);
       if (!url) throw new Error('GraphQL URL not found');
@@ -78,46 +80,63 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     refetchInterval: 60000,
     staleTime: 120000,
     enabled: shouldFetchData,
+    retry: (failureCount, error) => {
+      console.log(`[RPC-DEBUG] 📊 Markets query retry ${failureCount + 1}:`, error?.message);
+      
+      // Don't retry on 429 or timeout errors
+      if (error?.message?.includes('429') || error?.message?.includes('timeout')) {
+        console.log('[RPC-DEBUG] 🚫 Markets - Not retrying due to rate limit/timeout');
+        return false;
+      }
+      
+      return failureCount < 1; // Only 1 retry
+    },
+    retryDelay: 2000, // 2 second delay between retries
   });
 
-  // Process data when it becomes available
-  if (poolsData && markets.length === 0) {
-    processPools(poolsData).then(pools => {
-      const limitedPools = getUseSubgraph() ? pools : pools.slice(0, POOLS_PER_PAGE);
-      
-      if (limitedPools.length > 0) {
-        // Create market data directly
-        const marketData = limitedPools.map(pool => {
-          return {
-            id: pool.id,
-            name: pool.baseSymbol,
-            pair: pool.quoteSymbol,
-            starred: false,
-            iconInfo: { hasImage: false, imagePath: null, bg: '#000000' },
-            age: new Date(pool.timestamp * 1000).toLocaleDateString(),
-            timestamp: pool.timestamp,
-            price: '0.00', // Will be updated with real data
-            volume: pool.volume || '0',
-            liquidity: pool.maxOrderAmount || '0',
-          };
-        });
+  // Process data in useEffect to prevent render loops
+  useEffect(() => {
+    if (poolsData && markets.length === 0) {
+      console.log('[RPC-DEBUG] 📊 Processing pools data in useEffect');
+      processPools(poolsData).then(pools => {
+        const limitedPools = getUseSubgraph() ? pools : pools.slice(0, POOLS_PER_PAGE);
         
-        setMarkets(marketData);
-      }
-      setIsProcessingPools(false);
-    }).catch(error => {
-      console.error('Error processing pools:', error);
-      setIsProcessingPools(false);
-    });
-  }
-
-  // Handle errors
-  if (poolsError) {
-    console.error('Error fetching pools:', poolsError);
-    if (isProcessingPools) {
-      setIsProcessingPools(false);
+        if (limitedPools.length > 0) {
+          // Create market data directly
+          const marketData = limitedPools.map(pool => {
+            return {
+              id: pool.id,
+              name: pool.baseSymbol,
+              pair: pool.quoteSymbol,
+              starred: false,
+              iconInfo: { hasImage: false, imagePath: null, bg: '#000000' },
+              age: new Date(pool.timestamp * 1000).toLocaleDateString(),
+              timestamp: pool.timestamp,
+              price: '0.00', // Will be updated with real data
+              volume: pool.volume || '0',
+              liquidity: pool.maxOrderAmount || '0',
+            };
+          });
+          
+          setMarkets(marketData);
+        }
+        setIsProcessingPools(false);
+      }).catch(error => {
+        console.error('Error processing pools:', error);
+        setIsProcessingPools(false);
+      });
     }
-  }
+  }, [poolsData, markets.length, getUseSubgraph, POOLS_PER_PAGE]); // Dependencies
+
+  // Handle errors in useEffect
+  useEffect(() => {
+    if (poolsError) {
+      console.error('[RPC-DEBUG] ❌ Error fetching pools:', poolsError);
+      if (isProcessingPools) {
+        setIsProcessingPools(false);
+      }
+    }
+  }, [poolsError, isProcessingPools]); // Only run when poolsError changes
 
   // Trades data loading removed for performance - focusing on fast pool loading
 

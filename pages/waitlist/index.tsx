@@ -1,11 +1,10 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
-import { ArrowRight, CheckCircle, Users, Shield, Zap, Clock, Layers, ArrowUpRight, BarChart2, Code2, LineChart, Puzzle, ShieldCheck, Terminal, Wallet } from "lucide-react"
 import { DotPattern } from "@/components/magicui/dot-pattern"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import Link from "next/link"
+import { ArrowRight, ArrowUpRight, BarChart2, CheckCircle, Clock, Code2, LineChart, Puzzle, Wallet } from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState("")
@@ -127,7 +126,7 @@ export default function WaitlistPage() {
               </h1>
 
               <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Be among the first to experience the power of permissionless spot trading
+                Be among the first to experience crosschain trading with unified liquidity
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
@@ -329,11 +328,11 @@ export default function WaitlistPage() {
               //   stats: ["Dynamic Liquidation", "Cross-margin Support"],
               // },
               {
-                title: "Open Architecture",
+                title: "Crosschain Orderbook",
                 description:
-                  "Fully permissionless system allowing anyone to create markets, provide liquidity, and participate in the ecosystem.",
+                  "Eliminate fragmented liquidity across any EVM chains with our transparent matching engine. Trade without moving any funds on your favourite chain while feeling the high performance of our core deployed blockchain.",
                 icon: Puzzle,
-                // stats: ["Permissionless", "Composable"],
+                // stats: ["Crosschain", "Transparent"],
                 stats: []
               },
             ].map((feature, index) => (

@@ -1,9 +1,9 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import useCurrentTheme from "@/hooks/styles/theme"
+import { Twitter } from "lucide-react"
+import { useTheme } from "next-themes"
 import Link from "next/link"
-import { Twitter, MessageCircle, Github } from "lucide-react"
 
 const resources = [
   // {
@@ -70,7 +70,7 @@ const Footer = () => {
               <span className="text-3xl font-bold text-white">GTX</span>
             </Link>
             <p className="mt-4 text-gray-400 text-sm leading-relaxed">
-              Experience the power of permissionless spot trading.
+              Trade across any EVM chain without moving your funds.
             </p>
             <div className="py-5">
               <p className="text-gray-400 text-sm">© 2025 Great Trading eXperience</p>
@@ -129,7 +129,7 @@ const Footer = () => {
                 <span>Discord</span>
               </a> */}
               <a
-                href="https://x.com/gtxfi_official"
+                href="https://x.com/gtx_dex"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"

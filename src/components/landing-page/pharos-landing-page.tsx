@@ -44,7 +44,7 @@ export function PharosLandingPage() {
               </h1>
 
               <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Experience secure, transparent, and efficient spot trading on our permissionless decentralized exchange.
+                Trade across any EVM chain without moving your funds. Unified liquidity, transparent execution.
               </p>
 
               <div className="flex flex-wrap gap-5 pt-6">
