@@ -76,10 +76,7 @@ export default function TradingHistory({
 
   return (
     <div className="relative mt-1">
-      <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
-      <div className="absolute -right-32 top-0 h-64 w-64 rounded-full bg-gray-500/5 blur-3xl" />
-
-      <Card className="overflow-hidden rounded-lg border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
+      <Card className="overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
         <Tabs defaultValue="trades" className="w-full">
           <div className="space-y-3 p-3">
             <div className="relative">
@@ -208,9 +205,6 @@ export default function TradingHistory({
           </div>
         </Tabs>
       </Card>
-
-      {/* Bottom Gradient */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-gray-950/50 to-transparent" />
     </div>
   );
 }
