@@ -120,7 +120,7 @@ export const useBalance = (
             fetchBalance();
             intervalId = setInterval(() => {
                 refreshBalance();
-            }, 5000);
+            }, 30000);
         }
 
         return () => {

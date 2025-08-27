@@ -130,83 +130,6 @@ const SwapForm: React.FC = () => {
     }
   }, [isTokensLoading, tokensError, availableTokensFromPools]);
 
-  // Convert token addresses to Token objects for selector
-  const convertTokensForSelector = (tokenAddresses: Record<string, HexAddress>): Token[] => {
-    return Object.entries(tokenAddresses)
-      .map(([symbol, address]) => {
-        // Map token symbols to icon filenames with precise matching
-        const getTokenIcon = (tokenSymbol: string): string => {
-          // Exact symbol matches first
-          const exactMatches: Record<string, string> = {
-            'WETH': 'eth.png',
-            'mWETH': 'eth.png', 
-            'ETH': 'eth.png',
-            'NATIVE': 'eth.png',
-            'BTC': 'bitcoin.png',
-            'WBTC': 'bitcoin.png',
-            'mWBTC': 'bitcoin.png',
-            'USDC': 'usdc.png',
-            'MUSDC': 'usdc.png',
-            'DOGE': 'doge.png',
-            'LINK': 'link.png',
-            'PEPE': 'pepe.png',
-            'TRUMP': 'trump.png',
-            'SHIB': 'shiba.png',
-            'FLOKI': 'floki.png'
-          };
-
-          // Check for exact match first
-          if (exactMatches[tokenSymbol]) {
-            return exactMatches[tokenSymbol];
-          }
-
-          // If no exact match, check for partial matches
-          if (tokenSymbol.includes('ETH') || tokenSymbol.includes('WETH')) {
-            return 'eth.png';
-          }
-          if (tokenSymbol.includes('BTC') || tokenSymbol.includes('WBTC')) {
-            return 'bitcoin.png';
-          }
-          if (tokenSymbol.includes('USDC')) {
-            return 'usdc.png';
-          }
-
-          // Default fallback
-          return `${tokenSymbol.toLowerCase()}.png`;
-        };
-
-        const iconFilename = getTokenIcon(symbol);
-
-        return {
-          id: symbol.toLowerCase(),
-          name: getTokenFullName(symbol),
-          symbol: symbol,
-          icon: `/tokens/${iconFilename}`,
-          address: address,
-          description: address.slice(0, 6) + '...' + address.slice(-4)
-        };
-      });
-  };
-
-  // Helper to get full token names
-  const getTokenFullName = (symbol: string): string => {
-    const nameMap: Record<string, string> = {
-      'WETH': 'Wrapped Ethereum',
-      'mWETH': 'Mock Wrapped Ethereum',
-      'ETH': 'Ethereum',
-      'USDC': 'USD Coin',
-      'MUSDC': 'Mock USD Coin',
-      'WBTC': 'Wrapped Bitcoin',
-      'mWBTC': 'Mock Wrapped Bitcoin',
-      'TRUMP': 'Trump Token',
-      'PEPE': 'Pepe Token',
-      'LINK': 'Chainlink',
-      'DOGE': 'Dogecoin',
-      'NATIVE': 'Ethereum'
-    };
-    return nameMap[symbol] || symbol;
-  };
-
   // Prepare tokens for selector - dynamically from pools
   const availableTokensList: Token[] = useMemo(() => {
     // if (!availableTokensFromPools || availableTokensFromPools.length === 0) {
@@ -453,34 +376,26 @@ const SwapForm: React.FC = () => {
     }
   }, [walletType, useEmbeddedWallet, sourceToken, destToken, actualAddress, sourceTokenBalance, destTokenBalance, isSourceBalanceLoading, isDestBalanceLoading, isSourceBalanceError, isDestBalanceError]);
 
-  // Initialize default tokens
+  // Initialize default tokens - first token as source, second token as destination
   useEffect(() => {
     if (availableTokensList.length > 0) {
       console.log('[SWAP] 🪙 Available tokens:', availableTokensList.map(t => `${t.symbol} (${t.address})`));
       
       if (!sourceToken) {
-        // For Rise Sepolia, default to MUSDC first
-        const musdcToken = availableTokensList.find(t => t.symbol === 'MUSDC');
-        const wethToken = availableTokensList.find(t => t.symbol === 'mWETH');
-        const defaultToken = musdcToken || wethToken || availableTokensList[0];
-        
-        setSourceToken(defaultToken);
-        console.log('[SWAP] 📤 Set default source token:', defaultToken.symbol, defaultToken.address);
+        // Use the first available token as source
+        const defaultSourceToken = availableTokensList[0];
+        setSourceToken(defaultSourceToken);
+        console.log('[SWAP] 📤 Set default source token (first):', defaultSourceToken.symbol, defaultSourceToken.address);
       }
 
       if (!destToken) {
-        // Try to find a different token than source - prefer mWBTC for Rise Sepolia
-        const mwbtcToken = availableTokensList.find(t => t.symbol === 'mWBTC' && t.address !== sourceToken?.address);
-        const wethToken = availableTokensList.find(t => t.symbol === 'mWETH' && t.address !== sourceToken?.address);
-        const differentToken = availableTokensList.find(t => t.address !== sourceToken?.address);
-        const fallbackToken = availableTokensList.find(t => t !== sourceToken);
-        const defaultToken = mwbtcToken || wethToken || differentToken || fallbackToken || availableTokensList[0];
-        
-        setDestToken(defaultToken);
-        console.log('[SWAP] 📥 Set default destination token:', defaultToken.symbol, defaultToken.address);
+        // Use the second available token as destination, or first if only one token exists
+        const defaultDestToken = availableTokensList.length > 1 ? availableTokensList[1] : availableTokensList[0];
+        setDestToken(defaultDestToken);
+        console.log('[SWAP] 📥 Set default destination token (second):', defaultDestToken.symbol, defaultDestToken.address);
         
         // If still the same token, log a warning
-        if (sourceToken && defaultToken.address === sourceToken.address) {
+        if (sourceToken && defaultDestToken.address === sourceToken.address) {
           console.warn('[SWAP] ⚠️ Warning: Only one token available, source and destination are identical');
         }
       }

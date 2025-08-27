@@ -80,7 +80,7 @@ export const useFaucetCooldown = (
             fetchFaucetCooldown();
             intervalId = setInterval(() => {
                 refreshFaucetCooldown();
-            }, 5000);
+            }, 30000);
         }
 
         return () => {

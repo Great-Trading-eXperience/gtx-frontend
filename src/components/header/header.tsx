@@ -1,7 +1,5 @@
 import { usePrivyAuth } from "@/hooks/use-privy-auth";
-import { useTokenBalance } from "@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf";
-import { useAvailableTokens } from "@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useWallets } from "@privy-io/react-auth";
 import { Check, ChevronDown, Menu, Moon, Sun, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -11,11 +9,11 @@ import { PrivyAuthButton } from "../auth/privy-auth-button";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
+import { appchainTestnet, arbitrumSepolia } from "@/configs/wagmi";
 import { isTabEnabled } from "@/constants/features/features-config";
+import { useSwitchAndAddChain } from "@/hooks/useSwitchAndAddChain";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSwitchAndAddChain } from "@/hooks/useSwitchAndAddChain";
-import { appchainTestnet, arbitrumSepolia, rariTestnet } from "@/configs/wagmi";
 import { Chain } from 'viem/chains';
 import { useChainId } from "wagmi";
 
@@ -26,8 +24,7 @@ interface NavbarProps {
 const ChainDropdown: React.FC = () => {
   const networks: Chain[] = [
     appchainTestnet,
-    arbitrumSepolia,
-    rariTestnet
+    arbitrumSepolia
   ];
 
   const chainId = useChainId();
@@ -40,10 +37,20 @@ const ChainDropdown: React.FC = () => {
 
   const { switchAndAddChain } = useSwitchAndAddChain();
 
+  // Sync selectedNetwork with actual chainId when wallet chain changes
+  useEffect(() => {
+    const actualNetwork = networks.find(network => network.id === chainId);
+    if (actualNetwork && actualNetwork.id !== selectedNetwork.id) {
+      setSelectedNetwork(actualNetwork);
+    }
+  }, [chainId, networks, selectedNetwork.id]);
+
   const handleSwitchChain = async (selectedChain : Chain) => {
     try {
       const result = await switchAndAddChain(selectedChain);
       console.log(result.message);
+      // Only update UI state if switch was successful
+      setSelectedNetwork(selectedChain);
     } catch (error) {
       // TypeScript knows 'error' is of type 'unknown', so we can check it
       if (error instanceof Error) {
@@ -51,9 +58,9 @@ const ChainDropdown: React.FC = () => {
       } else {
         console.error('An unknown error occurred.');
       }
+      // Don't update selectedNetwork if switch failed
     }
 
-    setSelectedNetwork(selectedChain);
     setIsOpen(false);
   }
 
@@ -248,22 +255,7 @@ const Header = ({onTogglePanel}: NavbarProps) => {
     if (address === 'Not Created') return address;
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
-
-  // Get available tokens from pools data
-  const { tokens: availableTokens } = useAvailableTokens();
   
-  // Find MUSDC token address dynamically
-  const musdcToken = availableTokens.find(token => 
-    token.symbol === 'MUSDC' || token.symbol === 'USDC'
-  );
-  const addressMUSDC = musdcToken?.address;
-
-  const {
-    formattedBalance: BalanceOfMUSDC,
-    tokenSymbol: SymbolMUSDC,
-    refetchBalance: refetchMUSDC,
-  } = useTokenBalance(addressMUSDC, embeddedWalletAddress as `0x${string}`);
-
   return (
     <header className="relative z-5 border-b border-white/10 backdrop-blur-lg bg-black/20">
       <nav className="flex flex-row py-3 px-5 md:grid md:grid-cols-3 md:items-center">

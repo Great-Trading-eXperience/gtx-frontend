@@ -43,7 +43,8 @@ export const useBalanceManagerBalance = (
   userAddress: `0x${string}` | undefined,
   tokenAddress: `0x${string}` | undefined,
   chainId: number,
-  decimals: number = 18
+  decimals: number = 18,
+  enabled: boolean = true
 ): UseBalanceManagerBalanceResult => {
   const balanceManagerAddress = getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`;
 
@@ -60,7 +61,7 @@ export const useBalanceManagerBalance = (
     args: userAddress && tokenAddress ? [userAddress, tokenAddress] : undefined,
     chainId,
     query: {
-      enabled: !!(userAddress && tokenAddress && balanceManagerAddress),
+      enabled: enabled && !!(userAddress && tokenAddress && balanceManagerAddress),
     }
   });
 

@@ -105,42 +105,42 @@ export const appchainTestnet: Chain = {
 };
 
 export const arbitrumSepolia: Chain = ({
-  id: 421614,
-  name: 'Arbitrum Sepolia',
-  nativeCurrency: {
-    name: 'Arbitrum Sepolia Ether',
-    symbol: 'ETH',
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://sepolia-rollup.arbitrum.io/rpc'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Arbiscan',
-      url: 'https://sepolia.arbiscan.io',
-      apiUrl: 'https://api-sepolia.arbiscan.io/api',
-    },
-  },
-  contracts: {
-    multicall3: {
-      address: '0xca11bde05977b3631167028862be2a173976ca11',
-      blockCreated: 81930,
-    },
-  },
-  testnet: true,
+	id: 421614,
+	name: 'Arbitrum Sepolia',
+	nativeCurrency: {
+		name: 'Arbitrum Sepolia Ether',
+		symbol: 'ETH',
+		decimals: 18,
+	},
+	rpcUrls: {
+		default: {
+			http: ['https://sepolia-rollup.arbitrum.io/rpc'],
+		},
+	},
+	blockExplorers: {
+		default: {
+			name: 'Arbiscan',
+			url: 'https://sepolia.arbiscan.io',
+			apiUrl: 'https://api-sepolia.arbiscan.io/api',
+		},
+	},
+	contracts: {
+		multicall3: {
+			address: '0xca11bde05977b3631167028862be2a173976ca11',
+			blockCreated: 81930,
+		},
+	},
+	testnet: true,
 })
 
 export const wagmiConfig = createConfig({
 	chains: [
-		// riseTestnet,
-		rariTestnet,
-		appchainTestnet],
+		appchainTestnet,
+		arbitrumSepolia,
+		rariTestnet,],
 	transports: {
-		// [riseTestnet.id]: http(riseTestnet.rpcUrls.default.http[0]),
-		[rariTestnet.id]: http(rariTestnet.rpcUrls.default.http[0]),
 		[appchainTestnet.id]: http(appchainTestnet.rpcUrls.default.http[0]),
+		[arbitrumSepolia.id]: http(arbitrumSepolia.rpcUrls.default.http[0]),
+		[rariTestnet.id]: http(rariTestnet.rpcUrls.default.http[0]),
 	},
 });

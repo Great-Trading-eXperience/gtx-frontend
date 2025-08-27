@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { useChainId } from 'wagmi';
 import { toast } from 'sonner';
-import { FEATURE_FLAGS } from '@/constants/features/features-config';
+import { needsChainForcing } from '@/utils/chain-override';
 
-// Appchain Testnet ID - the required chain when crosschain is enabled
+// Appchain Testnet ID - the default fallback chain
 const APPCHAIN_TESTNET_ID = 4661;
+// Supported chains
+const SUPPORTED_CHAINS = [4661, 421614]; // Appchain, Arbitrum Sepolia
 
 interface UseCrosschainForceResult {
   isChainCorrect: boolean;
@@ -18,9 +20,9 @@ interface UseCrosschainForceResult {
 }
 
 /**
- * Hook to handle crosschain-specific chain forcing
- * Forces users to Appchain Testnet when CROSSCHAIN_DEPOSIT_ENABLED is true
- * and they're not already on the appchain
+ * Hook to handle chain forcing
+ * Forces users to Appchain if they're on unsupported chains
+ * Allows free choice between Appchain and Arbitrum Sepolia
  */
 export function useCrosschainForce(): UseCrosschainForceResult {
   const { wallets } = useWallets();
@@ -37,9 +39,9 @@ export function useCrosschainForce(): UseCrosschainForceResult {
     wallet.connectorType === 'embedded'
   ) || wallets[0]; // Fallback to first wallet if no specific embedded wallet found
   
-  // Check if crosschain forcing is needed
-  const needsCrosschainForce = FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED && currentChainId !== APPCHAIN_TESTNET_ID;
-  const isChainCorrect = !needsCrosschainForce || currentChainId === APPCHAIN_TESTNET_ID;
+  // Check if forcing is needed (only if not on supported chains)
+  const needsCrosschainForce = needsChainForcing(currentChainId);
+  const isChainCorrect = SUPPORTED_CHAINS.includes(currentChainId);
   
   /**
    * Force switch to Appchain Testnet
@@ -194,7 +196,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
    * Initial mount effect - runs once when hook is first mounted
    */
   useEffect(() => {
-    console.log(`[CROSSCHAIN_FORCE] Hook initialized - crosschain enabled: ${FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED}, current chain: ${currentChainId}`);
+    console.log(`[CHAIN_FORCE] Hook initialized - current chain: ${currentChainId}, supported: ${SUPPORTED_CHAINS.includes(currentChainId)}`);
     setHasInitialCheck(true);
   }, []); // Empty dependency array - runs only on initial mount
 
@@ -216,9 +218,10 @@ export function useCrosschainForce(): UseCrosschainForceResult {
         chainId: w.chainId
       })));
 
-      console.log(`[CROSSCHAIN_FORCE] Checking chain force requirements:`, {
-        crosschainEnabled: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED,
+      console.log(`[CHAIN_FORCE] Checking chain force requirements:`, {
         currentChainId,
+        supportedChains: SUPPORTED_CHAINS,
+        isSupported: SUPPORTED_CHAINS.includes(currentChainId),
         targetChainId: APPCHAIN_TESTNET_ID,
         needsForce: needsCrosschainForce,
         hasWallet: !!embeddedWallet,
@@ -228,25 +231,20 @@ export function useCrosschainForce(): UseCrosschainForceResult {
         totalWallets: wallets.length
       });
 
-      if (!FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
-        console.log(`[CROSSCHAIN_FORCE] Crosschain not enabled, skipping chain force`);
-        return;
-      }
-
       if (!needsCrosschainForce) {
-        console.log(`[CROSSCHAIN_FORCE] Already on correct chain (${currentChainId}), no force needed`);
+        console.log(`[CHAIN_FORCE] Already on supported chain (${currentChainId}), no force needed`);
         return;
       }
 
       if (!embeddedWallet) {
-        console.log(`[CROSSCHAIN_FORCE] No suitable wallet found for chain switching, waiting for wallet connection...`);
-        console.log(`[CROSSCHAIN_FORCE] Consider connecting a wallet that supports programmatic chain switching`);
+        console.log(`[CHAIN_FORCE] No suitable wallet found for chain switching, waiting for wallet connection...`);
+        console.log(`[CHAIN_FORCE] Consider connecting a wallet that supports programmatic chain switching`);
         return;
       }
 
       // Additional check to ensure wallet has switchChain capability
       if (!embeddedWallet.switchChain) {
-        console.log(`[CROSSCHAIN_FORCE] Selected wallet does not support chain switching:`, {
+        console.log(`[CHAIN_FORCE] Selected wallet does not support chain switching:`, {
           walletType: embeddedWallet.walletClientType,
           connectorType: embeddedWallet.connectorType,
           hasSwitchChain: !!embeddedWallet.switchChain
@@ -256,13 +254,13 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       
       setIsCheckingChain(true);
       
-      console.log(`[CROSSCHAIN_FORCE] Starting automatic chain switch from ${currentChainId} to Appchain Testnet (${APPCHAIN_TESTNET_ID})`);
+      console.log(`[CHAIN_FORCE] Starting automatic chain switch from ${currentChainId} to Appchain Testnet (${APPCHAIN_TESTNET_ID})`);
       
       // Add a small delay to ensure wallet is fully connected
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Show informational message about required chain
-      toast.info('Crosschain features require Appchain Testnet. Switching networks...', {
+      toast.info('This feature requires Appchain Testnet or Arbitrum Sepolia. Switching to Appchain...', {
         duration: 3000,
       });
       
@@ -270,7 +268,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       const success = await forceChainSwitch();
       
       if (!success) {
-        toast.error('Please switch to Appchain Testnet manually to use this feature.', {
+        toast.error('Please switch to Appchain Testnet or Arbitrum Sepolia manually to use this feature.', {
           duration: 5000,
         });
       }

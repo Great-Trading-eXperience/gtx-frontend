@@ -1,12 +1,12 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { usePrivyAuth } from '@/hooks/use-privy-auth';
-import { Wallet, LogOut, Link, User, Mail, Globe, Copy, Check } from 'lucide-react';
 import { CustomAvatar } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
-import { useState, useEffect } from 'react';
-import { useChainId } from 'wagmi';
+import { Button } from '@/components/ui/button';
 import { appchainTestnet, wagmiConfig } from '@/configs/wagmi';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
+import { Check, Copy, Globe, LogOut, Mail, User, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useChainId } from 'wagmi';
 import { switchChain } from 'wagmi/actions';
 
 interface PrivyAuthButtonProps {

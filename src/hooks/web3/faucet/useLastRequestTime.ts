@@ -88,7 +88,7 @@ export const useLastRequestTime = (
             fetchLastRequestTime();
             intervalId = setInterval(() => {
                 refreshLastRequestTime();
-            }, 5000);
+            }, 30000);
         }
 
         return () => {
