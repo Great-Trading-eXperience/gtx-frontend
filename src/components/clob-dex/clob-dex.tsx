@@ -825,7 +825,7 @@ export default function ClobDex() {
           />
         </div>
 
-        <div className="space-y-[6px] h-fit">
+        <div className="space-y-[6px] h-fit max-height-[546px]">
           <MarketDataTabs
             address={effectiveAddress}
             chainId={chainId}
@@ -839,7 +839,7 @@ export default function ClobDex() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 h-fit">
           <PlaceOrder
             address={effectiveAddress}
             chainId={chainId}

@@ -6,7 +6,6 @@ interface GTXSliderProps {
 }
 
 const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
-
     const [percentage, setPercentage] = useState(0);
     const [inputValue, setInputValue] = useState('');
 
@@ -52,7 +51,7 @@ const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
                   max="100"
                   value={percentage}
                   onChange={(e) => setPercentage(parseInt(e.target.value))}
-                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                  className="w-full h-2 bg-black rounded-lg appearance-none cursor-pointer slider"
                   style={{
                     background: `linear-gradient(to right, #06b6d4 0%, #06b6d4 ${percentage}%, #475569 ${percentage}%, #475569 100%)`
                   }}
@@ -82,7 +81,7 @@ const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
                     className={`text-xs px-2 py-1 rounded transition-colors ${
                       percentage === value
                         ? 'text-cyan-400 bg-cyan-400/10'
-                        : 'text-gray-400 hover:text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-white/10'
                     }`}
                   >
                     {value}%
@@ -91,7 +90,7 @@ const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 rounded-lg p-2 border border-gray-700/50">
+            <div className="flex items-center space-x-2 rounded-lg p-2 border border-white/20">
               <input
                 type="text"
                 value={inputValue}

@@ -132,14 +132,14 @@ const ChainDropdown: React.FC = () => {
           width: buttonRect.width,
           zIndex: 9999,
         }}
-        className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl"
+        className="bg-black/60 border border-gray-600 rounded-lg shadow-xl"
       >
-        <div className="py-1">
+        <div>
           {networks.map((network) => (
             <button
               key={network.id}
               onClick={() => handleSwitchChain(network)}
-              className="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center justify-between group transition-colors duration-150 text-sm"
+              className="w-full px-4 py-2 text-left hover:bg-white/10 flex items-center justify-between group transition-colors duration-150 text-sm"
             >
               <span className="text-white font-medium">{network.name}</span>
               {selectedNetwork.id === network.id && (
@@ -158,7 +158,7 @@ const ChainDropdown: React.FC = () => {
       <button
         ref={buttonRef}
         onClick={handleToggle}
-        className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center justify-between transition-colors duration-200 min-w-[200px]"
+        className="bg-black/60 border border-white/20 text-white px-4 py-2 rounded-lg flex items-center justify-between transition-colors duration-200 min-w-[200px]"
       >
         <div className="flex items-center space-x-3">
           <span className="font-medium text-sm">{selectedNetwork.name}</span>
@@ -299,7 +299,7 @@ const Header = ({onTogglePanel}: NavbarProps) => {
             {ready && authenticated ? (
               <div className="flex flex-row items-center gap-2">
                 <ChainDropdown />
-                <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
+                <div onClick={onTogglePanel} className="border border-white/20 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1.5 text-white cursor-pointer">
                   <Wallet className="w-6 h-6" /> 
                   <span>{truncateAddress(embeddedWalletAddress)}</span>
                 </div>

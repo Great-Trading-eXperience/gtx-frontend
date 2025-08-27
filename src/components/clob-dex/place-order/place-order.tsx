@@ -715,14 +715,14 @@ const PlaceOrder = ({
     return <PlaceOrderSkeleton />;
 
   return (
-    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm">
+    <div className="bg-black rounded-lg p-3 max-w-md mx-auto border border-white/20 backdrop-blur-sm">
       <style jsx global>
         {inputStyles}
       </style>
 
       <div className="flex flex-col w-full gap-3 mb-3">
         {effectiveIsConnected && selectedPool && (
-          <div className="bg-gray-900/30 rounded-lg border border-gray-700/40 p-3">
+          <div className="bg-black rounded-lg border border-white/20 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-gray-300 flex items-center gap-1.5">
                 <Wallet className="w-4 h-4" />
@@ -731,7 +731,7 @@ const PlaceOrder = ({
               <button
                 onClick={refreshBalance}
                 disabled={isManualRefreshing || balanceIsLoading}
-                className="text-gray-300 hover:text-blue-400 transition-colors flex items-center gap-1.5 text-xs bg-gray-800/50 px-2 py-1 rounded border border-gray-700/40"
+                className="text-gray-300 hover:text-blue-400 transition-colors flex items-center gap-1.5 text-xs bg-white/10 px-2 py-1 rounded border border-white/20"
               >
                 <RefreshCw
                   className={`w-3 h-3 ${isManualRefreshing ? 'animate-spin' : ''}`}
@@ -740,7 +740,7 @@ const PlaceOrder = ({
               </button>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">
+              <span className="text-white">
                 {balanceIsLoading ? (
                   <div className="flex items-center gap-2">
                     <RefreshCw className="w-3 h-3 animate-spin" />
@@ -753,7 +753,7 @@ const PlaceOrder = ({
                   })
                 )}
               </span>
-              <span className="text-gray-400">
+              <span className="text-white">
                 {side === OrderSideEnum.BUY ? 'USDC' : selectedPool.coin.split('/')[0]}
               </span>
             </div>
@@ -805,13 +805,13 @@ const PlaceOrder = ({
 
           {/* Buy/Sell Selection */}
           <div className="relative">
-            <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-gray-700/50 bg-gray-900/20">
+            <div className="flex h-9 text-sm rounded-lg overflow-hidden border border-white/20 bg-black">
               <button
                 type="button"
                 className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
                   side === OrderSideEnum.BUY
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-transparent text-gray-300 hover:bg-gray-800/50'
+                    : 'bg-transparent text-white hover:bg-white/10'
                 }`}
                 onClick={() => setSide(OrderSideEnum.BUY)}
               >
@@ -822,7 +822,7 @@ const PlaceOrder = ({
                 className={`flex-1 flex items-center justify-center gap-1.5 transition-colors ${
                   side === OrderSideEnum.SELL
                     ? 'bg-rose-600 text-white'
-                    : 'bg-transparent text-gray-300 hover:bg-gray-800/50'
+                    : 'bg-transparent text-white hover:bg-white/10'
                 }`}
                 onClick={() => setSide(OrderSideEnum.SELL)}
               >
@@ -835,13 +835,13 @@ const PlaceOrder = ({
         {/* Price - Only for Limit Orders */}
         {orderType === 'limit' && (
           <div className="space-y-1">
-            <label className="text-sm text-gray-300 flex items-center gap-1.5 ml-1">
+            <label className="text-sm text-white flex items-center gap-1.5 ml-1">
               <span>Price</span>
             </label>
             <div className="relative">
               <input
                 type="number"
-                className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
+                className="w-full bg-black text-white text-sm rounded-lg py-2 px-3 pr-16 border border-white/20 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
                 placeholder="Enter price"
@@ -849,7 +849,7 @@ const PlaceOrder = ({
                 min="0"
                 required
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-white/10 px-2 py-0.5 rounded border border-white/20">
                 {selectedPool?.quoteTokenAddress ? selectedPool.coin.split('/')[1] : ''}
               </div>
             </div>
@@ -858,13 +858,13 @@ const PlaceOrder = ({
 
         {/* Quantity */}
         <div className="space-y-1">
-          <label className="text-sm text-gray-300 flex items-center justify-between ml-1">
+          <label className="text-sm text-white flex items-center justify-between ml-1">
             <span>Quantity</span>
           </label>
           <div className="relative">
             <input
               type="number"
-              className="w-full bg-gray-900/40 text-white text-sm rounded-lg py-2 px-3 pr-16 border border-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500/50 transition-all"
+              className="w-full bg-black text-white text-sm rounded-lg py-2 px-3 pr-16 border border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               value={quantity}
               onChange={e => {
                 const value = e.target.value;
@@ -896,7 +896,7 @@ const PlaceOrder = ({
               // min="0"
               required
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white bg-white/10 px-2 py-0.5 rounded border border-white/20">
               {side === OrderSideEnum.BUY ? 
                 (orderType === 'market' ? 'USDC' : selectedPool?.coin.split('/')[0]) : 
                 selectedPool?.coin.split('/')[0]
@@ -908,18 +908,18 @@ const PlaceOrder = ({
 
         {/* Order Value/Minimum Received - Display Only */}
         <div className="space-y-1">
-          <label className="text-sm text-gray-300 flex items-center justify-between ml-1">
+          <label className="text-sm text-white flex items-center justify-between ml-1">
             <span>
               {orderType === 'limit' ? 'Order Value' : 
                (side === OrderSideEnum.BUY ? 'Minimum Received' : 'Minimum Proceeds')
               }
             </span>
           </label>
-          <div className="relative bg-gray-900/40 rounded-lg py-2 px-3 pr-16 border border-gray-700/50">
+          <div className="relative bg-black rounded-lg py-2 px-3 pr-16 border border-white/20">
             <div className="text-white text-sm">
               {total}
             </div>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700/40">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white bg-white/10 px-2 py-0.5 rounded border border-white/20">
               {orderType === 'limit' 
                 ? 'USDC'  // Limit orders always show USDC value (price * quantity)
                 : (side === OrderSideEnum.BUY ? selectedPool?.coin.split('/')[0] : 'USDC')
@@ -930,7 +930,7 @@ const PlaceOrder = ({
 
         {/* Slippage Info for Market Orders */}
         {orderType === 'market' && quantity && selectedPool && pool && (
-          <div className="bg-gray-900/30">
+          <div className="bg-black">
             {slippageInfo ? (
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">

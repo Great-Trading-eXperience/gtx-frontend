@@ -424,7 +424,7 @@ const EnhancedOrderBookDex = ({
   }
   
   return (
-    <div className="w-full overflow-hidden rounded-b-xl bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
+    <div className="w-full overflow-hidden bg-black text-white shadow-lg">
       <div className="flex items-center justify-between border-b border-gray-800/30 px-4 py-3">
         <div className="relative" ref={dropdownRef}>
           <div className='flex items-center'>
@@ -472,7 +472,7 @@ const EnhancedOrderBookDex = ({
         </div>
       </div>
 
-      <div className="py-2">
+      <div>
         {/* Loading state */}
         {isLoading || !selectedPool ? (
           <div className="flex justify-center py-8">
@@ -483,7 +483,7 @@ const EnhancedOrderBookDex = ({
             {(viewType === 'both' || viewType === 'asks') && (
               <div>
                 {/* Column Headers for Asks */}
-                <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+                <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
                   <div>Price</div>
                   <div className="text-center">Size</div>
                   <div className="text-right">Total</div>
@@ -508,7 +508,7 @@ const EnhancedOrderBookDex = ({
                       <div key={ask.key || `ask-${i}`} className="group relative">
                         {/* Volume bar - not animated */}
                         <div
-                          className="absolute bottom-0 left-0 top-0 bg-rose-500/10 transition-all group-hover:bg-rose-500/20"
+                          className="absolute bottom-0 left-0 top-0 bg-rose-500/20 transition-all group-hover:bg-rose-500/30"
                           style={{
                             width: `${((ask.total || 0) * 100) / maxTotal}%`,
                           }}
@@ -538,7 +538,7 @@ const EnhancedOrderBookDex = ({
             )}
 
             {viewType === 'both' && (
-              <div className="my-2 border-y border-gray-800/30 bg-gray-900/40 px-4 py-2 text-xs">
+              <div className="my-2 border-y border-white/20 bg-gray-900/40 px-4 py-2 text-xs">
                 {/* Single row with price (with arrow) and spread */}
                 <div className="flex justify-between text-gray-200">
                   <div className="flex items-center gap-4">
@@ -583,7 +583,7 @@ const EnhancedOrderBookDex = ({
             {(viewType === 'both' || viewType === 'bids') && (
               <div>
                 {/* Column Headers for Bids */}
-                <div className="grid grid-cols-3 border-y border-gray-800/30 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+                <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
                   <div>Price</div>
                   <div className="text-center">Size</div>
                   <div className="text-right">Total</div>
@@ -608,7 +608,7 @@ const EnhancedOrderBookDex = ({
                       <div key={bid.key || `bid-${i}`} className="group relative">
                         {/* Volume bar - not animated */}
                         <div
-                          className="absolute bottom-0 left-0 top-0 bg-emerald-500/10 transition-all group-hover:bg-emerald-500/20"
+                          className="absolute bottom-0 left-0 top-0 bg-emerald-500/20 transition-all group-hover:bg-emerald-500/30"
                           style={{
                             width: `${((bid.total || 0) * 100) / maxTotal}%`,
                           }}

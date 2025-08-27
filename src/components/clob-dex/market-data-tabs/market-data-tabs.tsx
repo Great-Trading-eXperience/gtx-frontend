@@ -1,6 +1,6 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from 'react';
 import { RecentTradeItem, TradeItem } from '@/graphql/gtx/clob';
 import { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
@@ -23,6 +23,8 @@ export interface MarketDataTabsProps extends ClobDexComponentProps {
   tradesLoading: boolean;
 }
 
+type TabValue = 'orderbook' | 'trades';
+
 const MarketDataTabs = ({
   chainId,
   defaultChainId,
@@ -33,40 +35,35 @@ const MarketDataTabs = ({
   trades,
   tradesLoading
 }: MarketDataTabsProps) => {
+  const [activeTab, setActiveTab] = useState<TabValue>('orderbook');
+
   // Show skeleton when pools are loading or no data is available yet
   if (poolsLoading || (!selectedPool && !depthData && trades.length === 0)) {
     return <MarketDataTabsSkeleton />;
   }
 
-  return (
-    <div className="relative w-full overflow-hidden rounded-lg border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 shadow-lg backdrop-blur-sm">
-      <Tabs defaultValue="orderbook" className="w-full">
-        <div className="relative border-b border-gray-800/30 backdrop-blur-sm">
-          <TabsList className="flex w-full justify-start gap-1 bg-transparent px-4 py-1">
-            <TabsTrigger
-              value="orderbook"
-              className="group w-1/2 flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-gray-300 transition-all duration-300 hover:bg-gray-800/30 hover:text-gray-200 data-[state=active]:bg-gray-800/40 data-[state=active]:text-white"
-            >
-              <LineChart className="h-4 w-4" />
-              <span>Order Book</span>
-              <span className="absolute bottom-0 left-0 h-[2px] w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
-            </TabsTrigger>
-            <TabsTrigger
-              value="trades"
-              className="group w-1/2 flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-gray-300 transition-all duration-300 hover:bg-gray-800/30 hover:text-gray-200 data-[state=active]:bg-gray-800/40 data-[state=active]:text-white"
-            >
-              <BarChart2 className="h-4 w-4" />
-              <span>Trades</span>
-              <span className="absolute bottom-0 left-0 h-[2px] w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
-            </TabsTrigger>
-          </TabsList>
-        </div>
+  const tabs = [
+    {
+      value: 'orderbook' as const,
+      label: 'Order Book',
+      icon: LineChart,
+    },
+    {
+      value: 'trades' as const,
+      label: 'Trades',
+      icon: BarChart2,
+    },
+  ];
 
-        <div className="p-0">
-          <TabsContent
-            value="orderbook"
-            className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
-          >
+  const handleTabClick = (tabValue: TabValue) => {
+    setActiveTab(tabValue);
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'orderbook':
+        return (
+          <div className="transition-all duration-300 animate-in fade-in-0">
             <EnhancedOrderBookDex
               chainId={chainId}
               defaultChainId={defaultChainId}
@@ -75,24 +72,48 @@ const MarketDataTabs = ({
               poolsError={poolsError}
               depthData={depthData}
             />
-          </TabsContent>
-
-          <TabsContent
-            value="trades"
-            className="mt-0 transition-all duration-300 data-[state=inactive]:opacity-0 data-[state=active]:animate-in data-[state=active]:fade-in-0"
-          >
+          </div>
+        );
+      case 'trades':
+        return (
+          <div className="transition-all duration-300 animate-in fade-in-0">
             <RecentTradesComponent
               chainId={chainId ?? defaultChainId}
               defaultChainId={defaultChainId}
               tradesData={trades}
               tradesLoading={tradesLoading}
             />
-          </TabsContent>
-        </div>
-      </Tabs>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
-      {/* Bottom Gradient */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-gray-950/50 to-transparent" />
+  return (
+    <div className="relative w-full overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
+      <div className="relative border-b border-white/20 backdrop-blur-sm">
+        <div className="flex w-full justify-start gap-1 bg-transparent">
+          {tabs.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              onClick={() => handleTabClick(value)}
+              className={`group w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-300 hover:text-gray-200 ${
+                activeTab === value
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        {renderTabContent()}
+      </div>
     </div>
   );
 };

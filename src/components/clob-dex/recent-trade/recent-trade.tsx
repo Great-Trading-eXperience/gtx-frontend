@@ -86,12 +86,12 @@ const RecentTradesComponent = ({
 	console.log('trades-1', trades);
 
 	return (
-		<div className="w-full overflow-hidden rounded-xl border border-gray-800/30 bg-gradient-to-b from-gray-950 to-gray-900 text-white shadow-lg">
+		<div className="w-full h-fit overflow-hidden bg-black text-white shadow-lg">
 			{/* Header */}
 
-			<div className="flex h-[550px] flex-col rounded-lg">
+			<div className="flex h-fit max-h-[546px] flex-col rounded-lg">
 				{/* Column Headers */}
-				<div className="sticky top-0 z-10 border-b border-gray-800/30 bg-gray-900/40 px-4 py-2">
+				<div className="sticky top-0 z-10 border-b border-white/20 bg-gray-900/40 px-4 py-2">
 					<div className="grid grid-cols-3 items-center text-xs font-medium text-gray-300">
 						<div className="flex items-center gap-1">Price</div>
 						<div className="flex items-center justify-center gap-1">
@@ -103,7 +103,7 @@ const RecentTradesComponent = ({
 				</div>
 
 				{/* Trades List */}
-				<div className="flex-1 px-0 py-2 overflow-auto [&::-webkit-scrollbar]:w-[2px] [&::-webkit-scrollbar-track]:bg-gray-100 dark:[&::-webkit-scrollbar-track]:bg-gray-900">
+				<div className="flex-1 overflow-auto [&::-webkit-scrollbar]:w-[2px] [&::-webkit-scrollbar-track]:bg-gray-100 dark:[&::-webkit-scrollbar-track]:bg-gray-900">
 					<div className="space-y-[2px]">
 						{trades.map((trade, i) => {
 							const maxTotal = Math.max(...trades.map((t) => t.total || 0));
@@ -115,8 +115,8 @@ const RecentTradesComponent = ({
 									<div
 										className={`absolute bottom-0 left-0 top-0 transition-all ${
 											trade.side === 'Buy'
-												? 'bg-emerald-500/10 group-hover:bg-emerald-500/20'
-												: 'bg-rose-500/10 group-hover:bg-rose-500/20'
+												? 'bg-emerald-500/20 group-hover:bg-emerald-500/30'
+												: 'bg-rose-500/20 group-hover:bg-rose-500/30'
 										}`}
 										style={{
 											width: `${percentageWidth}%`,

@@ -39,7 +39,7 @@ export default function MarketDataWidget({
   }
 
   return (
-    <div className="w-full bg-gradient-to-br from-gray-950 to-gray-900 border border-gray-700/30 text-white rounded-t-lg shadow-md">
+    <div className="w-full bg-black border border-white/20 text-white rounded-t-lg shadow-md">
       {/* Market data display with integrated selector */}
       <div className="flex items-center h-16 px-4">
         <div className="flex items-center space-x-2 w-72">
