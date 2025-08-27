@@ -1,6 +1,6 @@
 'use client';
 
-import { appchainTestnet, rariTestnet, wagmiConfig } from '@/configs/wagmi';
+import { appchainTestnet, arbitrumSepolia, rariTestnet, wagmiConfig } from '@/configs/wagmi';
 import { FEATURE_FLAGS } from '@/constants/features/features-config';
 import { useChainValidator } from '@/hooks/use-chain-validator';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
@@ -58,20 +58,21 @@ const createPrivyConfig = (): PrivyClientConfig => {
   };
 
   if (isCrosschainEnabled) {
-    // When crosschain is enabled, restrict to only Appchain and Rari
-    console.log(`[PRIVY_CONFIG] Restricting chains to Appchain and Rari Testnet only`);
+    // When crosschain is enabled, include all chains (Rari for embedded, Appchain/Arbitrum for external)
+    console.log(`[PRIVY_CONFIG] Including all chains - Rari for embedded wallets, Appchain/Arbitrum for external wallets`);
     
     return {
       ...baseConfig,
-      defaultChain: defineChain(appchainTestnet), // Default to appchain for crosschain features
+      defaultChain: defineChain(rariTestnet), // Default to Rari for embedded wallets
       supportedChains: [
-        defineChain(rariTestnet),
-        defineChain(appchainTestnet),
+        defineChain(rariTestnet),        // For embedded wallets
+        defineChain(appchainTestnet),    // For external wallets
+        defineChain(arbitrumSepolia),    // For external wallets
       ],
     };
   } else {
-    // When crosschain is disabled, use default Rari testnet configuration
-    console.log(`[PRIVY_CONFIG] Using default configuration with Rari Testnet`);
+    // When crosschain is disabled, use default configuration with all available chains
+    console.log(`[PRIVY_CONFIG] Using default configuration with all supported chains`);
     
     return {
       ...baseConfig,
@@ -79,6 +80,7 @@ const createPrivyConfig = (): PrivyClientConfig => {
       supportedChains: [
         defineChain(rariTestnet),
         defineChain(appchainTestnet),
+        defineChain(arbitrumSepolia),
       ],
     };
   }

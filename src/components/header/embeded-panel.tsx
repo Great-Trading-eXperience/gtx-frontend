@@ -2,6 +2,7 @@ import { wagmiConfig } from '@/configs/wagmi';
 import { ContractName, DEFAULT_CHAIN, getContractAddress } from '@/constants/contract/contract-address';
 import { FEATURE_FLAGS, getCoreChain, getSupportedCrosschainDepositChainNames, isCrosschainSupportedChain } from '@/constants/features/features-config';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
+import urlsConfig from '@/constants/urls/urls-config.json';
 import {
   PoolItem as GraphQLPoolItem,
   poolsPonderQuery,
@@ -26,19 +27,102 @@ import {
   Copy,
   CreditCard,
   Edit3,
+  ExternalLink,
+  History,
   Key,
   LogOut,
   QrCode,
   RefreshCw,
   Search,
-  Wifi,
   X
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react';
-import { toast as toastSonner } from 'sonner';
 import { useChainId } from 'wagmi';
 import GTXTooltip from '../clob-dex/place-order/tooltip';
+
+// GraphQL query for crosschain transfer history filtered by sender
+const getCrossChainTransfersQuery = `
+  query GetCrossChainTransferss($sender: String!) {
+    crossChainTransferss(
+      where: {
+        amount_gt: "0"
+        sender: $sender
+      }
+      orderBy: "timestamp"
+      orderDirection: "desc"
+    ) {
+      items {
+        direction
+        amount
+        recipient
+        sender
+        sourceChainId
+        sourceToken
+        dispatchMessage {
+          chainId
+          blockNumber
+          messageId
+          sender
+          timestamp
+          transactionHash
+          type
+          pairedMessages {
+            items {
+              blockNumber
+              chainId
+              type
+              transactionHash
+              timestamp
+              id
+              sender
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// TypeScript interfaces for crosschain transfer history
+interface PairedMessageItem {
+  blockNumber: string;
+  chainId: string;
+  type: string;
+  transactionHash: string;
+  timestamp: string;
+  id: string;
+  sender: string;
+}
+
+interface DispatchMessage {
+  chainId: string;
+  blockNumber: string;
+  messageId: string;
+  sender: string;
+  timestamp: string;
+  transactionHash: string;
+  type: string;
+  pairedMessages: {
+    items: PairedMessageItem[];
+  };
+}
+
+interface CrossChainTransfer {
+  direction: string;
+  amount: string;
+  recipient: string;
+  sender: string;
+  sourceChainId: string;
+  sourceToken: string;
+  dispatchMessage: DispatchMessage;
+}
+
+interface CrossChainTransfersResponse {
+  crossChainTransferss: {
+    items: CrossChainTransfer[];
+  };
+}
 
 interface Asset {
   symbol: string;
@@ -103,7 +187,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  const [activeTab, setActiveTab] = useState<'Asset' | 'Deposit' | 'Withdraw'>('Deposit');
+  const [activeTab, setActiveTab] = useState<'Asset' | 'Deposit' | 'Withdraw' | 'History'>('Deposit');
   const [hideDust, setHideDust] = useState(false);
 
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -117,19 +201,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     }
   }, [externalWallet]);
 
-  // Chain management functionality
-  const allChains = wagmiConfig.chains.map(chain => ({
-    id: chain.id,
-    name: chain.name,
-    shortName: chain.name.split(' ')[0], // "Rise Testnet" -> "Rise"
-    testnet: chain.testnet || false
-  }));
-
-  // Filter chains based on crosschain deposit feature
-  const availableChains = FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
-    ? allChains.filter(chain => isCrosschainSupportedChain(chain.id))
-    : allChains;
-
+  // Use wagmi chainId directly - no need for chain switching in embedded panel
   const parseChainId = (chainId: string | undefined): number | undefined => {
     if (!chainId) return undefined;
     return parseInt(chainId.replace('eip155:', ''));
@@ -137,64 +209,6 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   const embeddedWalletChainId = parseChainId(embeddedWallet?.chainId);
   const externalWalletChainId = parseChainId(externalWallet?.chainId);
-  const currentChain = availableChains.find(chain => chain.id === embeddedWalletChainId);
-
-  const [switchingChain, setSwitchingChain] = useState(false);
-
-  const switchEmbeddedChain = async (targetChainId: number): Promise<boolean> => {
-    if (!embeddedWallet) {
-      setToast({
-        message: 'No embedded wallet found',
-        type: 'error',
-        loading: false,
-        duration: 5000,
-      });
-      return false;
-    }
-    
-    if (embeddedWalletChainId === targetChainId) {
-      setToast({
-        message: 'Already on the selected network',
-        type: 'info',
-        loading: false,
-        duration: 3000,
-      });
-      return true;
-    }
-
-    setSwitchingChain(true);
-    try {
-      await embeddedWallet.switchChain(targetChainId);
-      
-      const chainInfo = availableChains.find(chain => chain.id === targetChainId);
-      setToast({
-        message: `Switched to ${chainInfo?.name || `Chain ${targetChainId}`}`,
-        type: 'success',
-        loading: false,
-        duration: 3000,
-      });
-      
-      // Refresh balances after successful chain switch
-      setTimeout(() => {
-        refetchAllBalances();
-      }, 1000);
-      
-      return true;
-    } catch (error: any) {
-      console.error('Failed to switch chain:', error);
-      
-      if (error.message?.includes('not configured')) {
-        toastSonner.error('Network not supported');
-      } else if (error.message?.includes('rejected') || error.message?.includes('denied')) {
-        toastSonner.error('Network switch cancelled');
-      } else {
-        toastSonner.error('Failed to switch network');
-      }
-      return false;
-    } finally {
-      setSwitchingChain(false);
-    }
-  };
 
   // Get token addresses for current chain (with fallback)
   const getTokenAddressForChain = (chainId: number | undefined, contractName: ContractName) => {
@@ -228,6 +242,30 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     },
     refetchInterval: 60000,
     staleTime: 60000,
+  });
+
+  // Fetch crosschain transfer history for external wallet sender
+  const {
+    data: crosschainHistoryData,
+    isLoading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory
+  } = useQuery<CrossChainTransfersResponse>({
+    queryKey: ['crosschain-history', externalWalletAddress],
+    queryFn: async () => {
+      if (!externalWalletAddress || externalWalletAddress === 'Not Connected') {
+        throw new Error('External wallet address not available');
+      }
+      const currentChainId = Number(chainId ?? defaultChainId);
+      const url = GTX_GRAPHQL_URL(currentChainId);
+      if (!url) throw new Error('GraphQL URL not found');
+      
+      console.log(`[HISTORY] Fetching crosschain transfers for sender: ${externalWalletAddress}`);
+      return await request(url, getCrossChainTransfersQuery, { sender: externalWalletAddress });
+    },
+    enabled: isOpen && !!externalWalletAddress && externalWalletAddress !== 'Not Connected', // Only fetch when panel is open and external wallet is connected
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 20000,
   });
 
   const processPool = (pool: GraphQLPoolItem): ProcessedPoolItem => {
@@ -295,7 +333,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   const baseCurrency = selectedPool?.baseTokenAddress as HexAddress;
   const quoteCurrency = selectedPool?.quoteTokenAddress as HexAddress;
 
-  const balanceDisplayChainId = getCoreChain();
+  // For embedded wallets, use the embedded wallet's actual chain ID
+  // For external wallets or when no embedded wallet, use header's chain ID or core chain as fallback
+  const balanceDisplayChainId = embeddedWalletChainId || chainId || getCoreChain();
   
   // Get token addresses for the balance display chain
   const getTokenAddressForBalanceChain = (contractName: ContractName) => {
@@ -350,7 +390,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   }, [poolsData, selectedPool]);
 
   // Hardcoded token mapping for crosschain deposits
-  // Source wallet uses appchain addresses, destination wallet (GTX) uses rari addresses
+  // Source wallet uses appchain/arbitrum addresses, destination wallet (GTX) uses rari addresses
   const HARDCODED_TOKENS = [
     // USDT
     {
@@ -359,7 +399,10 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       decimals: 6,
       isQuote: true,
       chainId: embeddedWalletChainId || balanceDisplayChainId,
-      sourceAddress: '0x1362Dd75d8F1579a0Ebd62DF92d8F3852C3a7516' as HexAddress // appchain for source
+      sourceAddresses: {
+        4661: '0x1362Dd75d8F1579a0Ebd62DF92d8F3852C3a7516' as HexAddress, // appchain
+        421614: '0x5eafC52D170ff391D41FBA99A7e91b9c4D49929a' as HexAddress  // arbitrum sepolia
+      }
     },
     // WETH  
     {
@@ -368,7 +411,10 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       decimals: 18,
       isQuote: false,
       chainId: embeddedWalletChainId || balanceDisplayChainId,
-      sourceAddress: '0x02950119C4CCD1993f7938A55B8Ab8384C3CcE4F' as HexAddress // appchain for source
+      sourceAddresses: {
+        4661: '0x02950119C4CCD1993f7938A55B8Ab8384C3CcE4F' as HexAddress, // appchain
+        421614: '0x6B4C6C7521B3Ed61a9fA02E926b73D278B2a6ca7' as HexAddress  // arbitrum sepolia
+      }
     },
     // WBTC
     {
@@ -377,14 +423,17 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       decimals: 8,
       isQuote: false,
       chainId: embeddedWalletChainId || balanceDisplayChainId,
-      sourceAddress: '0xb2e9Eabb827b78e2aC66bE17327603778D117d18' as HexAddress // appchain for source
+      sourceAddresses: {
+        4661: '0xb2e9Eabb827b78e2aC66bE17327603778D117d18' as HexAddress, // appchain
+        421614: '0x24E55f604FF98a03B9493B53bA3ddEbD7d02733A' as HexAddress  // arbitrum sepolia
+      }
     }
   ];
 
-  // For crosschain: use ONLY hardcoded tokens, ignore pool tokens completely
-  // For non-crosschain: use only pool tokens
+  // For crosschain: use hardcoded tokens OR pool tokens based on embedded wallet's actual chain
+  // For non-crosschain: use only pool tokens  
   const allUniqueTokens = FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED 
-    ? HARDCODED_TOKENS
+    ? (embeddedWalletChainId === 1918988905 ? HARDCODED_TOKENS : uniqueTokens) // Use hardcoded tokens only if embedded wallet is on Rari
     : uniqueTokens;
 
 
@@ -397,154 +446,180 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   const token4 = allUniqueTokens[4];
 
   // Create hooks for token 0 (GTX wallet balances)
+  // Use embedded wallet's actual chain ID for balance queries
   const token0Balance = useTokenBalance(
     token0?.address,
     embeddedWalletAddress as `0x${string}`,
-    balanceDisplayChainId
+    embeddedWalletChainId || balanceDisplayChainId,
+    isOpen
   );
   const token0BalanceManager = useBalanceManagerBalance(
     embeddedWalletAddress as `0x${string}`,
     token0?.address,
-    balanceDisplayChainId,
-    token0?.decimals || 18
+    embeddedWalletChainId || balanceDisplayChainId,
+    token0?.decimals || 18,
+    isOpen
   );
   
   // Create hooks for token 0 (External wallet balances)
-  // Use sourceAddress for crosschain tokens (source wallet), otherwise use regular address
-  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
+  // Use sourceAddresses for crosschain tokens (source wallet), otherwise use regular address
+  // IMPORTANT: Use chainId (from header) for external wallet balance queries to align with selected network
+  const token0SourceAddress = (token0 as any)?.sourceAddresses?.[chainId] || token0?.address;
   const token0ExternalBalance = useTokenBalance(
-    (token0 as any)?.sourceAddress || token0?.address,
+    token0SourceAddress,
     externalWalletAddress as `0x${string}`,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
+    chainId || balanceDisplayChainId,
+    isOpen
   );
   
   // Create hooks for token 0 (BalanceManager on connected chain - for crosschain deposits)
-  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
+  // IMPORTANT: Use chainId (from header) for balance manager queries to align with selected network
   const token0ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
-    (token0 as any)?.sourceAddress || token0?.address,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
-    token0?.decimals || 18
+    token0SourceAddress,
+    chainId || balanceDisplayChainId,
+    token0?.decimals || 18,
+    isOpen
   );
 
   // Create hooks for token 1 (GTX wallet balances)
   const token1Balance = useTokenBalance(
     token1?.address,
     embeddedWalletAddress as `0x${string}`,
-    balanceDisplayChainId
+    embeddedWalletChainId || balanceDisplayChainId,
+    isOpen
   );
   const token1BalanceManager = useBalanceManagerBalance(
     embeddedWalletAddress as `0x${string}`,
     token1?.address,
-    balanceDisplayChainId,
-    token1?.decimals || 18
+    embeddedWalletChainId || balanceDisplayChainId,
+    token1?.decimals || 18,
+    isOpen
   );
   
   // Create hooks for token 1 (External wallet balances)
-  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
+  // IMPORTANT: Use chainId (from header) for external wallet balance queries to align with selected network
+  const token1SourceAddress = (token1 as any)?.sourceAddresses?.[chainId] || token1?.address;
   const token1ExternalBalance = useTokenBalance(
-    (token1 as any)?.sourceAddress || token1?.address,
+    token1SourceAddress,
     externalWalletAddress as `0x${string}`,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
+    chainId || balanceDisplayChainId,
+    isOpen
   );
   
   // Create hooks for token 1 (BalanceManager on connected chain - for crosschain deposits)
-  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
+  // IMPORTANT: Use chainId (from header) for balance manager queries to align with selected network
   const token1ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
-    (token1 as any)?.sourceAddress || token1?.address,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
-    token1?.decimals || 18
+    token1SourceAddress,
+    chainId || balanceDisplayChainId,
+    token1?.decimals || 18,
+    isOpen
   );
 
   // Create hooks for token 2 (GTX wallet balances)
   const token2Balance = useTokenBalance(
     token2?.address,
     embeddedWalletAddress as `0x${string}`,
-    balanceDisplayChainId
+    embeddedWalletChainId || balanceDisplayChainId,
+    isOpen
   );
   const token2BalanceManager = useBalanceManagerBalance(
     embeddedWalletAddress as `0x${string}`,
     token2?.address,
-    balanceDisplayChainId,
-    token2?.decimals || 18
+    embeddedWalletChainId || balanceDisplayChainId,
+    token2?.decimals || 18,
+    isOpen
   );
   
   // Create hooks for token 2 (External wallet balances)
-  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
+  // IMPORTANT: Use chainId (from header) for external wallet balance queries to align with selected network
+  const token2SourceAddress = (token2 as any)?.sourceAddresses?.[chainId] || token2?.address;
   const token2ExternalBalance = useTokenBalance(
-    (token2 as any)?.sourceAddress || token2?.address,
+    token2SourceAddress,
     externalWalletAddress as `0x${string}`,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
+    chainId || balanceDisplayChainId,
+    isOpen
   );
   
   // Create hooks for token 2 (BalanceManager on connected chain - for crosschain deposits)
-  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
+  // IMPORTANT: Use chainId (from header) for balance manager queries to align with selected network
   const token2ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
-    (token2 as any)?.sourceAddress || token2?.address,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
-    token2?.decimals || 18
+    token2SourceAddress,
+    chainId || balanceDisplayChainId,
+    token2?.decimals || 18,
+    isOpen
   );
 
   // Create hooks for token 3 (GTX wallet balances)
   const token3Balance = useTokenBalance(
     token3?.address,
     embeddedWalletAddress as `0x${string}`,
-    balanceDisplayChainId
+    embeddedWalletChainId || balanceDisplayChainId,
+    isOpen
   );
   const token3BalanceManager = useBalanceManagerBalance(
     embeddedWalletAddress as `0x${string}`,
     token3?.address,
-    balanceDisplayChainId,
-    token3?.decimals || 18
+    embeddedWalletChainId || balanceDisplayChainId,
+    token3?.decimals || 18,
+    isOpen
   );
   
   // Create hooks for token 3 (External wallet balances)
-  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
+  // IMPORTANT: Use chainId (from header) for external wallet balance queries to align with selected network
+  const token3SourceAddress = (token3 as any)?.sourceAddresses?.[chainId] || token3?.address;
   const token3ExternalBalance = useTokenBalance(
-    (token3 as any)?.sourceAddress || token3?.address,
+    token3SourceAddress,
     externalWalletAddress as `0x${string}`,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
+    chainId || balanceDisplayChainId,
+    isOpen
   );
   
   // Create hooks for token 3 (BalanceManager on connected chain - for crosschain deposits)
-  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
+  // IMPORTANT: Use chainId (from header) for balance manager queries to align with selected network
   const token3ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
-    (token3 as any)?.sourceAddress || token3?.address,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
-    token3?.decimals || 18
+    token3SourceAddress,
+    chainId || balanceDisplayChainId,
+    token3?.decimals || 18,
+    isOpen
   );
 
   // Create hooks for token 4 (GTX wallet balances)
   const token4Balance = useTokenBalance(
     token4?.address,
     embeddedWalletAddress as `0x${string}`,
-    balanceDisplayChainId
+    embeddedWalletChainId || balanceDisplayChainId,
+    isOpen
   );
   const token4BalanceManager = useBalanceManagerBalance(
     embeddedWalletAddress as `0x${string}`,
     token4?.address,
-    balanceDisplayChainId,
-    token4?.decimals || 18
+    embeddedWalletChainId || balanceDisplayChainId,
+    token4?.decimals || 18,
+    isOpen
   );
   
   // Create hooks for token 4 (External wallet balances)
-  // IMPORTANT: Use externalWalletChainId to fetch balance from the chain the external wallet is actually connected to
+  // IMPORTANT: Use chainId (from header) for external wallet balance queries to align with selected network
+  const token4SourceAddress = (token4 as any)?.sourceAddresses?.[chainId] || token4?.address;
   const token4ExternalBalance = useTokenBalance(
-    (token4 as any)?.sourceAddress || token4?.address,
+    token4SourceAddress,
     externalWalletAddress as `0x${string}`,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId
+    chainId || balanceDisplayChainId,
+    isOpen
   );
   
   // Create hooks for token 4 (BalanceManager on connected chain - for crosschain deposits)
-  // IMPORTANT: Use externalWalletChainId for external wallet BalanceManager queries
+  // IMPORTANT: Use chainId (from header) for balance manager queries to align with selected network
   const token4ExternalBalanceManager = useBalanceManagerBalance(
     externalWalletAddress as `0x${string}`,
-    (token4 as any)?.sourceAddress || token4?.address,
-    externalWalletChainId || embeddedWalletChainId || balanceDisplayChainId,
-    token4?.decimals || 18
+    token4SourceAddress,
+    chainId || balanceDisplayChainId,
+    token4?.decimals || 18,
+    isOpen
   );
 
   // Aggregate token balances
@@ -693,45 +768,59 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   });
 
 
-  // Set default selected tokens when tokens are loaded
+  // Debug logging for token loading
   useEffect(() => {
-    if (tokens.length > 0 && !selectedDepositTokenAddress) {
-      // For crosschain: prefer hardcoded USDT, then quote tokens
-      // For non-crosschain: prefer quote tokens from pools
-      let defaultToken;
-      if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
-        // For crosschain, prefer USDT (check by symbol since addresses vary by chain)
-        const hardcodedUSDT = tokens.find(t => t.symbol === 'USDT');
-        const quoteToken = tokens.find(t => allUniqueTokens.find(ut => ut.address === t.address)?.isQuote);
-        defaultToken = hardcodedUSDT || quoteToken || tokens[0];
-      } else {
-        const quoteToken = tokens.find(t => allUniqueTokens.find(ut => ut.address === t.address)?.isQuote);
-        defaultToken = quoteToken || tokens[0];
+    console.log('🔍 Token loading debug:', {
+      allUniqueTokensLength: allUniqueTokens.length,
+      allUniqueTokens: allUniqueTokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
+      tokensLength: tokens.length,
+      tokens: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
+      uniqueTokensLength: uniqueTokens.length,
+      uniqueTokens: uniqueTokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
+      crosschainEnabled: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED,
+      embeddedWalletChainId,
+      selectedDepositTokenAddress,
+      selectedWithdrawTokenAddress
+    });
+  }, [allUniqueTokens.length, tokens.length, uniqueTokens.length, selectedDepositTokenAddress, selectedWithdrawTokenAddress, embeddedWalletChainId]);
+
+  // Set default selected tokens when tokens are loaded - use first available token
+  useEffect(() => {
+    if (tokens.length > 0) {
+      // Always set the first token as default if none is selected or if the current selection is invalid
+      const defaultToken = tokens[0];
+      const currentTokenExists = tokens.find(t => t.address === selectedDepositTokenAddress);
+      
+      if (!selectedDepositTokenAddress || !currentTokenExists) {
+        console.log('🚀 Setting default token (first available):', { 
+          defaultToken: defaultToken.address, 
+          symbol: defaultToken.symbol,
+          tokensLength: tokens.length,
+          previousSelection: selectedDepositTokenAddress,
+          currentTokenExists: !!currentTokenExists
+        });
+        setSelectedDepositTokenAddress(defaultToken.address);
+        setSelectedWithdrawTokenAddress(defaultToken.address);
       }
-      console.log('🚀 Setting default token:', { 
-        crosschainEnabled: FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED,
-        defaultToken: defaultToken.address, 
-        symbol: defaultToken.symbol,
-        tokensLength: tokens.length 
-      });
-      setSelectedDepositTokenAddress(defaultToken.address);
-      setSelectedWithdrawTokenAddress(defaultToken.address);
     }
-  }, [tokens.length, selectedDepositTokenAddress, allUniqueTokens.length]);
+  }, [tokens.length, selectedDepositTokenAddress, allUniqueTokens.length, tokens]);
 
   const currentDepositToken = tokens.find(token => token.address === selectedDepositTokenAddress);
   const currentWithdrawToken = tokens.find(
     token => token.address === selectedWithdrawTokenAddress
   );
 
-  // Debug logging
-  // console.log('🎯 Current token state:', {
-  //   selectedDepositTokenAddress,
-  //   selectedDepositTokenSymbol: currentDepositToken?.symbol,
-  //   currentDepositTokenAddress: currentDepositToken?.address,
-  //   tokensAvailable: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
-  //   uniqueTokensCount: uniqueTokens.length
-  // });
+  // Debug logging for current token state
+  useEffect(() => {
+    console.log('🎯 Current token state:', {
+      selectedDepositTokenAddress,
+      selectedDepositTokenSymbol: currentDepositToken?.symbol,
+      currentDepositTokenAddress: currentDepositToken?.address,
+      tokensAvailable: tokens.map(t => ({ symbol: t.symbol, address: t.address.slice(0, 8) + '...' })),
+      tokensLength: tokens.length,
+      currentDepositTokenExists: !!currentDepositToken
+    });
+  }, [selectedDepositTokenAddress, currentDepositToken, tokens]);
 
   const handleDepositTokenSelect = (tokenAddress: string) => {
     const selectedToken = tokens.find(t => t.address === tokenAddress);
@@ -799,13 +888,13 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
     if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
       console.log('⚡ handlePrivyDeposit: Using CROSSCHAIN DEPOSIT FLOW');
       
-      // For crosschain deposits, use the chain where the external wallet is connected as the source chain
-      // This is where the user's tokens are located and where they want to deposit from
-      const sourceChainId = externalWalletChainId || defaultChainId; // Chain where external wallet is connected
-      const userExternalChainId = externalWalletChainId;
+      // For crosschain deposits, use the chain selected in header as the source chain
+      // This ensures the embedded panel aligns with the header's chain selection
+      const sourceChainId = chainId || defaultChainId; // Chain selected in header
+      const userExternalChainId = chainId;
       
-      console.log('⚡ handlePrivyDeposit: sourceChainId (external wallet chain):', sourceChainId);
-      console.log('⚡ handlePrivyDeposit: userExternalChainId (current wallet):', userExternalChainId);
+      console.log('⚡ handlePrivyDeposit: sourceChainId (header selected chain):', sourceChainId);
+      console.log('⚡ handlePrivyDeposit: userExternalChainId (header selected chain):', userExternalChainId);
       console.log('⚡ handlePrivyDeposit: embeddedWalletChainId:', embeddedWalletChainId);
       console.log('⚡ handlePrivyDeposit: defaultChainId:', defaultChainId);
       
@@ -822,10 +911,10 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         return;
       }
       
-      // Check if external wallet needs to switch chains
-      if (userExternalChainId && userExternalChainId !== sourceChainId) {
-        console.log('⚡ handlePrivyDeposit: External wallet chain mismatch, attempting to switch');
-        console.log('⚡ handlePrivyDeposit: From chain:', userExternalChainId, 'To chain:', sourceChainId);
+      // Check if external wallet needs to switch chains to match header selection
+      if (externalWalletChainId && externalWalletChainId !== sourceChainId) {
+        console.log('⚡ handlePrivyDeposit: External wallet chain mismatch with header selection, attempting to switch');
+        console.log('⚡ handlePrivyDeposit: From chain:', externalWalletChainId, 'To chain:', sourceChainId);
         
         if (!externalWallet) {
           setToast({
@@ -919,7 +1008,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         } catch (error) {
           console.error('⚡ handlePrivyDeposit: Chain switch failed:', error);
           setToast({
-            message: 'Failed to switch chain. Please manually switch your external wallet to a supported crosschain deposit chain (Appchain Testnet) and try again.',
+            message: 'Failed to switch chain. Please manually switch your external wallet to match the selected network in the header and try again.',
             type: 'error',
             loading: false,
             duration: 8000,
@@ -930,9 +1019,9 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
       
       // Find the selected token address for deposit
       const selectedToken = tokens.find(t => t.address === selectedDepositTokenAddress);
-      // For crosschain deposits, we need the SOURCE token address (appchain), not destination (rari)
+      // For crosschain deposits, we need the SOURCE token address (appchain/arbitrum), not destination (rari)
       const selectedUniqueToken = allUniqueTokens.find(ut => ut.address === selectedToken?.address);
-      const sourceTokenAddress = (selectedUniqueToken as any)?.sourceAddress || selectedToken?.address;
+      const sourceTokenAddress = (selectedUniqueToken as any)?.sourceAddresses?.[chainId] || selectedToken?.address;
       const tokenAddress = sourceTokenAddress || (uniqueTokens.find(t => t.isQuote)?.address || uniqueTokens[0]?.address);
       
       console.log('⚡ handlePrivyDeposit: Chain validation passed, calling crosschainDeposit hook');
@@ -1002,18 +1091,21 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
   }, [withdrawCurrentStep]);
 
   useEffect(() => {
+    if (!isOpen) {
+      return; // Don't run interval when panel is closed
+    }
+
     const interval = setInterval(() => {
-      refetchAllBalances();
       refetchAllBalances();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [refetchAllBalances]);
+  }, [refetchAllBalances, isOpen]);
 
   return (
     <>
       <div
-        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/10 backdrop-blur-sm z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
         }`}
         onClick={onClose} // Close panel when overlay is clicked
@@ -1072,37 +1164,17 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               <Edit3 size={16} className="text-gray-400" />
             </div>
             
-            {/* Network Switcher */}
-            <div className="relative">
-              <select
-                value={embeddedWalletChainId || 11155931}
-                onChange={(e) => switchEmbeddedChain(parseInt(e.target.value))}
-                disabled={switchingChain}
-                className="bg-gray-700 text-white text-xs border border-gray-600 rounded px-2 py-1 pr-6 appearance-none focus:outline-none focus:border-blue-500 disabled:opacity-50"
-              >
-                {availableChains.map(chain => (
-                  <option key={chain.id} value={chain.id}>
-                    {chain.shortName}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-1 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                {switchingChain ? (
-                  <RefreshCw size={10} className="animate-spin text-gray-400" />
-                ) : (
-                  <ChevronDown size={10} className="text-gray-400" />
-                )}
-              </div>
+            {/* Display current network (read-only, controlled by header) */}
+            <div className="text-xs text-gray-400">
+              {(() => {
+                const currentChainId = chainId || embeddedWalletChainId;
+                const chainName = currentChainId === 4661 ? 'Appchain' : 
+                                 currentChainId === 421614 ? 'Arbitrum' : 
+                                 currentChainId === 1918988905 ? 'Rari' :
+                                 `Chain ${currentChainId}`;
+                return chainName;
+              })()}
             </div>
-          </div>
-
-          {/* Current Network Info */}
-          <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-            <Wifi size={12} />
-            <span>{currentChain?.name || 'Unknown Network'}</span>
-            {currentChain?.testnet && (
-              <span className="bg-yellow-600 text-yellow-100 px-1 py-0.5 rounded text-xs">Testnet</span>
-            )}
           </div>
 
           <div className="mt-3 border border-gray-600 rounded-lg p-3 flex items-center justify-between">
@@ -1119,7 +1191,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="flex border-b border-gray-700">
-          {(['Asset', 'Deposit', 'Withdraw'] as const).map(tab => (
+          {(['Asset', 'Deposit', 'Withdraw', 'History'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1236,11 +1308,16 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                           <span className="text-white font-medium">
                             {currentDepositToken?.name}
                           </span>
-                          {currentDepositToken?.address && (
-                            <span className="text-gray-400 text-xs font-mono">
-                              {`${currentDepositToken.address.slice(0, 6)}...${currentDepositToken.address.slice(-4)}`}
-                            </span>
-                          )}
+                          {(() => {
+                            // For "From connected wallet", show the SOURCE address (external wallet's chain)
+                            const selectedUniqueToken = allUniqueTokens.find(ut => ut.address === currentDepositToken?.address);
+                            const sourceAddress = (selectedUniqueToken as any)?.sourceAddresses?.[chainId] || currentDepositToken?.address;
+                            return sourceAddress && (
+                              <span className="text-gray-400 text-xs font-mono">
+                                {`${sourceAddress.slice(0, 6)}...${sourceAddress.slice(-4)}`}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <ChevronDown
                           className={`w-4 h-4 text-gray-400 transition-transform ${
@@ -1344,7 +1421,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-white font-medium">
-                            {currentDepositToken?.name}
+                            {currentDepositToken?.name ? `gs${currentDepositToken.name}` : ''}
                           </span>
                           {currentDepositToken?.address && (
                             <span className="text-gray-400 text-xs font-mono">
@@ -1562,6 +1639,217 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                   </div>
                 )}
               </button>
+            </div>
+          )}
+
+          {activeTab === 'History' && (
+            <div className="p-4">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Transaction History</h3>
+                    <p className="text-xs text-gray-400">Transactions initiated by your external wallet</p>
+                  </div>
+                  <button
+                    onClick={() => refetchHistory()}
+                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Refresh history"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${historyLoading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+
+                {!externalWalletAddress || externalWalletAddress === 'Not Connected' ? (
+                  <div className="text-center py-8">
+                    <History className="w-12 h-12 text-gray-500 mx-auto mb-2" />
+                    <p className="text-gray-400">External wallet not connected</p>
+                    <p className="text-gray-500 text-sm mt-1">Connect your external wallet to view transaction history</p>
+                  </div>
+                ) : historyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                    <span className="ml-2 text-gray-400">Loading history...</span>
+                  </div>
+                ) : historyError ? (
+                  <div className="text-center py-8">
+                    <p className="text-red-400 mb-2">Error loading history</p>
+                    <button
+                      onClick={() => refetchHistory()}
+                      className="text-blue-400 hover:text-blue-300 text-sm"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : !crosschainHistoryData?.crossChainTransferss?.items?.length ? (
+                  <div className="text-center py-8">
+                    <History className="w-12 h-12 text-gray-500 mx-auto mb-2" />
+                    <p className="text-gray-400">No transaction history yet</p>
+                    <p className="text-gray-500 text-sm mt-1">Crosschain transactions initiated from your external wallet will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {crosschainHistoryData.crossChainTransferss.items.map((transfer, index) => {
+                        const isIncoming = transfer.direction === 'DEPOSIT';
+                        const timestamp = new Date(parseInt(transfer.dispatchMessage.timestamp) * 1000);
+                        
+                        // Get chain name from chainId
+                        const getChainName = (chainId: string | number) => {
+                          const id = typeof chainId === 'string' ? parseInt(chainId) : chainId;
+                          switch (id) {
+                            case 4661: return 'Appchain';
+                            case 421614: return 'Arbitrum';
+                            case 1918988905: return 'Rari';
+                            default: return `Chain ${id}`;
+                          }
+                        };
+
+                        // Get explorer URL for a transaction
+                        const getExplorerUrl = (chainId: string | number, txHash: string) => {
+                          const id = typeof chainId === 'string' ? chainId : chainId.toString();
+                          const baseUrl = urlsConfig.EXPLORER_URLS[id as keyof typeof urlsConfig.EXPLORER_URLS];
+                          return baseUrl ? `${baseUrl}${txHash}` : '#';
+                        };
+
+                        // Get token symbol and decimals from address
+                        const getTokenInfo = (address: string) => {
+                          const addr = address.toLowerCase();
+                          // USDT - 6 decimals (Appchain addresses)
+                          if (addr === '0x1362dd75d8f1579a0ebd62df92d8f3852c3a7516' ||
+                              addr === '0x5eafc52d170ff391d41fba99a7e91b9c4d49929a') {
+                            return { symbol: 'USDT', decimals: 6 };
+                          }
+                          // WETH - 18 decimals (Appchain and Arbitrum addresses)
+                          else if (addr === '0xb2e9eabb827b78e2ac66be17327603778d117d18' ||
+                                   addr === '0x6b4c6c7521b3ed61a9fa02e926b73d278b2a6ca7') {
+                            return { symbol: 'WETH', decimals: 18 };
+                          }
+                          // USDC - 18 decimals (Appchain address) and 6 decimals (Arbitrum address)  
+                          else if (addr === '0x02950119c4ccd1993f7938a55b8ab8384c3cce4f') {
+                            return { symbol: 'USDC', decimals: 18 };
+                          }
+                          else if (addr === '0x6fcf28b801c7116ca8b6460289e259ac8d9131f3') {
+                            return { symbol: 'USDC', decimals: 6 };
+                          }
+                          // WBTC - 8 decimals (Arbitrum addresses)
+                          else if (addr === '0x24e55f604ff98a03b9493b53ba3ddebd7d02733a') {
+                            return { symbol: 'WBTC', decimals: 8 };
+                          }
+                          return { symbol: 'Token', decimals: 18 };
+                        };
+
+                        const tokenInfo = getTokenInfo(transfer.sourceToken);
+                        const amount = parseFloat(transfer.amount) / Math.pow(10, tokenInfo.decimals);
+                        const sourceChainName = getChainName(transfer.sourceChainId);
+                        // For crosschain deposits, destination is always Rari (core chain)
+                        const destChainName = transfer.direction === 'DEPOSIT' ? 'Rari' : getChainName(transfer.dispatchMessage.chainId);
+
+                        return (
+                          <div key={`${transfer.dispatchMessage.transactionHash}-${index}`} 
+                               className="border border-gray-600 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  isIncoming ? 'bg-green-500' : 'bg-blue-500'
+                                }`}></div>
+                                <span className="font-medium">
+                                  {isIncoming ? 'Deposit' : 'Withdrawal'}
+                                </span>
+                                <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                                  {sourceChainName} → {destChainName}
+                                </span>
+                              </div>
+                              <span className="font-medium">
+                                {formatNumber(amount, {decimals: 4})} {tokenInfo.symbol}
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-gray-400 space-y-1">
+                              <div className="flex justify-between">
+                                <span>From:</span>
+                                <span className="font-mono">{transfer.sender.slice(0, 8)}...{transfer.sender.slice(-6)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>To:</span>
+                                <span className="font-mono">{transfer.recipient.slice(0, 8)}...{transfer.recipient.slice(-6)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Time:</span>
+                                <span>{timestamp.toLocaleDateString()} {timestamp.toLocaleTimeString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Source Tx Hash:</span>
+                                <a
+                                  href={getExplorerUrl(transfer.dispatchMessage.chainId, transfer.dispatchMessage.transactionHash)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                  title="View source transaction on explorer"
+                                >
+                                  {transfer.dispatchMessage.transactionHash.slice(0, 8)}...{transfer.dispatchMessage.transactionHash.slice(-6)}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Message ID:</span>
+                                <a
+                                  href={`https://hyperlane-explorer.gtxdex.xyz/message/${transfer.dispatchMessage.messageId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs"
+                                  title="View message on Hyperlane explorer"
+                                >
+                                  {transfer.dispatchMessage.messageId.slice(0, 8)}...{transfer.dispatchMessage.messageId.slice(-6)}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Show destination chain status */}
+                            <div className="mt-2 pt-2 border-t border-gray-700">
+                              <div className="text-xs text-gray-500 mb-1">Destination Chain:</div>
+                              {(() => {
+                                // Check if there's a PROCESS message
+                                const processMessage = transfer.dispatchMessage.pairedMessages?.items?.find(
+                                  pairedMsg => pairedMsg.type === 'PROCESS'
+                                );
+                                
+                                if (processMessage) {
+                                  // Show completed destination transaction
+                                  return (
+                                    <div className="text-xs text-gray-400 flex justify-between items-center">
+                                      <span>{getChainName(processMessage.chainId)}:</span>
+                                      <a
+                                        href={getExplorerUrl(processMessage.chainId, processMessage.transactionHash)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-mono text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                        title="View destination transaction on explorer"
+                                      >
+                                        {processMessage.transactionHash.slice(0, 8)}...{processMessage.transactionHash.slice(-6)}
+                                        <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  );
+                                } else {
+                                  // Show processing status
+                                  return (
+                                    <div className="text-xs text-gray-400 flex justify-between items-center">
+                                      <span>Rari:</span>
+                                      <div className="flex items-center gap-1">
+                                        <RefreshCw className="w-3 h-3 animate-spin text-yellow-400" />
+                                        <span className="text-yellow-400">Processing...</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              })()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

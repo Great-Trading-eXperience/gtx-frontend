@@ -15,7 +15,8 @@ interface UseTokenBalanceResult {
 export const useTokenBalance = (
   tokenAddress: `0x${string}` | undefined,
   walletAddress: `0x${string}` | undefined,
-  chainId?: number
+  chainId?: number,
+  enabled: boolean = true
 ): UseTokenBalanceResult => {
   const {
     data: decimals,
@@ -28,7 +29,7 @@ export const useTokenBalance = (
     functionName: 'decimals',
     chainId,
     query: {
-      enabled: !!(tokenAddress && walletAddress),
+      enabled: enabled && !!(tokenAddress && walletAddress),
     }
   });
 
@@ -45,7 +46,7 @@ export const useTokenBalance = (
     args: walletAddress ? [walletAddress] : undefined,
     chainId,
     query: {
-      enabled: !!(tokenAddress && walletAddress),
+      enabled: enabled && !!(tokenAddress && walletAddress),
     }
   });
 
@@ -55,7 +56,7 @@ export const useTokenBalance = (
     functionName: 'name',
     chainId,
     query: {
-      enabled: !!(tokenAddress && walletAddress),
+      enabled: enabled && !!(tokenAddress && walletAddress),
     }
   });
 
@@ -65,7 +66,7 @@ export const useTokenBalance = (
     functionName: 'symbol',
     chainId,
     query: {
-      enabled: !!(tokenAddress && walletAddress),
+      enabled: enabled && !!(tokenAddress && walletAddress),
     }
   });
 

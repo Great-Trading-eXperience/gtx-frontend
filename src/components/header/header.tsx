@@ -1,9 +1,7 @@
 import { usePrivyAuth } from "@/hooks/use-privy-auth";
-import { useTokenBalance } from "@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf";
-import { useAvailableTokens } from "@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useWallets } from "@privy-io/react-auth";
-import { Menu, Moon, Sun, Wallet } from "lucide-react";
+import { Check, ChevronDown, Menu, Moon, Sun, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -11,11 +9,182 @@ import { PrivyAuthButton } from "../auth/privy-auth-button";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
+import { appchainTestnet, arbitrumSepolia } from "@/configs/wagmi";
 import { isTabEnabled } from "@/constants/features/features-config";
+import { useSwitchAndAddChain } from "@/hooks/useSwitchAndAddChain";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Chain } from 'viem/chains';
+import { useChainId } from "wagmi";
 
 interface NavbarProps {
   onTogglePanel: () => void;
 }
+
+const ChainDropdown: React.FC = () => {
+  const networks: Chain[] = [
+    appchainTestnet,
+    arbitrumSepolia
+  ];
+
+  const chainId = useChainId();
+  const usedNetwork = networks.find(network => network.id === chainId);
+  
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState<Chain>(usedNetwork || networks[0]);
+  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const { switchAndAddChain } = useSwitchAndAddChain();
+
+  // Sync selectedNetwork with actual chainId when wallet chain changes
+  useEffect(() => {
+    const actualNetwork = networks.find(network => network.id === chainId);
+    if (actualNetwork && actualNetwork.id !== selectedNetwork.id) {
+      setSelectedNetwork(actualNetwork);
+    }
+  }, [chainId, networks, selectedNetwork.id]);
+
+  const handleSwitchChain = async (selectedChain : Chain) => {
+    try {
+      const result = await switchAndAddChain(selectedChain);
+      console.log(result.message);
+      // Only update UI state if switch was successful
+      setSelectedNetwork(selectedChain);
+    } catch (error) {
+      // TypeScript knows 'error' is of type 'unknown', so we can check it
+      if (error instanceof Error) {
+        console.error(error.message);
+      } else {
+        console.error('An unknown error occurred.');
+      }
+      // Don't update selectedNetwork if switch failed
+    }
+
+    setIsOpen(false);
+  }
+
+  const handleToggle = () => {
+    if (buttonRef.current) {
+      setButtonRect(buttonRef.current.getBoundingClientRect());
+    }
+    setIsOpen(!isOpen);
+  };
+
+  // Close dropdown when clicking outside or pressing escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+        // Check if click is on dropdown
+        const dropdownElement = document.getElementById('dropdown-portal');
+        if (dropdownElement && !dropdownElement.contains(event.target as Node)) {
+          setIsOpen(false);
+        }
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  // Update button position on scroll/resize
+  useEffect(() => {
+    const updatePosition = () => {
+      if (buttonRef.current && isOpen) {
+        setButtonRect(buttonRef.current.getBoundingClientRect());
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
+
+  const DropdownContent = () => {
+    if (!buttonRect) return null;
+
+    return (
+      <div
+        id="dropdown-portal"
+        style={{
+          position: 'fixed',
+          top: buttonRect.bottom + 4,
+          left: buttonRect.left,
+          width: buttonRect.width,
+          zIndex: 9999,
+        }}
+        className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl"
+      >
+        <div className="py-1">
+          {networks.map((network) => (
+            <button
+              key={network.id}
+              onClick={() => handleSwitchChain(network)}
+              className="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center justify-between group transition-colors duration-150 text-sm"
+            >
+              <span className="text-white font-medium">{network.name}</span>
+              {selectedNetwork.id === network.id && (
+                <Check className="w-4 h-4 text-green-400" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Main Button */}
+      <button
+        ref={buttonRef}
+        onClick={handleToggle}
+        className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center justify-between transition-colors duration-200 min-w-[200px]"
+      >
+        <div className="flex items-center space-x-3">
+          <span className="font-medium text-sm">{selectedNetwork.name}</span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 transition-transform duration-200 ml-2 ${
+            isOpen ? 'transform rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {/* Portal Dropdown */}
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-[9998]" 
+            onClick={() => setIsOpen(false)}
+          />
+          <DropdownContent />
+        </>,
+        document.body
+      )}
+    </>
+  );
+};
 
 const Header = ({onTogglePanel}: NavbarProps) => {
   const { theme, setTheme } = useTheme();
@@ -86,24 +255,9 @@ const Header = ({onTogglePanel}: NavbarProps) => {
     if (address === 'Not Created') return address;
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
-
-  // Get available tokens from pools data
-  const { tokens: availableTokens } = useAvailableTokens();
   
-  // Find MUSDC token address dynamically
-  const musdcToken = availableTokens.find(token => 
-    token.symbol === 'MUSDC' || token.symbol === 'USDC'
-  );
-  const addressMUSDC = musdcToken?.address;
-
-  const {
-    formattedBalance: BalanceOfMUSDC,
-    tokenSymbol: SymbolMUSDC,
-    refetchBalance: refetchMUSDC,
-  } = useTokenBalance(addressMUSDC, embeddedWalletAddress as `0x${string}`);
-
   return (
-    <header className="relative z-10 border-b border-white/10 backdrop-blur-lg bg-black/20">
+    <header className="relative z-5 border-b border-white/10 backdrop-blur-lg bg-black/20">
       <nav className="flex flex-row py-3 px-5 md:grid md:grid-cols-3 md:items-center">
         {/* Left Column */}
         <div className="flex flex-row gap-4 items-center">
@@ -143,7 +297,8 @@ const Header = ({onTogglePanel}: NavbarProps) => {
           {/* Show authentication buttons - only Privy */}
           <div className="flex items-center gap-2">
             {ready && authenticated ? (
-              <div>
+              <div className="flex flex-row items-center gap-2">
+                <ChainDropdown />
                 <div onClick={onTogglePanel} className="border border-gray-600 rounded-lg flex flex-row items-center justify-center gap-2 px-2 py-1 font-medium text-gray-400 cursor-pointer hover:text-gray-200 hover:border-gray-500">
                   <Wallet className="w-6 h-6" /> 
                   <span>{truncateAddress(embeddedWalletAddress)}</span>

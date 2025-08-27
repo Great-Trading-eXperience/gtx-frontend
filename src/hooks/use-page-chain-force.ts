@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { useChainId } from 'wagmi';
 import { toast } from 'sonner';
-import { getEffectiveChainId, getChainName, isChainForcingEnabled } from '@/utils/chain-override';
+import { getEffectiveChainId, getChainName, needsChainForcing } from '@/utils/chain-override';
 
 interface UsePageChainForceResult {
   isChainCorrect: boolean;
@@ -16,7 +16,8 @@ interface UsePageChainForceResult {
 
 /**
  * Hook to handle page-level chain forcing
- * Checks and switches chain when page loads if chain forcing is enabled
+ * Forces users to Appchain if they're on unsupported chains
+ * Allows free choice between Appchain and Arbitrum Sepolia
  */
 export function usePageChainForce(): UsePageChainForceResult {
   const { wallets } = useWallets();
@@ -28,15 +29,15 @@ export function usePageChainForce(): UsePageChainForceResult {
   // Get embedded wallet for chain switching
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
   
-  const isChainCorrect = currentChainId === effectiveChainId;
-  const needsChainSwitch = isChainForcingEnabled() && !isChainCorrect;
+  const needsChainSwitch = needsChainForcing(currentChainId);
+  const isChainCorrect = !needsChainSwitch;
   
   /**
-   * Force switch to the target chain
+   * Force switch to Appchain Testnet
    */
   const forceChainSwitch = async (): Promise<boolean> => {
     if (!needsChainSwitch) {
-      return true; // Already on correct chain
+      return true; // No forcing needed
     }
     
     if (!embeddedWallet) {
@@ -45,21 +46,22 @@ export function usePageChainForce(): UsePageChainForceResult {
     }
     
     setIsSwitchingChain(true);
+    const APPCHAIN_TESTNET_ID = 4661;
+    
     try {
-      const targetChain = getChainName(effectiveChainId);
-      toast.info(`Switching to ${targetChain} for trading...`);
+      toast.info('Switching to Appchain Testnet for crosschain features...');
       
-      await embeddedWallet.switchChain(effectiveChainId);
+      await embeddedWallet.switchChain(APPCHAIN_TESTNET_ID);
       
-      toast.success(`Successfully switched to ${targetChain}`);
+      toast.success('Successfully switched to Appchain Testnet');
       return true;
       
     } catch (error: any) {
       console.error('Chain switch failed:', error);
       
-      let errorMessage = 'Failed to switch network';
+      let errorMessage = 'Failed to switch to Appchain Testnet';
       if (error.message?.includes('not configured')) {
-        errorMessage = `${getChainName(effectiveChainId)} is not configured`;
+        errorMessage = 'Appchain Testnet is not configured';
       } else if (error.message?.includes('rejected') || error.message?.includes('denied')) {
         errorMessage = 'Network switch cancelled by user';
       }
@@ -87,13 +89,23 @@ export function usePageChainForce(): UsePageChainForceResult {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Show informational message about required chain
-      const targetChain = getChainName(effectiveChainId);
       const currentChain = getChainName(currentChainId);
       
-      console.log(`[PAGE_CHAIN_FORCE] Trading requires ${targetChain}, currently on ${currentChain}`);
+      console.log(`[PAGE_CHAIN_FORCE] Current chain ${currentChain} not supported, switching to Appchain`);
+      
+      // Show informational message about required chain
+      toast.info('This feature requires Appchain Testnet or Arbitrum Sepolia. Switching to Appchain...', {
+        duration: 3000,
+      });
       
       // Automatically switch chain
-      await forceChainSwitch();
+      const success = await forceChainSwitch();
+      
+      if (!success) {
+        toast.error('Please switch to Appchain Testnet or Arbitrum Sepolia manually to use this feature.', {
+          duration: 5000,
+        });
+      }
       
       setIsCheckingChain(false);
     };
@@ -105,7 +117,7 @@ export function usePageChainForce(): UsePageChainForceResult {
     isChainCorrect,
     isCheckingChain,
     isSwitchingChain,
-    targetChainId: effectiveChainId,
+    targetChainId: 4661, // Always target Appchain when forcing
     currentChainId,
     effectiveChainId,
     forceChainSwitch,

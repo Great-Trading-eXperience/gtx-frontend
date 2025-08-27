@@ -49,15 +49,7 @@ if (typeof window !== 'undefined') {
         url.includes('rpc')) {
       
       requestCount++;
-      
-      console.log('[RPC-DEBUG] 🌐 RPC Request:', {
-        url,
-        method: init?.method || 'GET',
-        timestamp: new Date().toISOString(),
-        requestCount,
-        stack: new Error().stack?.split('\n')[2]?.trim() || 'Unknown caller'
-      });
-      
+    
       // If too many requests, add a delay
       if (requestCount > MAX_REQUESTS_PER_SECOND) {
         console.warn(`[RPC-DEBUG] ⚠️ Too many requests (${requestCount}/${MAX_REQUESTS_PER_SECOND}), adding delay`);
@@ -206,7 +198,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     }>
       <Providers>
         <RainbowKitProvider
-          initialChain={RARI_TESTNET_CHAIN_ID}
+          initialChain={ARBITRUM_SEPOLIA_CHAIN_ID}
           theme={darkTheme({
             accentColor: "white",
             accentColorForeground: "black",
