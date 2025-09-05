@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
-import { PrivyAuthButton } from './privy-auth-button';
+import { PrivyAuthButton } from '../privy-buttons/privy-auth-button';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 interface AuthWrapperProps {

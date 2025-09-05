@@ -5,7 +5,7 @@ import { Check, ChevronDown, Menu, Moon, Sun, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { PrivyAuthButton } from "../auth/privy-auth-button";
+import { PrivyAuthButton } from "../auth/privy-buttons/privy-auth-button";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 

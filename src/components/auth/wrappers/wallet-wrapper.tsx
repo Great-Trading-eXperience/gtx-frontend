@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
-import { PrivyAuthButton } from '../auth/privy-auth-button'
-import GradientLoader from '../gradient-loader/gradient-loader'
-import { AuthWrapper } from '../auth/auth-wrapper'
+import { PrivyAuthButton } from '../privy-buttons/privy-auth-button'
+import GradientLoader from '../../gradient-loader/gradient-loader'
+import { AuthWrapper } from './auth-wrapper'
 import { usePrivyAuth } from '@/hooks/use-privy-auth'
 
 interface WalletWrapperProps {

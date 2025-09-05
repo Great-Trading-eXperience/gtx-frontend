@@ -1,6 +1,6 @@
 'use client';
 
-import { CustomAvatar } from './custom-avatar';
+import { CustomAvatar } from '../ui/custom-avatar';
 import { Button } from '@/components/ui/button';
 import { appchainTestnet, wagmiConfig } from '@/configs/wagmi';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
@@ -23,10 +23,7 @@ export function PrivyAuthButton({
     authenticated,
     login,
     logout,
-    linkWallet,
-    hasWallet,
     walletAddress,
-    hasSocialLogin,
     socialLoginMethod,
     displayName,
     isFullyAuthenticated,

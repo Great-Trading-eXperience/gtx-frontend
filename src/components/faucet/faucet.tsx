@@ -33,7 +33,7 @@ import { useForm } from "react-hook-form"
 import { formatUnits } from "viem"
 import { useAccount, useChainId } from "wagmi"
 import * as z from "zod"
-import { PrivyAuthButton } from "../auth/privy-auth-button"
+import { PrivyAuthButton } from "../auth/privy-buttons/privy-auth-button"
 import { DotPattern } from "../magicui/dot-pattern"
 import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
 
