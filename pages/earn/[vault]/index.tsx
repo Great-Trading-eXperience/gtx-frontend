@@ -15,7 +15,7 @@ import {
   getCuratorVaultQuery,
   getCuratorVaultWithdrawQuerys,
 } from "@/graphql/gtx/perpetual"
-import { useAssetVaultDeposit } from "@/hooks/web3/gtx/perpetual/useDepositCuratorVault"
+import { useAssetVaultDeposit } from "@/hooks/web3/gtx/earn/useDepositCuratorVault"
 import type { HexAddress } from "@/types/general/address"
 import { useQuery } from "@tanstack/react-query"
 import request from "graphql-request"

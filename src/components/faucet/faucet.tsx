@@ -34,7 +34,6 @@ import { formatUnits } from "viem"
 import { useAccount, useChainId } from "wagmi"
 import * as z from "zod"
 import { PrivyAuthButton } from "../auth/privy-auth-button"
-import GradientLoader from "../gradient-loader/gradient-loader"
 import { DotPattern } from "../magicui/dot-pattern"
 import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
 
@@ -46,8 +45,6 @@ const GTXFaucet: NextPage = () => {
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const { isConnected } = useAccount()
-  const [showConnectionLoader, setShowConnectionLoader] = useState(false)
-  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
   
   // Transaction status
   const [txStatus, setTxStatus] = useState<string | null>(null)
@@ -63,18 +60,6 @@ const GTXFaucet: NextPage = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  useEffect(() => {
-    if (mounted) {
-      if (isConnected && !previousConnectionState) {
-        setShowConnectionLoader(true)
-        const timer = setTimeout(() => {
-          setShowConnectionLoader(false)
-        }, 2000)
-        return () => clearTimeout(timer)
-      }
-      setPreviousConnectionState(isConnected)
-    }
-  }, [isConnected, previousConnectionState, mounted])
 
   const form = useForm<z.infer<typeof faucetSchema>>({
     resolver: zodResolver(faucetSchema),
@@ -334,10 +319,6 @@ const GTXFaucet: NextPage = () => {
     }
   }, [availableTokens, selectedTokenAddress, form])
 
-  if (showConnectionLoader) {
-    return <GradientLoader />
-  }
-
   if (!mounted || isLoading) {
     return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />
   }
@@ -361,11 +342,6 @@ const GTXFaucet: NextPage = () => {
 
   return (
     <div className="px-6 py-12 mx-auto bg-black min-h-screen">
-      {/* Dot Pattern Background */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <DotPattern />
-      </div>
-
       <div className="relative z-10 max-w-7xl mx-auto">
         {isConnected ? (
           <div className="flex flex-col gap-8">

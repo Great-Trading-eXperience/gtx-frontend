@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useAccount } from "wagmi"
-import GradientLoader from "../gradient-loader/gradient-loader"
+import { EarnSkeleton } from "./earn-skeleton"
 import { VaultRow } from "./vault-row"
 
 // Allocation model
@@ -71,9 +71,7 @@ interface GetCuratorVaultsResponse {
 export default function GTXEarn() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [showConnectionLoader, setShowConnectionLoader] = useState(false)
   const { isConnected } = useAccount()
-  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
 
   // Fetch pools data
   const { data: curatorVaultsData, isLoading: curatorVaultsLoading } = useQuery<GetCuratorVaultsResponse>({
@@ -90,28 +88,14 @@ export default function GTXEarn() {
     return () => setMounted(false)
   }, [])
 
-  // Handle wallet connection state changes
-  useEffect(() => {
-    if (mounted) {
-      // Only handle connection changes after mounting
-      if (isConnected && !previousConnectionState) {
-        setShowConnectionLoader(true)
-        const timer = setTimeout(() => {
-          setShowConnectionLoader(false)
-        }, 3000) // Show for 3 seconds
-        return () => clearTimeout(timer)
-      }
-      setPreviousConnectionState(isConnected)
-    }
-  }, [isConnected, previousConnectionState, mounted])
 
   const handleRowClick = (vaultAddress: string) => {
     router.push(`/earn/${vaultAddress}`)
   }
 
-  // Show connection loading state when transitioning from disconnected to connected
-  if (showConnectionLoader) {
-    return <GradientLoader />
+  // Show loading state when component is not mounted or data is loading
+  if (!mounted || curatorVaultsLoading) {
+    return <EarnSkeleton />
   }
 
   return (
@@ -146,19 +130,9 @@ export default function GTXEarn() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {curatorVaultsLoading ? (
-                  <TableRow>
-                    <TableHead colSpan={6} className="text-center py-10">
-                      <div className="flex justify-center items-center h-40">
-                        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                ) : (
-                  curatorVaultsData?.assetVaults.items.map((vault) => (
-                    <VaultRow key={vault.id} vault={vault} onClick={handleRowClick} />
-                  ))
-                )}
+                {curatorVaultsData?.assetVaults.items.map((vault) => (
+                  <VaultRow key={vault.id} vault={vault} onClick={handleRowClick} />
+                ))}
               </TableBody>
             </Table>
           </div>

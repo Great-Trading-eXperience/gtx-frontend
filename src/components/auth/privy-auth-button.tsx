@@ -1,6 +1,6 @@
 'use client';
 
-import { CustomAvatar } from '@/components/button-connect-wallet.tsx/button-connect-wallet';
+import { CustomAvatar } from './custom-avatar';
 import { Button } from '@/components/ui/button';
 import { appchainTestnet, wagmiConfig } from '@/configs/wagmi';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';

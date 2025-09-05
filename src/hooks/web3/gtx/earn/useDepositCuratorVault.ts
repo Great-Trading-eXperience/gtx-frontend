@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { erc20Abi, parseUnits } from "viem";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { CuratorVaultABI } from "@/abis/gtx/perpetual/CuratorVaultABI";
+import { CuratorVaultABI } from "@/abis/gtx/earn/CuratorVaultABI";
 import TokenABI from "@/abis/tokens/TokenABI"
 import { HexAddress } from "@/types/general/address";
 
