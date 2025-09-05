@@ -2,7 +2,7 @@ import { ClientOnly } from "@/components/client-only";
 import ToastContainer from "@/components/clob-dex/place-order/toastContainer";
 import { ToastProvider } from "@/components/clob-dex/place-order/toastContext";
 import Footer from "@/components/footer/footer";
-import EmbededPanel from "@/components/header/wallet/embedded-panel/embeded-panel";
+import EmbededPanel from "@/components/header/embedded-panel/embeded-panel";
 import Header from "@/components/header/navigation/main-header";
 import LandingHeader from "@/components/header/navigation/landing-header";
 import MobileWarningModal from "@/components/header/modals/mobile-warning-modal";
