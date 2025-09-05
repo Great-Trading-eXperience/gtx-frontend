@@ -582,10 +582,10 @@ const SwapForm: React.FC = () => {
     }
   };
 
-  // Exchange rate for display
-  const exchangeRate = sourceToken && destToken
-    ? calculateExchangeRatio(sourceToken.symbol, destToken.symbol)
-    : '0';
+  // Exchange rate for display (currently unused)
+  // const exchangeRate = sourceToken && destToken
+  //   ? calculateExchangeRatio(sourceToken.symbol, destToken.symbol)
+  //   : '0';
 
   return (
     <div className="px-6 py-12 mx-auto bg-black min-h-screen">

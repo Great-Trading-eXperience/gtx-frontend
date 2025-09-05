@@ -19,7 +19,7 @@ import {
 import Head from "next/head"
 import Link from "next/link"
 
-export function PharosLandingPage() {
+export function PharosLanding() {
   return (
     <main className="relative bg-black min-h-screen text-white">
       <DotPattern />

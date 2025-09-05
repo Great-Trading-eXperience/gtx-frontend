@@ -1,20 +1,18 @@
-import { PharosLandingPage } from "@/components/landing-page/pharos-landing-page";
-import { LandingEspresso } from "@/components/landing-rise/landing-espresso";
-import { LandingRise } from "@/components/landing-rise/landing-rise";
+import { PharosLanding, EspressoLanding, RiseLanding } from "@/components/landing";
 import { isFeatureEnabled } from "@/constants/features/features-config";
 
 export default function Home() {
   // Early return based on configuration
   if (isFeatureEnabled('LANDING_PAGE_RISE')) {
-    return <LandingRise />;
+    return <RiseLanding />;
   }
   
   if (isFeatureEnabled('LANDING_PAGE_PHAROS')) {
-    return <PharosLandingPage />;
+    return <PharosLanding />;
   }
   
   if (isFeatureEnabled('LANDING_PAGE_ESPRESSO')) {
-    return <LandingEspresso />;
+    return <EspressoLanding />;
   }
   
   // Optional: Return a default component or null
