@@ -1,168 +1,192 @@
-"use client"
+'use client';
 
-import TokenABI from "@/abis/tokens/TokenABI"
-import { DataTable } from "@/components/table/data-table"
-import { requestTokenColumns } from "@/components/table/faucet/request-token/columns"
-import { appchainTestnet, arbitrumSepolia, rariTestnet, wagmiConfig } from "@/configs/wagmi"
-import { getIndexerUrl } from "@/constants/urls/urls-config"
-import { queryFaucetTokenss, queryRequestTokenss } from "@/graphql/faucet/faucet.query"
-import { useFaucetCooldown } from "@/hooks/web3/faucet/useFaucetCooldown"
-import { useLastRequestTime } from "@/hooks/web3/faucet/useLastRequestTime"
-import { usePrivyRequestToken } from "@/hooks/web3/faucet/usePrivyRequestToken"
-import { useRequestToken } from "@/hooks/web3/faucet/useRequestToken"
-import { useBalance } from "@/hooks/web3/token/useBalance"
-import type { HexAddress } from "@/types/general/address"
-import type { Token } from "@/types/tokens/token"
+import { DataTable } from '@/components/table/data-table';
+import { requestTokenColumns } from '@/components/table/faucet/request-token/columns';
+import {
+  appchainTestnet,
+  arbitrumSepolia,
+  rariTestnet,
+} from '@/configs/wagmi';
+import { useFaucetCooldown } from '@/hooks/web3/faucet/useFaucetCooldown';
+import { useLastRequestTime } from '@/hooks/web3/faucet/useLastRequestTime';
+import { usePrivyRequestToken } from '@/hooks/web3/faucet/usePrivyRequestToken';
+import { useRequestToken } from '@/hooks/web3/faucet/useRequestToken';
+import type { HexAddress } from '@/types/general/address';
 
-import { ContractName, DEFAULT_CHAIN, getContractAddress } from "@/constants/contract/contract-address"
-import { shouldFaucetUsePrivy, shouldFaucetUseStandardHook } from "@/constants/features/features-config"
-import { formatNumber } from "@/lib/utils"
-import { FaucetTokensData } from "@/types/faucet/add-token"
-import { FaucetRequestsData } from "@/types/faucet/request-token"
-import { Button } from "@heroui/react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useWallets } from "@privy-io/react-auth"
-import { useQuery } from "@tanstack/react-query"
-import { readContract } from "@wagmi/core"
-import { request } from "graphql-request"
-import { Calendar, Clock, Droplets, ExternalLink, History, RefreshCw, TrendingUp, Wallet } from "lucide-react"
-import { DateTime } from "luxon"
-import type { NextPage } from "next"
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
-import { formatUnits } from "viem"
-import { useAccount, useChainId } from "wagmi"
-import * as z from "zod"
-import { PrivyAuthButton } from "../auth/privy-auth-button"
-import GradientLoader from "../gradient-loader/gradient-loader"
-import { DotPattern } from "../magicui/dot-pattern"
-import { FaucetSkeleton, WalletConnectionSkeleton } from "./skeleton-faucet"
+import {
+  ContractName,
+  DEFAULT_CHAIN,
+  getContractAddress,
+} from '@/constants/contract/contract-address';
+import {
+  shouldFaucetUsePrivy,
+  shouldFaucetUseStandardHook,
+} from '@/constants/features/features-config';
+import { formatNumber } from '@/lib/utils';
+import { Button } from '@heroui/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useWallets } from '@privy-io/react-auth';
+import {
+  Calendar,
+  Clock,
+  Droplets,
+  ExternalLink,
+  History,
+  RefreshCw,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react';
+import { DateTime } from 'luxon';
+import type { NextPage } from 'next';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { formatUnits } from 'viem';
+import { useAccount, useChainId } from 'wagmi';
+import * as z from 'zod';
+import { PrivyAuthButton } from '../auth/privy-auth-button';
+import GradientLoader from '../gradient-loader/gradient-loader';
+import { DotPattern } from '../magicui/dot-pattern';
+import { FaucetSkeleton, WalletConnectionSkeleton } from './skeleton-faucet';
+import { useFaucetTokens } from '@/hooks/web3/faucet/useFaucetToken';
+import { useFaucetTokensData } from '@/hooks/web3/faucet/useFaucetTokensData';
+import { useFaucetRequestData } from '@/hooks/web3/faucet/useFaucetRequestData';
+import { useUserAndFaucetBalances } from '@/hooks/web3/faucet/useUserAndFaucetBalance';
 
 const faucetSchema = z.object({
   token: z.string().min(1),
-})
+});
 
 const GTXFaucet: NextPage = () => {
-  const [mounted, setMounted] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const { isConnected } = useAccount()
-  const [showConnectionLoader, setShowConnectionLoader] = useState(false)
-  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected)
-  
+  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { isConnected } = useAccount();
+  const [showConnectionLoader, setShowConnectionLoader] = useState(false);
+  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
+
   // Transaction status
-  const [txStatus, setTxStatus] = useState<string | null>(null)
-  const [txHash, setTxHash] = useState<string | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setMounted(true)
-      setIsLoading(false)
-    }, 1000)
+      setMounted(true);
+      setIsLoading(false);
+    }, 1000);
 
-    return () => clearTimeout(timer)
-  }, [])
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (mounted) {
       if (isConnected && !previousConnectionState) {
-        setShowConnectionLoader(true)
+        setShowConnectionLoader(true);
         const timer = setTimeout(() => {
-          setShowConnectionLoader(false)
-        }, 2000)
-        return () => clearTimeout(timer)
+          setShowConnectionLoader(false);
+        }, 2000);
+        return () => clearTimeout(timer);
       }
-      setPreviousConnectionState(isConnected)
+      setPreviousConnectionState(isConnected);
     }
-  }, [isConnected, previousConnectionState, mounted])
+  }, [isConnected, previousConnectionState, mounted]);
 
   const form = useForm<z.infer<typeof faucetSchema>>({
     resolver: zodResolver(faucetSchema),
     defaultValues: {
-      token: "",
+      token: '',
     },
-  })
-  const { watch } = form
-  const selectedTokenAddress = watch("token")
+  });
+  const { watch } = form;
+  const selectedTokenAddress = watch('token');
 
-  const { address: wagmiAddress } = useAccount()
-  const { wallets } = useWallets()
-  
+  const { address: wagmiAddress } = useAccount();
+  const { wallets } = useWallets();
+
   // Check if faucet should use Privy
-  const shouldUsePrivy = shouldFaucetUsePrivy()
-  
+  const shouldUsePrivy = shouldFaucetUsePrivy();
+
   // Get user address based on configuration
-  const privyWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0]
-  const userAddress = shouldUsePrivy ? (privyWallet?.address || wagmiAddress) : wagmiAddress
-
-  const [availableTokens, setAvailableTokens] = useState<Record<string, Token>>({})
-
-  const { balance: userBalance, error: userBalanceError } = useBalance(
-    userAddress as HexAddress,
-    selectedTokenAddress as HexAddress,
-  )
+  const privyWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
+  const userAddress = shouldUsePrivy
+    ? privyWallet?.address || wagmiAddress
+    : wagmiAddress;
 
   const chainId = useChainId();
   const defaultChainId = Number(DEFAULT_CHAIN);
   // For faucet, use the actual selected chain, not the core chain override
   const actualChainId = chainId ?? defaultChainId;
-  const faucetAddress = getContractAddress(actualChainId, ContractName.faucet) as HexAddress
-  const hasFaucetContract = !!faucetAddress && faucetAddress !== "0x0000000000000000000000000000000000000000"
-  
-  console.log('chainId', chainId)
+  const faucetAddress = getContractAddress(
+    actualChainId,
+    ContractName.faucet
+  ) as HexAddress;
+  const hasFaucetContract = !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
+
 
   // Get current chain info for explorer URL
-  const currentChain = [appchainTestnet, arbitrumSepolia, rariTestnet].find(chain => chain.id === actualChainId)
-  const explorerUrl = currentChain?.blockExplorers?.default?.url || 'https://appchaintestnet.explorer.caldera.xyz'
+  const currentChain = [appchainTestnet, arbitrumSepolia, rariTestnet].find(
+    chain => chain.id === actualChainId
+  );
+  const explorerUrl = currentChain?.blockExplorers?.default?.url || 'https://appchaintestnet.explorer.caldera.xyz';
 
-  const { balance: faucetBalance, error: faucetBalanceError } = useBalance(
+  const {
+    userBalance,
+    faucetBalance,
+    loading,
+    error,
+    refetchAll,
+    hasErrors
+  } = useUserAndFaucetBalances(
+    userAddress as HexAddress,
     faucetAddress,
-    selectedTokenAddress as HexAddress,
-  )
-  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress)
-  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress)
+    selectedTokenAddress as HexAddress
+  );
+
+  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress);
+  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress);
 
   // Conditionally use the appropriate hook based on crosschain feature flag
   const useCrosschainStandardHook = shouldFaucetUseStandardHook();
-  
+
   console.log('[Faucet] Hook selection:', {
     useCrosschainStandardHook,
     willUseStandardHook: useCrosschainStandardHook,
-    willUsePrivyHook: !useCrosschainStandardHook
+    willUsePrivyHook: !useCrosschainStandardHook,
   });
 
   // Standard Wagmi hook (used when crosschain is enabled)
   const standardHookResult = useRequestToken();
-  
+
   // Privy hook (used when crosschain is disabled)
   const privyHookResult = usePrivyRequestToken(userAddress as HexAddress);
-  
+
   // Select the appropriate hook result
   const {
-    isAlertOpen: isAlertRequestTokenOpen, 
+    isAlertOpen: isAlertRequestTokenOpen,
     handleRequestToken,
     isRequestTokenPending,
     isRequestTokenConfirming,
     isRequestTokenConfirmed,
     requestTokenHash,
-    requestTokenError
-  } = useCrosschainStandardHook ? {
-    isAlertOpen: standardHookResult.isAlertOpen,
-    handleRequestToken: standardHookResult.handleRequestToken,
-    isRequestTokenPending: standardHookResult.isRequestTokenPending,
-    isRequestTokenConfirming: standardHookResult.isRequestTokenConfirming,
-    isRequestTokenConfirmed: standardHookResult.isRequestTokenConfirmed,
-    requestTokenHash: standardHookResult.requestTokenHash,
-    requestTokenError: undefined // Standard hook doesn't have error in same format
-  } : {
-    isAlertOpen: privyHookResult.isAlertOpen,
-    handleRequestToken: privyHookResult.handleRequestToken,
-    isRequestTokenPending: privyHookResult.isRequestTokenPending,
-    isRequestTokenConfirming: privyHookResult.isRequestTokenConfirming,
-    isRequestTokenConfirmed: privyHookResult.isRequestTokenConfirmed,
-    requestTokenHash: privyHookResult.requestTokenHash,
-    requestTokenError: privyHookResult.requestTokenError
-  };
+    requestTokenError,
+  } = useCrosschainStandardHook
+    ? {
+        isAlertOpen: standardHookResult.isAlertOpen,
+        handleRequestToken: standardHookResult.handleRequestToken,
+        isRequestTokenPending: standardHookResult.isRequestTokenPending,
+        isRequestTokenConfirming: standardHookResult.isRequestTokenConfirming,
+        isRequestTokenConfirmed: standardHookResult.isRequestTokenConfirmed,
+        requestTokenHash: standardHookResult.requestTokenHash,
+        requestTokenError: undefined, // Standard hook doesn't have error in same format
+      }
+    : {
+        isAlertOpen: privyHookResult.isAlertOpen,
+        handleRequestToken: privyHookResult.handleRequestToken,
+        isRequestTokenPending: privyHookResult.isRequestTokenPending,
+        isRequestTokenConfirming: privyHookResult.isRequestTokenConfirming,
+        isRequestTokenConfirmed: privyHookResult.isRequestTokenConfirmed,
+        requestTokenHash: privyHookResult.requestTokenHash,
+        requestTokenError: privyHookResult.requestTokenError,
+      };
 
   // Update processing state based on token request state
   useEffect(() => {
@@ -182,164 +206,46 @@ const GTXFaucet: NextPage = () => {
   }, [isRequestTokenPending, isRequestTokenConfirming, isRequestTokenConfirmed, requestTokenHash, requestTokenError])
 
   const {
-    data: faucetTokensData,
-    isLoading: addTokensIsLoading,
-    refetch: addTokensRefetch,
-  } = useQuery<FaucetTokensData>({
-    queryKey: ["faucetTokensData", actualChainId],
-    queryFn: async () => {
-      const url = getIndexerUrl(actualChainId);
-      if (!url) throw new Error('Indexer URL not found');
-      return await request(url, queryFaucetTokenss, { chainId: Number(actualChainId) })
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    retry: false,
-    enabled: mounted,
-  })
+    faucetTokensData,
+    loading: useFaucetTokensDataLoading,
+    error: useFaucetTokensDataError,
+  } = useFaucetTokensData(actualChainId, mounted);
 
   const {
-    data: faucetRequestsData,
-    isLoading: faucetRequestsIsLoading,
-    refetch: faucetRequestsRefetch,
-  } = useQuery<FaucetRequestsData>({
-    queryKey: ["faucetRequestsData", actualChainId],
-    queryFn: async () => {
-      const url = getIndexerUrl(actualChainId);
-      if (!url) throw new Error('Indexer URL not found');
-      return await request(url, queryRequestTokenss, { chainId: Number(actualChainId) })
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    retry: false,
-    enabled: mounted,
-  })
+    faucetRequestsData,
+    loading: useFaucetRequestsDataLoading,
+    error: useFaucetRequestsDataError,
+    refetchAll: faucetRequestsRefetch
+  } = useFaucetRequestData(actualChainId, mounted);
 
   const onSubmit = async (values: z.infer<typeof faucetSchema>) => {
-    handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress)
-  }
+    handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress);
+  };
 
-  useEffect(() => {
-    if (!faucetTokensData || !mounted || !hasFaucetContract) {
-      return
-    }
-
-    const fetchTokensData = async () => {
-      const availableTokens: Record<string, Token> = {}
-
-      // Process tokens sequentially with delays to avoid rate limiting
-      for (let i = 0; i < faucetTokensData.faucetTokenss.items.length; i++) {
-        const faucetToken = faucetTokensData.faucetTokenss.items[i];
-        let tokenName = ""
-        let tokenSymbol = ""
-        let tokenDecimals = 18
-
-        try {
-          console.log(`[Faucet] Fetching metadata for token ${faucetToken.token} on chain ${actualChainId} (${i + 1}/${faucetTokensData.faucetTokenss.items.length})`);
-          
-          const tokenNameResult = await readContract(wagmiConfig, {
-            address: faucetToken.token,
-            abi: TokenABI,
-            functionName: "name",
-            args: [],
-            chainId: actualChainId,
-          })
-
-          // Add small delay between calls
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          const tokenSymbolResult = await readContract(wagmiConfig, {
-            address: faucetToken.token,
-            abi: TokenABI,
-            functionName: "symbol",
-            args: [],
-            chainId: actualChainId,
-          })
-
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          const tokenDecimalsResult = await readContract(wagmiConfig, {
-            address: faucetToken.token,
-            abi: TokenABI,
-            functionName: "decimals",
-            args: [],
-            chainId: actualChainId,
-          })
-
-          // Check for empty responses
-          if (tokenNameResult && tokenNameResult !== "0x") {
-            tokenName = tokenNameResult as string
-          }
-          if (tokenSymbolResult && tokenSymbolResult !== "0x") {
-            tokenSymbol = tokenSymbolResult as string
-          }
-          if (tokenDecimalsResult) {
-            tokenDecimals = tokenDecimalsResult as number
-          }
-
-          console.log(`[Faucet] Token metadata fetched:`, {
-            address: faucetToken.token,
-            name: tokenName || 'empty',
-            symbol: tokenSymbol || 'empty', 
-            decimals: tokenDecimals
-          });
-
-        } catch (err: unknown) {
-          console.warn(`[Faucet] Error fetching token metadata:`, {
-            chainId: actualChainId,
-            contractAddress: faucetToken.token,
-            error: err
-          });
-        }
-
-        const finalTokenData = {
-          address: faucetToken.token,
-          name: tokenName,
-          symbol: tokenSymbol,
-          decimals: tokenDecimals,
-        };
-
-        console.log(`[Faucet] Final token data for ${faucetToken.token}:`, finalTokenData);
-        availableTokens[faucetToken.token] = finalTokenData;
-
-        // Add delay between tokens (except for the last one)
-        if (i < faucetTokensData.faucetTokenss.items.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      }
-
-      setAvailableTokens(availableTokens)
-    }
-
-    fetchTokensData()
-  }, [faucetTokensData, mounted, hasFaucetContract])
-
-  useEffect(() => {
-    if (mounted) {
-      faucetRequestsRefetch()
-    }
-  }, [faucetRequestsRefetch, mounted])
-
-  // Auto-select the first available token when tokens are loaded
-  useEffect(() => {
+  const {
+    availableTokens,
+    loading: useFaucetTokensLoading,
+    error: useFaucetTokensError,
+  } = useFaucetTokens(faucetTokensData, actualChainId, mounted, hasFaucetContract);
+  
+  const defaultToken = useMemo(() => {
     const tokenAddresses = Object.keys(availableTokens);
     if (tokenAddresses.length > 0 && !selectedTokenAddress) {
-      const firstTokenAddress = tokenAddresses[0];
-      form.setValue('token', firstTokenAddress);
-      console.log('[Faucet] Auto-selecting first token:', availableTokens[firstTokenAddress]);
+      return tokenAddresses[0];
     }
-  }, [availableTokens, selectedTokenAddress, form])
+    return selectedTokenAddress;
+  }, [availableTokens, selectedTokenAddress]);
+
+  if (defaultToken && defaultToken !== selectedTokenAddress) {
+    form.setValue('token', defaultToken);
+  }
 
   if (showConnectionLoader) {
-    return <GradientLoader />
+    return <GradientLoader />;
   }
 
   if (!mounted || isLoading) {
-    return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />
+    return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />;
   }
 
   if (!hasFaucetContract && !isLoading) {
@@ -351,12 +257,13 @@ const GTXFaucet: NextPage = () => {
               Faucet Not Available
             </h2>
             <p className="text-white/70 mb-8">
-              The faucet is not available on the currently selected network. Please switch to a supported network.
+              The faucet is not available on the currently selected network. Please switch
+              to a supported network.
             </p>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -399,11 +306,13 @@ const GTXFaucet: NextPage = () => {
                         </label>
                         <select
                           value={selectedTokenAddress}
-                          onChange={(e) => form.setValue('token', e.target.value)}
+                          onChange={e => form.setValue('token', e.target.value)}
                           className="w-full h-12 bg-black/40 border border-white/20 text-white hover:border-white/40 focus:ring-1 focus:ring-white/40 focus:border-white/40 rounded-xl px-4 appearance-none cursor-pointer"
                         >
-                          <option value="" disabled>Choose a token to request</option>
-                          {Object.keys(availableTokens)?.map((key) => (
+                          <option value="" disabled>
+                            Choose a token to request
+                          </option>
+                          {Object.keys(availableTokens)?.map(key => (
                             <option
                               key={availableTokens[key].address}
                               value={availableTokens[key].address}
@@ -417,16 +326,21 @@ const GTXFaucet: NextPage = () => {
 
                       <Button
                         onClick={() => onSubmit({ token: selectedTokenAddress })}
-                        disabled={isProcessing || isRequestTokenPending || isRequestTokenConfirming || !selectedTokenAddress}
+                        disabled={
+                          isProcessing ||
+                          isRequestTokenPending ||
+                          isRequestTokenConfirming ||
+                          !selectedTokenAddress
+                        }
                         className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl transition-colors"
                       >
                         {isRequestTokenPending
                           ? 'Confirming in Wallet...'
                           : isRequestTokenConfirming
-                            ? 'Confirming...'
-                            : isProcessing
-                              ? 'Processing...'
-                              : 'Request Tokens'}
+                          ? 'Confirming...'
+                          : isProcessing
+                          ? 'Processing...'
+                          : 'Request Tokens'}
                       </Button>
                     </div>
 
@@ -435,7 +349,9 @@ const GTXFaucet: NextPage = () => {
                       <div className="bg-black/40 border border-white/10 rounded-xl p-4">
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-white/90">{txStatus}</div>
-                          {isProcessing && <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />}
+                          {isProcessing && (
+                            <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                          )}
                         </div>
                         {txHash && (
                           <a
@@ -459,14 +375,24 @@ const GTXFaucet: NextPage = () => {
                           <Wallet className="w-5 h-5 text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Faucet Balance</p>
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                            Faucet Balance
+                          </p>
                           <p className="text-white font-mono text-sm">
                             {faucetBalance && availableTokens[selectedTokenAddress]
-                              ? `${formatNumber(Number(formatUnits(BigInt(faucetBalance), availableTokens[selectedTokenAddress].decimals)), {
-                                decimals: 2,
-                                compact: true,
-                              })} ${availableTokens[selectedTokenAddress]?.symbol}`
-                              : "-"}
+                              ? `${formatNumber(
+                                  Number(
+                                    formatUnits(
+                                      BigInt(faucetBalance),
+                                      availableTokens[selectedTokenAddress].decimals
+                                    )
+                                  ),
+                                  {
+                                    decimals: 2,
+                                    compact: true,
+                                  }
+                                )} ${availableTokens[selectedTokenAddress]?.symbol}`
+                              : '-'}
                           </p>
                         </div>
                       </div>
@@ -478,9 +404,11 @@ const GTXFaucet: NextPage = () => {
                           <Clock className="w-5 h-5 text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Cooldown</p>
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                            Cooldown
+                          </p>
                           <p className="text-white font-mono text-sm">
-                            {faucetCooldown ? `${faucetCooldown}s` : "-"}
+                            {faucetCooldown ? `${faucetCooldown}s` : '-'}
                           </p>
                         </div>
                       </div>
@@ -492,11 +420,15 @@ const GTXFaucet: NextPage = () => {
                           <Calendar className="w-5 h-5 text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Last Request</p>
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                            Last Request
+                          </p>
                           <p className="text-white font-mono text-sm">
                             {lastRequestTime
-                              ? DateTime.fromMillis(Number(lastRequestTime) * 1000).toFormat("dd/MM/yy")
-                              : "-"}
+                              ? DateTime.fromMillis(
+                                  Number(lastRequestTime) * 1000
+                                ).toFormat('dd/MM/yy')
+                              : '-'}
                           </p>
                         </div>
                       </div>
@@ -508,14 +440,24 @@ const GTXFaucet: NextPage = () => {
                           <Wallet className="w-5 h-5 text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Your Balance</p>
+                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                            Your Balance
+                          </p>
                           <p className="text-white font-mono text-sm">
                             {userBalance && availableTokens[selectedTokenAddress]
-                              ? `${formatNumber(Number(formatUnits(BigInt(userBalance), availableTokens[selectedTokenAddress].decimals)), {
-                                decimals: 2,
-                                compact: true,
-                              })} ${availableTokens[selectedTokenAddress]?.symbol}`
-                              : "-"}
+                              ? `${formatNumber(
+                                  Number(
+                                    formatUnits(
+                                      BigInt(userBalance),
+                                      availableTokens[selectedTokenAddress].decimals
+                                    )
+                                  ),
+                                  {
+                                    decimals: 2,
+                                    compact: true,
+                                  }
+                                )} ${availableTokens[selectedTokenAddress]?.symbol}`
+                              : '-'}
                           </p>
                         </div>
                       </div>
@@ -529,7 +471,9 @@ const GTXFaucet: NextPage = () => {
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3">
                 <History className="w-6 h-6 text-white/70" />
-                <h3 className="text-white text-2xl font-bold tracking-tight">Transaction History</h3>
+                <h3 className="text-white text-2xl font-bold tracking-tight">
+                  Transaction History
+                </h3>
               </div>
 
               <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
@@ -537,8 +481,8 @@ const GTXFaucet: NextPage = () => {
                   <DataTable
                     data={faucetRequestsData?.faucetRequestss.items ?? []}
                     columns={requestTokenColumns()}
-                    handleRefresh={() => { }}
-                    isLoading={faucetRequestsIsLoading}
+                    handleRefresh={() => {}}
+                    isLoading={useFaucetRequestsDataLoading}
                   />
                 </div>
               </div>
@@ -556,7 +500,9 @@ const GTXFaucet: NextPage = () => {
                 <h2 className="text-white text-3xl font-bold tracking-tight mb-4">
                   Connect Wallet
                 </h2>
-                <p className="text-white/70 mb-8">Connect your wallet to access the test token faucet</p>
+                <p className="text-white/70 mb-8">
+                  Connect your wallet to access the test token faucet
+                </p>
                 <PrivyAuthButton showFullProfile={false} />
               </div>
             </div>
@@ -564,7 +510,7 @@ const GTXFaucet: NextPage = () => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default GTXFaucet
+export default GTXFaucet;
