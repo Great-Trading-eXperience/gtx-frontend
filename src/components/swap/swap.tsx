@@ -709,7 +709,7 @@ const SwapForm: React.FC = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                {isProcessing || isCalculatingMinOut ? (
+                {isCalculatingMinOut ? (
                   <Skeleton className="h-10 w-32 bg-white/10" />
                 ) : (
                   <input
