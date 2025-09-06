@@ -8,7 +8,6 @@ interface FeatureFlags {
     ENABLED_TABS_FAUCET: boolean;
     COMING_SOON_PERPETUAL: boolean;
     LANDING_PAGE_RISE: boolean;
-    LANDING_PAGE_PHAROS: boolean;
     LANDING_PAGE_ESPRESSO: boolean;
     ENABLED_TABS_EARN: boolean;
     ENABLED_TABS_VEGTX: boolean;

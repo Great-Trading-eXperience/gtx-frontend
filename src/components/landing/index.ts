@@ -1,5 +1,5 @@
 // Landing Pages
-export { PharosLanding, EspressoLanding, RiseLanding } from './pages';
+export { EspressoLanding, RiseLanding } from './pages';
 
 // Shared Sections
 export { 
