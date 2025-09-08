@@ -2,17 +2,12 @@
 
 import { DataTable } from '@/components/table/data-table';
 import { requestTokenColumns } from '@/components/table/faucet/request-token/columns';
-import {
-  appchainTestnet,
-  arbitrumSepolia,
-  rariTestnet,
-} from '@/configs/wagmi';
+import { appchainTestnet, arbitrumSepolia, rariTestnet } from '@/configs/wagmi';
 import { useFaucetCooldown } from '@/hooks/web3/faucet/useFaucetCooldown';
 import { useLastRequestTime } from '@/hooks/web3/faucet/useLastRequestTime';
 import { usePrivyRequestToken } from '@/hooks/web3/faucet/usePrivyRequestToken';
 import { useRequestToken } from '@/hooks/web3/faucet/useRequestToken';
 import type { HexAddress } from '@/types/general/address';
-
 import {
   ContractName,
   DEFAULT_CHAIN,
@@ -47,7 +42,6 @@ import { PrivyAuthButton } from '../auth/privy-auth-button';
 import GradientLoader from '../gradient-loader/gradient-loader';
 import { DotPattern } from '../magicui/dot-pattern';
 import { FaucetSkeleton, WalletConnectionSkeleton } from './skeleton-faucet';
-import { useFaucetTokens } from '@/hooks/web3/faucet/useFaucetToken';
 import { useFaucetTokensData } from '@/hooks/web3/faucet/useFaucetTokensData';
 import { useFaucetRequestData } from '@/hooks/web3/faucet/useFaucetRequestData';
 import { useUserAndFaucetBalances } from '@/hooks/web3/faucet/useUserAndFaucetBalance';
@@ -55,6 +49,12 @@ import { useUserAndFaucetBalances } from '@/hooks/web3/faucet/useUserAndFaucetBa
 const faucetSchema = z.object({
   token: z.string().min(1),
 });
+
+interface FaucetTokensData {
+  decimals: number;
+  symbol: string;
+  token: string;
+}
 
 const GTXFaucet: NextPage = () => {
   const [mounted, setMounted] = useState(false);
@@ -121,7 +121,6 @@ const GTXFaucet: NextPage = () => {
   ) as HexAddress;
   const hasFaucetContract = !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
 
-
   // Get current chain info for explorer URL
   const currentChain = [appchainTestnet, arbitrumSepolia, rariTestnet].find(
     chain => chain.id === actualChainId
@@ -129,20 +128,54 @@ const GTXFaucet: NextPage = () => {
   const explorerUrl = currentChain?.blockExplorers?.default?.url || 'https://appchaintestnet.explorer.caldera.xyz';
 
   const {
-    userBalance,
-    faucetBalance,
-    loading,
-    error,
-    refetchAll,
-    hasErrors
-  } = useUserAndFaucetBalances(
-    userAddress as HexAddress,
-    faucetAddress,
-    selectedTokenAddress as HexAddress
-  );
+    faucetTokensData,
+    loading: useFaucetTokensDataLoading,
+    error: useFaucetTokensDataError,
+  } = useFaucetTokensData(actualChainId);
 
-  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress);
-  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress);
+  const getTokenOptions = (faucetTokensData : FaucetTokensData[]) => {
+    if (!faucetTokensData || !Array.isArray(faucetTokensData)) {
+      return [];
+    }
+    
+    return faucetTokensData.map(item => ({
+      token: item.token,
+      symbol: item.symbol,
+      decimals: item.decimals,
+    }));
+  };
+
+  const tokenOptions = getTokenOptions(faucetTokensData.faucetTokenss.items);
+
+  const selectedToken = tokenOptions.find(token => token.token === selectedTokenAddress);
+
+  const defaultToken = useMemo(() => {
+    if (tokenOptions.length > 0 && !selectedTokenAddress) {
+      return tokenOptions[0].token;
+    }
+    return selectedTokenAddress;
+  }, [tokenOptions, selectedTokenAddress]);
+
+  if (defaultToken && defaultToken !== selectedTokenAddress) {
+    form.setValue('token', defaultToken);
+  }
+
+  const { userBalance, faucetBalance, loading, error, refetch } =
+    useUserAndFaucetBalances(
+      userAddress as HexAddress,
+      faucetAddress,
+      selectedTokenAddress as HexAddress
+    );
+
+  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress, faucetAddress); //iki yo langsung dua
+  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress); // iki satu
+
+  const {
+    faucetRequestsData,
+    loading: useFaucetRequestsDataLoading,
+    error: useFaucetRequestsDataError,
+  } = useFaucetRequestData(actualChainId); // iki sko indexer
+
 
   // Conditionally use the appropriate hook based on crosschain feature flag
   const useCrosschainStandardHook = shouldFaucetUseStandardHook();
@@ -191,54 +224,29 @@ const GTXFaucet: NextPage = () => {
   // Update processing state based on token request state
   useEffect(() => {
     if (isRequestTokenPending) {
-      setIsProcessing(true)
-      setTxStatus('Preparing token request...')
+      setIsProcessing(true);
+      setTxStatus('Preparing token request...');
     } else if (isRequestTokenConfirming) {
-      setTxStatus('Confirming transaction...')
+      setTxStatus('Confirming transaction...');
     } else if (isRequestTokenConfirmed && requestTokenHash) {
-      setTxHash(requestTokenHash)
-      setTxStatus('Token request completed successfully!')
-      setIsProcessing(false)
+      setTxHash(requestTokenHash);
+      setTxStatus('Token request completed successfully!');
+      setIsProcessing(false);
     } else if (requestTokenError) {
-      setTxStatus(`Token request failed: ${requestTokenError.message}`)
-      setIsProcessing(false)
+      setTxStatus(`Token request failed: ${requestTokenError.message}`);
+      setIsProcessing(false);
     }
-  }, [isRequestTokenPending, isRequestTokenConfirming, isRequestTokenConfirmed, requestTokenHash, requestTokenError])
-
-  const {
-    faucetTokensData,
-    loading: useFaucetTokensDataLoading,
-    error: useFaucetTokensDataError,
-  } = useFaucetTokensData(actualChainId, mounted);
-
-  const {
-    faucetRequestsData,
-    loading: useFaucetRequestsDataLoading,
-    error: useFaucetRequestsDataError,
-    refetchAll: faucetRequestsRefetch
-  } = useFaucetRequestData(actualChainId, mounted);
-
+  }, [
+    isRequestTokenPending,
+    isRequestTokenConfirming,
+    isRequestTokenConfirmed,
+    requestTokenHash,
+    requestTokenError,
+  ]);
+  
   const onSubmit = async (values: z.infer<typeof faucetSchema>) => {
     handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress);
   };
-
-  const {
-    availableTokens,
-    loading: useFaucetTokensLoading,
-    error: useFaucetTokensError,
-  } = useFaucetTokens(faucetTokensData, actualChainId, mounted, hasFaucetContract);
-  
-  const defaultToken = useMemo(() => {
-    const tokenAddresses = Object.keys(availableTokens);
-    if (tokenAddresses.length > 0 && !selectedTokenAddress) {
-      return tokenAddresses[0];
-    }
-    return selectedTokenAddress;
-  }, [availableTokens, selectedTokenAddress]);
-
-  if (defaultToken && defaultToken !== selectedTokenAddress) {
-    form.setValue('token', defaultToken);
-  }
 
   if (showConnectionLoader) {
     return <GradientLoader />;
@@ -312,15 +320,16 @@ const GTXFaucet: NextPage = () => {
                           <option value="" disabled>
                             Choose a token to request
                           </option>
-                          {Object.keys(availableTokens)?.map(key => (
-                            <option
-                              key={availableTokens[key].address}
-                              value={availableTokens[key].address}
-                              className="bg-black text-white"
-                            >
-                              {availableTokens[key].name} ({availableTokens[key].symbol})
-                            </option>
-                          ))}
+                          {tokenOptions.map(token => (
+                              <option
+                                key={token.token}
+                                value={token.token}
+                                className="bg-black text-white"
+                              >
+                                {token.symbol}
+                              </option>
+                            )
+                          )}
                         </select>
                       </div>
 
@@ -379,19 +388,19 @@ const GTXFaucet: NextPage = () => {
                             Faucet Balance
                           </p>
                           <p className="text-white font-mono text-sm">
-                            {faucetBalance && availableTokens[selectedTokenAddress]
+                            {faucetBalance && selectedToken
                               ? `${formatNumber(
                                   Number(
                                     formatUnits(
                                       BigInt(faucetBalance),
-                                      availableTokens[selectedTokenAddress].decimals
+                                      selectedToken.decimals
                                     )
                                   ),
                                   {
                                     decimals: 2,
                                     compact: true,
                                   }
-                                )} ${availableTokens[selectedTokenAddress]?.symbol}`
+                                )} ${selectedToken.symbol}`
                               : '-'}
                           </p>
                         </div>
@@ -444,19 +453,19 @@ const GTXFaucet: NextPage = () => {
                             Your Balance
                           </p>
                           <p className="text-white font-mono text-sm">
-                            {userBalance && availableTokens[selectedTokenAddress]
+                            {userBalance && selectedToken
                               ? `${formatNumber(
                                   Number(
                                     formatUnits(
                                       BigInt(userBalance),
-                                      availableTokens[selectedTokenAddress].decimals
+                                      selectedToken.decimals
                                     )
                                   ),
                                   {
                                     decimals: 2,
                                     compact: true,
                                   }
-                                )} ${availableTokens[selectedTokenAddress]?.symbol}`
+                                )} ${selectedToken.symbol}`
                               : '-'}
                           </p>
                         </div>

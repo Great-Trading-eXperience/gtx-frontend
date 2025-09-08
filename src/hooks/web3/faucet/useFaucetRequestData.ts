@@ -14,7 +14,6 @@ interface UseFaucetRequestDataResult {
 
 export const useFaucetRequestData = (
     actualChainId: number,
-    mounted: boolean,
 ): UseFaucetRequestDataResult => {
     const {
         data,
@@ -30,11 +29,10 @@ export const useFaucetRequestData = (
             return await request(url, queryRequestTokenss, { chainId: Number(actualChainId) });
         },
         staleTime: Number.POSITIVE_INFINITY,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
         retry: false,
-        enabled: mounted,
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
     });
 
     const refetchAll = async (): Promise<void> => {

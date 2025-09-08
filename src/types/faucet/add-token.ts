@@ -6,6 +6,8 @@ export default interface FaucetToken {
   blockNumber: number;
   blockTimestamp: number;
   transactionHash: string;
+  symbol: string;
+  decimals: number;
 }
 
 export type FaucetTokensData = {

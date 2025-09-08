@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { request } from "graphql-request"
 
 interface UseFaucetTokensDataResult {
-    faucetTokensData: FaucetTokensData | null | undefined;
+    faucetTokensData: FaucetTokensData;
     loading: boolean;
     error: boolean;
     hasErrors: boolean;
@@ -14,7 +14,6 @@ interface UseFaucetTokensDataResult {
 
 export const useFaucetTokensData = (
     actualChainId: number,
-    mounted: boolean,
 ) : UseFaucetTokensDataResult => {
     const {
         data,
@@ -30,11 +29,10 @@ export const useFaucetTokensData = (
           return await request(url, queryFaucetTokenss, { chainId: Number(actualChainId) })
         },
         staleTime: Number.POSITIVE_INFINITY,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
         retry: false,
-        enabled: mounted,
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
     })
 
     const refetchAll = async (): Promise<void> => {
@@ -43,7 +41,7 @@ export const useFaucetTokensData = (
 
 
     return {
-        faucetTokensData: data || null,
+        faucetTokensData: data || { faucetTokenss: {items : []} },
         loading: isLoading,
         error: isError,
         hasErrors: isError,
