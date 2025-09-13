@@ -177,13 +177,28 @@ function AppLayout({ children }: { children: ReactNode }) {
   const { ready, authenticated: isConnectedEmbeddedWallet } = usePrivyAuth();
   const { isConnected: isConnectedExternalWallet } = useAccount();
 
+  // Add delayed ready state
+  const [delayedReady, setDelayedReady] = useState(false);
+  
+  useEffect(() => {
+    if (ready) {
+      const timer = setTimeout(() => {
+        setDelayedReady(true);
+      }, 3000); // 3 second delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      setDelayedReady(false);
+    }
+  }, [ready]);
+
   const isConnected = isConnectedEmbeddedWallet && isConnectedExternalWallet;
 
   return (
     <>
       {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header onTogglePanel={togglePanel} />}
       {children}
-      {ready && !isConnected && !isHomePage && !isVeGTXPage && <ConnectWalletModal />}
+      {delayedReady && !isConnected && !isHomePage && !isVeGTXPage && <ConnectWalletModal />}
       {(isHomePage || isWaitlistMode) && <Footer />}
       <Toaster />
       
