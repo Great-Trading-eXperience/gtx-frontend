@@ -40,6 +40,7 @@ import { usePathname } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { useChainId } from 'wagmi';
 import GTXTooltip from '../../clob-dex/place-order/tooltip';
+import { useBalances } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalances';
 
 // GraphQL query for crosschain transfer history filtered by sender
 const getCrossChainTransfersQuery = `
@@ -728,21 +729,47 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
 
   let assets: Asset[] = [];
 
+  // // Create assets dynamically from all unique tokens found in pools
+  // if (tokenBalances.length > 0) {
+  //   assets = tokenBalances
+  //     .filter(tb => tb.displayBalance !== null && tb.symbol !== null)
+  //     .map((tb, index) => {
+  //       const colorMap = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-yellow-500', 'bg-indigo-500'];
+  //       const color = colorMap[index % colorMap.length];
+        
+  //       return {
+  //         symbol: tb.symbol,
+  //         balance: `${formatNumber(Number(tb.displayBalance), {decimals: 2, compact: true})} ${tb.symbol}`,
+  //         address: tb.token.address,
+  //         icon: (
+  //           <div className={`w-6 h-6 ${color} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
+  //             {tb.symbol?.charAt(0)?.toUpperCase() || 'T'}
+  //           </div>
+  //         ),
+  //       };
+  //     });
+  // }
+
+  const { 
+    balances: dataBalancess, 
+    loading: balancessIsLoading, 
+    error: balancessError 
+  } = useBalances(embeddedWalletAddress, chainId); // for trial can use address 0xac06dadc41514ec05a9dc396b2bf0ff99ecf152f
+
   // Create assets dynamically from all unique tokens found in pools
-  if (tokenBalances.length > 0) {
-    assets = tokenBalances
-      .filter(tb => tb.displayBalance !== null && tb.symbol !== null)
+  if (dataBalancess.length > 0) {
+    assets = dataBalancess
       .map((tb, index) => {
         const colorMap = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-yellow-500', 'bg-indigo-500'];
         const color = colorMap[index % colorMap.length];
         
         return {
-          symbol: tb.symbol,
-          balance: `${formatNumber(Number(tb.displayBalance), {decimals: 2, compact: true})} ${tb.symbol}`,
-          address: tb.token.address,
+          symbol: tb.currency.symbol,
+          balance: `${formatNumber(Number(tb.amount), {decimals: 2, compact: true})} ${tb.currency.symbol}`,
+          address: tb.currency.address,
           icon: (
             <div className={`w-6 h-6 ${color} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
-              {tb.symbol?.charAt(0)?.toUpperCase() || 'T'}
+              {tb.currency.symbol?.charAt(0)?.toUpperCase() || 'T'}
             </div>
           ),
         };
@@ -1421,11 +1448,11 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-white font-medium">
-                            {currentDepositToken?.name ? `gs${currentDepositToken.name}` : ''}
+                            {currentDepositToken?.name ? `gs${currentDepositToken?.name}` : ''}
                           </span>
                           {currentDepositToken?.address && (
                             <span className="text-gray-400 text-xs font-mono">
-                              {`${currentDepositToken.address.slice(0, 6)}...${currentDepositToken.address.slice(-4)}`}
+                              {`${currentDepositToken?.address.slice(0, 6)}...${currentDepositToken?.address.slice(-4)}`}
                             </span>
                           )}
                         </div>
@@ -1688,7 +1715,7 @@ const EmbededPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {crosschainHistoryData.crossChainTransferss.items.map((transfer, index) => {
+                    {crosschainHistoryData?.crossChainTransferss.items.map((transfer, index) => {
                         const isIncoming = transfer.direction === 'DEPOSIT';
                         const timestamp = new Date(parseInt(transfer.dispatchMessage.timestamp) * 1000);
                         

@@ -7,8 +7,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useChainId, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 
-export const useRequestToken = (
-) => {
+export const useRequestToken = () => {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
     const chainId = useChainId();

@@ -271,7 +271,7 @@ export const usePrivyRequestToken = (userAddress?: HexAddress) => {
           }
 
           // Check if faucet address is empty/invalid
-          if (!faucetAddress || faucetAddress === '' || faucetAddress === '0x') {
+          if (!faucetAddress || faucetAddress === '0x') {
             console.error('[usePrivyRequestToken] Faucet address is invalid for chain:', chainId);
             throw new Error(`Faucet contract not configured for chain ID ${chainId}. Please check contract configuration.`);
           }

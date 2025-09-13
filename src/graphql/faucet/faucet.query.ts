@@ -10,6 +10,8 @@ export const queryFaucetTokenss = gql`
           transactionId
           blockNumber
           chainId
+          symbol
+          decimals
         }
     }
   }

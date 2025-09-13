@@ -24,7 +24,7 @@ const Faucet = () => {
     return (
         <div className="min-h-screen relative overflow-hidden z-50">
             {/* Main content area */}
-            <div className="min-h-screen bg-black min-h-screen relative overflow-hidden z-50">
+            <div className="min-h-screen bg-black relative overflow-hidden z-50">
                 {/* GTXFaucet component with conditional blur effect */}
                 <div className={isComingSoon ? "blur-sm" : ""}>
                     <GTXFaucet />
