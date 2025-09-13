@@ -39,7 +39,6 @@ import { formatUnits } from 'viem';
 import { useAccount, useChainId } from 'wagmi';
 import * as z from 'zod';
 import { PrivyAuthButton } from '../auth/privy-buttons/privy-auth-button';
-import GradientLoader from '../gradient-loader/gradient-loader';
 import { DotPattern } from '../magicui/dot-pattern';
 import { FaucetSkeleton, WalletConnectionSkeleton } from './skeleton-faucet';
 import { useFaucetTokensData } from '@/hooks/web3/faucet/useFaucetTokensData';
@@ -247,9 +246,6 @@ const GTXFaucet: NextPage = () => {
     handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress);
   };
 
-  if (showConnectionLoader) {
-    return <GradientLoader />;
-  }
   if (!mounted || isLoading) {
     return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />;
   }
