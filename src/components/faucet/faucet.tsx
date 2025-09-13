@@ -57,38 +57,14 @@ interface FaucetTokensData {
 }
 
 const GTXFaucet: NextPage = () => {
-  const [mounted, setMounted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { isConnected } = useAccount();
-  const [showConnectionLoader, setShowConnectionLoader] = useState(false);
-  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
+  // const [mounted, setMounted] = useState(false);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const { isConnected, isConnecting, isReconnecting } = useAccount();
 
   // Transaction status
   const [txStatus, setTxStatus] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMounted(true);
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      if (isConnected && !previousConnectionState) {
-        setShowConnectionLoader(true);
-        const timer = setTimeout(() => {
-          setShowConnectionLoader(false);
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
-      setPreviousConnectionState(isConnected);
-    }
-  }, [isConnected, previousConnectionState, mounted]);
 
   const form = useForm<z.infer<typeof faucetSchema>>({
     resolver: zodResolver(faucetSchema),
@@ -119,13 +95,16 @@ const GTXFaucet: NextPage = () => {
     actualChainId,
     ContractName.faucet
   ) as HexAddress;
-  const hasFaucetContract = !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
+  const hasFaucetContract =
+    !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
 
   // Get current chain info for explorer URL
   const currentChain = [appchainTestnet, arbitrumSepolia, rariTestnet].find(
     chain => chain.id === actualChainId
   );
-  const explorerUrl = currentChain?.blockExplorers?.default?.url || 'https://appchaintestnet.explorer.caldera.xyz';
+  const explorerUrl =
+    currentChain?.blockExplorers?.default?.url ||
+    'https://appchaintestnet.explorer.caldera.xyz';
 
   const {
     faucetTokensData,
@@ -133,7 +112,7 @@ const GTXFaucet: NextPage = () => {
     error: useFaucetTokensDataError,
   } = useFaucetTokensData(actualChainId);
 
-  const getTokenOptions = (faucetTokensData : FaucetTokensData[]) => {
+  const getTokenOptions = (faucetTokensData: FaucetTokensData[]) => {
     if (!faucetTokensData || !Array.isArray(faucetTokensData)) {
       return [];
     }
@@ -149,42 +128,43 @@ const GTXFaucet: NextPage = () => {
 
   const selectedToken = tokenOptions.find(token => token.token === selectedTokenAddress);
 
-  const defaultToken = useMemo(() => {
+  useEffect(() => {
     if (tokenOptions.length > 0 && !selectedTokenAddress) {
-      return tokenOptions[0].token;
+      form.setValue('token', tokenOptions[0].token);
     }
-    return selectedTokenAddress;
-  }, [tokenOptions, selectedTokenAddress]);
+  }, [tokenOptions, selectedTokenAddress, form]);
 
-  if (defaultToken && defaultToken !== selectedTokenAddress) {
-    form.setValue('token', defaultToken);
-  }
-
-  const { userBalance, faucetBalance, loading, error, refetch } =
-    useUserAndFaucetBalances(
+  const {
+    userBalance,
+    faucetBalance,
+    loading: useUserAndFaucetBalanceLoading,
+    error,
+    refetch,
+  } = useUserAndFaucetBalances(
       userAddress as HexAddress,
       faucetAddress,
       selectedTokenAddress as HexAddress
     );
 
-  const { lastRequestTime, error: lastRequestTimeError } = useLastRequestTime(userAddress as HexAddress, faucetAddress); //iki yo langsung dua
-  const { faucetCooldown, error: faucetCooldownError } = useFaucetCooldown(faucetAddress); // iki satu
+  const {
+    lastRequestTime,
+    loading: useLastRequestTimeLoading,
+    error: lastRequestTimeError,
+  } = useLastRequestTime(userAddress as HexAddress, faucetAddress);
+  const {
+    faucetCooldown,
+    loading: useFaucetCooldownLoading,
+    error: faucetCooldownError,
+  } = useFaucetCooldown(faucetAddress);
 
   const {
     faucetRequestsData,
     loading: useFaucetRequestsDataLoading,
     error: useFaucetRequestsDataError,
-  } = useFaucetRequestData(actualChainId); // iki sko indexer
-
+  } = useFaucetRequestData(actualChainId);
 
   // Conditionally use the appropriate hook based on crosschain feature flag
   const useCrosschainStandardHook = shouldFaucetUseStandardHook();
-
-  console.log('[Faucet] Hook selection:', {
-    useCrosschainStandardHook,
-    willUseStandardHook: useCrosschainStandardHook,
-    willUsePrivyHook: !useCrosschainStandardHook,
-  });
 
   // Standard Wagmi hook (used when crosschain is enabled)
   const standardHookResult = useRequestToken();
@@ -247,16 +227,12 @@ const GTXFaucet: NextPage = () => {
   const onSubmit = async (values: z.infer<typeof faucetSchema>) => {
     handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress);
   };
-
-  if (showConnectionLoader) {
-    return <GradientLoader />;
+  
+  if (useFaucetTokensDataLoading) {
+    return <FaucetSkeleton />;
   }
 
-  if (!mounted || isLoading) {
-    return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />;
-  }
-
-  if (!hasFaucetContract && !isLoading) {
+  if (!hasFaucetContract) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-black/90 border border-white/30 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.1)] backdrop-blur-sm max-w-md w-full mx-4">
@@ -282,241 +258,221 @@ const GTXFaucet: NextPage = () => {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        {isConnected ? (
-          <div className="flex flex-col gap-8">
-            {/* Header Section */}
-            <div className="flex items-start justify-between">
-              <h2 className="text-white text-4xl font-bold tracking-tight text-start">
-                Token Faucet
-                <br />
-                <span className="text-white/70 text-base font-normal mt-2 block">
-                  Request test tokens
-                </span>
-              </h2>
+        <div className="flex flex-col gap-8">
+          {/* Header Section */}
+          <div className="flex items-start justify-between">
+            <h2 className="text-white text-4xl font-bold tracking-tight text-start">
+              Token Faucet
+              <br />
+              <span className="text-white/70 text-base font-normal mt-2 block">
+                Request test tokens
+              </span>
+            </h2>
+          </div>
+
+          {/* Main Faucet Card */}
+          <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
+            {/* Header with Icon */}
+            <div className="flex items-center gap-3 p-6 border-b border-white/10">
+              <TrendingUp className="w-5 h-5 text-white/70" />
+              <span className="text-white font-medium text-lg">Request Tokens</span>
             </div>
 
-            {/* Main Faucet Card */}
-            <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
-              {/* Header with Icon */}
-              <div className="flex items-center gap-3 p-6 border-b border-white/10">
-                <TrendingUp className="w-5 h-5 text-white/70" />
-                <span className="text-white font-medium text-lg">Request Tokens</span>
-              </div>
-
-              <div className="p-6">
-                <div className="grid lg:grid-cols-2 gap-8">
-                  {/* Token Request Form */}
+            <div className="p-6">
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Token Request Form */}
+                <div className="space-y-6">
                   <div className="space-y-6">
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-white/70 text-sm font-medium uppercase tracking-wider block mb-3">
-                          Select Token
-                        </label>
-                        <select
-                          value={selectedTokenAddress}
-                          onChange={e => form.setValue('token', e.target.value)}
-                          className="w-full h-12 bg-black/40 border border-white/20 text-white hover:border-white/40 focus:ring-1 focus:ring-white/40 focus:border-white/40 rounded-xl px-4 appearance-none cursor-pointer"
-                        >
-                          <option value="" disabled>
-                            Choose a token to request
-                          </option>
-                          {tokenOptions.map(token => (
-                              <option
-                                key={token.token}
-                                value={token.token}
-                                className="bg-black text-white"
-                              >
-                                {token.symbol}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <Button
-                        onClick={() => onSubmit({ token: selectedTokenAddress })}
-                        disabled={
-                          isProcessing ||
-                          isRequestTokenPending ||
-                          isRequestTokenConfirming ||
-                          !selectedTokenAddress
-                        }
-                        className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl transition-colors"
+                    <div>
+                      <label htmlFor="select-token" className="text-white/70 text-sm font-medium uppercase tracking-wider block mb-3">
+                        Select Token
+                      </label>
+                      <select
+                        value={selectedTokenAddress}
+                        onChange={e => form.setValue('token', e.target.value)}
+                        id='select-token'
+                        className="w-full h-12 bg-black/40 border border-white/20 text-white hover:border-white/40 focus:ring-1 focus:ring-white/40 focus:border-white/40 rounded-xl px-4 appearance-none cursor-pointer"
                       >
-                        {isRequestTokenPending
-                          ? 'Confirming in Wallet...'
-                          : isRequestTokenConfirming
-                          ? 'Confirming...'
-                          : isProcessing
-                          ? 'Processing...'
-                          : 'Request Tokens'}
-                      </Button>
+                        <option value="" disabled>
+                          Choose a token to request
+                        </option>
+                        {tokenOptions.map(token => (
+                            <option
+                              key={token.token}
+                              value={token.token}
+                              className="bg-black text-white"
+                            >
+                              {token.symbol}
+                            </option>
+                          )
+                        )}
+                      </select>
                     </div>
 
-                    {/* Status Display */}
-                    {txStatus && (
-                      <div className="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-white/90">{txStatus}</div>
-                          {isProcessing && (
-                            <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
-                          )}
-                        </div>
-                        {txHash && (
-                          <a
-                            href={`${explorerUrl}/tx/${txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                          >
-                            View on Explorer <ExternalLink className="ml-1 w-3 h-3" />
-                          </a>
+                    <Button
+                      onClick={() => onSubmit({ token: selectedTokenAddress })}
+                      disabled={
+                        isProcessing ||
+                        isRequestTokenPending ||
+                        isRequestTokenConfirming ||
+                        !selectedTokenAddress
+                      }
+                      className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl transition-colors"
+                    >
+                      {isRequestTokenPending
+                        ? 'Confirming in Wallet...'
+                        : isRequestTokenConfirming
+                        ? 'Confirming...'
+                        : isProcessing
+                        ? 'Processing...'
+                        : 'Request Tokens'}
+                    </Button>
+                  </div>
+
+                  {/* Status Display */}
+                  {txStatus && (
+                    <div className="bg-black/40 border border-white/10 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-white/90">{txStatus}</div>
+                        {isProcessing && (
+                          <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
                         )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                          <Wallet className="w-5 h-5 text-blue-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
-                            Faucet Balance
-                          </p>
-                          <p className="text-white font-mono text-sm">
-                            {faucetBalance && selectedToken
-                              ? `${formatNumber(
-                                  Number(
-                                    formatUnits(
-                                      BigInt(faucetBalance),
-                                      selectedToken.decimals
-                                    )
-                                  ),
-                                  {
-                                    decimals: 2,
-                                    compact: true,
-                                  }
-                                )} ${selectedToken.symbol}`
-                              : '-'}
-                          </p>
-                        </div>
-                      </div>
+                      {txHash && (
+                        <a
+                          href={`${explorerUrl}/tx/${txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          View on Explorer <ExternalLink className="ml-1 w-3 h-3" />
+                        </a>
+                      )}
                     </div>
-
-                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-blue-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
-                            Cooldown
-                          </p>
-                          <p className="text-white font-mono text-sm">
-                            {faucetCooldown ? `${faucetCooldown}s` : '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                          <Calendar className="w-5 h-5 text-blue-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
-                            Last Request
-                          </p>
-                          <p className="text-white font-mono text-sm">
-                            {lastRequestTime
-                              ? DateTime.fromMillis(
-                                  Number(lastRequestTime) * 1000
-                                ).toFormat('dd/MM/yy')
-                              : '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                          <Wallet className="w-5 h-5 text-blue-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
-                            Your Balance
-                          </p>
-                          <p className="text-white font-mono text-sm">
-                            {userBalance && selectedToken
-                              ? `${formatNumber(
-                                  Number(
-                                    formatUnits(
-                                      BigInt(userBalance),
-                                      selectedToken.decimals
-                                    )
-                                  ),
-                                  {
-                                    decimals: 2,
-                                    compact: true,
-                                  }
-                                )} ${selectedToken.symbol}`
-                              : '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              </div>
-            </div>
 
-            {/* Transaction History */}
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-3">
-                <History className="w-6 h-6 text-white/70" />
-                <h3 className="text-white text-2xl font-bold tracking-tight">
-                  Transaction History
-                </h3>
-              </div>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                          Faucet Balance
+                        </p>
+                        <p className="text-white font-mono text-sm">
+                          {faucetBalance && selectedToken
+                            ? `${formatNumber(
+                                Number(
+                                  formatUnits(
+                                    BigInt(faucetBalance),
+                                    selectedToken.decimals
+                                  )
+                                ),
+                                {
+                                  decimals: 2,
+                                  compact: true,
+                                }
+                              )} ${selectedToken.symbol}`
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
-                <div className="p-6">
-                  <DataTable
-                    data={faucetRequestsData?.faucetRequestss.items ?? []}
-                    columns={requestTokenColumns()}
-                    handleRefresh={() => {}}
-                    isLoading={useFaucetRequestsDataLoading}
-                  />
+                  <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                          Cooldown
+                        </p>
+                        <p className="text-white font-mono text-sm">
+                          {faucetCooldown ? `${faucetCooldown}s` : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                          Last Request
+                        </p>
+                        <p className="text-white font-mono text-sm">
+                          {lastRequestTime
+                            ? DateTime.fromMillis(
+                                Number(lastRequestTime) * 1000
+                              ).toFormat('dd/MM/yy')
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/40 border border-white/10 rounded-xl p-4 hover:bg-black/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                          Your Balance
+                        </p>
+                        <p className="text-white font-mono text-sm">
+                          {userBalance && selectedToken
+                            ? `${formatNumber(
+                                Number(
+                                  formatUnits(
+                                    BigInt(userBalance),
+                                    selectedToken.decimals
+                                  )
+                                ),
+                                {
+                                  decimals: 2,
+                                  compact: true,
+                                }
+                              )} ${selectedToken.symbol}`
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm max-w-md w-full">
-              <div className="p-12 text-center">
-                <div className="flex items-center justify-center mb-8">
-                  <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                    <Droplets className="w-10 h-10 text-blue-400" />
-                  </div>
-                </div>
-                <h2 className="text-white text-3xl font-bold tracking-tight mb-4">
-                  Connect Wallet
-                </h2>
-                <p className="text-white/70 mb-8">
-                  Connect your wallet to access the test token faucet
-                </p>
-                <PrivyAuthButton showFullProfile={false} />
+
+          {/* Transaction History */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <History className="w-6 h-6 text-white/70" />
+              <h3 className="text-white text-2xl font-bold tracking-tight">
+                Transaction History
+              </h3>
+            </div>
+
+            <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm">
+              <div className="p-6">
+                <DataTable
+                  data={faucetRequestsData?.faucetRequestss.items ?? []}
+                  columns={requestTokenColumns()}
+                  handleRefresh={() => {}}
+                  isLoading={useFaucetRequestsDataLoading}
+                />
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
