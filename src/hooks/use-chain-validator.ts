@@ -3,6 +3,8 @@ import { useWallets } from '@privy-io/react-auth';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useChainId, useDisconnect } from 'wagmi';
+import { useSwitchAndAddChain } from './useSwitchAndAddChain';
+import { appchainTestnet } from '@/configs/wagmi';
 
 // Supported chain IDs for external wallets
 const SUPPORTED_EXTERNAL_CHAINS = [
@@ -36,6 +38,8 @@ export function useChainValidator() {
   const { disconnect } = useDisconnect();
   const { wallets } = useWallets();
 
+  const { switchAndAddChain } = useSwitchAndAddChain();
+
   useEffect(() => {
     const validateChain = async () => {
       // Only enforce restrictions when crosschain is enabled
@@ -44,80 +48,64 @@ export function useChainValidator() {
         return;
       }
 
-      // Check if user is using embedded wallet (Privy wallet)
-      const embeddedWallet = wallets.find(wallet => 
-        wallet.walletClientType === 'privy' || 
-        wallet.walletClientType === 'embedded' ||
-        wallet.connectorType === 'embedded'
-      );
+      wallets.forEach(async wallet => {
+        const isEmbedded = wallet.walletClientType === 'privy' || wallet.walletClientType === 'embedded' || wallet.connectorType === 'embedded';
 
-      const chainName = CHAIN_NAMES[currentChainId] || `Chain ${currentChainId}`;
+        if (isEmbedded) {
+          const chainIdStr = wallet.chainId;
+          const chainId = Number(chainIdStr.replace("eip155:", ""));
 
-      if (embeddedWallet) {
-        // Embedded wallets must be on Rari Testnet only
-        if (currentChainId !== RARI_TESTNET_CHAIN_ID) {
-          console.log(`[CHAIN_VALIDATOR] Embedded wallet on wrong chain: ${chainName} (${currentChainId}), switching to Rari`);
-          
-          try {
-            await embeddedWallet.switchChain(RARI_TESTNET_CHAIN_ID);
-            console.log(`[CHAIN_VALIDATOR] Successfully switched embedded wallet to Rari`);
-          } catch (error) {
-            console.error(`[CHAIN_VALIDATOR] Failed to switch embedded wallet to Rari:`, error);
-            
-            toast.error(
-              `Failed to switch to Rari Testnet. Please try reconnecting your wallet.`,
-              {
-                duration: 8000,
-                action: {
-                  label: 'Disconnect',
-                  onClick: () => disconnect(),
-                },
-              }
-            );
+          if (chainId !== RARI_TESTNET_CHAIN_ID) {
+            console.log(`[CHAIN_VALIDATOR] Embedded wallet on wrong chain: ${CHAIN_NAMES[chainId] || chainId}} (${currentChainId}), switching to Rari`);
+            try {
+              await wallet.switchChain(RARI_TESTNET_CHAIN_ID);
+              console.log(`[CHAIN_VALIDATOR] Successfully switched embedded wallet to Rari`);
+            } catch (error) {
+              console.error(`[CHAIN_VALIDATOR] Failed to switch embedded wallet to Rari:`, error);
+              
+              toast.error(
+                `Failed to switch to Rari Testnet. Please try reconnecting your wallet.`,
+                {
+                  duration: 8000,
+                  action: {
+                    label: 'Disconnect',
+                    onClick: () => disconnect(),
+                  },
+                }
+              );
 
-            // Disconnect if switching fails
-            setTimeout(() => {
-              console.log(`[CHAIN_VALIDATOR] Auto-disconnecting embedded wallet due to chain switch failure`);
-              disconnect();
-            }, 3000);
+              setTimeout(() => {
+                console.log(`[CHAIN_VALIDATOR] Auto-disconnecting embedded wallet due to chain switch failure`);
+                disconnect();
+              }, 3000);
+            }
+          } else {
+            console.log(`[CHAIN_VALIDATOR] Embedded wallet correctly on Rari Testnet`);
           }
         } else {
-          console.log(`[CHAIN_VALIDATOR] Embedded wallet correctly on Rari Testnet`);
-        }
-      } else {
-        // External wallet validation
-        const isSupported = SUPPORTED_EXTERNAL_CHAINS.includes(currentChainId);
+          const chainIdStr = wallet.chainId;
+          const chainId = Number(chainIdStr.replace("eip155:", ""));
 
-        console.log(`[CHAIN_VALIDATOR] Validating external wallet chain: ${chainName} (${currentChainId}), supported: ${isSupported}`);
+          const isSupported = SUPPORTED_EXTERNAL_CHAINS.includes(chainId);
 
-        if (!isSupported) {
-          console.log(`[CHAIN_VALIDATOR] Unsupported chain detected for external wallet: ${chainName} (${currentChainId})`);
-          
-          // Show error message
-          toast.error(
-            `${chainName} is not supported with crosschain features. Please switch to Appchain Testnet or Arbitrum Sepolia.`,
-            {
-              duration: 8000,
-              action: {
-                label: 'Disconnect',
-                onClick: () => disconnect(),
-              },
+          if (!isSupported) {
+            console.log(`[CHAIN_VALIDATOR] Unsupported chain detected for external wallet: ${CHAIN_NAMES[chainId] || chainId} (${chainId})`);
+            try {
+              await switchAndAddChain(appchainTestnet); // Attempt to switch to Appchain First
+              toast.success(`Switched to Appchain Testnet.`, { duration: 5000 });
+              console.log(`[CHAIN_VALIDATOR] Successfully switched external wallet to Appchain Testnet`);
+            } catch (error) {
+              if (error instanceof Error) {
+                console.error(error.message);
+              } else {
+                console.error('An unknown error occurred.');
+              }
             }
-          );
-
-          // Auto-disconnect after a delay to give user time to read the message
-          setTimeout(() => {
-            console.log(`[CHAIN_VALIDATOR] Auto-disconnecting from unsupported chain: ${chainName}`);
-            disconnect();
-            
-            toast.info('Disconnected from unsupported network. Please reconnect with Appchain Testnet or Arbitrum Sepolia.', {
-              duration: 5000,
-            });
-          }, 3000);
-        } else {
-          console.log(`[CHAIN_VALIDATOR] Chain validated successfully: ${chainName} (${currentChainId})`);
+          } else {
+            console.log(`[CHAIN_VALIDATOR] Chain validated successfully: ${CHAIN_NAMES[chainId] || chainId} (${chainId})`);
+          };
         }
-      }
+      })
     };
 
     // Small delay to ensure wallet is fully connected

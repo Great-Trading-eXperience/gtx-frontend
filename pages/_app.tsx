@@ -18,6 +18,9 @@ import { useRouter } from "next/router";
 import { NextPage } from "next/types";
 import { ReactNode, useEffect, useState } from "react";
 import "../styles/globals.css";
+import { usePrivyAuth } from "@/hooks/use-privy-auth";
+import { useAccount } from "wagmi";
+import ConnectWalletModal from "@/components/header/connect-wallet-modal";
 
 // RPC Request logging and rate limiting for debugging 429 errors
 if (typeof window !== 'undefined') {
@@ -170,10 +173,32 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isPanelOpen]);
 
+  // Handle connection state
+  const { ready, authenticated: isConnectedEmbeddedWallet } = usePrivyAuth();
+  const { isConnected: isConnectedExternalWallet } = useAccount();
+
+  // Add delayed ready state
+  const [delayedReady, setDelayedReady] = useState(false);
+  
+  useEffect(() => {
+    if (ready) {
+      const timer = setTimeout(() => {
+        setDelayedReady(true);
+      }, 3000); // 3 second delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      setDelayedReady(false);
+    }
+  }, [ready]);
+
+  const isConnected = isConnectedEmbeddedWallet && isConnectedExternalWallet;
+
   return (
     <>
       {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header onTogglePanel={togglePanel} />}
       {children}
+      {delayedReady && !isConnected && !isHomePage && !isVeGTXPage && <ConnectWalletModal />}
       {(isHomePage || isWaitlistMode) && <Footer />}
       <Toaster />
       
