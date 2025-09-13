@@ -3,8 +3,39 @@ const { withSentryConfig } = require("@sentry/nextjs");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: false, // Temporarily disabled for WebSocket testing
-    webpack: (config) => {
+    experimental: {
+        workerThreads: false,
+        cpus: 1,
+    },
+    output: 'standalone',
+    webpack: (config, { isServer }) => {
         config.resolve.fallback = { fs: false, net: false, tls: false };
+        
+        if (!isServer) {
+            config.optimization = {
+                ...config.optimization,
+                splitChunks: {
+                    chunks: 'all',
+                    maxInitialRequests: 25,
+                    minSize: 20000,
+                    cacheGroups: {
+                        default: {
+                            minChunks: 1,
+                            priority: -20,
+                            reuseExistingChunk: true,
+                        },
+                        vendor: {
+                            test: /[\\/]node_modules[\\/]/,
+                            name: 'vendors',
+                            priority: -10,
+                            chunks: 'all',
+                            maxSize: 244000,
+                        },
+                    },
+                },
+            };
+        }
+        
         return config;
     },
     publicRuntimeConfig: {
