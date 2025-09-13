@@ -18,6 +18,9 @@ import { useRouter } from "next/router";
 import { NextPage } from "next/types";
 import { ReactNode, useEffect, useState } from "react";
 import "../styles/globals.css";
+import { usePrivyAuth } from "@/hooks/use-privy-auth";
+import { useAccount } from "wagmi";
+import ConnectWalletModal from "@/components/header/connect-wallet-modal";
 
 // RPC Request logging and rate limiting for debugging 429 errors
 if (typeof window !== 'undefined') {
@@ -170,10 +173,17 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isPanelOpen]);
 
+  // Handle connection state
+  const { ready, authenticated: isConnectedEmbeddedWallet } = usePrivyAuth();
+  const { isConnected: isConnectedExternalWallet } = useAccount();
+
+  const isConnected = isConnectedEmbeddedWallet && isConnectedExternalWallet;
+
   return (
     <>
       {isHomePage ? <LandingHeader /> : isVeGTXPage ? <VeGTXHeader /> : <Header onTogglePanel={togglePanel} />}
       {children}
+      {ready && !isConnected && !isHomePage && !isVeGTXPage && <ConnectWalletModal />}
       {(isHomePage || isWaitlistMode) && <Footer />}
       <Toaster />
       
