@@ -1,4 +1,4 @@
-import { PrivyAuthButton } from '../auth/privy-auth-button';
+import { PrivyAuthButton } from '../auth/privy-buttons/privy-auth-button';
 import Image from 'next/image';
 
 const ConnectWalletModal = () => {
