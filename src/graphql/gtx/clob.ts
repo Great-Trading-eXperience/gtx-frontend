@@ -845,3 +845,47 @@ export type TradeHistoryPonderResponse = {
 export type TradeHistoryResponse = {
   orderHistorys: TradeHistoryItem[];
 };
+
+export const useBalancesQuery = gql `
+  query getBalancess($userAddress: String!) {
+    balancess(where: { user: $userAddress }) {
+      items {
+        id
+        amount
+        lockedAmount
+        user
+        currency {
+          address
+          chainId
+          decimals
+          id
+          name
+          symbol
+        }
+      }
+    }
+  }
+`;
+
+export type Currency = {
+  address: string;
+  chainId: number;
+  decimals: number;
+  id: string;
+  name: string;
+  symbol: string;
+}
+
+export type BalancesItem = {
+  id: string;
+  amount: string;
+  lockedAmount: string;
+  user: string;
+  currency: Currency;
+}
+
+export type BalancessResponse = {
+  balancess: {
+    items: BalancesItem[];
+  };
+}
