@@ -1,3 +1,5 @@
+"use client"
+
 // useCrossChain.ts - Improved Pharos version
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAccount } from 'wagmi';

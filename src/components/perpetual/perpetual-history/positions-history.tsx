@@ -10,7 +10,7 @@ import { formatUnits } from "viem"
 import type { HexAddress } from "@/types/general/address"
 import { useMarketData } from "../../../../utils/useMarketData"
 import { positionsQuery } from "@/graphql/gtx/perpetual"
-import { formatDate } from "../../../../helper"
+import { formatDate } from "../../../helper"
 
 // Interfaces
 interface Position {

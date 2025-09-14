@@ -40,3 +40,15 @@ export interface MarketData {
   volume: string;
   liquidity: string;
 } 
+
+export interface MarketDataApi {
+  poolId: string;
+  symbol: string;
+  baseAsset: string;
+  baseDecimals: number;
+  quoteAsset: string;
+  quoteDecimals: number;
+  latestPrice: string;
+  volume: string;
+  volumeQuote: string;
+}

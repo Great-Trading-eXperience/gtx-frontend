@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
-import { formatDate } from '../../../../helper';
+import { formatDate } from '../../../helper';
 import { ClobDexComponentProps } from '../clob-dex';
 
 export interface OrderHistoryTableProps extends ClobDexComponentProps {

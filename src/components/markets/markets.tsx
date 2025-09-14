@@ -1,3 +1,5 @@
+"use client";
+
 import { Input } from '@/components/ui/input';
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';

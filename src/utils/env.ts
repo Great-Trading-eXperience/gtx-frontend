@@ -3,8 +3,6 @@ import { DEFAULT_CHAIN, ContractName, getContractAddress } from '@/constants/con
 import { USE_SUBGRAPH } from '@/constants/features/features-config'
 import { getIndexerUrl, getExplorerUrl as getExplorerUrlFromConfig } from '@/constants/urls/urls-config'
 
-const { publicRuntimeConfig } = getConfig()
-
 // Helper function to get chain ID string
 const getChainIdStr = (chainId?: number): string => {
     return chainId ? chainId.toString() : DEFAULT_CHAIN
@@ -33,13 +31,14 @@ export const getExplorerUrl = (chainId?: number): string => {
     }
 };
 
-// Methods that can use contract-address.ts directly
+// Refactored methods to get config inside the function body
 export const getBalanceManagerAddress = (chainId?: number): string => {
     try {
         // Try to get from contract addresses first
         return getContractAddress(chainId || DEFAULT_CHAIN, ContractName.clobBalanceManager)
     } catch (error) {
         // Fall back to environment variables if not found in contract config
+        const { publicRuntimeConfig } = getConfig();
         const chainIdStr = getChainIdStr(chainId)
         const envVarName = `NEXT_PUBLIC_BALANCE_MANAGER_${chainIdStr}_ADDRESS`
         const address = publicRuntimeConfig[envVarName]
@@ -59,6 +58,7 @@ export const getPoolManagerAddress = (chainId?: number): string => {
         return getContractAddress(chainId || DEFAULT_CHAIN, ContractName.clobPoolManager)
     } catch (error) {
         // Fall back to environment variables if not found in contract config
+        const { publicRuntimeConfig } = getConfig();
         const chainIdStr = getChainIdStr(chainId)
         const envVarName = `NEXT_PUBLIC_POOL_MANAGER_${chainIdStr}_ADDRESS`
         const address = publicRuntimeConfig[envVarName]
@@ -78,6 +78,7 @@ export const getGTXRouterAddress = (chainId?: number): string => {
         return getContractAddress(chainId || DEFAULT_CHAIN, ContractName.clobRouter)
     } catch (error) {
         // Fall back to environment variables if not found in contract config
+        const { publicRuntimeConfig } = getConfig();
         const chainIdStr = getChainIdStr(chainId)
         const envVarName = `NEXT_PUBLIC_GTX_ROUTER_${chainIdStr}_ADDRESS`
         const address = publicRuntimeConfig[envVarName]

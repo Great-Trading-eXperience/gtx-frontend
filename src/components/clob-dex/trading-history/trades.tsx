@@ -16,7 +16,7 @@ import {
 import { useState } from 'react';
 import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
-import { formatDate } from '../../../../helper';
+import { formatDate } from '../../../helper';
 import { ClobDexComponentProps } from '../clob-dex';
 
 export interface TradesProps extends ClobDexComponentProps {
