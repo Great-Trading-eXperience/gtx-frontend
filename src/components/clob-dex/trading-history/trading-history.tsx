@@ -1,6 +1,5 @@
 'use client';
 
-import { PrivyAuthButton } from '@/components/auth/privy-auth-button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -17,6 +16,7 @@ import BalancesHistoryTable from './balances';
 import OrderHistoryTable from './orders';
 import TradeHistoryTable from './trades';
 import TradingHistorySkeleton from './trading-history-skeleton';
+import { PrivyAuthButton } from '@/components/auth/privy-buttons/privy-auth-button';
 
 export interface TradingHistoryProps extends ClobDexComponentProps {
   balanceData: BalanceItem[];

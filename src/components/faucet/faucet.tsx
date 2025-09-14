@@ -38,8 +38,7 @@ import { useForm } from 'react-hook-form';
 import { formatUnits } from 'viem';
 import { useAccount, useChainId } from 'wagmi';
 import * as z from 'zod';
-import { PrivyAuthButton } from '../auth/privy-auth-button';
-import GradientLoader from '../gradient-loader/gradient-loader';
+import { PrivyAuthButton } from '../auth/privy-buttons/privy-auth-button';
 import { DotPattern } from '../magicui/dot-pattern';
 import { FaucetSkeleton, WalletConnectionSkeleton } from './skeleton-faucet';
 import { useFaucetTokensData } from '@/hooks/web3/faucet/useFaucetTokensData';
@@ -57,9 +56,11 @@ interface FaucetTokensData {
 }
 
 const GTXFaucet: NextPage = () => {
-  // const [mounted, setMounted] = useState(false);
-  // const [isLoading, setIsLoading] = useState(true);
-  // const { isConnected, isConnecting, isReconnecting } = useAccount();
+  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { isConnected } = useAccount();
+  const [showConnectionLoader, setShowConnectionLoader] = useState(false);
+  const [previousConnectionState, setPreviousConnectionState] = useState(isConnected);
 
   // Transaction status
   const [txStatus, setTxStatus] = useState<string | null>(null);
@@ -227,9 +228,10 @@ const GTXFaucet: NextPage = () => {
   const onSubmit = async (values: z.infer<typeof faucetSchema>) => {
     handleRequestToken(userAddress as HexAddress, selectedTokenAddress as HexAddress);
   };
-  
-  if (useFaucetTokensDataLoading) {
-    return <FaucetSkeleton />;
+
+  if (!mounted || isLoading) {
+    return isConnected ? <FaucetSkeleton /> : <WalletConnectionSkeleton />;
+
   }
 
   if (!hasFaucetContract) {
@@ -252,11 +254,6 @@ const GTXFaucet: NextPage = () => {
 
   return (
     <div className="px-6 py-12 mx-auto bg-black min-h-screen">
-      {/* Dot Pattern Background */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <DotPattern />
-      </div>
-
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="flex flex-col gap-8">
           {/* Header Section */}

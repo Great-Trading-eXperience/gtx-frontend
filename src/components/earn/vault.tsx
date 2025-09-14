@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExternalLink } from "lucide-react"
 import Link from "next/link"
-import { PrivyAuthButton } from "../auth/privy-auth-button"
+import { PrivyAuthButton } from "../auth/privy-buttons/privy-auth-button"
 
 interface Pool {
   collateral: string
