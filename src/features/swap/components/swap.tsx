@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from '@/_components/ui/button';
+import { Skeleton } from '@/_components/ui/skeleton';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useWallets } from '@privy-io/react-auth';
 import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from "sonner";
+import { toast } from 'sonner';
 import { useAccount, useChainId } from 'wagmi';
 
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
-import { useTradingBalances } from '@/hooks/web3/gtx/clob-dex/balance-manager/useTradingBalances';
-import { useTokenBalance } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useBalanceOf';
-import { useAvailableTokens } from '@/hooks/web3/gtx/clob-dex/gtx-router/useAvailableTokens';
-import { useCalculateMinOutForSwap } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCalculateMinOutForSwap';
-import { useSwap } from '@/hooks/web3/gtx/clob-dex/gtx-router/useSwap';
 import type { HexAddress } from '@/types/general/address';
 import { formatUnits } from 'viem';
-import { DotPattern } from '../magicui/dot-pattern';
+
+import { useTradingBalances } from '../hooks/useTradingBalances';
+import { useTokenBalance } from '../hooks/useBalanceOf';
+import { useAvailableTokens } from '../hooks/useAvailableTokens';
+import { useCalculateMinOutForSwap } from '../hooks/useCalculateMinOutForSwap';
+import { useSwap } from '../hooks/useSwap';
 
 // Type for token selection
 export interface Token {
@@ -35,14 +35,14 @@ const SwapForm: React.FC = () => {
   const { isFullyAuthenticated } = usePrivyAuth();
   const { wallets } = useWallets();
   const currentChainId = useChainId();
-  
+
   const embedded = wallets.find(wallet => wallet.walletClientType === 'privy');
-  
+
   const effectiveIsConnected = isConnected || isFullyAuthenticated;
-  
+
   let walletType: 'external' | 'embedded' | 'none';
   let actualAddress: HexAddress | undefined;
-  
+
   if (isFullyAuthenticated && embedded?.address) {
     walletType = 'embedded';
     actualAddress = embedded.address as HexAddress;
@@ -68,12 +68,13 @@ const SwapForm: React.FC = () => {
     isSwapConfirmed,
     swapHash,
     swapError,
-    resetSwapState
+    resetSwapState,
   } = useSwap(actualAddress);
 
-  const {
-    getTotalAvailableBalance,
-  } = useTradingBalances(balanceManagerAddress, actualAddress);
+  const { getTotalAvailableBalance } = useTradingBalances(
+    balanceManagerAddress,
+    actualAddress
+  );
 
   // Processing state for swap
   const [isProcessing, setIsProcessing] = useState(false);
@@ -97,8 +98,12 @@ const SwapForm: React.FC = () => {
   }, [isSwapPending, isSwapConfirming, isSwapConfirmed, swapHash, swapError]);
 
   // Fetch available tokens dynamically from pools
-  const { tokens: availableTokensFromPools, isLoading: isTokensLoading, error: tokensError } = useAvailableTokens();
- 
+  const {
+    tokens: availableTokensFromPools,
+    isLoading: isTokensLoading,
+    error: tokensError,
+  } = useAvailableTokens();
+
   const [amount, setAmount] = useState<string>('');
   const [estimatedReceived, setEstimatedReceived] = useState<string>('0');
   const [minReceived, setMinReceived] = useState<string>('0');
@@ -125,8 +130,15 @@ const SwapForm: React.FC = () => {
     } else if (tokensError) {
       console.error('[SWAP] ❌ Error loading tokens:', tokensError);
     } else if (availableTokensFromPools) {
-      console.log('[SWAP] ✅ Loaded available tokens:', availableTokensFromPools.length, 'tokens');
-      console.log('[SWAP] 📋 Available tokens details:', availableTokensFromPools.map(t => `${t.symbol} (${t.address})`));
+      console.log(
+        '[SWAP] ✅ Loaded available tokens:',
+        availableTokensFromPools.length,
+        'tokens'
+      );
+      console.log(
+        '[SWAP] 📋 Available tokens details:',
+        availableTokensFromPools.map(t => `${t.symbol} (${t.address})`)
+      );
     }
   }, [isTokensLoading, tokensError, availableTokensFromPools]);
 
@@ -174,25 +186,25 @@ const SwapForm: React.FC = () => {
     const getTokenIcon = (tokenSymbol: string): string => {
       // Exact symbol matches first
       const exactMatches: Record<string, string> = {
-        'WETH': 'eth.png',
-        'mWETH': 'eth.png', 
-        'gsWETH': 'eth.png',
-        'ETH': 'eth.png',
-        'NATIVE': 'eth.png',
-        'BTC': 'bitcoin.png',
-        'WBTC': 'bitcoin.png',
-        'mWBTC': 'bitcoin.png',
-        'gsWBTC': 'bitcoin.png',
-        'USDC': 'usdc.png',
-        'MUSDC': 'usdc.png',
-        'USDT': 'usdc.png',
-        'gsUSDT': 'usdc.png',
-        'DOGE': 'doge.png',
-        'LINK': 'link.png',
-        'PEPE': 'pepe.png',
-        'TRUMP': 'trump.png',
-        'SHIB': 'shiba.png',
-        'FLOKI': 'floki.png'
+        WETH: 'eth.png',
+        mWETH: 'eth.png',
+        gsWETH: 'eth.png',
+        ETH: 'eth.png',
+        NATIVE: 'eth.png',
+        BTC: 'bitcoin.png',
+        WBTC: 'bitcoin.png',
+        mWBTC: 'bitcoin.png',
+        gsWBTC: 'bitcoin.png',
+        USDC: 'usdc.png',
+        MUSDC: 'usdc.png',
+        USDT: 'usdc.png',
+        gsUSDT: 'usdc.png',
+        DOGE: 'doge.png',
+        LINK: 'link.png',
+        PEPE: 'pepe.png',
+        TRUMP: 'trump.png',
+        SHIB: 'shiba.png',
+        FLOKI: 'floki.png',
       };
 
       // Check for exact match first
@@ -222,7 +234,7 @@ const SwapForm: React.FC = () => {
       icon: `/tokens/${getTokenIcon(token.symbol)}`,
       address: token.address as HexAddress,
       description: token.address.slice(0, 6) + '...' + token.address.slice(-4),
-      decimals: token.decimals
+      decimals: token.decimals,
     }));
   }, [availableTokensFromPools, currentChainId]);
 
@@ -259,15 +271,19 @@ const SwapForm: React.FC = () => {
 
   // Get actual token decimals from the available tokens (from pools data)
   const getTokenDecimalsFromPools = (tokenAddress: string): number | null => {
-    const token = availableTokensList.find(t => 
-      t.address.toLowerCase() === tokenAddress.toLowerCase()
+    const token = availableTokensList.find(
+      t => t.address.toLowerCase() === tokenAddress.toLowerCase()
     );
     return token?.decimals || null;
   };
-  
+
   // Get actual token decimals from pools data
-  const sourceTokenDecimals = sourceToken ? getTokenDecimalsFromPools(sourceToken.address) : null;
-  const destTokenDecimals = destToken ? getTokenDecimalsFromPools(destToken.address) : null;
+  const sourceTokenDecimals = sourceToken
+    ? getTokenDecimalsFromPools(sourceToken.address)
+    : null;
+  const destTokenDecimals = destToken
+    ? getTokenDecimalsFromPools(destToken.address)
+    : null;
   const hasValidDecimals = sourceTokenDecimals !== null && destTokenDecimals !== null;
 
   // Fetch balances based on wallet type
@@ -282,32 +298,38 @@ const SwapForm: React.FC = () => {
         try {
           setIsSourceBalanceLoading(true);
           setIsDestBalanceLoading(true);
-          
+
           // Check if we have valid decimals before proceeding
           if (!hasValidDecimals) {
-            console.error('[SWAP] ❌ Cannot fetch balances - missing token decimals from pools');
+            console.error(
+              '[SWAP] ❌ Cannot fetch balances - missing token decimals from pools'
+            );
             setIsSourceBalanceError(true);
             setIsDestBalanceError(true);
             setSourceTokenBalance('Error: Missing token info');
             setDestTokenBalance('Error: Missing token info');
             return;
           }
-          
-          const sourceBalanceBigInt = await getTotalAvailableBalance(sourceToken.address as HexAddress);
-          const destBalanceBigInt = await getTotalAvailableBalance(destToken.address as HexAddress);
-          
+
+          const sourceBalanceBigInt = await getTotalAvailableBalance(
+            sourceToken.address as HexAddress
+          );
+          const destBalanceBigInt = await getTotalAvailableBalance(
+            destToken.address as HexAddress
+          );
+
           console.log('[SWAP] 💰 Raw balances fetched:', {
             sourceBalanceBigInt: sourceBalanceBigInt.toString(),
-            destBalanceBigInt: destBalanceBigInt.toString()
+            destBalanceBigInt: destBalanceBigInt.toString(),
           });
-          
+
           // Format the balances with actual decimals from pools data
           const sourceDecimals = sourceTokenDecimals!; // We know it's not null due to hasValidDecimals check
           const destDecimals = destTokenDecimals!;
-          
+
           const sourceFormatted = formatUnits(sourceBalanceBigInt, sourceDecimals);
           const destFormatted = formatUnits(destBalanceBigInt, destDecimals);
-          
+
           // Format balances without unnecessary decimals
           const formatBalance = (value: string): string => {
             const num = parseFloat(value);
@@ -318,17 +340,17 @@ const SwapForm: React.FC = () => {
             // Otherwise, show up to 6 decimals but remove trailing zeros
             return parseFloat(num.toFixed(6)).toString();
           };
-          
+
           const sourceFinal = formatBalance(sourceFormatted);
           const destFinal = formatBalance(destFormatted);
-          
+
           console.log('[SWAP] 📊 Formatted balances:', {
             sourceFormatted,
             destFormatted,
             sourceFinal,
-            destFinal
+            destFinal,
           });
-          
+
           setSourceTokenBalance(sourceFinal);
           setDestTokenBalance(destFinal);
           setIsSourceBalanceError(false);
@@ -355,7 +377,22 @@ const SwapForm: React.FC = () => {
     };
 
     fetchBalances();
-  }, [useEmbeddedWallet, sourceToken, destToken, actualAddress, hasValidDecimals, sourceTokenDecimals, destTokenDecimals, getTotalAvailableBalance, externalSourceBalance, externalDestBalance, isExternalSourceLoading, isExternalDestLoading, isExternalSourceError, isExternalDestError]);
+  }, [
+    useEmbeddedWallet,
+    sourceToken,
+    destToken,
+    actualAddress,
+    hasValidDecimals,
+    sourceTokenDecimals,
+    destTokenDecimals,
+    getTotalAvailableBalance,
+    externalSourceBalance,
+    externalDestBalance,
+    isExternalSourceLoading,
+    isExternalDestLoading,
+    isExternalSourceError,
+    isExternalDestError,
+  ]);
 
   // Debug logging for balance hooks
   useEffect(() => {
@@ -371,32 +408,60 @@ const SwapForm: React.FC = () => {
         isSourceLoading: isSourceBalanceLoading,
         isDestLoading: isDestBalanceLoading,
         sourceError: isSourceBalanceError,
-        destError: isDestBalanceError
+        destError: isDestBalanceError,
       });
     }
-  }, [walletType, useEmbeddedWallet, sourceToken, destToken, actualAddress, sourceTokenBalance, destTokenBalance, isSourceBalanceLoading, isDestBalanceLoading, isSourceBalanceError, isDestBalanceError]);
+  }, [
+    walletType,
+    useEmbeddedWallet,
+    sourceToken,
+    destToken,
+    actualAddress,
+    sourceTokenBalance,
+    destTokenBalance,
+    isSourceBalanceLoading,
+    isDestBalanceLoading,
+    isSourceBalanceError,
+    isDestBalanceError,
+  ]);
 
   // Initialize default tokens - first token as source, second token as destination
   useEffect(() => {
     if (availableTokensList.length > 0) {
-      console.log('[SWAP] 🪙 Available tokens:', availableTokensList.map(t => `${t.symbol} (${t.address})`));
-      
+      console.log(
+        '[SWAP] 🪙 Available tokens:',
+        availableTokensList.map(t => `${t.symbol} (${t.address})`)
+      );
+
       if (!sourceToken) {
         // Use the first available token as source
         const defaultSourceToken = availableTokensList[0];
         setSourceToken(defaultSourceToken);
-        console.log('[SWAP] 📤 Set default source token (first):', defaultSourceToken.symbol, defaultSourceToken.address);
+        console.log(
+          '[SWAP] 📤 Set default source token (first):',
+          defaultSourceToken.symbol,
+          defaultSourceToken.address
+        );
       }
 
       if (!destToken) {
         // Use the second available token as destination, or first if only one token exists
-        const defaultDestToken = availableTokensList.length > 1 ? availableTokensList[1] : availableTokensList[0];
+        const defaultDestToken =
+          availableTokensList.length > 1
+            ? availableTokensList[1]
+            : availableTokensList[0];
         setDestToken(defaultDestToken);
-        console.log('[SWAP] 📥 Set default destination token (second):', defaultDestToken.symbol, defaultDestToken.address);
-        
+        console.log(
+          '[SWAP] 📥 Set default destination token (second):',
+          defaultDestToken.symbol,
+          defaultDestToken.address
+        );
+
         // If still the same token, log a warning
         if (sourceToken && defaultDestToken.address === sourceToken.address) {
-          console.warn('[SWAP] ⚠️ Warning: Only one token available, source and destination are identical');
+          console.warn(
+            '[SWAP] ⚠️ Warning: Only one token available, source and destination are identical'
+          );
         }
       }
     }
@@ -404,7 +469,7 @@ const SwapForm: React.FC = () => {
 
   // Use on-chain calculation for min output amount
   const slippageBps = 30; // 0.3% slippage tolerance in basis points
-  
+
   // Debug logging for decimals
   useEffect(() => {
     if (sourceToken && destToken) {
@@ -417,32 +482,51 @@ const SwapForm: React.FC = () => {
         tokensFromPools: availableTokensList.map(t => ({
           symbol: t.symbol,
           address: t.address,
-          decimals: t.decimals
-        }))
+          decimals: t.decimals,
+        })),
       });
-      
+
       if (!hasValidDecimals) {
         console.error('[SWAP] ❌ Cannot get token decimals from pools data!');
       }
     }
-  }, [sourceToken, destToken, sourceTokenDecimals, destTokenDecimals, hasValidDecimals, availableTokensList]);
-  
+  }, [
+    sourceToken,
+    destToken,
+    sourceTokenDecimals,
+    destTokenDecimals,
+    hasValidDecimals,
+    availableTokensList,
+  ]);
+
   const { minOutputAmount, isLoading: isCalculatingMinOut } = useCalculateMinOutForSwap({
     srcCurrency: sourceToken?.address || '',
     dstCurrency: destToken?.address || '',
     inputAmount: amount || '0',
     slippageToleranceBps: slippageBps,
     srcTokenDecimals: sourceTokenDecimals || 18, // Use 18 as last resort but log error
-    enabled: !!(sourceToken && destToken && amount && parseFloat(amount) > 0 && hasValidDecimals)
+    enabled: !!(
+      sourceToken &&
+      destToken &&
+      amount &&
+      parseFloat(amount) > 0 &&
+      hasValidDecimals
+    ),
   });
 
   // Update estimated receive amount when inputs change
   useEffect(() => {
-    if (minOutputAmount && typeof minOutputAmount === 'bigint' && minOutputAmount > 0n && destToken && destTokenDecimals !== null) {
+    if (
+      minOutputAmount &&
+      typeof minOutputAmount === 'bigint' &&
+      minOutputAmount > 0n &&
+      destToken &&
+      destTokenDecimals !== null
+    ) {
       // Convert the BigInt result to a readable format using destination token decimals from pools
       const formattedMinOut = formatUnits(minOutputAmount, destTokenDecimals);
       setMinReceived(parseFloat(formattedMinOut).toFixed(6));
-      
+
       // Estimate received is slightly higher than min (reverse the slippage calculation)
       const estimatedOut = parseFloat(formattedMinOut) * (1 + slippageBps / 10000);
       setEstimatedReceived(estimatedOut.toFixed(6));
@@ -450,27 +534,34 @@ const SwapForm: React.FC = () => {
       setEstimatedReceived('-');
       setMinReceived('-');
     }
-  }, [minOutputAmount, isCalculatingMinOut, amount, sourceToken, destToken, destTokenDecimals, slippageBps]);
+  }, [
+    minOutputAmount,
+    isCalculatingMinOut,
+    amount,
+    sourceToken,
+    destToken,
+    destTokenDecimals,
+    slippageBps,
+  ]);
 
-
-  // Calculate USD values 
+  // Calculate USD values
   const getTokenUsdPrice = (symbol: string): number => {
     const priceMap: Record<string, number> = {
-      'WETH': 1800,
-      'mWETH': 1800,
-      'ETH': 1800,
-      'NATIVE': 1800,
-      'USDC': 1,
-      'MUSDC': 1,
-      'WBTC': 50000,
-      'mWBTC': 50000,
-      'BTC': 50000,
-      'TRUMP': 20,
-      'PEPE': 0.000001,
-      'LINK': 15,
-      'DOGE': 0.1,
-      'SHIB': 0.00001,
-      'FLOKI': 0.0001
+      WETH: 1800,
+      mWETH: 1800,
+      ETH: 1800,
+      NATIVE: 1800,
+      USDC: 1,
+      MUSDC: 1,
+      WBTC: 50000,
+      mWBTC: 50000,
+      BTC: 50000,
+      TRUMP: 20,
+      PEPE: 0.000001,
+      LINK: 15,
+      DOGE: 0.1,
+      SHIB: 0.00001,
+      FLOKI: 0.0001,
     };
     return priceMap[symbol] || 1;
   };
@@ -487,11 +578,16 @@ const SwapForm: React.FC = () => {
   // USD values for display
   const sourceUsdPrice = sourceToken ? getTokenUsdPrice(sourceToken.symbol) : 0;
   const destUsdPrice = destToken ? getTokenUsdPrice(destToken.symbol) : 0;
-  const sourceUsdValue = amount && sourceToken ? Number.parseFloat(amount || '0') * sourceUsdPrice : 0;
-  const destUsdValue = estimatedReceived && destToken ? Number.parseFloat(estimatedReceived || '0') * destUsdPrice : 0;
+  const sourceUsdValue =
+    amount && sourceToken ? Number.parseFloat(amount || '0') * sourceUsdPrice : 0;
+  const destUsdValue =
+    estimatedReceived && destToken
+      ? Number.parseFloat(estimatedReceived || '0') * destUsdPrice
+      : 0;
 
   // Calculate fees
-  const swapFee = amount && sourceToken ? (Number.parseFloat(amount || '0') * 0.002).toFixed(6) : '0';
+  const swapFee =
+    amount && sourceToken ? (Number.parseFloat(amount || '0') * 0.002).toFixed(6) : '0';
 
   // Handle amount change with validation
   const handleAmountChange = (value: string) => {
@@ -538,7 +634,7 @@ const SwapForm: React.FC = () => {
       setDestToken(tempToken);
       console.log('[SWAP] 🔄 Swapped tokens:', {
         newSource: `${destToken.symbol} (${destToken.address})`,
-        newDest: `${sourceToken.symbol} (${sourceToken.address})`
+        newDest: `${sourceToken.symbol} (${sourceToken.address})`,
       });
     }
   };
@@ -583,17 +679,13 @@ const SwapForm: React.FC = () => {
   };
 
   // Exchange rate for display
-  const exchangeRate = sourceToken && destToken
-    ? calculateExchangeRatio(sourceToken.symbol, destToken.symbol)
-    : '0';
+  const exchangeRate =
+    sourceToken && destToken
+      ? calculateExchangeRatio(sourceToken.symbol, destToken.symbol)
+      : '0';
 
   return (
     <div className="px-6 py-12 mx-auto bg-black min-h-screen">
-      {/* Dot Pattern Background */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <DotPattern />
-      </div>
-      
       <div className="relative z-10 max-w-2xl mx-auto">
         {/* Header Section */}
         <div className="mb-8">
@@ -608,53 +700,57 @@ const SwapForm: React.FC = () => {
 
         {/* Main Swap Card */}
         <div className="bg-black/60 border border-white/20 rounded-xl shadow-[0_0_25px_rgba(255,255,255,0.07)] backdrop-blur-sm overflow-hidden">
-          
-
           <div className="p-6 space-y-4">
             {/* Source Token Input */}
             <div className="bg-black/40 border border-white/10 rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-white/70 text-sm font-medium uppercase tracking-wider">You Pay</span>
+                <span className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                  You Pay
+                </span>
                 <div className="flex items-center gap-2 text-sm text-white/60">
                   <Wallet className="w-4 h-4" />
                   <span>
-                    Balance: {isClient
-                      ? (effectiveIsConnected
-                        ? (isSourceBalanceLoading
-                          ? "Loading..."
+                    Balance:{' '}
+                    {isClient
+                      ? effectiveIsConnected
+                        ? isSourceBalanceLoading
+                          ? 'Loading...'
                           : isSourceBalanceError
-                            ? "Error"
-                            : `${sourceTokenBalance || '0'}`)
-                        : "Connect wallet")
-                      : "Loading..."}
+                          ? 'Error'
+                          : `${sourceTokenBalance || '0'}`
+                        : 'Connect wallet'
+                      : 'Loading...'}
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <input
                   type="text"
                   value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
+                  onChange={e => handleAmountChange(e.target.value)}
                   placeholder="0.0"
                   className="flex-1 bg-transparent text-3xl font-medium text-white outline-none placeholder-white/40"
                 />
-                
+
                 <Button
                   variant="outline"
                   onClick={() => openTokenSelector(true)}
                   className="flex items-center gap-3 h-12 px-4 border-white/20 bg-white/5 text-white hover:bg-white/10 rounded-xl"
                 >
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30" style={{ backgroundColor: '#000000' }}>
+                  <div
+                    className="w-8 h-8 rounded-full overflow-hidden border border-white/30"
+                    style={{ backgroundColor: '#000000' }}
+                  >
                     {sourceToken ? (
                       <img
                         src={sourceToken.icon}
                         alt={sourceToken.symbol}
                         className="w-full h-full object-contain"
-                        onError={(e) => {
+                        onError={e => {
                           const target = e.currentTarget;
                           target.onerror = null;
-                          target.src = "/tokens/eth.png";
+                          target.src = '/tokens/eth.png';
                         }}
                       />
                     ) : (
@@ -664,13 +760,17 @@ const SwapForm: React.FC = () => {
                     )}
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="text-white font-medium">{sourceToken?.symbol || 'Select'}</span>
-                    <span className="text-white/60 text-xs">{sourceToken?.name || 'Token'}</span>
+                    <span className="text-white font-medium">
+                      {sourceToken?.symbol || 'Select'}
+                    </span>
+                    <span className="text-white/60 text-xs">
+                      {sourceToken?.name || 'Token'}
+                    </span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-white/60" />
                 </Button>
               </div>
-              
+
               <div className="mt-3 text-sm text-white/60">
                 ≈ ${sourceUsdValue.toFixed(2)}
               </div>
@@ -691,23 +791,26 @@ const SwapForm: React.FC = () => {
             {/* Destination Token Output */}
             <div className="bg-black/40 border border-white/10 rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-white/70 text-sm font-medium uppercase tracking-wider">You Receive</span>
+                <span className="text-white/70 text-sm font-medium uppercase tracking-wider">
+                  You Receive
+                </span>
                 <div className="flex items-center gap-2 text-sm text-white/60">
                   <Wallet className="w-4 h-4" />
                   <span>
-                    Balance: {isClient
-                      ? (effectiveIsConnected
-                        ? (isDestBalanceLoading
-                          ? "Loading..."
+                    Balance:{' '}
+                    {isClient
+                      ? effectiveIsConnected
+                        ? isDestBalanceLoading
+                          ? 'Loading...'
                           : isDestBalanceError
-                            ? "Error"
-                            : `${destTokenBalance || '0'}`)
-                        : "Connect wallet")
-                      : "Loading..."}
+                          ? 'Error'
+                          : `${destTokenBalance || '0'}`
+                        : 'Connect wallet'
+                      : 'Loading...'}
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 {isProcessing || isCalculatingMinOut ? (
                   <Skeleton className="h-10 w-32 bg-white/10" />
@@ -720,22 +823,25 @@ const SwapForm: React.FC = () => {
                     className="flex-1 bg-transparent text-3xl font-medium text-white outline-none placeholder-white/40"
                   />
                 )}
-                
+
                 <Button
                   variant="outline"
                   onClick={() => openTokenSelector(false)}
                   className="flex items-center gap-3 h-12 px-4 border-white/20 bg-white/5 text-white hover:bg-white/10 rounded-xl"
                 >
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30" style={{ backgroundColor: '#000000' }}>
+                  <div
+                    className="w-8 h-8 rounded-full overflow-hidden border border-white/30"
+                    style={{ backgroundColor: '#000000' }}
+                  >
                     {destToken ? (
                       <img
                         src={destToken.icon}
                         alt={destToken.symbol}
                         className="w-full h-full object-contain"
-                        onError={(e) => {
+                        onError={e => {
                           const target = e.currentTarget;
                           target.onerror = null;
-                          target.src = "/tokens/eth.png";
+                          target.src = '/tokens/eth.png';
                         }}
                       />
                     ) : (
@@ -745,13 +851,17 @@ const SwapForm: React.FC = () => {
                     )}
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="text-white font-medium">{destToken?.symbol || 'Select'}</span>
-                    <span className="text-white/60 text-xs">{destToken?.name || 'Token'}</span>
+                    <span className="text-white font-medium">
+                      {destToken?.symbol || 'Select'}
+                    </span>
+                    <span className="text-white/60 text-xs">
+                      {destToken?.name || 'Token'}
+                    </span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-white/60" />
                 </Button>
               </div>
-              
+
               <div className="mt-3 text-sm text-white/60">
                 ≈ ${destUsdValue.toFixed(2)}
               </div>
@@ -766,7 +876,9 @@ const SwapForm: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white/70">Fee (0.2%)</span>
-                  <span className="text-white">{swapFee} {sourceToken?.symbol || ''}</span>
+                  <span className="text-white">
+                    {swapFee} {sourceToken?.symbol || ''}
+                  </span>
                 </div>
                 {/* <div className="flex items-center justify-between text-sm">
                   <span className="text-white/70">Min. received</span>
@@ -780,7 +892,9 @@ const SwapForm: React.FC = () => {
               <div className="bg-black/40 border border-white/10 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-white/90">{txStatus}</div>
-                  {isProcessing && <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />}
+                  {isProcessing && (
+                    <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                  )}
                 </div>
                 {txHash && (
                   <a
@@ -799,20 +913,29 @@ const SwapForm: React.FC = () => {
             <Button
               className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium text-lg rounded-xl transition-colors"
               onClick={handleSubmit}
-              disabled={isProcessing || isSwapPending || isSwapConfirming || !amount || !sourceToken || !destToken || !effectiveIsConnected || !hasValidDecimals}
+              disabled={
+                isProcessing ||
+                isSwapPending ||
+                isSwapConfirming ||
+                !amount ||
+                !sourceToken ||
+                !destToken ||
+                !effectiveIsConnected ||
+                !hasValidDecimals
+              }
             >
               {isClient
-                ? (!effectiveIsConnected
+                ? !effectiveIsConnected
                   ? 'Connect Wallet'
                   : !hasValidDecimals
-                    ? 'Error: Missing Token Info'
-                    : isSwapPending
-                      ? 'Confirming in Wallet...'
-                      : isSwapConfirming
-                        ? 'Confirming...'
-                        : isProcessing
-                          ? 'Processing...'
-                          : `Swap ${sourceToken?.symbol || ''} for ${destToken?.symbol || ''}`)
+                  ? 'Error: Missing Token Info'
+                  : isSwapPending
+                  ? 'Confirming in Wallet...'
+                  : isSwapConfirming
+                  ? 'Confirming...'
+                  : isProcessing
+                  ? 'Processing...'
+                  : `Swap ${sourceToken?.symbol || ''} for ${destToken?.symbol || ''}`
                 : 'Loading...'}
             </Button>
           </div>
@@ -826,7 +949,7 @@ const SwapForm: React.FC = () => {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/10">
               <h3 className="text-xl font-bold text-white">
-                {isSellSelector ? "Select source token" : "Select destination token"}
+                {isSellSelector ? 'Select source token' : 'Select destination token'}
               </h3>
               <button
                 onClick={() => setSelectorOpen(false)}
@@ -835,10 +958,10 @@ const SwapForm: React.FC = () => {
                 ×
               </button>
             </div>
-            
+
             {/* Token List */}
             <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-              {availableTokensList.map((token) => (
+              {availableTokensList.map(token => (
                 <button
                   key={token.id}
                   onClick={() => {
@@ -847,15 +970,18 @@ const SwapForm: React.FC = () => {
                   }}
                   className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/10 transition-colors text-left border border-transparent hover:border-white/10"
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-white/30" style={{ backgroundColor: '#000000' }}>
+                  <div
+                    className="w-10 h-10 rounded-full overflow-hidden border border-white/30"
+                    style={{ backgroundColor: '#000000' }}
+                  >
                     <img
                       src={token.icon}
                       alt={token.symbol}
                       className="w-full h-full object-contain"
-                      onError={(e) => {
+                      onError={e => {
                         const target = e.currentTarget;
                         target.onerror = null;
-                        target.src = "/tokens/eth.png";
+                        target.src = '/tokens/eth.png';
                       }}
                     />
                   </div>
