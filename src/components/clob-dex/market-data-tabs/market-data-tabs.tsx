@@ -5,7 +5,7 @@ import { RecentTradeItem, TradeItem } from '@/graphql/gtx/clob';
 import { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BarChart2, LineChart } from 'lucide-react';
-import { ClobDexComponentProps } from '../clob-dex';
+import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
 import EnhancedOrderBookDex from '../orderbook-dex/orderbook-dex';
 import RecentTradesComponent from '../recent-trade/recent-trade';
 import { DepthData } from '@/lib/market-api';

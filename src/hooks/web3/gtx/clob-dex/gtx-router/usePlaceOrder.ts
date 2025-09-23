@@ -11,7 +11,7 @@ import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { useEffectiveChainId } from "@/utils/chain-override";
-import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
+import { OrderSideEnum, TimeInForceEnum } from "@/lib/enums/clob.enum";
 import { isFeatureEnabled, getCoreChain } from "@/constants/features/features-config";
 
 // Helper function to get the effective chain ID for contract calls

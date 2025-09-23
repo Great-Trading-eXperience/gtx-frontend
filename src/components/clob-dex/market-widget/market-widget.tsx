@@ -7,7 +7,7 @@ import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { formatUnits } from 'viem';
-import { ClobDexComponentProps } from '../clob-dex';
+import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
 import { PairDropdown } from './pair-dropdown';
 import MarketWidgetSkeleton from './market-widget-skeleton';
 

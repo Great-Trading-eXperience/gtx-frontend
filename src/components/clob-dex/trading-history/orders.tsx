@@ -29,7 +29,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
 import { formatDate } from '../../../helper';
-import { ClobDexComponentProps } from '../clob-dex';
+import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
 
 export interface OrderHistoryTableProps extends ClobDexComponentProps {
   ordersData: OpenOrderItem[];

@@ -9,7 +9,7 @@ import { useMarketStore } from '@/store/market-store';
 import { ArrowDown, ArrowUp, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { formatUnits } from 'viem';
-import { ClobDexComponentProps } from '../clob-dex';
+import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
 
 interface Trade {
 	price: number;

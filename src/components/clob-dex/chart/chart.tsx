@@ -30,8 +30,8 @@ import {
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState } from 'react';
 import { formatUnits } from 'viem';
-import { TimeFrame } from '../../../../lib/enums/clob.enum';
-import { ClobDexComponentProps } from '../clob-dex';
+import { TimeFrame } from '@/lib/enums/clob.enum';
+import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
 import TradingViewChartContainer, {
   TradingPair,
 } from '@/components/trading-view-chart/trading-view-chart';

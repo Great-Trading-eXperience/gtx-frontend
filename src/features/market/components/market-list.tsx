@@ -12,7 +12,7 @@ export default function MarketList() {
   
   const handleRowClick = (poolId: string) => {
     console.log(`Navigating to spot trading for pool: ${poolId}`);
-    window.location.href = `/spot/${poolId}`
+    window.location.href = `/trading/${poolId}`
   };
 
   return (

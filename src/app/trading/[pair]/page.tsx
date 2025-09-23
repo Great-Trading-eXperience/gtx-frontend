@@ -1,7 +1,7 @@
 // app/spot/[poolId]/page.tsx
 'use client';
 
-import ClobDex from "@/components/clob-dex/clob-dex";
+import ClobDex from "@/features/trading/components/clob-dex";
 import { Suspense } from "react";
 
 export default function SpotWithPool({ params }: { params: { poolId: string } }) {

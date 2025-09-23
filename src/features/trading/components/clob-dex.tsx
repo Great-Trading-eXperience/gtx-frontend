@@ -1,0 +1,216 @@
+'use client';
+
+import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useAccount, useChainId } from 'wagmi';
+import { usePrivyAuth } from '@/hooks/use-privy-auth';
+
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
+import ChartComponent from '../../../components/clob-dex/chart/chart';
+import MarketDataTabs from '../../../components/clob-dex/market-data-tabs/market-data-tabs';
+import MarketDataWidget from '../../../components/clob-dex/market-widget/market-widget';
+import PlaceOrder from '../../../components/clob-dex/place-order/place-order';
+import TradingHistory from '../../../components/clob-dex/trading-history/trading-history';
+import { useWallets } from '@privy-io/react-auth';
+import { usePools } from '../hooks/use-pools';
+import { useSelectedPool } from '../hooks/use-selected-pool';
+import { useDepthData, useTicker24hr, useTickerPrice, useTradesData, useUserTrades } from '../hooks/use-market-data';
+import { useAccountData, useAllOrders, useOpenOrders } from '../hooks/use-account-data';
+import { useWebSocketData } from '../hooks/use-websocket-data';
+import { useCombinedDepth, useCombinedOrders, useCombinedTrades } from '../hooks/use-combine-data';
+import { useTransformedBalances } from '../hooks/use-transformed-balance';
+
+const useIsClient = () => {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return isClient;
+};
+
+export type ClobDexComponentProps = {
+  address?: HexAddress;
+  chainId: number;
+  defaultChainId: number;
+  selectedPool?: ProcessedPoolItem;
+};
+
+export default function ClobDex() {
+  // Auth and wallet setup
+  const { address, isConnected } = useAccount();
+  const { walletAddress, isFullyAuthenticated } = usePrivyAuth();
+  const { wallets } = useWallets();
+  const chainId = useChainId();
+  const defaultChainId = Number(DEFAULT_CHAIN);
+  const isClient = useIsClient();
+
+  const embedded = wallets.find(wallet => wallet.walletClientType === 'privy');
+  const effectiveAddress = embedded?.address as HexAddress;
+  const effectiveIsConnected = isConnected || isFullyAuthenticated;
+
+  // React Query setup
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: true,
+            staleTime: 5000,
+          },
+        },
+      })
+  );
+
+  // Fetch pools data
+  const {
+    data: poolsData,
+    isLoading: poolsLoading,
+    error: poolsError,
+  } = usePools(chainId, defaultChainId);
+
+  // Get selected pool
+  const { selectedPool, symbol } = useSelectedPool(poolsData);
+
+  // Fetch market data using custom hooks
+  const { data: depthData } = useDepthData(selectedPool);
+  const { data: tickerPrice, isLoading: isLoadingTickerPrice } = useTickerPrice(symbol);
+  const { data: ticker24hr, isLoading: isLoadingTicker24hr } = useTicker24hr(symbol);
+  const { data: tradesData, isLoading: isLoadingApiTrades } = useTradesData(selectedPool);
+  const { data: userTradesData } = useUserTrades(selectedPool, effectiveAddress);
+
+  // Fetch account data
+  const {
+    data: accountData,
+    isLoading: accountLoading,
+    error: accountError,
+    refetch: refetchAccount,
+  } = useAccountData(effectiveAddress);
+
+  const {
+    data: allOrdersData,
+    isLoading: allOrdersLoading,
+    refetch: refetchAllOrders,
+  } = useAllOrders(effectiveAddress);
+
+  const {
+    data: openOrdersData,
+    isLoading: openOrdersLoading,
+    refetch: refetchOpenOrders,
+  } = useOpenOrders(effectiveAddress);
+
+  // WebSocket data
+  const { wsDepthUpdates, wsTradeUpdates, wsTickerUpdates, wsOpenOrders, wsUserTrades } =
+    useWebSocketData(chainId, symbol, selectedPool, effectiveAddress);
+
+  // Combined data using custom hooks
+  const combinedTrades = useCombinedTrades(tradesData, wsTradeUpdates);
+  const combinedDepth = useCombinedDepth(depthData, wsDepthUpdates);
+  const combinedOrders = useCombinedOrders(
+    openOrdersData,
+    wsOpenOrders,
+    chainId,
+    defaultChainId
+  );
+  const transformedBalances = useTransformedBalances(accountData, poolsData);
+
+  // Handle connection state changes
+  useEffect(() => {
+    if (effectiveIsConnected && effectiveAddress) {
+      refetchAllOrders();
+      refetchOpenOrders();
+      refetchAccount();
+    }
+  }, [effectiveIsConnected, effectiveAddress]);
+
+  // Loading states
+  const tradesLoading = isLoadingApiTrades || isLoadingTickerPrice;
+  const isLoading = poolsLoading || isLoadingTicker24hr;
+
+  if (!isClient) {
+    return null;
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
+        {/* Chart and Market Widget */}
+        <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
+          <MarketDataWidget
+            address={effectiveAddress}
+            chainId={chainId}
+            defaultChainId={defaultChainId}
+            poolId={selectedPool?.id}
+            selectedPool={selectedPool}
+            ticker24hr={ticker24hr}
+            isLoading={isLoading}
+          />
+          <ChartComponent
+            address={effectiveAddress}
+            chainId={chainId}
+            defaultChainId={defaultChainId}
+            selectedPool={selectedPool}
+          />
+        </div>
+
+        {/* Market Data Tabs */}
+        <div className="space-y-[6px] h-fit max-height-[546px]">
+          <MarketDataTabs
+            address={effectiveAddress}
+            chainId={chainId}
+            defaultChainId={defaultChainId}
+            selectedPool={selectedPool}
+            poolsLoading={poolsLoading}
+            poolsError={poolsError}
+            depthData={combinedDepth}
+            trades={combinedTrades}
+            tradesLoading={tradesLoading}
+          />
+        </div>
+
+        {/* Place Order */}
+        <div className="space-y-2 h-fit">
+          <PlaceOrder
+            address={effectiveAddress}
+            chainId={chainId}
+            defaultChainId={defaultChainId}
+            selectedPool={selectedPool}
+            tradesData={combinedTrades}
+            tradesLoading={tradesLoading}
+            depthData={combinedDepth}
+            ticker24hr={ticker24hr}
+            refetchAccount={refetchAccount}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      <TradingHistory
+        address={effectiveAddress}
+        chainId={chainId}
+        defaultChainId={defaultChainId}
+        balanceData={transformedBalances}
+        balancesLoading={accountLoading}
+        balancesError={accountError}
+        ordersData={combinedOrders}
+        ordersLoading={openOrdersLoading}
+        ordersError={null}
+        selectedPool={selectedPool}
+        userTradesData={[...(userTradesData || []), ...wsUserTrades]}
+        tradesLoading={false}
+        tradesError={null}
+        marketOpenOrdersData={openOrdersData}
+        marketOpenOrdersLoading={openOrdersLoading}
+        marketAllOrdersData={allOrdersData}
+        refetchFn={refetchAccount}
+        isLoading={
+          poolsLoading ||
+          accountLoading ||
+          openOrdersLoading
+        }
+      />
+    </QueryClientProvider>
+  );
+}

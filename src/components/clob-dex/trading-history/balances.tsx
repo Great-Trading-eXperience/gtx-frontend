@@ -1,6 +1,6 @@
 'use client';
 
-import { ClobDexComponentProps } from '../clob-dex';
+import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
 import { BalanceItem, PoolItem } from '@/graphql/gtx/clob';
 import { formatAmount } from '@/lib/utils';
 import { ChevronDown, Loader2, BookOpen, AlertCircle } from 'lucide-react';

@@ -1,4 +1,4 @@
-import { OrderSideEnum } from '../../../lib/enums/clob.enum';
+import { OrderSideEnum } from '@/lib/enums/clob.enum';
 
 // Enum for asset type (base/quote)
 export enum AssetType {

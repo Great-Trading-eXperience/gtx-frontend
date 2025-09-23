@@ -10,7 +10,7 @@ import { type CandlestickData, ColorType, createChart, type IChartApi, ISeriesAp
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
 import { formatUnits } from "viem"
-import { ClobDexComponentProps } from "../clob-dex"
+import { ClobDexComponentProps } from "../../../features/trading/components/clob-dex"
 
 // Define interfaces for the trades query response
 interface TradeItem {

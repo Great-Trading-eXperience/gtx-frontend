@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { createWalletClient, custom, erc20Abi, formatUnits } from "viem";
 import { useChainId } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt } from "wagmi/actions";
-import { OrderSideEnum, TimeInForceEnum } from "../../../../../../lib/enums/clob.enum";
+import { OrderSideEnum, TimeInForceEnum } from "@/lib/enums/clob.enum";
 
 // Helper function to get the effective chain ID for contract calls
 const getEffectiveChainId = (currentChainId: number): number => {
