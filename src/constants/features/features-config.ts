@@ -77,27 +77,26 @@ export function getEnabledTabs(): string[] {
 // Helper function to check if a chain supports crosschain deposits
 export function isCrosschainSupportedChain(chainId: number): boolean {
     // Only chains with ChainBalanceManager contracts support crosschain deposits
-    const supportedCrosschainDepositChains = [4661, 421614, 1918988905]; // Appchain Testnet, Arbitrum Sepolia, Rari Testnet
+    const supportedCrosschainDepositChains = [31337, 31338]; // Core Anvil, Side Anvil
     return supportedCrosschainDepositChains.includes(chainId);
 }
 
 // Helper function to get supported crosschain deposit chains
 export function getSupportedCrosschainDepositChains(): number[] {
-    return [4661, 421614, 1918988905]; // Appchain Testnet, Arbitrum Sepolia, Rari Testnet
+    return [31337, 31338]; // Core Anvil, Side Anvil
 }
 
 // Helper function to get human-readable names for supported crosschain chains
 export function getSupportedCrosschainDepositChainNames(): string[] {
     const chainNames: Record<number, string> = {
-        4661: 'Appchain Testnet',
-        421614: 'Arbitrum Sepolia',
-        1918988905: 'Rari Testnet',
+        31337: 'Core Anvil',
+        31338: 'Side Anvil',
     };
     return getSupportedCrosschainDepositChains().map(chainId => chainNames[chainId] || `Chain ${chainId}`);
 }
 
 // Core chain configuration - the main chain where balances are shown for crosschain deposits
-export const CORE_CHAIN = 1918988905; 
+export const CORE_CHAIN = 31337;
 
 // Helper function to get the core chain ID
 export function getCoreChain(): number {

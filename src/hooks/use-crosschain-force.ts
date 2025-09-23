@@ -4,10 +4,10 @@ import { useChainId } from 'wagmi';
 import { toast } from 'sonner';
 import { needsChainForcing } from '@/utils/chain-override';
 
-// Appchain Testnet ID - the default fallback chain
-const APPCHAIN_TESTNET_ID = 4661;
+// Core Anvil ID - the default fallback chain
+const CORE_ANVIL_ID = 31337;
 // Supported chains
-const SUPPORTED_CHAINS = [4661, 421614]; // Appchain, Arbitrum Sepolia
+const SUPPORTED_CHAINS = [31337, 31338]; // Core Anvil, Side Anvil
 
 interface UseCrosschainForceResult {
   isChainCorrect: boolean;
@@ -21,8 +21,8 @@ interface UseCrosschainForceResult {
 
 /**
  * Hook to handle chain forcing
- * Forces users to Appchain if they're on unsupported chains
- * Allows free choice between Appchain and Arbitrum Sepolia
+ * Forces users to Core Anvil if they're on unsupported chains
+ * Allows free choice between Core Anvil and Side Anvil
  */
 export function useCrosschainForce(): UseCrosschainForceResult {
   const { wallets } = useWallets();
@@ -44,7 +44,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
   const isChainCorrect = SUPPORTED_CHAINS.includes(currentChainId);
   
   /**
-   * Force switch to Appchain Testnet
+   * Force switch to Core Anvil
    */
   const forceChainSwitch = async (): Promise<boolean> => {
     if (!needsCrosschainForce) {
@@ -58,14 +58,14 @@ export function useCrosschainForce(): UseCrosschainForceResult {
     
     setIsSwitchingChain(true);
     try {
-      console.log(`[CROSSCHAIN_FORCE] Switching from chain ${currentChainId} to Appchain Testnet (${APPCHAIN_TESTNET_ID})`);
+      console.log(`[CROSSCHAIN_FORCE] Switching from chain ${currentChainId} to Core Anvil (${CORE_ANVIL_ID})`);
       
-      toast.info('Switching to Appchain Testnet for crosschain features...');
+      toast.info('Switching to Core Anvil for crosschain features...');
       
       // First try to switch to the chain
-      await embeddedWallet.switchChain(APPCHAIN_TESTNET_ID);
+      await embeddedWallet.switchChain(CORE_ANVIL_ID);
       
-      toast.success('Successfully switched to Appchain Testnet');
+      toast.success('Successfully switched to Core Anvil');
       return true;
       
     } catch (error: any) {
@@ -73,13 +73,13 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       
       // If the chain is unrecognized, try to add it first
       if (error.message?.includes('Unrecognized chain ID') || error.message?.includes('not configured')) {
-        console.log(`[CROSSCHAIN_FORCE] Chain not recognized, attempting to add Appchain Testnet first...`);
+        console.log(`[CROSSCHAIN_FORCE] Chain not recognized, attempting to add Core Anvil first...`);
         
         try {
-          // Import the appchain config
-          const { appchainTestnet } = await import('@/configs/wagmi');
+          // Import the core anvil config
+          const { coreAnvil } = await import('@/configs/wagmi');
           
-          toast.info('Adding Appchain Testnet to your wallet...');
+          toast.info('Adding Core Anvil to your wallet...');
           
           // Try different methods to add the chain
           console.log(`[CROSSCHAIN_FORCE] Checking available wallet methods:`, {
@@ -95,15 +95,15 @@ export function useCrosschainForce(): UseCrosschainForceResult {
           if (embeddedWallet.addChain) {
             try {
               await embeddedWallet.addChain({
-                id: appchainTestnet.id,
-                name: appchainTestnet.name,
-                network: appchainTestnet.name.toLowerCase().replace(/\s+/g, '-'),
-                nativeCurrency: appchainTestnet.nativeCurrency,
+                id: coreAnvil.id,
+                name: coreAnvil.name,
+                network: coreAnvil.name.toLowerCase().replace(/\s+/g, '-'),
+                nativeCurrency: coreAnvil.nativeCurrency,
                 rpcUrls: {
-                  default: { http: appchainTestnet.rpcUrls.default.http },
-                  public: { http: appchainTestnet.rpcUrls.public.http }
+                  default: { http: coreAnvil.rpcUrls.default.http },
+                  public: { http: coreAnvil.rpcUrls.public.http }
                 },
-                blockExplorers: appchainTestnet.blockExplorers
+                blockExplorers: coreAnvil.blockExplorers
               });
               chainAdded = true;
               console.log(`[CROSSCHAIN_FORCE] Successfully added chain using addChain method`);
@@ -118,11 +118,11 @@ export function useCrosschainForce(): UseCrosschainForceResult {
               await embeddedWallet.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: `0x${appchainTestnet.id.toString(16)}`,
-                  chainName: appchainTestnet.name,
-                  nativeCurrency: appchainTestnet.nativeCurrency,
-                  rpcUrls: appchainTestnet.rpcUrls.default.http,
-                  blockExplorerUrls: appchainTestnet.blockExplorers?.default ? [appchainTestnet.blockExplorers.default.url] : []
+                  chainId: `0x${coreAnvil.id.toString(16)}`,
+                  chainName: coreAnvil.name,
+                  nativeCurrency: coreAnvil.nativeCurrency,
+                  rpcUrls: coreAnvil.rpcUrls.default.http,
+                  blockExplorerUrls: coreAnvil.blockExplorers?.default ? [coreAnvil.blockExplorers.default.url] : []
                 }]
               });
               chainAdded = true;
@@ -138,11 +138,11 @@ export function useCrosschainForce(): UseCrosschainForceResult {
               await embeddedWallet.walletClient.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: `0x${appchainTestnet.id.toString(16)}`,
-                  chainName: appchainTestnet.name,
-                  nativeCurrency: appchainTestnet.nativeCurrency,
-                  rpcUrls: appchainTestnet.rpcUrls.default.http,
-                  blockExplorerUrls: appchainTestnet.blockExplorers?.default ? [appchainTestnet.blockExplorers.default.url] : []
+                  chainId: `0x${coreAnvil.id.toString(16)}`,
+                  chainName: coreAnvil.name,
+                  nativeCurrency: coreAnvil.nativeCurrency,
+                  rpcUrls: coreAnvil.rpcUrls.default.http,
+                  blockExplorerUrls: coreAnvil.blockExplorers?.default ? [coreAnvil.blockExplorers.default.url] : []
                 }]
               });
               chainAdded = true;
@@ -154,21 +154,21 @@ export function useCrosschainForce(): UseCrosschainForceResult {
 
           if (!chainAdded) {
             console.log(`[CROSSCHAIN_FORCE] All chain addition methods failed`);
-            throw new Error('Unable to add Appchain Testnet - wallet does not support any known chain addition methods');
+            throw new Error('Unable to add Core Anvil - wallet does not support any known chain addition methods');
           }
 
           console.log(`[CROSSCHAIN_FORCE] Chain added successfully, now attempting to switch...`);
           
           // Now try to switch to the newly added chain
-          await embeddedWallet.switchChain(APPCHAIN_TESTNET_ID);
+          await embeddedWallet.switchChain(CORE_ANVIL_ID);
           
-          toast.success('Successfully added and switched to Appchain Testnet');
+          toast.success('Successfully added and switched to Core Anvil');
           return true;
           
         } catch (addChainError: any) {
           console.error('[CROSSCHAIN_FORCE] Failed to add chain:', addChainError);
           
-          let addErrorMessage = 'Failed to add Appchain Testnet to wallet';
+          let addErrorMessage = 'Failed to add Core Anvil to wallet';
           if (addChainError.message?.includes('rejected') || addChainError.message?.includes('denied')) {
             addErrorMessage = 'Adding network cancelled by user';
           }
@@ -179,7 +179,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       }
       
       // Handle other types of errors
-      let errorMessage = 'Failed to switch to Appchain Testnet';
+      let errorMessage = 'Failed to switch to Core Anvil';
       if (error.message?.includes('rejected') || error.message?.includes('denied')) {
         errorMessage = 'Network switch cancelled by user';
       }
@@ -222,7 +222,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
         currentChainId,
         supportedChains: SUPPORTED_CHAINS,
         isSupported: SUPPORTED_CHAINS.includes(currentChainId),
-        targetChainId: APPCHAIN_TESTNET_ID,
+        targetChainId: CORE_ANVIL_ID,
         needsForce: needsCrosschainForce,
         hasWallet: !!embeddedWallet,
         walletAddress: embeddedWallet?.address,
@@ -254,13 +254,13 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       
       setIsCheckingChain(true);
       
-      console.log(`[CHAIN_FORCE] Starting automatic chain switch from ${currentChainId} to Appchain Testnet (${APPCHAIN_TESTNET_ID})`);
+      console.log(`[CHAIN_FORCE] Starting automatic chain switch from ${currentChainId} to Core Anvil (${CORE_ANVIL_ID})`);
       
       // Add a small delay to ensure wallet is fully connected
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Show informational message about required chain
-      toast.info('This feature requires Appchain Testnet or Arbitrum Sepolia. Switching to Appchain...', {
+      toast.info('This feature requires Core Anvil or Side Anvil. Switching to Core Anvil...', {
         duration: 3000,
       });
       
@@ -268,7 +268,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       const success = await forceChainSwitch();
       
       if (!success) {
-        toast.error('Please switch to Appchain Testnet or Arbitrum Sepolia manually to use this feature.', {
+        toast.error('Please switch to Core Anvil or Side Anvil manually to use this feature.', {
           duration: 5000,
         });
       }
@@ -285,7 +285,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
     isCheckingChain,
     isSwitchingChain,
     needsCrosschainForce,
-    targetChainId: APPCHAIN_TESTNET_ID,
+    targetChainId: CORE_ANVIL_ID,
     currentChainId,
     forceChainSwitch,
   };

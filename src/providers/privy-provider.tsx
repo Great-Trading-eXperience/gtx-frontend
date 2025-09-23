@@ -1,6 +1,6 @@
 'use client';
 
-import { appchainTestnet, arbitrumSepolia, rariTestnet, wagmiConfig } from '@/configs/wagmi';
+import { coreAnvil, sideAnvil, wagmiConfig } from '@/configs/wagmi';
 import { FEATURE_FLAGS } from '@/constants/features/features-config';
 import { useChainValidator } from '@/hooks/use-chain-validator';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
@@ -58,29 +58,27 @@ const createPrivyConfig = (): PrivyClientConfig => {
   };
 
   if (isCrosschainEnabled) {
-    // When crosschain is enabled, include all chains (Rari for embedded, Appchain/Arbitrum for external)
-    console.log(`[PRIVY_CONFIG] Including all chains - Rari for embedded wallets, Appchain/Arbitrum for external wallets`);
+    // When crosschain is enabled, include anvil chains (Core for main, Side for faucet)
+    console.log(`[PRIVY_CONFIG] Including anvil chains - Core Anvil for main operations, Side Anvil for faucet`);
     
     return {
       ...baseConfig,
-      defaultChain: defineChain(rariTestnet), // Default to Rari for embedded wallets
+      defaultChain: defineChain(coreAnvil), // Default to Core Anvil for main operations
       supportedChains: [
-        defineChain(rariTestnet),        // For embedded wallets
-        defineChain(appchainTestnet),    // For external wallets
-        defineChain(arbitrumSepolia),    // For external wallets
+        defineChain(coreAnvil),        // For main operations
+        defineChain(sideAnvil),        // For faucet operations
       ],
     };
   } else {
-    // When crosschain is disabled, use default configuration with all available chains
-    console.log(`[PRIVY_CONFIG] Using default configuration with all supported chains`);
+    // When crosschain is disabled, use default configuration with anvil chains
+    console.log(`[PRIVY_CONFIG] Using default configuration with anvil chains`);
     
     return {
       ...baseConfig,
-      defaultChain: defineChain(rariTestnet),
+      defaultChain: defineChain(coreAnvil),
       supportedChains: [
-        defineChain(rariTestnet),
-        defineChain(appchainTestnet),
-        defineChain(arbitrumSepolia),
+        defineChain(coreAnvil),
+        defineChain(sideAnvil),
       ],
     };
   }

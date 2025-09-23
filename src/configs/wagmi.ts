@@ -133,14 +133,62 @@ export const arbitrumSepolia: Chain = ({
 	testnet: true,
 })
 
+export const coreAnvil: Chain = {
+	id: 31337,
+	name: 'Core Anvil',
+	nativeCurrency: {
+		decimals: 18,
+		name: 'Ether',
+		symbol: 'ETH',
+	},
+	rpcUrls: {
+		default: {
+			http: ['/core-anvil-api'],
+		},
+		public: {
+			http: ['/core-anvil-api'],
+		},
+	},
+	blockExplorers: {
+		default: {
+			name: 'Core Anvil Explorer',
+			url: 'http://localhost:8545',
+		},
+	},
+	testnet: true,
+};
+
+export const sideAnvil: Chain = {
+	id: 31338,
+	name: 'Side Anvil',
+	nativeCurrency: {
+		decimals: 18,
+		name: 'Ether',
+		symbol: 'ETH',
+	},
+	rpcUrls: {
+		default: {
+			http: ['/side-anvil-api'],
+		},
+		public: {
+			http: ['/side-anvil-api'],
+		},
+	},
+	blockExplorers: {
+		default: {
+			name: 'Side Anvil Explorer',
+			url: 'http://localhost:8546',
+		},
+	},
+	testnet: true,
+};
+
 export const wagmiConfig = createConfig({
 	chains: [
-		appchainTestnet,
-		arbitrumSepolia,
-		rariTestnet,],
+		coreAnvil,
+		sideAnvil,],
 	transports: {
-		[appchainTestnet.id]: http(appchainTestnet.rpcUrls.default.http[0]),
-		[arbitrumSepolia.id]: http(arbitrumSepolia.rpcUrls.default.http[0]),
-		[rariTestnet.id]: http(rariTestnet.rpcUrls.default.http[0]),
+		[coreAnvil.id]: http(coreAnvil.rpcUrls.default.http[0]),
+		[sideAnvil.id]: http(sideAnvil.rpcUrls.default.http[0]),
 	},
 });

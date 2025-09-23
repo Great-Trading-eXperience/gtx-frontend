@@ -8,7 +8,7 @@ import { PrivyAuthButton } from '../auth/privy-auth-button';
 import { Button } from '../ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 
-import { appchainTestnet, arbitrumSepolia } from '@/configs/wagmi';
+import { coreAnvil, sideAnvil } from '@/configs/wagmi';
 import { isTabEnabled } from '@/constants/features/features-config';
 import { useSwitchAndAddChain } from '@/hooks/useSwitchAndAddChain';
 import { useEffect, useRef, useState } from 'react';
@@ -22,7 +22,7 @@ interface NavbarProps {
 }
 
 const ChainDropdown: React.FC = () => {
-  const networks: Chain[] = [appchainTestnet, arbitrumSepolia];
+  const networks: Chain[] = [coreAnvil, sideAnvil];
 
   const chainId = useChainId();
   const usedNetwork = networks.find(network => network.id === chainId);

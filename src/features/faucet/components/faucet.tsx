@@ -2,7 +2,7 @@
 
 import { DataTable } from '@/components/table/data-table';
 import { requestTokenColumns } from '@/components/table/faucet/request-token/columns';
-import { appchainTestnet, arbitrumSepolia, rariTestnet } from '@/configs/wagmi';
+import { coreAnvil, sideAnvil } from '@/configs/wagmi';
 import { useFaucetCooldown } from '../hooks/useFaucetCooldown';
 import { useLastRequestTime } from '../hooks/useLastRequestTime';
 import { usePrivyRequestToken } from '../hooks/usePrivyRequestToken';
@@ -91,12 +91,12 @@ const GTXFaucet: NextPage = () => {
     !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
 
   // Get current chain info for explorer URL
-  const currentChain = [appchainTestnet, arbitrumSepolia, rariTestnet].find(
+  const currentChain = [coreAnvil, sideAnvil].find(
     chain => chain.id === actualChainId
   );
   const explorerUrl =
     currentChain?.blockExplorers?.default?.url ||
-    'https://appchaintestnet.explorer.caldera.xyz';
+    'http://localhost:8545';
 
   const {
     faucetTokensData,

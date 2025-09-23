@@ -5,15 +5,13 @@
  * via environment variables, without needing to modify individual hooks.
  */
 
-// import { riseTestnet, rariTestnet, appchainTestnet } from '@/configs/wagmi';
-import { rariTestnet, appchainTestnet } from '@/configs/wagmi';
+import { coreAnvil, sideAnvil } from '@/configs/wagmi';
 import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
 
 // Available chains for override
 const AVAILABLE_CHAINS = {
-  // RISE_TESTNET: riseTestnet.id,      // 11155931
-  RARI_TESTNET: rariTestnet.id,      // 1918988905  
-  APPCHAIN_TESTNET: appchainTestnet.id, // 4661
+  CORE_ANVIL: coreAnvil.id,      // 31337
+  SIDE_ANVIL: sideAnvil.id,      // 31338
 } as const;
 
 /**
@@ -55,10 +53,10 @@ export function getEffectiveChainId(currentChainId: number): number {
     return forcedChainId;
   }
   
-  // Supported chains: Appchain Testnet and Arbitrum Sepolia
+  // Supported chains: Core Anvil and Side Anvil
   const SUPPORTED_CHAINS = [
-    AVAILABLE_CHAINS.APPCHAIN_TESTNET,  // 4661
-    421614  // Arbitrum Sepolia
+    AVAILABLE_CHAINS.CORE_ANVIL,  // 31337
+    AVAILABLE_CHAINS.SIDE_ANVIL   // 31338
   ];
   
   // If current chain is supported, use it
@@ -66,12 +64,12 @@ export function getEffectiveChainId(currentChainId: number): number {
     return currentChainId;
   }
   
-  // If current chain is not supported, default to Appchain
+  // If current chain is not supported, default to Core Anvil
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[CHAIN_OVERRIDE] Current chain ${currentChainId} not supported, defaulting to Appchain ${AVAILABLE_CHAINS.APPCHAIN_TESTNET}`);
+    console.log(`[CHAIN_OVERRIDE] Current chain ${currentChainId} not supported, defaulting to Core Anvil ${AVAILABLE_CHAINS.CORE_ANVIL}`);
   }
   
-  return AVAILABLE_CHAINS.APPCHAIN_TESTNET;
+  return AVAILABLE_CHAINS.CORE_ANVIL;
 }
 
 /**
@@ -91,7 +89,7 @@ export function needsChainForcing(currentChainId: number): boolean {
   }
   
   // Otherwise, only force if current chain is not supported
-  const SUPPORTED_CHAINS = [4661, 421614]; // Appchain, Arbitrum Sepolia
+  const SUPPORTED_CHAINS = [31337, 31338]; // Core Anvil, Side Anvil
   return !SUPPORTED_CHAINS.includes(currentChainId);
 }
 
@@ -100,12 +98,10 @@ export function needsChainForcing(currentChainId: number): boolean {
  */
 export function getChainName(chainId: number): string {
   switch (chainId) {
-    // case AVAILABLE_CHAINS.RISE_TESTNET:
-    //   return 'Rise Testnet';
-    case AVAILABLE_CHAINS.RARI_TESTNET:
-      return 'Rari Testnet';
-    case AVAILABLE_CHAINS.APPCHAIN_TESTNET:
-      return 'Appchain Testnet';
+    case AVAILABLE_CHAINS.CORE_ANVIL:
+      return 'Core Anvil';
+    case AVAILABLE_CHAINS.SIDE_ANVIL:
+      return 'Side Anvil';
     default:
       return `Chain ${chainId}`;
   }
