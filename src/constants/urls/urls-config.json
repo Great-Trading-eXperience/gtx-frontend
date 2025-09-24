@@ -4,7 +4,7 @@
       "31338": "https://side-indexer-anvil.gtxdex.xyz"
     },
     "WEBSOCKET_URLS": {
-      "31338": "wss://side-anvil.gtxdex.xyz"
+      "31337": "wss://anvil.gtxdex.xyz"
     },
     "EXPLORER_URLS": {
       "31337": "http://localhost:8545/tx/",

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://api.gtx.exchange/ws';
+  const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://anvil.gtxdex.xyz';
 
   return (
     <html lang="en" suppressHydrationWarning>
