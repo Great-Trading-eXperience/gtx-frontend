@@ -7,19 +7,32 @@ import { useAccount, useChainId } from 'wagmi';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
-import ChartComponent from '../../../components/clob-dex/chart/chart';
-import MarketDataTabs from '../../../components/clob-dex/market-data-tabs/market-data-tabs';
-import MarketDataWidget from '../../../components/clob-dex/market-widget/market-widget';
-import PlaceOrder from '../../../components/clob-dex/place-order/place-order';
-import TradingHistory from '../../../components/clob-dex/trading-history/trading-history';
+
+import ChartComponent from './chart/chart';
+import MarketDataTabs from './market-data-tabs/market-data-tabs';
+import MarketDataWidget from './market-widget/market-widget';
+import PlaceOrder from './place-order/place-order';
+import TradingHistory from './trading-history/trading-history';
+
 import { useWallets } from '@privy-io/react-auth';
-import { usePools } from '../hooks/use-pools';
-import { useSelectedPool } from '../hooks/use-selected-pool';
-import { useDepthData, useTicker24hr, useTickerPrice, useTradesData, useUserTrades } from '../hooks/use-market-data';
-import { useAccountData, useAllOrders, useOpenOrders } from '../hooks/use-account-data';
-import { useWebSocketData } from '../hooks/use-websocket-data';
-import { useCombinedDepth, useCombinedOrders, useCombinedTrades } from '../hooks/use-combine-data';
-import { useTransformedBalances } from '../hooks/use-transformed-balance';
+
+import { usePools } from '../hooks/usePools';
+import { useSelectedPool } from '../hooks/useSelectedPool';
+import {
+  useDepthData,
+  useTicker24hr,
+  useTickerPrice,
+  useTradesData,
+  useUserTrades,
+} from '../hooks/useMarketData';
+import { useAccountData, useAllOrders, useOpenOrders } from '../hooks/useAccountData';
+import { useWebSocketData } from '../hooks/useWebsocketData';
+import {
+  useCombinedDepth,
+  useCombinedOrders,
+  useCombinedTrades,
+} from '../hooks/useCombineData';
+import { useTransformedBalances } from '../hooks/useTransformedBalance';
 
 const useIsClient = () => {
   const [isClient, setIsClient] = useState(false);
@@ -134,7 +147,7 @@ export default function ClobDex() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <div className="grid grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
         {/* Chart and Market Widget */}
         <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
@@ -187,7 +200,7 @@ export default function ClobDex() {
         </div>
       </div>
 
-      <TradingHistory
+      {/* <TradingHistory
         address={effectiveAddress}
         chainId={chainId}
         defaultChainId={defaultChainId}
@@ -205,12 +218,8 @@ export default function ClobDex() {
         marketOpenOrdersLoading={openOrdersLoading}
         marketAllOrdersData={allOrdersData}
         refetchFn={refetchAccount}
-        isLoading={
-          poolsLoading ||
-          accountLoading ||
-          openOrdersLoading
-        }
-      />
-    </QueryClientProvider>
+        isLoading={poolsLoading || accountLoading || openOrdersLoading}
+      /> */}
+    </>
   );
 }

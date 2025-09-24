@@ -3,6 +3,8 @@
 import { ReactNode } from 'react';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { ToastProvider } from '@/features/trading/components/place-order/toastContext';
+import ToastContainer from '@/features/trading/components/place-order/toastContainer';
 import Providers from '@/providers/privy-provider'; // Your existing Privy provider
 import { WebSocketProvider } from '@/contexts/websocket-context';
 import { ThemeProvider } from 'next-themes';
@@ -31,7 +33,10 @@ export function ClientProviders({ children, wsUrl }: ClientProvidersProps) {
               accentColorForeground: 'black',
             })}
           >
-            {children}
+            <ToastProvider>
+              {children}
+              <ToastContainer />
+            </ToastProvider>
           </RainbowKitProvider>
         </Providers>
       </WebSocketProvider>

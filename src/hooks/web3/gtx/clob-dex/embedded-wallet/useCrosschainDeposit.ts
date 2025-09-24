@@ -3,7 +3,7 @@ import { encodeFunctionData, formatUnits } from 'viem';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import { ChainBalanceManagerABI } from '@/abis/gtx/clob/ChainBalanceManagerABI';
 import { useState } from 'react';
-import { useToast } from '@/components/clob-dex/place-order/toastContext';
+import { useToast } from '@/features/trading/components/place-order/toastContext';
 import { getContractAddress, ContractName } from '@/constants/contract/contract-address';
 import { isCrosschainSupportedChain, getSupportedCrosschainDepositChainNames } from '@/constants/features/features-config';
 

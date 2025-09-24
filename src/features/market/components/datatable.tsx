@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -52,39 +52,24 @@ export default function DataTable({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [markets, setMarkets] = useState<(MarketData & { starred: boolean })[]>(
-    (data || []).map(item => ({ ...item, starred: false }))
-  );
+  const [starredMap, setStarredMap] = useState<Record<string, boolean>>({});
 
-  // Update markets when data prop changes
-  useEffect(() => {
-    if (data && Array.isArray(data) && data.length > 0) {
-      setMarkets(prevMarkets => {
-        // Preserve starred status for existing items
-        const prevStarredMap = new Map(
-          (prevMarkets || []).map(market => [market.poolId, market.starred])
-        );
-
-        return data.map(item => ({
-          ...item,
-          starred: prevStarredMap.get(item.poolId) || false,
-        }));
-      });
-    } else if (data && Array.isArray(data) && data.length === 0) {
-      // If data is an empty array, reset markets to empty array
-      setMarkets([]);
-    }
-  }, [data]);
-
-  // Toggle star functionality
+  // toggle star
   const toggleStarred = (poolId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setMarkets(prev =>
-      prev.map(market =>
-        market.poolId === poolId ? { ...market, starred: !market.starred } : market
-      )
-    );
+    setStarredMap(prev => ({
+      ...prev,
+      [poolId]: !prev[poolId],
+    }));
   };
+
+  // derived markets = data + starred status
+  const markets = useMemo(() => {
+    return (data || []).map(item => ({
+      ...item,
+      starred: starredMap[item.poolId] ?? false,
+    }));
+  }, [data, starredMap]);
 
   // Format volume for display
   const formatVolume = (volume: string, decimals: number) => {
@@ -110,7 +95,7 @@ export default function DataTable({
       cell: ({ row }) => {
         const market = row.original;
         return (
-          <div className='flex justify-center'>
+          <div className="flex justify-center">
             <button
               onClick={e => toggleStarred(market.poolId, e)}
               className="p-1 hover:bg-white/10 rounded transition-colors"

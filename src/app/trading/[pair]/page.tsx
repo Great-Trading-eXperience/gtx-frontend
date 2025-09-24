@@ -1,17 +1,9 @@
-// app/spot/[poolId]/page.tsx
-'use client';
+import ClobDex from '@/features/trading/components/clob-dex';
 
-import ClobDex from "@/features/trading/components/clob-dex";
-import { Suspense } from "react";
-
-export default function SpotWithPool({ params }: { params: { poolId: string } }) {
-  // The poolId parameter will be available but we don't need to handle it directly
-  // because the ClobDex component will read it from the URL path
+export default function SpotWithPool() {
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
-      <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-        <ClobDex />
-      </Suspense>
+      <ClobDex />
     </div>
   );
 }

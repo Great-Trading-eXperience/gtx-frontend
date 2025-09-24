@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { RecentTradeItem, TradeItem } from '@/graphql/gtx/clob';
+import { TradeItem } from '@/graphql/gtx/clob';
 import { HexAddress } from '@/types/general/address';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BarChart2, LineChart } from 'lucide-react';
-import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
-import EnhancedOrderBookDex from '../orderbook-dex/orderbook-dex';
-import RecentTradesComponent from '../recent-trade/recent-trade';
+import { ClobDexComponentProps } from '../clob-dex';
+import EnhancedOrderBookDex from '@/components/clob-dex/orderbook-dex/orderbook-dex';
+import RecentTradesComponent from '@/components/clob-dex/recent-trade/recent-trade';
 import { DepthData } from '@/lib/market-api';
 import MarketDataTabsSkeleton from './market-data-tabs-skeleton';
 
