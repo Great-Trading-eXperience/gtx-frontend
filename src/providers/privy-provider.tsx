@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { coreAnvil, sideAnvil, wagmiConfig } from '@/configs/wagmi';
 import { FEATURE_FLAGS } from '@/constants/features/features-config';
 import { useChainValidator } from '@/hooks/use-chain-validator';
@@ -87,9 +88,21 @@ const createPrivyConfig = (): PrivyClientConfig => {
 const privyConfig = createPrivyConfig();
 
 // Chain validation wrapper component
-function ChainValidatorWrapper({ children }: { children: React.ReactNode }) {
+function ChainValidatorActive({ children }: { children: React.ReactNode }) {
   useChainValidator();
   return <>{children}</>;
+}
+
+function ChainValidatorWrapper({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Avoid running chain validation on the server/prerender
+  if (!mounted) return <>{children}</>;
+  return <ChainValidatorActive>{children}</ChainValidatorActive>;
 }
 
 export default function PrivyProviders({ children }: { children: React.ReactNode }) {

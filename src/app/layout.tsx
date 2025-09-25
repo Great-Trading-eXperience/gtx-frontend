@@ -10,12 +10,16 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo/gtx.png',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+};
+
+// Force dynamic rendering to avoid prerender-time execution of client hooks (e.g., useWallets)
+export const dynamic = 'force-dynamic';
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

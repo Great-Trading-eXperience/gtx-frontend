@@ -1,3 +1,5 @@
+'use client';
+
 import { wagmiConfig } from '@/configs/wagmi';
 import {
   ContractName,

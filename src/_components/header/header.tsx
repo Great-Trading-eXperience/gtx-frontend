@@ -1,3 +1,5 @@
+'use client';
+
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { cn } from '@/lib/utils';
 import { useWallets } from '@privy-io/react-auth';
