@@ -16,8 +16,8 @@ import {
 import { useState } from 'react';
 import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
-import { formatDate } from '../../../helper';
-import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
+import { formatDate } from '@/helper';
+import { ClobDexComponentProps } from '../../types/chart.types';
 
 export interface TradesProps extends ClobDexComponentProps {
   userTradesData?: TradeItem[];

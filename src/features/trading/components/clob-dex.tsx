@@ -1,7 +1,6 @@
 'use client';
 
 import { HexAddress, ProcessedPoolItem } from '@/types/gtx/clob';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
@@ -63,19 +62,6 @@ export default function ClobDex() {
   const embedded = wallets.find(wallet => wallet.walletClientType === 'privy');
   const effectiveAddress = embedded?.address as HexAddress;
   const effectiveIsConnected = isConnected || isFullyAuthenticated;
-
-  // React Query setup
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: true,
-            staleTime: 5000,
-          },
-        },
-      })
-  );
 
   // Fetch pools data
   const {
@@ -200,7 +186,7 @@ export default function ClobDex() {
         </div>
       </div>
 
-      {/* <TradingHistory
+      <TradingHistory
         address={effectiveAddress}
         chainId={chainId}
         defaultChainId={defaultChainId}
@@ -219,7 +205,7 @@ export default function ClobDex() {
         marketAllOrdersData={allOrdersData}
         refetchFn={refetchAccount}
         isLoading={poolsLoading || accountLoading || openOrdersLoading}
-      /> */}
+      />
     </>
   );
 }

@@ -24,7 +24,7 @@ export function ClientProviders({ children, wsUrl }: ClientProvidersProps) {
       defaultTheme="dark"
       value={{ light: 'light', dark: 'dark' }}
     >
-      <WebSocketProvider url={wsUrl}>
+      {/* <WebSocketProvider url={wsUrl}> */}
         <Providers>
           <RainbowKitProvider
             initialChain={CORE_ANVIL_CHAIN_ID}
@@ -39,7 +39,7 @@ export function ClientProviders({ children, wsUrl }: ClientProvidersProps) {
             </ToastProvider>
           </RainbowKitProvider>
         </Providers>
-      </WebSocketProvider>
+      {/* </WebSocketProvider> */}
     </ThemeProvider>
   );
 }

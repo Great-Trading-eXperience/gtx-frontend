@@ -12,7 +12,7 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Menu, RefreshCw } from 'luc
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatUnits } from 'viem';
 import { OrderSideEnum } from '@/lib/enums/clob.enum';
-import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
+import { ClobDexComponentProps } from '../clob-dex';
 import { DepthData } from '@/lib/market-api';
 
 interface Order {

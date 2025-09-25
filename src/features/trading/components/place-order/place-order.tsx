@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId } from 'wagmi';
 import { OrderSideEnum } from '@/lib/enums/clob.enum';
-import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
+import { ClobDexComponentProps } from '../../types/chart.types';
 import PlaceOrderSkeleton from './place-order-skeleton';
 import GTXSlider from './slider';
 import GTXTooltip from './tooltip';

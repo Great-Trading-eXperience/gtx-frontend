@@ -12,7 +12,7 @@ import { OrderData } from '@/lib/market-api';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BookOpen, History, Wallet } from 'lucide-react';
 import { useAccount } from 'wagmi';
-import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
+import { ClobDexComponentProps } from '../../types/chart.types';
 import BalancesHistoryTable from './balances';
 import OrderHistoryTable from './orders';
 import TradeHistoryTable from './trades';

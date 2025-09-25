@@ -1,29 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { TradeItem } from '@/graphql/gtx/clob';
-import { HexAddress } from '@/types/general/address';
-import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { BarChart2, LineChart } from 'lucide-react';
-import { ClobDexComponentProps } from '../clob-dex';
-import EnhancedOrderBookDex from '@/components/clob-dex/orderbook-dex/orderbook-dex';
-import RecentTradesComponent from '@/components/clob-dex/recent-trade/recent-trade';
-import { DepthData } from '@/lib/market-api';
+
+import { MarketDataTabsProps } from '../../types/market-data.types';
+
+import EnhancedOrderBookDex from './orderbook-dex';
+import RecentTradesComponent from './recent-trade';
 import MarketDataTabsSkeleton from './market-data-tabs-skeleton';
 
-export interface MarketDataTabsProps extends ClobDexComponentProps {
-  address: HexAddress | undefined;
-  chainId: number;
-  defaultChainId: number;
-  selectedPool?: ProcessedPoolItem;
-  poolsLoading: boolean;
-  poolsError: Error | null;
-  depthData: DepthData | null;
-  trades: TradeItem[];
-  tradesLoading: boolean;
-}
-
-type TabValue = 'orderbook' | 'trades';
 
 const MarketDataTabs = ({
   chainId,
@@ -35,7 +20,7 @@ const MarketDataTabs = ({
   trades,
   tradesLoading
 }: MarketDataTabsProps) => {
-  const [activeTab, setActiveTab] = useState<TabValue>('orderbook');
+  const [activeTab, setActiveTab] = useState<'orderbook' | 'trades'>('orderbook');
 
   // Show skeleton when pools are loading or no data is available yet
   if (poolsLoading || (!selectedPool && !depthData && trades.length === 0)) {
@@ -55,7 +40,7 @@ const MarketDataTabs = ({
     },
   ];
 
-  const handleTabClick = (tabValue: TabValue) => {
+  const handleTabClick = (tabValue: 'orderbook' | 'trades') => {
     setActiveTab(tabValue);
   };
 

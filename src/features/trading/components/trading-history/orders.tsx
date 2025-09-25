@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
-import { formatDate } from '../../../helper';
-import { ClobDexComponentProps } from '../../../features/trading/components/clob-dex';
+import { formatDate } from '@/helper';
+import { ClobDexComponentProps } from '../../types/chart.types';
 
 export interface OrderHistoryTableProps extends ClobDexComponentProps {
   ordersData: OpenOrderItem[];

@@ -6,9 +6,7 @@ import { createChart, type IChartApi, type ISeriesApi } from 'lightweight-charts
 
 import { TimeFrame } from '@/lib/enums/clob.enum';
 import { useMarketStore } from '@/store/market-store';
-import TradingViewChartContainer, {
-  TradingPair,
-} from '@/_components/trading-view-chart/trading-view-chart';
+import TradingViewChartContainer, { TradingPair } from '@/_components/trading-view-chart/trading-view-chart';
 
 import { ChartComponentProps } from '../../types/chart.types';
 
