@@ -1,43 +1,81 @@
-import { useQuery } from "@tanstack/react-query";
-import { getIndexerUrl } from "@/constants/urls/urls-config";
-import { DEFAULT_CHAIN } from "@/constants/contract/contract-address";
+import { useQuery } from '@tanstack/react-query';
+import { getIndexerUrl } from '@/constants/urls/urls-config';
+import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
+import { MarketData } from '../types/market-data';
+import { getIconInfo } from '../services';
+import { formatUnits } from 'viem';
+import { formatNumber } from '@/lib/utils';
 
 interface UseMarketDataResult {
-    marketData: any, // will be check first
-    marketDataLoading: boolean,
-    marketDataHasError: boolean,
-    marketDataError: Error | null,
+  marketData: MarketData[] | undefined;
+  marketDataLoading: boolean;
+  marketDataHasError: boolean;
+  marketDataError: Error | null;
+}
+
+interface MarketApiResponse {
+  poolId: string;
+  baseAsset: string;
+  quoteAsset: string;
+  latestPrice: bigint;
+  volume: bigint;
+  quoteDecimals: number;
+  baseDecimals: number;
 }
 
 export function useMarkets(chainId?: number): UseMarketDataResult {
-    const currentChainId = chainId ?? Number(DEFAULT_CHAIN);
-    
-    const {
-        data,
-        isLoading,
-        isError,
-        error,
-    } = useQuery({
-        queryKey: ['markets', String(currentChainId)],
-        queryFn: async () => {
-            const url = getIndexerUrl(currentChainId);
-            if (!url) throw new Error('Indexer URL not found');
-            
-            const response = await fetch(`${url}/api/markets`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch markets')
-            }
-            return response.json()
-        },
-        refetchInterval: 2000,
-        staleTime: 0,
-        gcTime: 60000,
-    });
+  const currentChainId = chainId ?? Number(DEFAULT_CHAIN);
+
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+  }: {
+    data: MarketApiResponse[] | undefined;
+    isLoading: boolean;
+    isError: boolean;
+    error: Error | null;
+  } = useQuery({
+    queryKey: ['markets', String(currentChainId)],
+    queryFn: async () => {
+      const url = getIndexerUrl(currentChainId);
+      if (!url) throw new Error('Indexer URL not found');
+
+      const response = await fetch(`${url}/api/markets`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch markets');
+      }
+      return response.json();
+    },
+    refetchInterval: 3000,
+    staleTime: 0,
+    gcTime: 60000,
+  });
+
+  const marketData: MarketData[] | undefined = data?.map(market => {
+    const iconInfo        = getIconInfo(market.baseAsset);
+    const formattedPrice  = formatUnits(BigInt(market.latestPrice), market.quoteDecimals);
+    const formattedVolume = formatUnits(BigInt(market.volume), market.quoteDecimals);
 
     return {
-        marketData: data,
-        marketDataLoading: isLoading,
-        marketDataHasError: isError,
-        marketDataError: error,
-    }
+      id: market.poolId,
+      name: market.baseAsset,
+      pair: market.quoteAsset,
+      starred: false,
+      iconInfo,
+      age: '', //calculateAge(pool.timestamp),
+      timestamp: 0, //pool.timestamp,
+      price: formatNumber(Number(formattedPrice), { decimals: 0 }),
+      volume: formatNumber(Number(formattedVolume), { decimals: 0 }),
+      liquidity: '', //formatNumber(pool.maxOrderAmount),
+    };
+  });
+
+  return {
+    marketData: marketData,
+    marketDataLoading: isLoading,
+    marketDataHasError: isError,
+    marketDataError: error,
+  };
 }

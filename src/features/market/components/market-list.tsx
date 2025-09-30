@@ -1,7 +1,7 @@
 'use client';
 
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
-import { useMarketData } from '../hooks/useLatestMarkets';
+import { useMarkets } from '../hooks/useMarkets';
 import { useState } from 'react';
 import MarketsDataTable from './marketDatatable';
 
@@ -9,7 +9,7 @@ export default function MarketList() {
   const [showWatchlist, setShowWatchlist] = useState(false);
 
   const { marketData, marketDataLoading, marketDataHasError, marketDataError } =
-    useMarketData(Number(DEFAULT_CHAIN));
+    useMarkets(Number(DEFAULT_CHAIN));
 
   const handleRowClick = (poolId: string) => {
     console.log(`Navigating to spot trading for pool: ${poolId}`);

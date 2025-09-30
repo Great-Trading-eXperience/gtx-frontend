@@ -1,22 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, ArrowUpDown, ChevronLeft, ChevronRight, Star, Clock, Copy } from 'lucide-react';
-
-interface MarketData {
-  age: string;
-  iconInfo: {
-    bg: string;
-    hasImage: boolean;
-    imagePath: string;
-  };
-  id: string;
-  liquidity: string;
-  name: string;
-  pair: string;
-  price: string;
-  starred: boolean;
-  timestamp: number;
-  volume: string;
-}
+import { MarketData } from '../types/market-data';
 
 interface MarketsTableProps {
   data: MarketData[] | undefined;

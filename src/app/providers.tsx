@@ -8,7 +8,6 @@ import ToastContainer from '@/features/trading/components/place-order/toastConta
 import PrivyProviders from '@/providers/privy-provider';
 import { WebSocketProvider } from '@/contexts/websocket-context';
 import { ThemeProvider } from 'next-themes';
-import { ToastProvider } from '@/components/clob-dex/place-order/toastContext';
 
 const CORE_ANVIL_CHAIN_ID = 31337;
 
