@@ -1,7 +1,7 @@
 {
     "INDEXER_URLS": {
-      "31337": "https://core-indexer-anvil.gtxdex.xyz",
-      "31338": "https://side-indexer-anvil.gtxdex.xyz"
+      "31337": "https://core-indexer-devnet.gtxdex.xyz",
+      "31338": "https://side-indexer-devnet.gtxdex.xyz"
     },
     "WEBSOCKET_URLS": {
       "31337": "wss://anvil.gtxdex.xyz"
