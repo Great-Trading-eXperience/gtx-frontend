@@ -11,6 +11,7 @@ import VeGTXHeader from '@/_components/header/vegtx-header';
 import ConnectWalletModal from '@/_components/modals/connect-wallet';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useAccount } from 'wagmi';
+import BottomNavbar from './bottom-navbar';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -38,6 +39,7 @@ export function PageLayout({ children }: PageLayoutProps) {
   const [mobileWarningOpen, setMobileWarningOpen] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
+  /*
   // Mobile device detection and redirection
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -51,7 +53,9 @@ export function PageLayout({ children }: PageLayoutProps) {
       router.push('/');
     }
   }, [pathname, router]);
+  */
 
+  /*
   // Listen for custom events from the LandingHeader
   useEffect(() => {
     const handleMobileTrigger = () => {
@@ -64,6 +68,7 @@ export function PageLayout({ children }: PageLayoutProps) {
       window.removeEventListener('gtx:mobileTrigger', handleMobileTrigger);
     };
   }, []);
+  */
 
   // Handle body scroll when panel is open
   useEffect(() => {
@@ -122,10 +127,9 @@ export function PageLayout({ children }: PageLayoutProps) {
       )}
       {(isHomePage || isWaitlistMode) && <Footer />}
 
-      {/* Mobile Warning Modal */}
-      <MobileWarningModal isOpen={mobileWarningOpen} onClose={handleCloseMobileWarning} />
+      {!isMobileDevice() && <EmbededPanel isOpen={isPanelOpen} onClose={togglePanel} />}
 
-      <EmbededPanel isOpen={isPanelOpen} onClose={togglePanel} />
+      {isMobileDevice() && <BottomNavbar />}
     </>
   );
 }

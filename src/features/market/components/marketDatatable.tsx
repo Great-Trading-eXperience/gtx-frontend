@@ -1,6 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, ArrowUpDown, ChevronLeft, ChevronRight, Star, Clock, Copy } from 'lucide-react';
+import {
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Clock,
+  Copy,
+} from 'lucide-react';
 import { MarketData } from '../types/market-data';
+import { formatUnits } from 'viem';
 
 interface MarketsTableProps {
   data: MarketData[] | undefined;
@@ -21,11 +30,25 @@ export default function MarketsDataTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [starredItems, setStarredItems] = useState<Set<string>>(new Set());
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const itemsPerPage = 10;
+
+  // Detect screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Initialize starred items from data
   useEffect(() => {
-    const initialStarred = new Set(data.filter(item => item.starred).map(item => item.id));
+    const initialStarred = new Set(
+      data.filter(item => item.starred).map(item => item.id)
+    );
     setStarredItems(initialStarred);
   }, []);
 
@@ -65,7 +88,7 @@ export default function MarketsDataTable({
   const filteredAndSortedData = useMemo(() => {
     let filtered = data.map(item => ({
       ...item,
-      starred: starredItems.has(item.id)
+      starred: starredItems.has(item.id),
     }));
 
     // Apply watchlist filter
@@ -75,17 +98,18 @@ export default function MarketsDataTable({
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.pair.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.id.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        item =>
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.pair.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
       let aVal: any, bVal: any;
-      
+
       switch (sortField) {
         case 'timestamp':
           aVal = a.timestamp;
@@ -135,7 +159,10 @@ export default function MarketsDataTable({
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedData = filteredAndSortedData.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedData = filteredAndSortedData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   // Handle sort
   const handleSort = (field: string) => {
@@ -197,21 +224,22 @@ export default function MarketsDataTable({
 
   return (
     <div className="w-full">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search markets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-black/50 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent"
-            />
-          </div>
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 h-4 w-4" />
+          <input
+            type="text"
+            placeholder="Search markets..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-black/50 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent"
+          />
         </div>
+      </div>
 
-        {/* Table */}
+      {/* Table */}
+      {!isMobile ? (
         <div className="rounded-xl border border-white/20 bg-black/60 backdrop-blur-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
@@ -220,7 +248,7 @@ export default function MarketsDataTable({
                   <th className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5">
                     Market
                   </th>
-                  <th 
+                  <th
                     className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleSort('age')}
                   >
@@ -229,7 +257,7 @@ export default function MarketsDataTable({
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th 
+                  <th
                     className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleSort('price')}
                   >
@@ -238,7 +266,7 @@ export default function MarketsDataTable({
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th 
+                  <th
                     className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleSort('volume')}
                   >
@@ -247,7 +275,7 @@ export default function MarketsDataTable({
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th 
+                  <th
                     className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleSort('liquidity')}
                   >
@@ -266,7 +294,7 @@ export default function MarketsDataTable({
                     </td>
                   </tr>
                 ) : paginatedData.length > 0 ? (
-                  paginatedData.map((market) => (
+                  paginatedData.map(market => (
                     <tr
                       key={market.id}
                       className="hover:bg-white/10 cursor-pointer transition-colors duration-200 border-b border-white/5 last:border-0"
@@ -277,7 +305,7 @@ export default function MarketsDataTable({
                           <div className="relative group">
                             <button
                               className="w-6 h-6 flex items-center justify-center border border-white/20 rounded-md hover:bg-white/20 transition-colors"
-                              onClick={(e) => copyToClipboard(market.id, 'market', e)}
+                              onClick={e => copyToClipboard(market.id, 'market', e)}
                             >
                               <Copy className="h-3 w-3 text-white/70" />
                             </button>
@@ -287,14 +315,18 @@ export default function MarketsDataTable({
                           </div>
                           <button
                             className="text-white/50 hover:text-yellow-400 transition-colors"
-                            onClick={(e) => toggleStarred(market.id, e)}
+                            onClick={e => toggleStarred(market.id, e)}
                             aria-label={
-                              market.starred ? 'Remove from watchlist' : 'Add to watchlist'
+                              market.starred
+                                ? 'Remove from watchlist'
+                                : 'Add to watchlist'
                             }
                           >
                             <Star
                               className={`w-5 h-5 ${
-                                market.starred ? 'fill-yellow-400 text-yellow-400' : 'text-white/40'
+                                market.starred
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-white/40'
                               }`}
                             />
                           </button>
@@ -307,19 +339,23 @@ export default function MarketsDataTable({
                                 src={market.iconInfo.imagePath}
                                 alt={market.name}
                                 className="w-full h-full object-contain"
-                                onError={(e) => {
+                                onError={e => {
                                   const target = e.target as HTMLImageElement;
                                   target.style.display = 'none';
-                                  const fallback = target.nextElementSibling as HTMLElement;
+                                  const fallback =
+                                    target.nextElementSibling as HTMLElement;
                                   if (fallback) fallback.style.display = 'flex';
                                 }}
                               />
                             ) : null}
-                            <div 
+                            <div
                               className="flex items-center justify-center w-full h-full text-white"
-                              style={{ 
-                                display: market.iconInfo.hasImage && market.iconInfo.imagePath ? 'none' : 'flex',
-                                backgroundColor: market.iconInfo.bg 
+                              style={{
+                                display:
+                                  market.iconInfo.hasImage && market.iconInfo.imagePath
+                                    ? 'none'
+                                    : 'flex',
+                                backgroundColor: market.iconInfo.bg,
                               }}
                             >
                               <span className="font-bold text-xs">
@@ -347,7 +383,10 @@ export default function MarketsDataTable({
                         ${market.volume}
                       </td>
                       <td className="px-6 py-5 text-white/90 font-mono">
-                        ${market.liquidity === "0" ? "0" : parseFloat(market.liquidity).toLocaleString()}
+                        $
+                        {market.liquidity === '0'
+                          ? '0'
+                          : parseFloat(market.liquidity).toLocaleString()}
                       </td>
                     </tr>
                   ))
@@ -366,39 +405,174 @@ export default function MarketsDataTable({
             </table>
           </div>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="flex items-center space-x-2 py-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              {renderPaginationButtons()}
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="text-white/60 text-sm">
-              Page {currentPage} of {totalPages} ({filteredAndSortedData.length} total markets)
-            </div>
+      ) : (
+        <div className="rounded-xl border border-white/20 bg-black/60 backdrop-blur-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/20">
+                  <th className="text-left px-3 py-2 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5">
+                    Market
+                  </th>
+                  <th
+                    className="text-left px-3 py-2 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Price
+                      <ArrowUpDown className="w-1.5 h-1.5" />
+                    </div>
+                  </th>
+                  <th
+                    className="text-left px-3 py-2 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+                    onClick={() => handleSort('volume')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Volume
+                      <ArrowUpDown className="w-1.5 h-1.5" />
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={3} className="text-center py-12 text-white/50">
+                      Loading markets...
+                    </td>
+                  </tr>
+                ) : paginatedData.length > 0 ? (
+                  paginatedData.map(market => (
+                    <tr
+                      key={market.id}
+                      className="hover:bg-white/10 cursor-pointer transition-colors duration-200 border-b border-white/5 last:border-0"
+                      onClick={() => onRowClick?.(market.id)}
+                    >
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative group">
+                            <button
+                              className="w-3 h-3flex items-center justify-center border border-white/20 rounded-md hover:bg-white/20 transition-colors"
+                              onClick={e => copyToClipboard(market.id, 'market', e)}
+                            >
+                              <Copy className="h-1.5 w-1.5 text-white/70" />
+                            </button>
+                            <div className="absolute left-0 top-0 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-white/20 text-white text-xs rounded-md py-1.5 px-2.5 whitespace-nowrap z-10">
+                              Copy token {market.name}
+                            </div>
+                          </div>
+                          <button
+                            className="text-white/50 hover:text-yellow-400 transition-colors"
+                            onClick={e => toggleStarred(market.id, e)}
+                            aria-label={
+                              market.starred
+                                ? 'Remove from watchlist'
+                                : 'Add to watchlist'
+                            }
+                          >
+                            <Star
+                              className={`w-2.5 h-2.5 ${
+                                market.starred
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-white/40'
+                              }`}
+                            />
+                          </button>
+                          <div
+                            className="w-4 h-4 rounded-full flex items-center justify-center overflow-hidden border border-white/30"
+                            style={{ backgroundColor: market.iconInfo.bg }}
+                          >
+                            {market.iconInfo.hasImage && market.iconInfo.imagePath ? (
+                              <img
+                                src={market.iconInfo.imagePath}
+                                alt={market.name}
+                                className="w-full h-full object-contain"
+                                onError={e => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const fallback =
+                                    target.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              className="flex items-center justify-center w-full h-full text-white"
+                              style={{
+                                display:
+                                  market.iconInfo.hasImage && market.iconInfo.imagePath
+                                    ? 'none'
+                                    : 'flex',
+                                backgroundColor: market.iconInfo.bg,
+                              }}
+                            >
+                              <span className="font-bold text-xs">
+                                {market.name.substring(0, 2).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-white">{market.name}</span>
+                            <span className="text-white/60">/ {market.pair}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-white font-mono">${market.price}</td>
+                      <td className="px-3 py-2 text-white/90 font-mono">
+                        ${market.volume}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="text-center py-8 text-white/50">
+                      {showWatchlist
+                        ? 'Your watchlist is empty. Star some markets to add them here.'
+                        : searchTerm
+                        ? `No markets found matching "${searchTerm}"`
+                        : 'No markets found'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Copy notification */}
-        {copiedItem && (
-          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-            Copied to clipboard!
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-col items-center justify-center py-6">
+          <div className="flex items-center space-x-2 py-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {renderPaginationButtons()}
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-        )}
+          <div className="text-white/60 text-sm">
+            Page {currentPage} of {totalPages} ({filteredAndSortedData.length} total
+            markets)
+          </div>
+        </div>
+      )}
+
+      {/* Copy notification */}
+      {copiedItem && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          Copied to clipboard!
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getIndexerUrl } from '@/constants/urls/urls-config';
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { MarketData } from '../types/market-data';
-import { getIconInfo } from '../services';
+import { getIconInfo } from '../services/get-icon-info';
 import { formatUnits } from 'viem';
 import { formatNumber } from '@/lib/utils';
 
@@ -54,9 +54,15 @@ export function useMarkets(chainId?: number): UseMarketDataResult {
   });
 
   const marketData: MarketData[] | undefined = data?.map(market => {
-    const iconInfo        = getIconInfo(market.baseAsset);
-    const formattedPrice  = formatUnits(BigInt(market.latestPrice), market.quoteDecimals);
-    const formattedVolume = formatUnits(BigInt(market.volume), market.quoteDecimals);
+    const iconInfo = getIconInfo(market.baseAsset);
+    const formattedPrice = formatNumber(
+      Number(formatUnits(BigInt(market.latestPrice), market.quoteDecimals)),
+      { decimals: 2, compact: true }
+    );
+    const formattedVolume = formatNumber(
+      Number(formatUnits(BigInt(market.volume), market.quoteDecimals)),
+      { decimals: 2, compact: true }
+    );
 
     return {
       id: market.poolId,
@@ -66,8 +72,8 @@ export function useMarkets(chainId?: number): UseMarketDataResult {
       iconInfo,
       age: '', //calculateAge(pool.timestamp),
       timestamp: 0, //pool.timestamp,
-      price: formatNumber(Number(formattedPrice), { decimals: 0 }),
-      volume: formatNumber(Number(formattedVolume), { decimals: 0 }),
+      price: formattedPrice,
+      volume: formattedVolume,
       liquidity: '', //formatNumber(pool.maxOrderAmount),
     };
   });

@@ -685,7 +685,7 @@ const SwapForm: React.FC = () => {
       : '0';
 
   return (
-    <div className="px-6 py-12 mx-auto bg-black min-h-screen">
+    <div className="px-6 py-12 mx-auto bg-black">
       <div className="relative z-10 max-w-2xl mx-auto">
         {/* Header Section */}
         <div className="mb-8">

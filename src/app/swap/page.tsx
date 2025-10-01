@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 const Swap = () => {
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden z-50">
+    <div className="md:min-h-screen bg-black relative overflow-hidden z-50">
       <SwapForm />
     </div>
   );

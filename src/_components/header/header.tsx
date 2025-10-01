@@ -289,7 +289,7 @@ const Header = ({ onTogglePanel }: NavbarProps) => {
         {/* Right Column */}
         <div className="flex justify-end items-center">
           {/* Show authentication buttons - only Privy */}
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {ready && authenticated ? (
               <div className="flex flex-row items-center gap-2">
                 <ChainDropdown />
@@ -307,7 +307,7 @@ const Header = ({ onTogglePanel }: NavbarProps) => {
           </div>
 
           {/* Mobile Menu Button - Only Visible on Mobile */}
-          <div className="flex ml-4 lg:hidden">
+          {/* <div className="flex ml-4 lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" className="text-white">
@@ -350,7 +350,7 @@ const Header = ({ onTogglePanel }: NavbarProps) => {
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
+          </div> */}
         </div>
       </nav>
     </header>
