@@ -75,33 +75,33 @@ export default function TradingHistory({
   };
 
   return (
-    <div className="relative mt-1">
+    <div className="relative mt-1 mb-20 md:mb-0">
       <Card className="overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
         <Tabs defaultValue="trades" className="w-full">
           <div className="space-y-3 p-3">
             <div className="relative">
-              <TabsList className="flex w-full justify-start gap-6 bg-transparent">
+              <TabsList className="flex w-full justify-start gap-2 md:gap-6 bg-transparent">
                 <TabsTrigger
                   value="open-orders"
-                  className="group relative flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
+                  className="group relative flex items-center gap-1 md:gap-2 rounded-lg bg-transparent px-1.5 py-1 md:px-3 md:py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
                 >
-                  <BookOpen className="h-5 w-5" />
+                  <BookOpen className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="text-sm">Open Orders</span>
                   <span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
                 </TabsTrigger>
                 <TabsTrigger
                   value="trades"
-                  className="group relative flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
+                  className="group relative flex items-center gap-1 md:gap-2 rounded-lg bg-transparent px-1.5 py-1 md:px-3 md:py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
                 >
-                  <History className="h-5 w-5" />
+                  <History className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="text-sm">Trade History</span>
                   <span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
                 </TabsTrigger>
                 <TabsTrigger
                   value="balances"
-                  className="group relative flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
+                  className="group relative flex items-center gap-1 md:gap-2 rounded-lg bg-transparent px-1.5 py-1 md:px-3 md:py-2 text-lg font-medium text-gray-300 transition-all hover:text-gray-200 data-[state=active]:text-white"
                 >
-                  <Wallet className="h-5 w-5" />
+                  <Wallet className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="text-sm">Balances</span>
                   <span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transform rounded-full bg-gradient-to-r from-gray-400 to-gray-500 transition-transform duration-300 ease-out group-hover:scale-x-100 group-data-[state=active]:scale-x-100" />
                 </TabsTrigger>

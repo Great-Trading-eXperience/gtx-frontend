@@ -219,7 +219,7 @@ function ChartComponent({
         </div>
       )}
 
-      <div className="p-2 h-full">
+      <div className="p-2 h-full min-h-[450px]">
         {selectedPool?.coin ? (
           <TradingViewChartContainer
             chainId={chainId}

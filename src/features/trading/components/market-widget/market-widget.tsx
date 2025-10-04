@@ -32,7 +32,7 @@ export default function MarketDataWidget({
 
   const handlePoolChange = (poolId: string) => {
     router.push(`/spot/${poolId}`);
-  }
+  };
 
   if (isLoading || (!selectedPool && !ticker24hr)) {
     return <MarketWidgetSkeleton />;
@@ -41,7 +41,7 @@ export default function MarketDataWidget({
   return (
     <div className="w-full bg-black border border-white/20 text-white rounded-t-lg shadow-md">
       {/* Market data display with integrated selector */}
-      <div className="flex items-center h-16 px-4">
+      {/* <div className="flex items-center h-16 px-4">
         <div className="flex items-center space-x-2 w-72">
           <div className="flex items-center gap-2">
             {poolsWithDecimals.length > 0 ? (
@@ -87,6 +87,58 @@ export default function MarketDataWidget({
             <div className="font-semibold text-[15px] pb-1">24h Volume</div>
             <div className="text-gray-900 dark:text-white w-16">
               ${formatNumber(Number(ticker24hr?.quoteVolume ?? '0'), { decimals: 2, compact: true })}
+            </div>
+          </div>
+        </div>
+      </div> */}
+
+      <div className="flex flex-row justify-between py-2 px-4">
+        <div className="flex flex-col">
+          <span className="text-2xl font-semibold">
+            $
+            {formatNumber(
+              formatUnits(
+                BigInt(Math.floor(Number(ticker24hr?.lastPrice ?? '0'))),
+                selectedPool?.quoteDecimals ?? 0
+              )
+            )}
+          </span>
+        </div>
+        <div className="flex flex-row gap-2">
+          <div className="text-gray-600 dark:text-gray-400 text-left">
+            <div className="text-xs">24h High</div>
+            <div className="text-green-600 dark:text-[#5BBB6F] w-14 font-semibold text-md">
+              $
+              {formatNumber(
+                formatUnits(
+                  BigInt(Math.floor(Number(ticker24hr?.highPrice ?? '0'))),
+                  selectedPool?.quoteDecimals ?? 0
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="text-gray-600 dark:text-gray-400 text-left">
+            <div className="text-xs">24h Low</div>
+            <div className="text-red-600 dark:text-[#FF6978] w-14 font-semibold text-md">
+              $
+              {formatNumber(
+                formatUnits(
+                  BigInt(Math.floor(Number(ticker24hr?.lowPrice ?? '0'))),
+                  selectedPool?.quoteDecimals ?? 0
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="text-gray-600 dark:text-gray-400 text-left">
+            <div className="text-xs">24h Volume</div>
+            <div className="text-gray-900 dark:text-white w-16 font-semibold text-md">
+              $
+              {formatNumber(Number(ticker24hr?.quoteVolume ?? '0'), {
+                decimals: 2,
+                compact: true,
+              })}
             </div>
           </div>
         </div>
