@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useMarketWebSocket } from '@/hooks/use-market-websocket';
 import { convertPrice, normalizeSymbol } from '../../utils/tradingView/priceConversion';
 

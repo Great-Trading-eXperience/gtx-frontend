@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { WifiOff } from 'lucide-react';
+import Image from 'next/image';
 
 interface TradingViewContainerProps {
   height: number | string;
@@ -20,8 +21,7 @@ function TradingViewContainer({
       {!isReady && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 z-10">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
-            <p className="text-gray-400 text-sm">Loading chart...</p>
+            <Image src={'/logo/gtx.png'} alt='logo' width={100} height={100} />
           </div>
         </div>
       )}

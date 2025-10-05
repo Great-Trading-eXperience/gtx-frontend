@@ -1,4 +1,3 @@
-// hooks/useProcessedChartData.ts
 import { useMemo, useRef } from 'react';
 import { BucketData } from './useCandlestickData';
 import {
