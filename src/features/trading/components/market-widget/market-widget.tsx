@@ -11,10 +11,10 @@ import { ClobDexComponentProps } from '../../components/clob-dex';
 import { PairDropdown } from './pair-dropdown';
 import MarketWidgetSkeleton from './market-widget-skeleton';
 
-export interface MarketDataWidgetProps extends ClobDexComponentProps {
+export interface MarketDataWidgetProps {
   poolId: string | null;
   selectedPool?: ProcessedPoolItem;
-  ticker24hr?: Ticker24hrData;
+  ticker24hr?: Ticker24hrData | null;
   isLoading?: boolean;
 }
 

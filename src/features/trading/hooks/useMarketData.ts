@@ -33,9 +33,9 @@ export const useTickerPrice = (symbol: string) => {
 };
 
 export const useTicker24hr = (symbol: string) => {
-  return useQuery<Ticker24hrData | undefined>({
+  return useQuery<Ticker24hrData | null>({
     queryKey: ['ticker24hr', symbol],
-    queryFn: () => (symbol ? fetchTicker24hr(symbol) : undefined),
+    queryFn: () => (symbol ? fetchTicker24hr(symbol) : null),
     enabled: !!symbol,
     staleTime: 10000,
     refetchInterval: 30000,

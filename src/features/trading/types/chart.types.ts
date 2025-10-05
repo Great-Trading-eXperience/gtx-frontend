@@ -83,7 +83,7 @@ export type ClobDexComponentProps = {
 
 export type ChartComponentProps = ClobDexComponentProps & {
   height?: number;
-  poolsData?: ProcessedPoolItem[] | null;
+  poolsData?: ProcessedPoolItem[] | undefined;
   poolsLoading?: boolean;
   poolsError?: Error | null;
 };

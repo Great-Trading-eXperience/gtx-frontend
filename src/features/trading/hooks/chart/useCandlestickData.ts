@@ -16,7 +16,7 @@ import {
   MinuteCandleStickPonderResponse,
   MinuteCandleStickResponse,
 } from '@/graphql/gtx/clob';
-import { TimeFrame } from '@/lib/enums/clob.enum';
+import { TimeFrame } from '../../types/chart.types';
 import { getUseSubgraph } from '@/utils/env';
 
 export interface BucketData {
@@ -52,7 +52,7 @@ export const useCandlestickData = ({
   selectedTimeFrame,
   poolId,
 }: UseCandlestickDataParams) => {
-  return useQuery<CandleStickItem[]>({
+  const query = useQuery<CandleStickItem[]>({
     queryKey: ['candlesticks', selectedTimeFrame, poolId],
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChainId);
@@ -79,6 +79,11 @@ export const useCandlestickData = ({
     refetchInterval: 60000,
     staleTime: 60000,
   });
+
+  return {
+    ...query,
+    refetch: query.refetch,
+  };
 };
 
 const getQueryByTimeFrame = (timeFrame: TimeFrame) => {

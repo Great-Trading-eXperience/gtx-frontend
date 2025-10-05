@@ -7,10 +7,11 @@ import { usePrivyAuth } from '@/hooks/use-privy-auth';
 
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 
-import ChartComponent from './chart/chart';
+// import ChartComponent from './chart_/chart';
 import MarketDataTabs from './market-data-tabs/market-data-tabs';
 import MarketDataWidget from './market-widget/market-widget';
 import PlaceOrder from './place-order/place-order';
+import ChartComponent from './chart';
 import TradingHistory from './trading-history/trading-history';
 
 import { useWallets } from '@privy-io/react-auth';
@@ -137,15 +138,18 @@ export default function ClobDex() {
       <div className="grid md:grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
         {/* Chart and Market Widget */}
         <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
-          <MarketDataWidget
-            address={effectiveAddress}
-            chainId={chainId}
-            defaultChainId={defaultChainId}
-            poolId={selectedPool?.id}
+          {/* <MarketDataWidget
+            poolId={selectedPool?.id || null}
             selectedPool={selectedPool}
             ticker24hr={ticker24hr}
             isLoading={isLoading}
           />
+          <ChartComponent
+            address={effectiveAddress}
+            chainId={chainId}
+            defaultChainId={defaultChainId}
+            selectedPool={selectedPool}
+          /> */}
           <ChartComponent
             address={effectiveAddress}
             chainId={chainId}

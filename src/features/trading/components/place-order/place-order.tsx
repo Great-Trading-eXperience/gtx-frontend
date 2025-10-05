@@ -21,11 +21,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount, useChainId } from 'wagmi';
-import { OrderSideEnum } from '@/lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../../types/chart.types';
 import PlaceOrderSkeleton from './place-order-skeleton';
 import GTXSlider from './slider';
 import GTXTooltip from './tooltip';
+
+enum OrderSideEnum {
+    BUY = 0,
+    SELL = 1,
+}
 
 export interface PlaceOrderProps extends ClobDexComponentProps {
   selectedPool?: ProcessedPoolItem;

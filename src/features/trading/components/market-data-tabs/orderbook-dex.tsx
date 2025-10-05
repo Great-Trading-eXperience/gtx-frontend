@@ -1,9 +1,7 @@
 'use client';
 
-import GTXRouterABI from '@/abis/gtx/clob/GTXRouterABI';
 import OrderBookABI from '@/abis/gtx/clob/OrderBookABI';
 import { wagmiConfig } from '@/configs/wagmi';
-import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { PoolsResponse } from '@/graphql/gtx/clob';
 import { useMarketStore } from '@/store/market-store';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
@@ -11,9 +9,13 @@ import { readContract } from '@wagmi/core';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Menu, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatUnits } from 'viem';
-import { OrderSideEnum } from '@/lib/enums/clob.enum';
 import { ClobDexComponentProps } from '../clob-dex';
 import { DepthData } from '@/lib/market-api';
+
+enum OrderSideEnum {
+    BUY = 0,
+    SELL = 1,
+}
 
 interface Order {
   price: number;
