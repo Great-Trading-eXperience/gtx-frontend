@@ -719,12 +719,12 @@ const PlaceOrder = ({
     return <PlaceOrderSkeleton />;
 
   return (
-    <div className="bg-black rounded-lg p-3 max-w-md mx-auto border border-white/20 backdrop-blur-sm">
+    <div className="bg-black rounded-lg p-3 max-w-[250px] mx-auto border border-white/20 backdrop-blur-sm">
       <style jsx global>
         {inputStyles}
       </style>
 
-      <div className="flex flex-col w-full gap-3 mb-3">
+      {/* <div className="flex flex-col w-full gap-3 mb-3">
         {effectiveIsConnected && selectedPool && (
           <div className="bg-black rounded-lg border border-white/20 p-3">
             <div className="flex items-center justify-between mb-2">
@@ -763,7 +763,7 @@ const PlaceOrder = ({
             </div>
           </div>
         )}
-      </div>
+      </div> */}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type and Side Row */}

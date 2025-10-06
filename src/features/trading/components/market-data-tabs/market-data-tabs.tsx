@@ -100,7 +100,7 @@ const MarketDataTabs = ({
     //     {renderTabContent()}
     //   </div>
     // </div>
-    <div className="relative w-full max-w-[200px] overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
+    <div className="relative w-full max-w-[180px] overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
       <EnhancedOrderBookDex
         chainId={chainId}
         defaultChainId={defaultChainId}
