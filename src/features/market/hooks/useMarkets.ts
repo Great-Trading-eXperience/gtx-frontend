@@ -48,9 +48,11 @@ export function useMarkets(chainId?: number): UseMarketDataResult {
       }
       return response.json();
     },
-    refetchInterval: 3000,
-    staleTime: 0,
-    gcTime: 60000,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const marketData: MarketData[] | undefined = data?.map(market => {
