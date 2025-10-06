@@ -76,29 +76,39 @@ const MarketDataTabs = ({
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
-      <div className="relative border-b border-white/20 backdrop-blur-sm">
-        <div className="flex w-full justify-start gap-1 bg-transparent">
-          {tabs.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => handleTabClick(value)}
-              className={`group w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-300 hover:text-gray-200 ${
-                activeTab === value
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+    // <div className="relative w-full overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
+    //   <div className="relative border-b border-white/20 backdrop-blur-sm">
+    //     <div className="flex w-full justify-start gap-1 bg-transparent">
+    //       {tabs.map(({ value, label, icon: Icon }) => (
+    //         <button
+    //           key={value}
+    //           onClick={() => handleTabClick(value)}
+    //           className={`group w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-300 hover:text-gray-200 ${
+    //             activeTab === value
+    //               ? 'bg-white/10 text-white'
+    //               : 'text-white/60 hover:text-white hover:bg-white/5'
+    //           }`}
+    //         >
+    //           <Icon className="h-4 w-4" />
+    //           <span>{label}</span>
+    //         </button>
+    //       ))}
+    //     </div>
+    //   </div>
 
-      <div>
-        {renderTabContent()}
-      </div>
+    //   <div>
+    //     {renderTabContent()}
+    //   </div>
+    // </div>
+    <div className="relative w-full max-w-[200px] overflow-hidden rounded-lg border border-white/20 bg-black shadow-lg backdrop-blur-sm">
+      <EnhancedOrderBookDex
+        chainId={chainId}
+        defaultChainId={defaultChainId}
+        selectedPool={selectedPool}
+        poolsLoading={poolsLoading}
+        poolsError={poolsError}
+        depthData={depthData}
+      />
     </div>
   );
 };
