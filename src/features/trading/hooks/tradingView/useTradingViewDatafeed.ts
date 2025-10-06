@@ -3,14 +3,7 @@ import { KlineService } from '../../services/kline/klineService';
 import { PairsService } from '../../services/pairs/pairsService';
 import { TradingPair } from '../../types/tradingview.types';
 import { normalizeSymbol } from '../../utils/tradingView/priceConversion';
-
-const RESOLUTION_MAPPING: Record<string, string> = {
-  '1': '1m',
-  '5': '5m',
-  '30': '30m',
-  '60': '1h',
-  '1D': '1d',
-};
+import { RESOLUTION_MAPPING } from '../../utils/tradingView/resolutionMapping';
 
 export function useTradingViewDatafeed(
   chainId: number,
@@ -106,7 +99,7 @@ export function useTradingViewDatafeed(
       },
 
       subscribeBars: (symbolInfo: any, resolution: any, onTick: any) => {
-        onIntervalChange(RESOLUTION_MAPPING[resolution] || '1m');
+        onIntervalChange(RESOLUTION_MAPPING[resolution] || '1d');
         // Actual subscription handled by useKlineSubscription
       },
 

@@ -1,5 +1,3 @@
-// features/trading/components/chart/TradingViewChart/index.tsx
-
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { useTradingViewWidget } from '../../../hooks/tradingView/useTradingViewWidget';
 import { useTradingViewDatafeed } from '../../../hooks/tradingView/useTradingViewDatafeed';
@@ -21,13 +19,13 @@ export interface TradingViewChartProps {
 export default function TradingViewChart({
   chainId,
   symbol,
-  interval = '1',
+  interval = '1d',
   availablePairs = [],
   height = '100%',
   theme = 'Dark',
   onSymbolChange,
 }: TradingViewChartProps) {
-  const [klineInterval, setKlineInterval] = useState('1m');
+  const [klineInterval, setKlineInterval] = useState('1d');
   const onTickRef = useRef<((bar: any) => void) | null>(null);
 
   // Find current pair for decimal precision
