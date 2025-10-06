@@ -138,18 +138,6 @@ export default function ClobDex() {
       <div className="grid md:grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
         {/* Chart and Market Widget */}
         <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
-          {/* <MarketDataWidget
-            poolId={selectedPool?.id || null}
-            selectedPool={selectedPool}
-            ticker24hr={ticker24hr}
-            isLoading={isLoading}
-          />
-          <ChartComponent
-            address={effectiveAddress}
-            chainId={chainId}
-            defaultChainId={defaultChainId}
-            selectedPool={selectedPool}
-          /> */}
           <ChartComponent
             address={effectiveAddress}
             chainId={chainId}
@@ -158,11 +146,11 @@ export default function ClobDex() {
           />
         </div>
 
-        <div className='h-48 flex items-center justify-center'>
+        {/* <div className='h-48 flex items-center justify-center'>
           <span className='text-gray-500'>On Process Development</span>
-        </div>
+        </div> */}
         {/* Market Data Tabs */}
-        {/* <div className="space-y-[6px] h-fit max-height-[546px]">
+        <div className="space-y-[6px] h-fit max-height-[546px]">
           <MarketDataTabs
             address={effectiveAddress}
             chainId={chainId}
@@ -174,7 +162,7 @@ export default function ClobDex() {
             trades={combinedTrades}
             tradesLoading={tradesLoading}
           />
-        </div> */}
+        </div>
 
         {/* Place Order */}
         {/* <div className="space-y-2 h-fit">
