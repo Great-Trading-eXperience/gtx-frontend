@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import { BucketData } from './useCandlestickData';
+import { CandleStickItem } from '../../graphql/chart.types';
 import {
   processCandleStickData,
   sortCandleData,
@@ -8,14 +8,14 @@ import {
 } from '../../utils/chartDataUtils';
 
 interface UseProcessedChartDataParams {
-  data: BucketData[] | undefined;
+  data: CandleStickItem[] | undefined;
   quoteDecimals: number;
 }
 
 // Deep equality check for data array
 const areDataArraysEqual = (
-  a: BucketData[] | undefined,
-  b: BucketData[] | undefined
+  a: CandleStickItem[] | undefined,
+  b: CandleStickItem[] | undefined
 ): boolean => {
   if (a === b) return true;
   if (!a || !b || a.length !== b.length) return false;
@@ -42,7 +42,7 @@ export const useProcessedChartData = ({
   data,
   quoteDecimals,
 }: UseProcessedChartDataParams) => {
-  const previousDataRef = useRef<BucketData[] | undefined>();
+  const previousDataRef = useRef<CandleStickItem[] | undefined>();
   const previousProcessedRef = useRef<ProcessedChartData>({
     candlesticks: [],
     volumes: [],
