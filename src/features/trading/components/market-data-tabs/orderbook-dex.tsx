@@ -485,9 +485,8 @@ return (
           {(viewType === 'both' || viewType === 'asks') && (
             <div>
               {/* Column Headers for Asks */}
-              <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+              <div className="grid grid-cols-2 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
                 <div>Price</div>
-                {/* <div className="text-center">Size</div> */}
                 <div className="text-right">Total</div>
               </div>
 
@@ -521,13 +520,10 @@ return (
                         <div className="absolute inset-0 animate-highlight-ask"></div>
                       )}
 
-                      <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
+                      <div className="relative grid grid-cols-2 px-4 py-1 text-xs">
                         <div className="font-medium text-rose-400">
                           {formatPrice(ask.price)}
                         </div>
-                        {/* <div className="text-center text-gray-200">
-                          {formatSize(ask.size)}
-                        </div> */}
                         <div className="text-right text-gray-200">
                           {ask.total ? formatSize(ask.total) : '0.00'}
                         </div>
@@ -585,9 +581,8 @@ return (
           {(viewType === 'both' || viewType === 'bids') && (
             <div>
               {/* Column Headers for Bids */}
-              <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+              <div className="grid grid-cols-2 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
                 <div>Price</div>
-                {/* <div className="text-center">Size</div> */}
                 <div className="text-right">Total</div>
               </div>
 
@@ -621,13 +616,10 @@ return (
                         <div className="absolute inset-0 animate-highlight-bid"></div>
                       )}
 
-                      <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
+                      <div className="relative grid grid-cols-2 px-4 py-1 text-xs">
                         <div className="font-medium text-emerald-400">
                           {formatPrice(bid.price)}
                         </div>
-                        {/* <div className="text-center text-gray-200">
-                          {formatSize(bid.size)}
-                        </div> */}
                         <div className="text-right text-gray-200">
                           {bid.total ? formatSize(bid.total) : '0.00'}
                         </div>
