@@ -20,6 +20,7 @@ export enum TimeFrame {
     DAILY = "daily",
     MINUTE = "minute",
     FIVE_MINUTE = "fiveMinute",
+    THIRTY_MINUTE= "thirtyMinute",
     HOURLY = "hourly",
 }
 

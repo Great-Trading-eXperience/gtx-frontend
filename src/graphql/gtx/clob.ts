@@ -464,6 +464,7 @@ export type BalancesResponse = {
   balances: BalanceItem[];
 };
 
+/*
 export const minuteCandleStickPonderQuery = gql`
   query GetMinuteCandleStick($poolId: String!) {
     minuteBucketss(
@@ -695,6 +696,7 @@ export type DailyCandleStickPonderResponse = {
 export type DailyCandleStickResponse = {
   dailyBuckets: CandleStickItem[];
 };
+*/
 
 export const openOrdersPonderQuery = gql`
   query GetUserOpenOrders($userAddress: String!, $status: String) {

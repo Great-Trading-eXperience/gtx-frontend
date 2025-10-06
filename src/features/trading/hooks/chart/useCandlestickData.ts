@@ -1,43 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import request from 'graphql-request';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import {
-  dailyCandleStickPonderQuery,
-  DailyCandleStickPonderResponse,
-  dailyCandleStickQuery,
-  DailyCandleStickResponse,
-  FiveMinuteCandleStickPonderResponse,
-  fiveMinuteCandleStickQuery,
-  FiveMinuteCandleStickResponse,
-  hourCandleStickPonderQuery,
-  HourCandleStickPonderResponse,
-  hourCandleStickQuery,
-  HourCandleStickResponse,
-  MinuteCandleStickPonderResponse,
-  MinuteCandleStickResponse,
-} from '@/graphql/gtx/clob';
 import { TimeFrame } from '../../types/chart.types';
-import { getUseSubgraph } from '@/utils/env';
-
-export interface BucketData {
-  id: string;
-  openTime: number;
-  closeTime: number;
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  quoteVolume: number;
-  average: number;
-  count: number;
-  takerBuyBaseVolume: number;
-  takerBuyQuoteVolume: number;
-  poolId: string;
-}
-
-interface CandleStickItem extends BucketData {}
+import {
+  minuteCandleStickQuery,
+  fiveMinuteCandleStickQuery,
+  thirtyMinuteCandleStickQuery,
+  hourCandleStickQuery,
+  dailyCandleStickQuery,
+} from '../../graphql/chart.query';
+import {
+  CandleStickItem,
+  MinuteCandleStickResponse,
+  FiveMinuteCandleStickResponse,
+  ThirtyMinuteCandleStickResponse,
+  HourCandleStickResponse,
+  DailyCandleStickResponse,
+} from '../../graphql/chart.types';
 
 interface UseCandlestickDataParams {
   chainId?: string | number;
@@ -57,7 +36,7 @@ export const useCandlestickData = ({
     queryFn: async () => {
       const currentChainId = Number(chainId ?? defaultChainId);
       const url = GTX_GRAPHQL_URL(currentChainId);
-      
+
       if (!url) {
         throw new Error('GraphQL URL not found');
       }
@@ -87,42 +66,34 @@ export const useCandlestickData = ({
 };
 
 const getQueryByTimeFrame = (timeFrame: TimeFrame) => {
-  const useSubgraph = getUseSubgraph();
-  
   switch (timeFrame) {
-    case TimeFrame.DAILY:
-      return useSubgraph ? dailyCandleStickQuery : dailyCandleStickPonderQuery;
-    case TimeFrame.HOURLY:
-      return useSubgraph ? hourCandleStickQuery : hourCandleStickPonderQuery;
+    case TimeFrame.MINUTE:
+      return minuteCandleStickQuery;
     case TimeFrame.FIVE_MINUTE:
       return fiveMinuteCandleStickQuery;
-    case TimeFrame.MINUTE:
-      return fiveMinuteCandleStickQuery;
+    case TimeFrame.THIRTY_MINUTE:
+      return thirtyMinuteCandleStickQuery;
+    case TimeFrame.HOURLY:
+      return hourCandleStickQuery;
+    case TimeFrame.DAILY:
+      return dailyCandleStickQuery;
     default:
       return fiveMinuteCandleStickQuery;
   }
 };
 
 const extractItemsFromResponse = (result: any, timeFrame: TimeFrame) => {
-  const useSubgraph = getUseSubgraph();
-
   switch (timeFrame) {
-    case TimeFrame.DAILY:
-      return useSubgraph
-        ? (result as DailyCandleStickPonderResponse)?.dailyBucketss?.items
-        : (result as DailyCandleStickResponse).dailyBuckets;
-    case TimeFrame.HOURLY:
-      return useSubgraph
-        ? (result as HourCandleStickPonderResponse)?.hourBucketss?.items
-        : (result as HourCandleStickResponse).hourBuckets;
-    case TimeFrame.FIVE_MINUTE:
-      return useSubgraph
-        ? (result as FiveMinuteCandleStickPonderResponse)?.fiveMinuteBucketss?.items
-        : (result as FiveMinuteCandleStickResponse).fiveMinuteBuckets;
     case TimeFrame.MINUTE:
-      return useSubgraph
-        ? (result as MinuteCandleStickPonderResponse)?.minuteBucketss?.items
-        : (result as MinuteCandleStickResponse).minuteBuckets;
+      return (result as MinuteCandleStickResponse).minuteBucketss.items;
+    case TimeFrame.FIVE_MINUTE:
+      return (result as FiveMinuteCandleStickResponse).fiveMinuteBucketss.items;
+    case TimeFrame.THIRTY_MINUTE:
+      return (result as ThirtyMinuteCandleStickResponse).thirtyMinuteBucketss.items;
+    case TimeFrame.HOURLY:
+      return (result as HourCandleStickResponse).hourBucketss.items;
+    case TimeFrame.DAILY:
+      return (result as DailyCandleStickResponse).dailyBucketss.items;
     default:
       return [];
   }
