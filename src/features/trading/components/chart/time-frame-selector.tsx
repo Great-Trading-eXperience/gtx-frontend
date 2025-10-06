@@ -4,6 +4,7 @@ import { TimeFrame, TimeFrameSelectorProps } from '../../types/chart.types';
 const timeFrameButtons = [
   { label: '1M', value: TimeFrame.MINUTE },
   { label: '5M', value: TimeFrame.FIVE_MINUTE },
+  { label: '30M', value: TimeFrame.THIRTY_MINUTE },
   { label: '1H', value: TimeFrame.HOURLY },
   { label: '1D', value: TimeFrame.DAILY },
 ] as const;
