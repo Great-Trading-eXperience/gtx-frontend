@@ -6,6 +6,7 @@ import { waitForTransaction, writeContract } from '@wagmi/core';
 import { useCallback, useState } from 'react';
 import { TransactionReceipt } from 'viem';
 import { useChainId } from 'wagmi';
+import { useEffectiveChainId } from '@/utils/chain-override';
 
 // Withdraw hook
 interface WithdrawParams {
@@ -30,7 +31,8 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const chainId = useChainId()
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   const withdraw = useCallback(
     async ({ currency, amount, user }: WithdrawParams): Promise<TransactionReceipt> => {
@@ -40,7 +42,7 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
       try {
         if (user) {
           const hash = await writeContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
             abi: BalanceManagerABI,
             functionName: 'withdraw',
             args: [currency, amount, user] as const,
@@ -54,7 +56,7 @@ export const useWithdraw = (options: BaseOptions = {}): UseWithdrawReturn => {
           return receipt;
         } else {
           const hash = await writeContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`,
+            address: getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress,
             abi: BalanceManagerABI,
             functionName: 'withdraw',
             args: [currency, amount] as const,

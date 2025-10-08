@@ -2,7 +2,7 @@
 
 import { useContractRead } from "wagmi"
 import { parseAbi } from "viem"
-
+import { HexAddress } from "@/types/general/address"
 interface AllocationRowProps {
   marketToken: string
   allocation: string
@@ -11,7 +11,7 @@ interface AllocationRowProps {
 export function AllocationRow({ marketToken, allocation }: AllocationRowProps) {
   // Get market token symbol
   const { data: symbol } = useContractRead({
-    address: marketToken as `0x${string}`,
+    address: marketToken as HexAddress,
     abi: parseAbi(["function symbol() view returns (string)"]),
     functionName: "symbol",
   })
@@ -30,7 +30,7 @@ export function AllocationRow({ marketToken, allocation }: AllocationRowProps) {
       BONK: "/bonk.png",
       FLOKI: "/floki.png",
     }
-    return icons[symbol.split("_")[1]] || "/default-token.png"
+    return icons[symbol.split("_")[1]] || "/tokens/eth.png"
   }
 
   // Format market name from GTX_TOKEN_USDC to TOKEN/USDC

@@ -10,7 +10,7 @@ import {
 import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager';
 import { Hexagon, Code } from 'lucide-react';
 import { COMMON_TOKENS } from '@/hooks/web3/gtx/perpetual/chain-id';
-
+import { HexAddress } from '@/types/general/address';
 interface SolanaToken {
   address: string;
   symbol: string;
@@ -31,7 +31,7 @@ interface TokenSelectionProps {
   setTokenPair: (pair: string) => void;
   solanaToEvmAddress: (address: string) => string;
   generateDefaultSources: (
-    tokenAddress: `0x${string}`,
+    tokenAddress: HexAddress,
     pairName: string,
     isSolana?: boolean,
     solanaAddress?: string
@@ -89,7 +89,7 @@ const TokenSelection: React.FC<TokenSelectionProps> = ({
     solanaAddress?: string
   ) => {
     const newSources = generateDefaultSources(
-      tokenAddress as `0x${string}`,
+      tokenAddress as HexAddress,
       pairName,
       isSolana,
       solanaAddress

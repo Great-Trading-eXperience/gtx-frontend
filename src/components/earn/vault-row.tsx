@@ -4,7 +4,7 @@ import TokenABI from "@/abis/tokens/TokenABI"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { useContractRead, useContractReads } from "wagmi"
 import { parseAbi } from "viem"
-
+import { HexAddress } from "@/types/general/address"
 interface VaultRowProps {
   vault: {
     id: string
@@ -27,14 +27,14 @@ interface VaultRowProps {
 export function VaultRow({ vault, onClick }: VaultRowProps) {
   // Read token symbol
   const { data: symbol } = useContractRead({
-    address: vault.asset as `0x${string}`,
+    address: vault.asset as HexAddress,
     abi: TokenABI,
     functionName: "symbol",
   })
 
   // Read token name
   const { data: name } = useContractRead({
-    address: vault.asset as `0x${string}`,
+    address: vault.asset as HexAddress,
     abi: TokenABI,
     functionName: "name",
   })
@@ -54,7 +54,7 @@ export function VaultRow({ vault, onClick }: VaultRowProps) {
       FLOKI: "/floki.png",
       // Add more mappings as needed
     }
-    return icons[symbol] || "/default-token.png"
+    return icons[symbol] || "/tokens/eth.png"
   }
 
   // Format market name from GTX_TOKEN_USDC to TOKEN/USDC
@@ -68,7 +68,7 @@ export function VaultRow({ vault, onClick }: VaultRowProps) {
 
   const { data: marketNames } = useContractReads({
     contracts: vault.allocations.items.map((allocation) => ({
-      address: allocation.marketToken as `0x${string}`,
+      address: allocation.marketToken as HexAddress,
       abi: parseAbi(["function symbol() view returns (string)"]),
       functionName: "symbol",
     })),

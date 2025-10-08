@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { CheckCircle2, Loader2, ArrowRight, ExternalLink } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
+import { ArrowRight, CheckCircle2, ExternalLink, Loader2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 type SwapProgressDialogProps = {
   open: boolean
@@ -144,7 +144,7 @@ export function SwapProgressDialog({
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <span>Transaction:</span>
                 <a
-                  href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                  href={`https://testnet.explorer.rarichain.org/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center hover:text-primary"

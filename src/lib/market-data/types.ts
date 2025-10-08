@@ -1,0 +1,54 @@
+export interface ProcessedPool {
+  id: string;
+  baseToken: string;
+  quoteToken: string;
+  orderBook: string;
+  timestamp: number;
+  maxOrderAmount: string;
+  baseSymbol: string;
+  quoteSymbol: string;
+  baseDecimals: number | undefined;
+  quoteDecimals: number | undefined;
+  volume: string;
+}
+
+export interface ProcessedTrade {
+  poolId: string;
+  pool: string;
+  price: string;
+  quantity: string;
+  timestamp: number;
+}
+
+export interface PoolMetrics {
+  latestPrice: number;
+}
+
+export interface MarketData {
+  id: string;
+  name: string;
+  pair: string;
+  starred: boolean;
+  iconInfo: {
+    hasImage: boolean;
+    imagePath: string | null;
+    bg: string;
+  };
+  age: string;
+  timestamp: number;
+  price: string;
+  volume: string;
+  liquidity: string;
+} 
+
+export interface MarketDataApi {
+  poolId: string;
+  symbol: string;
+  baseAsset: string;
+  baseDecimals: number;
+  quoteAsset: string;
+  quoteDecimals: number;
+  latestPrice: string;
+  volume: string;
+  volumeQuote: string;
+}

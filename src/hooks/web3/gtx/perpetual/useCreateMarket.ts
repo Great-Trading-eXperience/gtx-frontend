@@ -10,9 +10,8 @@ import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceMan
 // Import crypto-js instead of ethers and bs58
 import { SHA3 } from "crypto-js";
 import { ORACLE_ADDRESS, ROUTER_ADDRESS } from "@/constants/contract/contract-address";
+import { HexAddress } from "@/types/general/address";
 
-// Define types
-export type HexAddress = `0x${string}`;
 export type OracleSource = {
   name: string;
   identifier: string;

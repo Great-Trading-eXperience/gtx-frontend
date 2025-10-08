@@ -11,12 +11,12 @@ import { useAccount } from "wagmi"
 import { toast } from "sonner"
 import { writeContract, waitForTransactionReceipt } from "wagmi/actions"
 import { wagmiConfig } from "@/configs/wagmi"
-import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "@/components/auth/privy-auth-button"
 
 
 import { getTokenAddresses } from "@/helper/token-helper"
 import { ROUTER_ADDRESS } from "@/constants/contract/contract-address"
-
+import { HexAddress } from "@/types/general/address"
 
 
 // RouterABI with createMarket function
@@ -148,8 +148,8 @@ const hash = await writeContract(wagmiConfig, {
     abi: RouterABI,
     functionName: 'createMarket',
     args: [
-      longToken as `0x${string}`,
-      shortToken as `0x${string}`,
+      longToken as HexAddress,
+      shortToken as HexAddress,
       tokenPair,
       oracleSources
     ]
@@ -221,7 +221,7 @@ const hash = await writeContract(wagmiConfig, {
           {!isConnected ? (
             <div className="py-6 text-center">
               <p className="mb-4 text-gray-500">Connect your wallet to create a market</p>
-              <ButtonConnectWallet />
+              <PrivyAuthButton showFullProfile={false} />
             </div>
           ) : (
             <>
@@ -321,7 +321,7 @@ const hash = await writeContract(wagmiConfig, {
                 {error && (
                   <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-md text-red-800 dark:text-red-300 text-sm flex items-start">
                     <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                    <div>{error}</div>
+                    <div>{String(error || 'Unknown error')}</div>
                   </div>
                 )}
                 

@@ -1,20 +1,25 @@
 import { gql } from "graphql-request";
 
-export const queryAddTokens = gql`{
-    addTokens(orderBy: "timestamp", orderDirection: "desc") {
+export const queryFaucetTokenss = gql`
+  query GetFaucetTokens($chainId: Int!) {
+    faucetTokenss(orderBy: "timestamp", orderDirection: "desc", where: { chainId: $chainId }) {
         items {
-          address
+          token
           id
-          lastRequestTime
           timestamp
-          transactionHash
+          transactionId
           blockNumber
+          chainId
+          symbol
+          decimals
         }
     }
-}`
+  }
+`;
 
-export const queryRequestTokens = gql`{
-    requestTokens {
+export const queryRequestTokenss = gql`
+  query GetFaucetRequests($chainId: Int!) {
+    faucetRequestss(where: { chainId: $chainId }, orderBy: "timestamp", orderDirection: "desc") {
         items {
           id
           receiver
@@ -22,7 +27,9 @@ export const queryRequestTokens = gql`{
           timestamp
           token
           blockNumber
-          transactionHash
+          transactionId
+          chainId
         }
+    }
   }
-}`
+`;
