@@ -194,7 +194,7 @@ export class MarketWebSocket {
     try {
       const wsUrl = getWebsocketUrl(chainId);
       logWS('[MARKET-WS]', 'Connecting to market WebSocket...', { url: wsUrl, chainId });
-      this.socket = new WebSocket(wsUrl);
+      this.socket = new WebSocket(`${wsUrl}/ws`);
 
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);

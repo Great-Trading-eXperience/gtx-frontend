@@ -57,12 +57,12 @@ const nextConfig = {
                 destination: 'https://chart.gtxdex.xyz/charting_library/:path*',
             },
             {
-                source: '/core-anvil-api/:path*',
-                destination: 'https://anvil.gtxdex.xyz/:path*',
+                source: '/core-devnet/:path*',
+                destination: 'https://core-devnet.gtxdex.xyz/:path*',
             },
             {
-                source: '/side-anvil-api/:path*',
-                destination: 'https://side-anvil.gtxdex.xyz/:path*',
+                source: '/side-devnet/:path*',
+                destination: 'https://side-devnet.gtxdex.xyz/:path*',
             },
         ];
     },

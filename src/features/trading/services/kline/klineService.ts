@@ -58,7 +58,7 @@ export class KlineService {
       const pair = params.pairs.find(
         p => p.symbol === params.symbol || p.symbol === normalizedSymbol
       );
-      const decimals = pair?.quoteDecimals || 18;
+      const decimals = pair?.quoteDecimals || 6;
 
       return data.map((d: any) => ({
         time: d[0],

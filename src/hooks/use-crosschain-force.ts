@@ -4,10 +4,10 @@ import { useChainId } from 'wagmi';
 import { toast } from 'sonner';
 import { needsChainForcing } from '@/utils/chain-override';
 
-// Core Anvil ID - the default fallback chain
+// Core Devnet ID - the default fallback chain
 const CORE_ANVIL_ID = 31337;
 // Supported chains
-const SUPPORTED_CHAINS = [31337, 31338]; // Core Anvil, Side Anvil
+const SUPPORTED_CHAINS = [31337, 31338]; // Core Devnet, Side Devnet
 
 interface UseCrosschainForceResult {
   isChainCorrect: boolean;
@@ -21,8 +21,8 @@ interface UseCrosschainForceResult {
 
 /**
  * Hook to handle chain forcing
- * Forces users to Core Anvil if they're on unsupported chains
- * Allows free choice between Core Anvil and Side Anvil
+ * Forces users to Core Devnet if they're on unsupported chains
+ * Allows free choice between Core Devnet and Side Devnet
  */
 export function useCrosschainForce(): UseCrosschainForceResult {
   const { wallets } = useWallets();
@@ -44,7 +44,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
   const isChainCorrect = SUPPORTED_CHAINS.includes(currentChainId);
   
   /**
-   * Force switch to Core Anvil
+   * Force switch to Core Devnet
    */
   const forceChainSwitch = async (): Promise<boolean> => {
     if (!needsCrosschainForce) {
@@ -58,14 +58,14 @@ export function useCrosschainForce(): UseCrosschainForceResult {
     
     setIsSwitchingChain(true);
     try {
-      console.log(`[CROSSCHAIN_FORCE] Switching from chain ${currentChainId} to Core Anvil (${CORE_ANVIL_ID})`);
+      console.log(`[CROSSCHAIN_FORCE] Switching from chain ${currentChainId} to Core Devnet (${CORE_ANVIL_ID})`);
       
-      toast.info('Switching to Core Anvil for crosschain features...');
+      toast.info('Switching to Core Devnet for crosschain features...');
       
       // First try to switch to the chain
       await embeddedWallet.switchChain(CORE_ANVIL_ID);
       
-      toast.success('Successfully switched to Core Anvil');
+      toast.success('Successfully switched to Core Devnet');
       return true;
       
     } catch (error: any) {
@@ -73,13 +73,13 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       
       // If the chain is unrecognized, try to add it first
       if (error.message?.includes('Unrecognized chain ID') || error.message?.includes('not configured')) {
-        console.log(`[CROSSCHAIN_FORCE] Chain not recognized, attempting to add Core Anvil first...`);
+        console.log(`[CROSSCHAIN_FORCE] Chain not recognized, attempting to add Core Devnet first...`);
         
         try {
           // Import the core anvil config
-          const { coreAnvil } = await import('@/configs/wagmi');
+          const { coreDevnet } = await import('@/configs/wagmi');
           
-          toast.info('Adding Core Anvil to your wallet...');
+          toast.info('Adding Core Devnet to your wallet...');
           
           // Try different methods to add the chain
           console.log(`[CROSSCHAIN_FORCE] Checking available wallet methods:`, {
@@ -95,15 +95,15 @@ export function useCrosschainForce(): UseCrosschainForceResult {
           if (embeddedWallet.addChain) {
             try {
               await embeddedWallet.addChain({
-                id: coreAnvil.id,
-                name: coreAnvil.name,
-                network: coreAnvil.name.toLowerCase().replace(/\s+/g, '-'),
-                nativeCurrency: coreAnvil.nativeCurrency,
+                id: coreDevnet.id,
+                name: coreDevnet.name,
+                network: coreDevnet.name.toLowerCase().replace(/\s+/g, '-'),
+                nativeCurrency: coreDevnet.nativeCurrency,
                 rpcUrls: {
-                  default: { http: coreAnvil.rpcUrls.default.http },
-                  public: { http: coreAnvil.rpcUrls.public.http }
+                  default: { http: coreDevnet.rpcUrls.default.http },
+                  public: { http: coreDevnet.rpcUrls.public.http }
                 },
-                blockExplorers: coreAnvil.blockExplorers
+                blockExplorers: coreDevnet.blockExplorers
               });
               chainAdded = true;
               console.log(`[CROSSCHAIN_FORCE] Successfully added chain using addChain method`);
@@ -118,11 +118,11 @@ export function useCrosschainForce(): UseCrosschainForceResult {
               await embeddedWallet.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: `0x${coreAnvil.id.toString(16)}`,
-                  chainName: coreAnvil.name,
-                  nativeCurrency: coreAnvil.nativeCurrency,
-                  rpcUrls: coreAnvil.rpcUrls.default.http,
-                  blockExplorerUrls: coreAnvil.blockExplorers?.default ? [coreAnvil.blockExplorers.default.url] : []
+                  chainId: `0x${coreDevnet.id.toString(16)}`,
+                  chainName: coreDevnet.name,
+                  nativeCurrency: coreDevnet.nativeCurrency,
+                  rpcUrls: coreDevnet.rpcUrls.default.http,
+                  blockExplorerUrls: coreDevnet.blockExplorers?.default ? [coreDevnet.blockExplorers.default.url] : []
                 }]
               });
               chainAdded = true;
@@ -138,11 +138,11 @@ export function useCrosschainForce(): UseCrosschainForceResult {
               await embeddedWallet.walletClient.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: `0x${coreAnvil.id.toString(16)}`,
-                  chainName: coreAnvil.name,
-                  nativeCurrency: coreAnvil.nativeCurrency,
-                  rpcUrls: coreAnvil.rpcUrls.default.http,
-                  blockExplorerUrls: coreAnvil.blockExplorers?.default ? [coreAnvil.blockExplorers.default.url] : []
+                  chainId: `0x${coreDevnet.id.toString(16)}`,
+                  chainName: coreDevnet.name,
+                  nativeCurrency: coreDevnet.nativeCurrency,
+                  rpcUrls: coreDevnet.rpcUrls.default.http,
+                  blockExplorerUrls: coreDevnet.blockExplorers?.default ? [coreDevnet.blockExplorers.default.url] : []
                 }]
               });
               chainAdded = true;
@@ -154,7 +154,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
 
           if (!chainAdded) {
             console.log(`[CROSSCHAIN_FORCE] All chain addition methods failed`);
-            throw new Error('Unable to add Core Anvil - wallet does not support any known chain addition methods');
+            throw new Error('Unable to add Core Devnet - wallet does not support any known chain addition methods');
           }
 
           console.log(`[CROSSCHAIN_FORCE] Chain added successfully, now attempting to switch...`);
@@ -162,13 +162,13 @@ export function useCrosschainForce(): UseCrosschainForceResult {
           // Now try to switch to the newly added chain
           await embeddedWallet.switchChain(CORE_ANVIL_ID);
           
-          toast.success('Successfully added and switched to Core Anvil');
+          toast.success('Successfully added and switched to Core Devnet');
           return true;
           
         } catch (addChainError: any) {
           console.error('[CROSSCHAIN_FORCE] Failed to add chain:', addChainError);
           
-          let addErrorMessage = 'Failed to add Core Anvil to wallet';
+          let addErrorMessage = 'Failed to add Core Devnet to wallet';
           if (addChainError.message?.includes('rejected') || addChainError.message?.includes('denied')) {
             addErrorMessage = 'Adding network cancelled by user';
           }
@@ -179,7 +179,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       }
       
       // Handle other types of errors
-      let errorMessage = 'Failed to switch to Core Anvil';
+      let errorMessage = 'Failed to switch to Core Devnet';
       if (error.message?.includes('rejected') || error.message?.includes('denied')) {
         errorMessage = 'Network switch cancelled by user';
       }
@@ -254,13 +254,13 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       
       setIsCheckingChain(true);
       
-      console.log(`[CHAIN_FORCE] Starting automatic chain switch from ${currentChainId} to Core Anvil (${CORE_ANVIL_ID})`);
+      console.log(`[CHAIN_FORCE] Starting automatic chain switch from ${currentChainId} to Core Devnet (${CORE_ANVIL_ID})`);
       
       // Add a small delay to ensure wallet is fully connected
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Show informational message about required chain
-      toast.info('This feature requires Core Anvil or Side Anvil. Switching to Core Anvil...', {
+      toast.info('This feature requires Core Devnet or Side Devnet. Switching to Core Devnet...', {
         duration: 3000,
       });
       
@@ -268,7 +268,7 @@ export function useCrosschainForce(): UseCrosschainForceResult {
       const success = await forceChainSwitch();
       
       if (!success) {
-        toast.error('Please switch to Core Anvil or Side Anvil manually to use this feature.', {
+        toast.error('Please switch to Core Devnet or Side Devnet manually to use this feature.', {
           duration: 5000,
         });
       }

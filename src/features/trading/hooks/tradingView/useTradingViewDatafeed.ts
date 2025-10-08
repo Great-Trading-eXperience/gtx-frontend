@@ -57,7 +57,7 @@ export function useTradingViewDatafeed(
           const pair = pairs.find(
             p => p.symbol === symbolName || p.symbol === normalizeSymbol(symbolName)
           );
-          const decimals = pair?.quoteDecimals || 18;
+          const decimals = pair?.quoteDecimals || 6;
 
           onResolve({
             name: symbolName,
@@ -66,7 +66,7 @@ export function useTradingViewDatafeed(
             session: '24x7',
             timezone: 'Etc/UTC',
             minmov: 1,
-            pricescale: Math.pow(10, Math.min(decimals, 8)),
+            pricescale: 100,
             has_intraday: true,
             supported_resolutions: ['1', '5', '30', '60', '1D'],
             data_status: 'streaming',

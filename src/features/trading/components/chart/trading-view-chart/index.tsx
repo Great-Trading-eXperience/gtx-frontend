@@ -19,7 +19,7 @@ export interface TradingViewChartProps {
 export default function TradingViewChart({
   chainId,
   symbol,
-  interval = '1d',
+  interval = '1h',
   availablePairs = [],
   height = '100%',
   theme = 'Dark',

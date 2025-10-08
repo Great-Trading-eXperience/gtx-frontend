@@ -77,20 +77,20 @@ export function getEnabledTabs(): string[] {
 // Helper function to check if a chain supports crosschain deposits
 export function isCrosschainSupportedChain(chainId: number): boolean {
     // Only chains with ChainBalanceManager contracts support crosschain deposits
-    const supportedCrosschainDepositChains = [31337, 31338]; // Core Anvil, Side Anvil
+    const supportedCrosschainDepositChains = [31337, 31338]; // Core Devnet, Side Devnet
     return supportedCrosschainDepositChains.includes(chainId);
 }
 
 // Helper function to get supported crosschain deposit chains
 export function getSupportedCrosschainDepositChains(): number[] {
-    return [31337, 31338]; // Core Anvil, Side Anvil
+    return [31337, 31338]; // Core Devnet, Side Devnet
 }
 
 // Helper function to get human-readable names for supported crosschain chains
 export function getSupportedCrosschainDepositChainNames(): string[] {
     const chainNames: Record<number, string> = {
-        31337: 'Core Anvil',
-        31338: 'Side Anvil',
+        31337: 'Core Devnet',
+        31338: 'Side Devnet',
     };
     return getSupportedCrosschainDepositChains().map(chainId => chainNames[chainId] || `Chain ${chainId}`);
 }

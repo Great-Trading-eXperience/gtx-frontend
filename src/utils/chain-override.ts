@@ -5,12 +5,12 @@
  * via environment variables, without needing to modify individual hooks.
  */
 
-import { coreAnvil, sideAnvil } from '@/configs/wagmi';
+import { coreDevnet, sideAnvil } from '@/configs/wagmi';
 import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
 
 // Available chains for override
 const AVAILABLE_CHAINS = {
-  CORE_ANVIL: coreAnvil.id,      // 31337
+  CORE_ANVIL: coreDevnet.id,      // 31337
   SIDE_ANVIL: sideAnvil.id,      // 31338
 } as const;
 
@@ -53,7 +53,7 @@ export function getEffectiveChainId(currentChainId: number): number {
     return forcedChainId;
   }
   
-  // Supported chains: Core Anvil and Side Anvil
+  // Supported chains: Core Devnet and Side Devnet
   const SUPPORTED_CHAINS = [
     AVAILABLE_CHAINS.CORE_ANVIL,  // 31337
     AVAILABLE_CHAINS.SIDE_ANVIL   // 31338
@@ -64,9 +64,9 @@ export function getEffectiveChainId(currentChainId: number): number {
     return currentChainId;
   }
   
-  // If current chain is not supported, default to Core Anvil
+  // If current chain is not supported, default to Core Devnet
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[CHAIN_OVERRIDE] Current chain ${currentChainId} not supported, defaulting to Core Anvil ${AVAILABLE_CHAINS.CORE_ANVIL}`);
+    console.log(`[CHAIN_OVERRIDE] Current chain ${currentChainId} not supported, defaulting to Core Devnet ${AVAILABLE_CHAINS.CORE_ANVIL}`);
   }
   
   return AVAILABLE_CHAINS.CORE_ANVIL;
@@ -89,7 +89,7 @@ export function needsChainForcing(currentChainId: number): boolean {
   }
   
   // Otherwise, only force if current chain is not supported
-  const SUPPORTED_CHAINS = [31337, 31338]; // Core Anvil, Side Anvil
+  const SUPPORTED_CHAINS = [31337, 31338]; // Core Devnet, Side Devnet
   return !SUPPORTED_CHAINS.includes(currentChainId);
 }
 
@@ -99,9 +99,9 @@ export function needsChainForcing(currentChainId: number): boolean {
 export function getChainName(chainId: number): string {
   switch (chainId) {
     case AVAILABLE_CHAINS.CORE_ANVIL:
-      return 'Core Anvil';
+      return 'Core Devnet';
     case AVAILABLE_CHAINS.SIDE_ANVIL:
-      return 'Side Anvil';
+      return 'Side Devnet';
     default:
       return `Chain ${chainId}`;
   }

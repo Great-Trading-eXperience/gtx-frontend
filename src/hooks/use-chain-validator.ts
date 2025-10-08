@@ -6,17 +6,17 @@ import { useChainId, useDisconnect } from 'wagmi';
 
 // Supported chain IDs for external wallets
 const SUPPORTED_EXTERNAL_CHAINS = [
-  31337,      // Core Anvil
-  31338,      // Side Anvil
+  31337,      // Core Devnet
+  31338,      // Side Devnet
 ];
 
-// Required chain for embedded wallets (now Core Anvil)
+// Required chain for embedded wallets (now Core Devnet)
 const CORE_ANVIL_CHAIN_ID = 31337;
 
 // Map chain IDs to readable names
 const CHAIN_NAMES: Record<number, string> = {
-  31337: 'Core Anvil',
-  31338: 'Side Anvil',
+  31337: 'Core Devnet',
+  31338: 'Side Devnet',
   1: 'Ethereum Mainnet',
   5: 'Goerli',
   11155111: 'Sepolia',
@@ -24,9 +24,9 @@ const CHAIN_NAMES: Record<number, string> = {
 
 /**
  * Hook to validate supported chains
- * - For external wallets: Restricts to Core Anvil and Side Anvil only
- * - For embedded wallets: Must stay on Core Anvil only
- * Automatically switches embedded wallets to Core Anvil or disconnects if switching fails
+ * - For external wallets: Restricts to Core Devnet and Side Devnet only
+ * - For embedded wallets: Must stay on Core Devnet only
+ * Automatically switches embedded wallets to Core Devnet or disconnects if switching fails
  * Automatically disconnects external wallets if they're on unsupported chains when crosschain is enabled
  */
 export function useChainValidator() {
@@ -52,18 +52,18 @@ export function useChainValidator() {
       const chainName = CHAIN_NAMES[currentChainId] || `Chain ${currentChainId}`;
 
       if (embeddedWallet) {
-        // Embedded wallets must be on Core Anvil only
+        // Embedded wallets must be on Core Devnet only
         if (currentChainId !== CORE_ANVIL_CHAIN_ID) {
-          console.log(`[CHAIN_VALIDATOR] Embedded wallet on wrong chain: ${chainName} (${currentChainId}), switching to Core Anvil`);
+          console.log(`[CHAIN_VALIDATOR] Embedded wallet on wrong chain: ${chainName} (${currentChainId}), switching to Core Devnet`);
           
           try {
             await embeddedWallet.switchChain(CORE_ANVIL_CHAIN_ID);
-            console.log(`[CHAIN_VALIDATOR] Successfully switched embedded wallet to Core Anvil`);
+            console.log(`[CHAIN_VALIDATOR] Successfully switched embedded wallet to Core Devnet`);
           } catch (error) {
-            console.error(`[CHAIN_VALIDATOR] Failed to switch embedded wallet to Core Anvil:`, error);
+            console.error(`[CHAIN_VALIDATOR] Failed to switch embedded wallet to Core Devnet:`, error);
             
             toast.error(
-              `Failed to switch to Core Anvil. Please try reconnecting your wallet.`,
+              `Failed to switch to Core Devnet. Please try reconnecting your wallet.`,
               {
                 duration: 8000,
                 action: {
@@ -80,7 +80,7 @@ export function useChainValidator() {
             }, 3000);
           }
         } else {
-          console.log(`[CHAIN_VALIDATOR] Embedded wallet correctly on Core Anvil`);
+          console.log(`[CHAIN_VALIDATOR] Embedded wallet correctly on Core Devnet`);
         }
       } else {
         // External wallet validation
@@ -93,7 +93,7 @@ export function useChainValidator() {
           
           // Show error message
           toast.error(
-            `${chainName} is not supported with crosschain features. Please switch to Core Anvil or Side Anvil.`,
+            `${chainName} is not supported with crosschain features. Please switch to Core Devnet or Side Devnet.`,
             {
               duration: 8000,
               action: {
@@ -108,7 +108,7 @@ export function useChainValidator() {
             console.log(`[CHAIN_VALIDATOR] Auto-disconnecting from unsupported chain: ${chainName}`);
             disconnect();
             
-            toast.info('Disconnected from unsupported network. Please reconnect with Core Anvil or Side Anvil.', {
+            toast.info('Disconnected from unsupported network. Please reconnect with Core Devnet or Side Devnet.', {
               duration: 5000,
             });
           }, 3000);
@@ -136,7 +136,7 @@ export function useChainValidator() {
     if (!FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) return true;
     
     if (isUsingEmbeddedWallet) {
-      // Embedded wallets must be on Core Anvil only
+      // Embedded wallets must be on Core Devnet only
       return currentChainId === CORE_ANVIL_CHAIN_ID;
     } else {
       // External wallets must be on supported external chains

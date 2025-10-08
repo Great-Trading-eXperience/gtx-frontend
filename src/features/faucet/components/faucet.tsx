@@ -2,7 +2,7 @@
 
 import { DataTable } from '@/components/table/data-table';
 import { requestTokenColumns } from '@/components/table/faucet/request-token/columns';
-import { coreAnvil, sideAnvil } from '@/configs/wagmi';
+import { coreDevnet, sideAnvil } from '@/configs/wagmi';
 import { useFaucetCooldown } from '../hooks/useFaucetCooldown';
 import { useLastRequestTime } from '../hooks/useLastRequestTime';
 import { usePrivyRequestToken } from '../hooks/usePrivyRequestToken';
@@ -91,7 +91,7 @@ const GTXFaucet: NextPage = () => {
     !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
 
   // Get current chain info for explorer URL
-  const currentChain = [coreAnvil, sideAnvil].find(
+  const currentChain = [coreDevnet, sideAnvil].find(
     chain => chain.id === actualChainId
   );
   const explorerUrl =
