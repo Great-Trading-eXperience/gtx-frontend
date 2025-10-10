@@ -9,9 +9,12 @@ interface FeatureFlags {
     COMING_SOON_PERPETUAL: boolean;
     LANDING_PAGE_RISE: boolean;
     LANDING_PAGE_PHAROS: boolean;
+    LANDING_PAGE_ESPRESSO: boolean;
     ENABLED_TABS_EARN: boolean;
     ENABLED_TABS_VEGTX: boolean;
     ENABLED_TABS_PERPETUAL: boolean;
+    CROSSCHAIN_DEPOSIT_ENABLED: boolean;
+    FAUCET_USE_PRIVY: boolean;
 }
 
 interface FeaturesConfig {
@@ -69,4 +72,48 @@ export function getEnabledTabs(): string[] {
     return Object.entries(FEATURE_FLAGS)
         .filter(([feature, enabled]) => feature.startsWith(tabPrefix) && enabled)
         .map(([feature]) => feature.replace(tabPrefix, '').toLowerCase());
+}
+
+// Helper function to check if a chain supports crosschain deposits
+export function isCrosschainSupportedChain(chainId: number): boolean {
+    // Only chains with ChainBalanceManager contracts support crosschain deposits
+    const supportedCrosschainDepositChains = [31337, 31338]; // Core Devnet, Side Devnet
+    return supportedCrosschainDepositChains.includes(chainId);
+}
+
+// Helper function to get supported crosschain deposit chains
+export function getSupportedCrosschainDepositChains(): number[] {
+    return [31337, 31338]; // Core Devnet, Side Devnet
+}
+
+// Helper function to get human-readable names for supported crosschain chains
+export function getSupportedCrosschainDepositChainNames(): string[] {
+    const chainNames: Record<number, string> = {
+        31337: 'Core Devnet',
+        31338: 'Side Devnet',
+    };
+    return getSupportedCrosschainDepositChains().map(chainId => chainNames[chainId] || `Chain ${chainId}`);
+}
+
+// Core chain configuration - the main chain where balances are shown for crosschain deposits
+export const CORE_CHAIN = 31337;
+
+// Helper function to get the core chain ID
+export function getCoreChain(): number {
+    return CORE_CHAIN;
+}
+
+// Helper function to check if crosschain deposit is enabled and should use core chain balances
+export function shouldUseCoreChainBalance(): boolean {
+    return FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED;
+}
+
+// Helper function to check if faucet should use Privy wallet
+export function shouldFaucetUsePrivy(): boolean {
+    return FEATURE_FLAGS.FAUCET_USE_PRIVY;
+}
+
+// Helper function to check if faucet should use standard Wagmi hook when crosschain is enabled
+export function shouldFaucetUseStandardHook(): boolean {
+    return FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED;
 }

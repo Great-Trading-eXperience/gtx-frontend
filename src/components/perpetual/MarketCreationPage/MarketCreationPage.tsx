@@ -18,10 +18,10 @@ import { OracleSource } from '@/hooks/web3/gtx/perpetual/useOracleServiceManager
 import TokenSelection from './TokenSelection';
 import OracleSources from './OracleSources';
 import { useAccount } from 'wagmi';
-import ButtonConnectWallet from '@/components/button-connect-wallet.tsx/button-connect-wallet';
+import { PrivyAuthButton } from '@/components/auth/privy-auth-button';
 import GradientLoader from '@/components/gradient-loader/gradient-loader';
 import { getTokenAddresses } from '@/helper/token-helper';
-
+import { HexAddress } from '@/types/general/address';
 const MarketCreationPage: React.FC = () => {
   // Wallet connection and loading states
   const [mounted, setMounted] = useState(false);
@@ -113,16 +113,16 @@ const MarketCreationPage: React.FC = () => {
     try {
       if (tokenType === 'evm') {
         await createMarket({
-          longToken: evmToken as `0x${string}`,
-          shortToken: shortToken as `0x${string}`,
+          longToken: evmToken as HexAddress,
+          shortToken: shortToken as HexAddress,
           tokenPair: finalTokenPair,
           sources: sources
         });
       } else {
         await createMarket({
           // This is just a placeholder - the actual conversion happens in the hook
-          longToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-          shortToken: shortToken as `0x${string}`,
+          longToken: '0x0000000000000000000000000000000000000000' as HexAddress,
+          shortToken: shortToken as HexAddress,
           tokenPair: finalTokenPair,
           sources: sources,
           isSolanaToken: true,
@@ -311,7 +311,7 @@ const MarketCreationPage: React.FC = () => {
                   Connect Wallet
                 </h2>
                 <p className="text-cyan-100/80 mb-8">Connect your wallet to create a perpetual market</p>
-                <ButtonConnectWallet />
+                <PrivyAuthButton showFullProfile={false} />
               </CardContent>
             </Card>
           </div>

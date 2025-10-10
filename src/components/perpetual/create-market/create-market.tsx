@@ -12,7 +12,7 @@ import { NotificationDialog } from "@/components/notification-dialog/notificatio
 import { Button } from "@/components/ui/button"
 import { useAccount, useChainId } from "wagmi"
 import GradientLoader from "@/components/gradient-loader/gradient-loader"
-import ButtonConnectWallet from "@/components/button-connect-wallet.tsx/button-connect-wallet"
+import { PrivyAuthButton } from "@/components/auth/privy-auth-button"
 import { EXPLORER_URL } from "@/constants/explorer-url"
 import { DEFAULT_CHAIN } from "@/constants/contract/contract-address"
 import { getTokenAddresses } from "@/helper/token-helper"
@@ -505,7 +505,7 @@ const CreateMarketComponent: React.FC = () => {
                                     Connect Wallet
                                 </h2>
                                 <p className="text-cyan-100/80 mb-8">Connect your wallet to create a trading market</p>
-                                <ButtonConnectWallet />
+                                <PrivyAuthButton showFullProfile={false} />
                             </CardContent>
                         </Card>
                     </div>

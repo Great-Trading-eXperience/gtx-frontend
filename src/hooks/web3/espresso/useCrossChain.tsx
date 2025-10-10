@@ -1,3 +1,5 @@
+"use client"
+
 // CrossChainProvider.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAccount } from 'wagmi';

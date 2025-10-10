@@ -51,7 +51,7 @@ export const formatVolume = (value: number, decimals: number = 6) => {
 }
 
 export const formatTime = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000)
+  const date = new Date(timestamp)
   return date.toLocaleTimeString("en-US", { hour12: false })
 }
 export const formatNumber = (

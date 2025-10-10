@@ -57,3 +57,9 @@ package-lock.json
 .tmp
 # Local Netlify folder
 .netlify
+
+# public folder
+public/charting_library.zip
+
+# wagmi demo folder
+wagmi-demo/

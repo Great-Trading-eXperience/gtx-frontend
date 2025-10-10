@@ -2,16 +2,16 @@ import { HexAddress } from "@/types/general/address";
 import contractAddresses from "./contract-address.json";
 
 export enum ContractName {
-    clobBalanceManager = "clobBalanceManager",
-    clobPoolManager = "clobPoolManager",
-    clobRouter = "clobRouter",
-    resolverPoolManager = "resolverPoolManager",
-    proxyAdminOwner = "proxyAdminOwner",
-    openIntentRouter = "openIntentRouter",
-    usdc = "usdc",
-    weth = "weth",
-    wbtc = "wbtc",
-    router = "router",
+    clobBalanceManager = "PROXY_BALANCEMANAGER",
+    clobPoolManager = "PROXY_POOLMANAGER",
+    clobRouter = "PROXY_ROUTER",
+    chainBalanceManager = "PROXY_CHAINBALANCEMANAGER",
+    openIntentRouter = "OPEN_INTENT_ROUTER",
+    usdc = "USDC",
+    weth = "WETH",
+    wbtc = "WBTC",
+    router = "ROUTER",
+    faucet = "PROXY_FAUCET",
 }
 
 interface MailchimpConfig {
@@ -33,8 +33,8 @@ interface ContractConfig {
     NETWORK: string;
     ROUTER_OWNER: HexAddress | string;
     ENABLED_CHAINS: string;
-    MAILCHIMP: MailchimpConfig;
-    [chainId: string]: Partial<Record<ContractName, string>> | string | MailchimpConfig;
+    MAILCHIMP?: MailchimpConfig;
+    [chainId: string]: Partial<Record<ContractName, string>> | string | MailchimpConfig | undefined;
 }
 
 // Extract contract config
@@ -54,10 +54,13 @@ export const NETWORK = contractsConfig.NETWORK;
 export const ROUTER_OWNER = contractsConfig.ROUTER_OWNER as HexAddress;
 export const ENABLED_CHAINS = contractsConfig.ENABLED_CHAINS;
 
-// Mailchimp configuration
-export const MAILCHIMP = contractsConfig.MAILCHIMP as MailchimpConfig;
+// Using env
+export const MAILCHIMP = {
+  API_KEY: process.env.NEXT_PUBLIC_MAILCHIMP_API_KEY || '',
+  AUDIENCE_ID: process.env.NEXT_PUBLIC_MAILCHIMP_AUDIENCE_ID || '',
+  API_SERVER: process.env.NEXT_PUBLIC_MAILCHIMP_API_SERVER || '',
+};
 
-// Helper function to get contract address by chain ID and contract name
 export function getContractAddress(
     chainId: string | number = DEFAULT_CHAIN,
     contractName: ContractName
@@ -66,16 +69,18 @@ export function getContractAddress(
     const chainContracts = contractsConfig[chainIdString] as Partial<Record<ContractName, string>>;
 
     if (!chainContracts) {
-        throw new Error(`Chain ID ${chainIdString} not found in configuration`);
+        console.error(`Chain ID ${chainIdString} not found in configuration, returning empty address`);
+        return '';
     }
 
     const address = chainContracts[contractName];
 
-    if (!address) {
-        throw new Error(
-            `Contract ${contractName} not found for chain ID ${chainIdString}`
-        );
-    }
+    // TODO: remove this
+    // if (!address) {
+    //     throw new Error(
+    //         `Contract ${contractName} not found for chain ID ${chainIdString}`
+    //     );
+    // }
 
-    return address;
+    return address || '';
 }

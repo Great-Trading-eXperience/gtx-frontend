@@ -120,7 +120,7 @@ export const usePerpPositions = (
     } finally {
       setLoading(false);
     }
-  }, [address, positionHandlerAddress, dataStoreAddress, marketHandlerAddress]);
+  }, [address]);
 
   // Example function to calculate PnL
   const calculatePnL = useCallback(async (position: Position): Promise<{ pnl: string, pnlPercentage: string }> => {
@@ -159,7 +159,7 @@ export const usePerpPositions = (
       console.error("Error calculating PnL:", error);
       return { pnl: "0", pnlPercentage: "0" };
     }
-  }, [marketHandlerAddress]);
+  }, []);
 
   // Refresh positions on interval
   useEffect(() => {

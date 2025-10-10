@@ -1,583 +1,695 @@
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
+import BalanceManagerABI from "@/abis/gtx/clob/BalanceManagerABI";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { HexAddress } from "@/types/general/address";
+// Removed unused useWallets import
 import { useMutation } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { OrderSideEnum } from "../../../../../../lib/enums/clob.enum";
+import { useEffectiveChainId } from "@/utils/chain-override";
+import { OrderSideEnum, TimeInForceEnum } from "@/lib/enums/clob.enum";
+import { isFeatureEnabled, getCoreChain } from "@/constants/features/features-config";
 
-export const usePlaceOrder = () => {
-  const { address } = useAccount();
+// Helper function to get the effective chain ID for contract calls
+const getEffectiveChainId = (currentChainId: number): number => {
+  const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+  const effectiveChainId = crosschainEnabled ? getCoreChain() : currentChainId;
+  console.log('[DEBUG_EXTERNAL_ORDER] 🔗 Chain selection | Crosschain enabled:', crosschainEnabled, '| Current chain:', currentChainId, '| Effective chain:', effectiveChainId);
+  return effectiveChainId;
+};
+
+const getTokenDecimals = async (tokenAddress: HexAddress, chainId?: number): Promise<number> => {
+  try {
+    const effectiveChainId = chainId || getCoreChain(); // Default to core chain if not specified
+    console.log('[DEBUG_EXTERNAL_ORDER] 💳 Getting token decimals | Token:', tokenAddress, '| Chain:', effectiveChainId);
+    
+    const decimals = await readContract(wagmiConfig, {
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'decimals',
+      chainId: effectiveChainId,
+    });
+    
+    console.log('[DEBUG_EXTERNAL_ORDER] ✅ Token decimals retrieved:', decimals, '| Token:', tokenAddress, '| Chain:', effectiveChainId);
+    return decimals;
+  } catch (error) {
+    console.error(`[DEBUG_EXTERNAL_ORDER] ❌ Failed to fetch decimals for token ${tokenAddress} on chain ${chainId}:`, error);
+    return 18;
+  }
+};
+
+type OrderType = 'market' | 'limit';
+
+interface OrderParams {
+  pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
+  baseCurrency: HexAddress;
+  quoteCurrency: HexAddress;
+  orderBook: HexAddress;
+  quantity: bigint;
+  side: OrderSideEnum;
+  price?: bigint;
+  timeInForce?: TimeInForceEnum;
+  slippageBps?: number;
+  originalUsdcAmount?: bigint; 
+}
+
+interface SlippageInfo {
+  minOutAmount: bigint; 
+  conservativeMinOut: bigint; 
+  slippageTolerance: number; 
+  actualSlippage: number; 
+  estimatedPrice: bigint;
+}
+
+interface BestSellPrice {
+  price: bigint;
+  volume: bigint;
+}
+
+export const usePlaceOrder = (userAddress?: HexAddress) => {
+  const { address: wagmiAddress } = useAccount();
+  // Remove unused wallets import
   const [limitOrderHash, setLimitOrderHash] = useState<HexAddress | undefined>(undefined);
   const [marketOrderHash, setMarketOrderHash] = useState<HexAddress | undefined>(undefined);
+  
+  const address = wagmiAddress; 
 
-  const chainId = useChainId()
+  const currentChainId = useChainId();
+  const chainId = useEffectiveChainId(currentChainId); // Use forced chain if configured
 
   const resetLimitOrderState = useCallback(() => {
     setLimitOrderHash(undefined);
   }, []);
-  
+
   const resetMarketOrderState = useCallback(() => {
     setMarketOrderHash(undefined);
   }, []);
-  
-  // Mutation for limit orders
-  const {
-    mutateAsync: placeLimitOrder,
-    isPending: isLimitOrderPending,
-    isError: isLimitOrderError,
-    error: limitSimulateError,
-  } = useMutation({
-    mutationFn: async ({
-      pool,
-      baseCurrency,
-      quoteCurrency,
-      price,
-      quantity,
-      side,
-      withDeposit = false
-    }: {
-      pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
-      baseCurrency: HexAddress;
-      quoteCurrency: HexAddress;
-      orderBook: HexAddress;
-      price: bigint;
-      quantity: bigint;
-      side: OrderSideEnum;
-      withDeposit?: boolean;
-    }) => {
+
+  // Shared helper functions
+  const getRequiredTokenAndAmount = async (
+    side: OrderSideEnum,
+    baseCurrency: HexAddress,
+    quoteCurrency: HexAddress,
+    quantity: bigint,
+    price?: bigint
+  ) => {
+    if (side === OrderSideEnum.BUY) {
+      if (!price) throw new Error("Price is required for buy orders");
+      
+      const baseDecimals = await getTokenDecimals(baseCurrency);
+      const amount = price * quantity / BigInt(10 ** baseDecimals);
+      
+      return {
+        token: quoteCurrency,
+        amount
+      };
+    }
+    
+    return {
+      token: baseCurrency,
+      amount: quantity
+    };
+  };
+
+  const checkBalance = async (token: HexAddress, requiredAmount: bigint, address: HexAddress) => {
+    const crosschainEnabled = isFeatureEnabled('CROSSCHAIN_DEPOSIT_ENABLED');
+    const effectiveChainId = getEffectiveChainId(chainId);
+    
+    console.log('[DEBUG_EXTERNAL_ORDER] 💰 Checking token balance | Token:', token, '| User:', address, '| Chain:', effectiveChainId, '| Crosschain:', crosschainEnabled);
+    
+    let balance: bigint;
+    
+    // When crosschain is enabled, read from balance manager contract on core chain
+    if (crosschainEnabled) {
+      const balanceManagerAddress = getContractAddress(effectiveChainId, ContractName.clobBalanceManager) as HexAddress;
+      console.log('[DEBUG_EXTERNAL_ORDER] 💰 Reading balance from Balance Manager | Manager:', balanceManagerAddress, '| Chain:', effectiveChainId);
+      
+      balance = await readContract(wagmiConfig, {
+        address: balanceManagerAddress,
+        abi: BalanceManagerABI,
+        functionName: 'getBalance',
+        args: [address, token],
+        chainId: effectiveChainId, // Use core chain for balance manager queries
+      }) as bigint;
+      
+      console.log('[DEBUG_EXTERNAL_ORDER] ✅ Balance Manager balance retrieved:', balance.toString(), '| Required:', requiredAmount.toString(), '| Token:', token, '| Chain:', effectiveChainId);
+    } else {
+      // When crosschain is disabled, read directly from ERC20 contract on current chain
+      console.log('[DEBUG_EXTERNAL_ORDER] 💰 Reading balance directly from ERC20 contract | Token:', token, '| Chain:', effectiveChainId);
+      
+      balance = await readContract(wagmiConfig, {
+        address: token,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address],
+        chainId: effectiveChainId,
+      }) as bigint;
+      
+      console.log('[DEBUG_EXTERNAL_ORDER] ✅ ERC20 balance retrieved:', balance.toString(), '| Required:', requiredAmount.toString(), '| Token:', token, '| Chain:', effectiveChainId);
+    }
+
+    if (balance < requiredAmount) {
+      const tokenDecimals = await getTokenDecimals(token, effectiveChainId);
+      const formattedBalance = formatUnits(balance, tokenDecimals);
+      const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
+      const balanceSource = crosschainEnabled ? 'Balance Manager' : 'ERC20';
+
+      const errorMessage = `Insufficient ${balanceSource} balance. You have ${formattedBalance}, but need ${formattedRequired}.`;
+      console.error('[DEBUG_EXTERNAL_ORDER] ❌ Insufficient balance | Token:', token, '| Source:', balanceSource, '| Chain:', effectiveChainId, '| Error:', errorMessage);
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const writeContractSafe = async (contractCall: any) => {
+    
+    if (!address) {
+      throw new Error('No wallet address available');
+    }
+    
+    try {
+      return await writeContract(wagmiConfig, contractCall);
+    } catch (error: any) {
+      console.error('Wagmi writeContract failed:', error);
+      throw error;
+    }
+  };
+
+  const ensureAllowance = async (
+    token: HexAddress,
+    requiredAmount: bigint,
+    address: HexAddress,
+    chainId: number
+  ) => {
+    const effectiveChainId = getEffectiveChainId(chainId);
+    const spender = getContractAddress(effectiveChainId, ContractName.clobBalanceManager) as HexAddress;
+    
+    console.log('[DEBUG_EXTERNAL_ORDER] 🔐 Checking token allowance | Token:', token, '| User:', address, '| Spender:', spender, '| Chain:', effectiveChainId);
+    
+    const allowance = await readContract(wagmiConfig, {
+      address: token,
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [address, spender],
+      chainId: effectiveChainId,
+    });
+
+    console.log('[DEBUG_EXTERNAL_ORDER] ✅ Token allowance retrieved:', allowance.toString(), '| Required:', requiredAmount.toString(), '| Chain:', effectiveChainId);
+
+    if (allowance < requiredAmount) {
+      console.log('[DEBUG_EXTERNAL_ORDER] 🔄 Approving tokens for trading | Amount:', requiredAmount.toString(), '| Chain:', effectiveChainId);
+      toast.info('Approving tokens for trading...');
+      
+      const approvalHash = await writeContractSafe({
+        address: token,
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [spender, requiredAmount],
+      });
+
+      const approvalReceipt = await waitForTransactionReceipt(wagmiConfig, {
+        hash: approvalHash
+      });
+
+      if (approvalReceipt.status !== 'success') {
+        toast.error('Token approval failed');
+        throw new Error('Token approval failed');
+      }
+      
+      toast.success('Token approval confirmed');
+    } else {
+      console.log('[ALLOWANCE_CHECK] ✅ Allowance check passed');
+    }
+  };
+
+  const calculateSlippageForMarket = async (
+    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
+    quantity: bigint,
+    side: OrderSideEnum,
+    slippageBps: number = 500,
+    chainId: number,
+    userDepositAmount?: bigint
+  ): Promise<SlippageInfo> => {
+    try {
+      const effectiveChainId = getEffectiveChainId(chainId);
+      const routerAddress = getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress;
+      
+      let depositAmount: bigint;
+      if (side === OrderSideEnum.BUY) {
+        depositAmount = userDepositAmount || quantity;
+      } else {
+        depositAmount = quantity;
+      }
+
+      const minOutAmount = await readContract(wagmiConfig, {
+        address: routerAddress,
+        abi: GTXRouterABI,
+        functionName: 'calculateMinOutAmountForMarket',
+        args: [pool, depositAmount, side === OrderSideEnum.BUY ? 0 : 1, slippageBps],
+        chainId: effectiveChainId,
+      }) as bigint;
+   
+      let estimatedPrice: bigint;
+      if (side === OrderSideEnum.BUY) {
+        const bestSellPrice = await readContract(wagmiConfig, {
+          address: routerAddress,
+          abi: GTXRouterABI,
+          functionName: 'getBestPrice',
+          args: [pool.baseCurrency, pool.quoteCurrency, 1],
+          chainId: effectiveChainId,
+        }) as BestSellPrice;
+        estimatedPrice = bestSellPrice.price;
+      } else {
+        estimatedPrice = minOutAmount * BigInt(10 ** 18) / quantity;
+      }
+      
+      let actualSlippage: number;
+      if (side === OrderSideEnum.BUY) {
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
+        const expectedEthTokens = depositAmount * BigInt(10 ** baseDecimals) / estimatedPrice;
+        const actualMinTokens = minOutAmount;
+        
+        if (expectedEthTokens > 0n) {
+          actualSlippage = Number((expectedEthTokens - actualMinTokens) * BigInt(10000) / expectedEthTokens) / 100;
+        } else {
+          actualSlippage = 0;
+        }
+      } else {
+        const bestBuyPrice = await readContract(wagmiConfig, {
+          address: routerAddress,
+          abi: GTXRouterABI,
+          functionName: 'getBestPrice',
+          args: [pool.baseCurrency, pool.quoteCurrency, 0], 
+          chainId: effectiveChainId,
+        }) as BestSellPrice;
+        
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
+        const expectedUSDC = bestBuyPrice.price * quantity / BigInt(10 ** baseDecimals);
+        actualSlippage = Number((expectedUSDC - minOutAmount) * BigInt(10000) / expectedUSDC) / 100;
+      }
+      
+      actualSlippage = Math.max(0, actualSlippage);
+
+      const conservativeBufferBps = 50;
+      const conservativeMinOut = minOutAmount * BigInt(10000 - conservativeBufferBps) / BigInt(10000);
+
+      const result = {
+        minOutAmount,
+        conservativeMinOut,
+        slippageTolerance: slippageBps / 100,
+        actualSlippage,
+        estimatedPrice
+      };
+
+      return result;
+    } catch (error) {
+      console.error('Failed to calculate slippage:', error);
+      throw error;
+    }
+  };
+
+  const executeOrder = async (
+    orderType: OrderType,
+    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
+    price: bigint | undefined,
+    quantity: bigint,
+    side: OrderSideEnum,
+    timeInForce: TimeInForceEnum,
+    chainId: number,
+    slippageInfo?: SlippageInfo
+  ) => {
+    const effectiveChainId = getEffectiveChainId(chainId);
+    const routerAddress = getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress;
+    const sideValue = side === OrderSideEnum.BUY ? 0 : 1;
+    
+    let functionName: string;
+    let args: readonly unknown[];
+
+    if (orderType === 'market') {
+      if (!slippageInfo) throw new Error('Slippage info is required for market orders');
+      
+      const { amount: depositAmount } = await getRequiredTokenAndAmount(
+        side, pool.baseCurrency, pool.quoteCurrency, quantity, slippageInfo.estimatedPrice
+      );
+      
+      functionName = 'placeMarketOrder';
+      args = [pool, quantity, sideValue, depositAmount, slippageInfo.conservativeMinOut] as const;
+    } else {
+      if (!price) throw new Error('Price is required for limit orders');
+      
+      const { amount: requiredAmount } = await getRequiredTokenAndAmount(
+        side, pool.baseCurrency, pool.quoteCurrency, quantity, price
+      );
+      
+      functionName = 'placeLimitOrder';
+      args = [pool, price, quantity, sideValue, timeInForce, requiredAmount] as const;
+    }
+    
+    if (orderType === 'market') {
+      if (side === OrderSideEnum.BUY && address) {
+        try {
+          const requiredToken = pool.quoteCurrency; 
+          const balance = await readContract(wagmiConfig, {
+            address: requiredToken,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [address],
+          }) as bigint;
+          
+          const allowance = await readContract(wagmiConfig, {
+            address: requiredToken,
+            abi: erc20Abi,
+            functionName: 'allowance',
+            args: [address, getContractAddress(chainId, ContractName.clobBalanceManager) as HexAddress],
+          }) as bigint;
+          
+          const requiredAmount = functionName === 'placeMarketOrder' ? args[3] as bigint : quantity;
+          if (allowance < requiredAmount) {
+            throw new Error('Insufficient allowance!');
+          }
+        } catch (error) {
+          console.error('[CONTRACT_CALL] Failed to check user balance/allowance:', error);
+          throw error;
+        }
+      }
+    }
+    
+    // Simulate first with detailed error handling
+    try {
+      const simulationResult = await simulateContract(wagmiConfig, {
+        address: routerAddress,
+        abi: GTXRouterABI,
+        functionName,
+        args,
+        chainId: effectiveChainId,
+      });
+      
+    } catch (simulationError: any) {
+      console.error('[CONTRACT_CALL] ❌ Simulation failed with detailed error:', {
+        error: simulationError,
+        errorMessage: simulationError?.message,
+        errorCause: simulationError?.cause,
+        errorData: simulationError?.data,
+        errorCode: simulationError?.code,
+        contractCall: {
+          address: routerAddress,
+          functionName,
+          args: args.map(arg => typeof arg === 'bigint' ? arg.toString() : arg)
+        }
+      });
+      
+      // Try to extract more specific error information
+      if (simulationError?.cause?.data) {
+        console.error('[CONTRACT_CALL] 🔍 Raw error data:', simulationError.cause.data);
+      }
+      
+      if (simulationError?.shortMessage) {
+        console.error('[CONTRACT_CALL] 📝 Short message:', simulationError.shortMessage);
+      }
+
+      // Try a direct static call to get better error info
       try {
-        let hash: HexAddress;
-        
-        if (withDeposit) {
-          try {
-            // Check if the user has enough balance first
-            let requiredToken: HexAddress;
-            let requiredAmount: bigint;
-            
-            // For BUY orders, we need the quote currency (e.g., USDC)
-            // For SELL orders, we need the base currency (e.g., WETH)
-            if (side === OrderSideEnum.BUY) {
-              requiredToken = quoteCurrency as `0x${string}`;
-              // Calculate total cost (price * quantity) for buy orders
-              requiredAmount = price * quantity / BigInt(10**18); // Adjust based on your token decimals
-            } else {
-              requiredToken = baseCurrency as `0x${string}`;
-              requiredAmount = quantity;
-            }
-            
-            console.log(`Checking balance for token: ${requiredToken}, required amount: ${requiredAmount}`);
-            
-            // Check user's wallet balance
-            const balance = await readContract(wagmiConfig, {
-              address: requiredToken,
-              abi: erc20Abi,
-              functionName: 'balanceOf',
-              args: [address as `0x${string}`],
-            });
-            
-            console.log(`User balance: ${balance}, Required: ${requiredAmount}`);
-            
-            // If balance is insufficient, stop immediately with helpful message
-            if (balance < requiredAmount) {
-              const tokenSymbol = side === OrderSideEnum.BUY ? "USDC" : "Asset";
-              const tokenDecimals = side === OrderSideEnum.BUY ? 6 : 18; // Adjust based on your tokens
-              
-              const formattedBalance = formatUnits(balance, tokenDecimals);
-              const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
-              
-              const errorMessage = `Insufficient balance. You have ${formattedBalance} ${tokenSymbol}, but need ${formattedRequired} ${tokenSymbol}.`;
-              toast.error(errorMessage);
-              throw new Error(errorMessage);
-            }
+        console.log('[CONTRACT_CALL] 🔍 Attempting direct static call for better error details...');
+        await readContract(wagmiConfig, {
+          address: routerAddress,
+          abi: GTXRouterABI,
+          functionName,
+          args,
+          chainId: effectiveChainId,
+        });
+      } catch (staticCallError: any) {
+        console.error('[CONTRACT_CALL] 🔍 Static call also failed:', {
+          staticError: staticCallError,
+          staticErrorMessage: staticCallError?.message,
+          staticErrorData: staticCallError?.data,
+          note: 'This might give us more specific error details'
+        });
+      }
 
-            // Check allowance if there's enough balance
-            const allowance = await readContract(wagmiConfig, {
-              address: requiredToken,
-              abi: erc20Abi,
-              functionName: 'allowance',
-              args: [address as `0x${string}`, getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`],
-            });
-            
-            console.log(`Allowance: ${allowance}, Required: ${requiredAmount}`);
-            
-            // If allowance is insufficient, trigger approval transaction
-            if (allowance < requiredAmount) {
-              toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
-              
-              try {
-                // Execute the approval transaction
-                const approvalHash = await writeContract(wagmiConfig, {
-                  account: address,
-                  address: requiredToken,
-                  abi: erc20Abi,
-                  functionName: 'approve',
-                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, requiredAmount],
-                });
-                
-                console.log('Approval transaction hash:', approvalHash);
-                toast.info('Waiting for approval confirmation...');
-                
-                // Wait for the approval transaction to be confirmed
-                const approvalReceipt = await waitForTransactionReceipt(wagmiConfig, { 
-                  hash: approvalHash 
-                });
-                
-                if (approvalReceipt.status === 'success') {
-                  toast.success('Token approval confirmed');
-                  console.log('Token approval confirmed, proceeding with order');
-                } else {
-                  toast.error('Token approval failed');
-                  throw new Error('Token approval failed');
-                }
-              } catch (approvalError) {
-                console.error('Token approval error:', approvalError);
-                toast.error('Token approval failed. Please try again.');
-                throw new Error('Failed to approve tokens for trading');
-              }
-            } else {
-              console.log('Sufficient allowance already exists');
-            }
-          
-            // First simulate the transaction
-            const simulation = await simulateContract(wagmiConfig, {
-              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-              abi: GTXRouterABI,
-              functionName: 'placeOrderWithDeposit',
-              args: [
-                pool,
-                BigInt(price),
-                BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as `0x${string}`
-              ] as const,
-            });
-            
-            console.log("Simulation result:", simulation.result);
-            
-            // If simulation succeeds, execute the transaction
-            hash = await writeContract(wagmiConfig, {
-              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-              abi: GTXRouterABI,
-              functionName: 'placeOrderWithDeposit',
-              args: [
-                pool,
-                BigInt(price),
-                BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as `0x${string}`
-              ] as const,
-            });
-          } catch (simulationError: unknown) {
-            console.error("Limit order with deposit simulation failed:", simulationError);
-            
-            // Check if it's the specific error signature we can't decode
-            if (simulationError instanceof Error && simulationError.toString().includes('0xfb8f41b2')) {
-              toast.error("Insufficient balance for this order. Please deposit more funds.");
-              throw new Error("Insufficient balance for this order. Please deposit more funds.");
-            }
-            
-            // For any other errors, propagate them
-            throw simulationError;
+      // Check if the amounts make sense
+      if (orderType === 'market') {
+        const depositAmount = args[3] as bigint;
+        const minOut = args[4] as bigint;
+        const quantity = args[1] as bigint;
+        
+        console.error('[CONTRACT_CALL] 🚨 Market order parameter analysis:', {
+          side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
+          quantity: quantity.toString(),
+          depositAmount: depositAmount.toString(),
+          minOut: minOut.toString(),
+          suspiciousRatios: {
+            quantityVsDeposit: quantity === depositAmount ? 'SAME' : 'DIFFERENT',
+            minOutVsDeposit: side === OrderSideEnum.SELL ? 
+              `${minOut.toString()} USDC for ${depositAmount.toString()} wei ETH - ratio: ${Number(minOut) / Number(depositAmount)}` :
+              'N/A for BUY orders',
+            possibleIssue: side === OrderSideEnum.SELL && Number(minOut) < Number(depositAmount) / Number(1000000000000000n) ? 
+              'MIN_OUT_TOO_LOW - expecting ~3600 USDC but getting ~3.6 USDC' : 'RATIO_OK'
           }
-        } else {
-          try {
-            // For regular limit orders, also check balance and approval
-            let requiredToken: HexAddress;
-            let requiredAmount: bigint;
-            
-            // For BUY orders, we need the quote currency (e.g., USDC)
-            // For SELL orders, we need the base currency (e.g., WETH)
-            if (side === OrderSideEnum.BUY) {
-              requiredToken = quoteCurrency as `0x${string}`;
-              // Calculate total cost (price * quantity) for buy orders
-              requiredAmount = price * quantity / BigInt(10**18); // Adjust based on your token decimals
-            } else {
-              requiredToken = baseCurrency as `0x${string}`;
-              requiredAmount = quantity;
-            }
-            
-            console.log(`Checking balance for token: ${requiredToken}, required amount: ${requiredAmount}`);
-            
-            // Check user's wallet balance
-            const balance = await readContract(wagmiConfig, {
-              address: requiredToken,
-              abi: erc20Abi,
-              functionName: 'balanceOf',
-              args: [address as `0x${string}`],
-            });
-            
-            console.log(`User balance: ${balance}, Required: ${requiredAmount}`);
-            
-            // If balance is insufficient, stop immediately with helpful message
-            if (balance < requiredAmount) {
-              const tokenSymbol = side === OrderSideEnum.BUY ? "USDC" : "Asset";
-              const tokenDecimals = side === OrderSideEnum.BUY ? 6 : 18; // Adjust based on your tokens
-              
-              const formattedBalance = formatUnits(balance, tokenDecimals);
-              const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
-              
-              const errorMessage = `Insufficient balance. You have ${formattedBalance} ${tokenSymbol}, but need ${formattedRequired} ${tokenSymbol}.`;
-              toast.error(errorMessage);
-              throw new Error(errorMessage);
-            }
+        });
+      }
+      
+      throw simulationError;
+    }
 
-            // Check allowance if there's enough balance
-            const allowance = await readContract(wagmiConfig, {
-              address: requiredToken,
-              abi: erc20Abi,
-              functionName: 'allowance',
-              args: [address as `0x${string}`, getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`],
-            });
-            
-            console.log(`Allowance: ${allowance}, Required: ${requiredAmount}`);
-            
-            // If allowance is insufficient, trigger approval transaction
-            if (allowance < requiredAmount) {
-              toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
-              
-              try {
-                // Execute the approval transaction
-                const approvalHash = await writeContract(wagmiConfig, {
-                  account: address,
-                  address: requiredToken,
-                  abi: erc20Abi,
-                  functionName: 'approve',
-                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, requiredAmount],
-                });
-                
-                console.log('Approval transaction hash:', approvalHash);
-                toast.info('Waiting for approval confirmation...');
-                
-                // Wait for the approval transaction to be confirmed
-                const approvalReceipt = await waitForTransactionReceipt(wagmiConfig, { 
-                  hash: approvalHash 
-                });
-                
-                if (approvalReceipt.status === 'success') {
-                  toast.success('Token approval confirmed');
-                  console.log('Token approval confirmed, proceeding with order');
-                } else {
-                  toast.error('Token approval failed');
-                  throw new Error('Token approval failed');
-                }
-              } catch (approvalError) {
-                console.error('Token approval error:', approvalError);
-                toast.error('Token approval failed. Please try again.');
-                throw new Error('Failed to approve tokens for trading');
-              }
-            } else {
-              console.log('Sufficient allowance already exists');
-            }
-          
-            // First simulate the transaction
-            const simulation = await simulateContract(wagmiConfig, {
-              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-              abi: GTXRouterABI,
-              functionName: 'placeOrderWithDeposit',
-              args: [
-                pool,
-                BigInt(price),
-                BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as `0x${string}`
-              ] as const,
-            });
-            
-            console.log("Simulation result:", simulation.result);
-            
-            // If simulation succeeds, execute the transaction
-            hash = await writeContract(wagmiConfig, {
-              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-              abi: GTXRouterABI,
-              functionName: 'placeOrderWithDeposit',
-              args: [
-                pool,
-                BigInt(price),
-                BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as `0x${string}`
-              ] as const,
-            });
-          } catch (simulationError: unknown) {
-            console.error("Limit order simulation failed:", simulationError);
-            
-            // Check if it's the specific error signature we can't decode
-            if (simulationError instanceof Error && simulationError.toString().includes('0xfb8f41b2')) {
-              toast.error("Insufficient balance for this order. Please deposit more funds.");
-              throw new Error("Insufficient balance for this order. Please deposit more funds.");
-            }
-            
-            // For any other errors, propagate them
-            throw simulationError;
-          }
-        }
+    // Execute if simulation passes
+    const txHash = await writeContractSafe({
+      address: routerAddress,
+      abi: GTXRouterABI,
+      functionName,
+      args,
+      chainId: effectiveChainId,
+    });
+    
+    return txHash;
+  };
 
-        setLimitOrderHash(hash);
-        toast.success('Limit order submitted. Waiting for confirmation...');
-        
-        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
-        
-        if (receipt.status === 'success') {
-          toast.success('Limit order confirmed successfully!');
-        } else {
-          toast.error('Transaction failed on-chain');
-          throw new Error('Transaction failed on-chain');
+  const handlePreOrderChecks = async (
+    orderType: OrderType,
+    side: OrderSideEnum,
+    baseCurrency: HexAddress,
+    quoteCurrency: HexAddress,
+    quantity: bigint,
+    price: bigint | undefined,
+    address: HexAddress,
+    chainId: number,
+    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
+    slippageInfo?: SlippageInfo
+  ) => {
+    let requiredAmount: bigint;
+    
+    if (orderType === 'market' && slippageInfo) {
+      const { amount } = await getRequiredTokenAndAmount(
+        side, baseCurrency, quoteCurrency, quantity, slippageInfo.estimatedPrice
+      );
+      requiredAmount = amount;
+    } else {
+      console.log('[PRE_ORDER_CHECKS] Using limit order pricing');
+      const { amount } = await getRequiredTokenAndAmount(
+        side, baseCurrency, quoteCurrency, quantity, price
+      );
+      requiredAmount = amount;
+    }
+
+    const requiredToken = side === OrderSideEnum.BUY ? quoteCurrency : baseCurrency;
+    
+    await checkBalance(requiredToken, requiredAmount, address);
+    await ensureAllowance(requiredToken, requiredAmount, address, chainId);
+  };
+
+  async function waitForTransactionReceiptWithRetry(
+    hash: HexAddress, 
+    options: {
+      maxAttempts: number;
+      initialDelay: number;
+      maxDelay: number;
+      timeout: number;
+    }
+  ) {
+    const { maxAttempts, initialDelay, maxDelay, timeout } = options;
+    const startTime = Date.now();
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Check if we've exceeded the total timeout
+        if (Date.now() - startTime > timeout) {
+          throw new Error(`Transaction receipt timeout after ${timeout}ms`);
         }
+        
+        const receipt = await waitForTransactionReceipt(wagmiConfig, { 
+          hash,
+          timeout: Math.min(20000, timeout - (Date.now() - startTime)) // Dynamic timeout
+        });
         
         return receipt;
+        
       } catch (error) {
-        console.error('Limit order error:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to place limit order');
-        throw error;
+        // If this is the last attempt, throw the error
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+        
+        // Calculate delay with exponential backoff
+        const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), maxDelay);
+        console.log(`Waiting ${delay}ms before retry...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-    },
-  });
+    }
+  }
 
-  // Mutation for market orders
+  const CreateOrderMutation = (orderType: OrderType, setOrderHash: (hash: HexAddress) => void) => {
+    return useMutation({
+      mutationFn: async ({
+        pool,
+        baseCurrency,
+        quoteCurrency,
+        quantity,
+        side,
+        price,
+        timeInForce = TimeInForceEnum.GTC,
+        slippageBps = 500,
+        originalUsdcAmount
+      }: OrderParams) => {
+        try {
+          let slippageInfo: SlippageInfo | undefined;
+          
+          if (orderType === 'market') {
+            const quantityForSlippageCalc = quantity;
+              
+            const userDepositAmount = side === OrderSideEnum.BUY ? originalUsdcAmount : undefined;
+            
+            slippageInfo = await calculateSlippageForMarket(
+              pool,
+              quantityForSlippageCalc,
+              side,
+              slippageBps,
+              chainId,
+              userDepositAmount
+            );
+          }
+          await handlePreOrderChecks(
+            orderType,
+            side,
+            baseCurrency,
+            quoteCurrency,
+            quantity,
+            price,
+            address as HexAddress,
+            chainId,
+            pool,
+            slippageInfo
+          );
+
+          const hash = await executeOrder(
+            orderType,
+            pool,
+            price,
+            quantity,
+            side,
+            timeInForce,
+            chainId,
+            slippageInfo
+          );
+
+          setOrderHash(hash);
+          toast.success(`${orderType} order submitted. Waiting for confirmation...`);
+
+          const receipt = await waitForTransactionReceiptWithRetry(hash, {
+            maxAttempts: 5,
+            initialDelay: 2000, 
+            maxDelay: 10000,   
+            timeout: 120000    
+          });
+
+          if (receipt && receipt.status === 'success') {
+            toast.success(`${orderType} order confirmed successfully!`);
+            return receipt;
+          } else {
+            toast.error('Transaction failed on-chain');
+            throw new Error('Transaction failed on-chain');
+          }
+
+        } catch (error) {
+          console.error(`[ORDER_MUTATION] ❌ ${orderType} order error:`, error);
+          
+          // Log additional context for debugging
+          console.error(`[ORDER_MUTATION] Error context:`, {
+            orderType,
+            userAddress: address,
+            chainId,
+            baseCurrency,
+            quoteCurrency,
+            side: side === OrderSideEnum.BUY ? 'BUY' : 'SELL',
+            quantity: quantity.toString(),
+            price: price?.toString()
+          });
+          
+          // Handle specific error cases with enhanced detection
+          if (error instanceof Error) {
+            const errorStr = error.toString();
+            const errorMessage = error.message || '';
+            
+            // Check for common revert reasons
+            if (errorStr.includes('0xfb8f41b2')) {
+              toast.error("Insufficient balance for this order. Please deposit more funds.");
+            } else if (errorStr.includes('SlippageTooHigh')) {
+              toast.error("Order failed due to high slippage. Try again with higher slippage tolerance or smaller amount.");
+            } else if (errorStr.includes('InsufficientLiquidity')) {
+              toast.error("Insufficient liquidity in the order book for this order size.");
+            } else if (errorStr.includes('InvalidPool')) {
+              toast.error("Invalid trading pool. Please refresh and try again.");
+            } else if (errorStr.includes('TransactionReceiptNotFoundError')) {
+              toast.error("Transaction is taking longer than expected. Please check your transaction status manually.");
+            } else if (errorStr.includes('reverted') && !errorStr.includes('reason')) {
+              // Generic revert without specific reason
+              toast.error(`Contract execution failed. This might be due to insufficient balance, slippage, or market conditions. Check console for details.`);
+            } else {
+              toast.error(error.message || `Failed to place ${orderType} order`);
+            }
+            
+            // Log additional error context for debugging
+            console.error(`[${orderType.toUpperCase()}_ORDER] 🚨 Enhanced error context:`, {
+              errorType: error.constructor.name,
+              errorMessage: errorMessage,
+              isRevertError: errorStr.includes('reverted'),
+              hasErrorCode: error.hasOwnProperty('code'),
+              errorData: error.hasOwnProperty('data') ? (error as any).data : undefined
+            });
+          }
+          
+          throw error;
+        }
+      },
+    });
+  };
+
+  // Market Order Hook
   const {
     mutateAsync: placeMarketOrder,
     isPending: isMarketOrderPending,
-    isError: isMarketOrderError,
     error: marketSimulateError,
-  } = useMutation({
-    mutationFn: async ({
-      pool,
-      baseCurrency,
-      quoteCurrency,
-      orderBook,
-      quantity,
-      side,
-      price,
-      withDeposit = false
-    }: {
-      pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress };
-      baseCurrency: HexAddress;
-      quoteCurrency: HexAddress;
-      orderBook: HexAddress;
-      quantity: bigint;
-      side: OrderSideEnum;
-      price?: bigint;
-      withDeposit?: boolean;
-    }) => {
-      try {
-        let hash: HexAddress;
+  } = CreateOrderMutation('market', setMarketOrderHash);
 
-        if (withDeposit) {
-          if (!price) {
-            throw new Error("Price is required for market orders with deposit");
-          }
-          
-          try {
-            // Check if the user has enough balance first
-            let requiredToken: HexAddress;
-            let requiredAmount: bigint;
-            
-            // For BUY orders, we need the quote currency (e.g., USDC)
-            // For SELL orders, we need the base currency (e.g., WETH)
-            if (side === OrderSideEnum.BUY) {
-              requiredToken = quoteCurrency as `0x${string}`;
-              // Calculate total cost (price * quantity) for buy orders
-              requiredAmount = BigInt(quantity) * price / BigInt(10**18); // Adjust based on your token decimals
-            } else {
-              requiredToken = baseCurrency as `0x${string}`;
-              requiredAmount = BigInt(quantity);
-            }
-            
-            console.log(`Checking balance for token: ${requiredToken}, required amount: ${requiredAmount}`);
-            
-            // Check user's wallet balance
-            const balance = await readContract(wagmiConfig, {
-              address: requiredToken,
-              abi: erc20Abi,
-              functionName: 'balanceOf',
-              args: [address as `0x${string}`],
-            });
-            
-            console.log(`User balance: ${balance}, Required: ${requiredAmount}`);
-            
-            // If balance is insufficient, stop immediately with helpful message
-            if (balance < requiredAmount) {
-              const tokenSymbol = side === OrderSideEnum.BUY ? "USDC" : "Asset";
-              const tokenDecimals = side === OrderSideEnum.BUY ? 6 : 18; // Adjust based on your tokens
-              
-              const formattedBalance = formatUnits(balance, tokenDecimals);
-              const formattedRequired = formatUnits(requiredAmount, tokenDecimals);
-              
-              const errorMessage = `Insufficient balance. You have ${formattedBalance} ${tokenSymbol}, but need ${formattedRequired} ${tokenSymbol}.`;
-              toast.error(errorMessage);
-              throw new Error(errorMessage);
-            }
-
-            // Check allowance if there's enough balance
-            const allowance = await readContract(wagmiConfig, {
-              address: requiredToken,
-              abi: erc20Abi,
-              functionName: 'allowance',
-              args: [address as `0x${string}`, getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`],
-            });
-            
-            console.log(`Allowance: ${allowance}, Required: ${requiredAmount}`);
-            
-            // If allowance is insufficient, trigger approval transaction
-            if (allowance < requiredAmount) {
-              toast.info('Approving tokens for trading...');
-              console.log(`Approving ${formatUnits(requiredAmount, side === OrderSideEnum.BUY ? 6 : 18)} tokens from ${address} to ${getContractAddress(chainId, ContractName.clobBalanceManager)}`);
-              
-              try {
-                // Execute the approval transaction
-                const approvalHash = await writeContract(wagmiConfig, {
-                  account: address,
-                  address: requiredToken,
-                  abi: erc20Abi,
-                  functionName: 'approve',
-                  args: [getContractAddress(chainId, ContractName.clobBalanceManager) as `0x${string}`, requiredAmount],
-                });
-                
-                console.log('Approval transaction hash:', approvalHash);
-                toast.info('Waiting for approval confirmation...');
-                
-                // Wait for the approval transaction to be confirmed
-                const approvalReceipt = await waitForTransactionReceipt(wagmiConfig, { 
-                  hash: approvalHash 
-                });
-                
-                if (approvalReceipt.status === 'success') {
-                  toast.success('Token approval confirmed');
-                  console.log('Token approval confirmed, proceeding with order');
-                } else {
-                  toast.error('Token approval failed');
-                  throw new Error('Token approval failed');
-                }
-              } catch (approvalError) {
-                console.error('Token approval error:', approvalError);
-                toast.error('Token approval failed. Please try again.');
-                throw new Error('Failed to approve tokens for trading');
-              }
-            } else {
-              console.log('Sufficient allowance already exists');
-            }
-            
-            // First simulate the transaction
-            const simulation = await simulateContract(wagmiConfig, {
-              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-              abi: GTXRouterABI,
-              functionName: 'placeMarketOrderWithDeposit',
-              args: [
-                pool,
-                BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as `0x${string}`
-              ] as const,
-            });
-            
-            console.log("Simulation result:", simulation.result);
-            
-            // If simulation succeeds, execute the transaction
-            hash = await writeContract(wagmiConfig, {
-              address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-              abi: GTXRouterABI,
-              functionName: 'placeMarketOrderWithDeposit',
-              args: [
-                {
-                  baseCurrency,
-                  quoteCurrency,
-                  orderBook
-                },
-                BigInt(quantity),
-                side === OrderSideEnum.BUY ? 0 : 1,
-                address as `0x${string}`
-              ] as const,
-            });
-          } catch (simulationError: unknown) {
-            console.error("Market order with deposit simulation failed:", simulationError);
-            
-            // Check if it's the specific error signature we can't decode
-            if (simulationError instanceof Error && simulationError.toString().includes('0xfb8f41b2')) {
-              toast.error("Insufficient balance for this order. Please deposit more funds.");
-              throw new Error("Insufficient balance for this order. Please deposit more funds.");
-            }
-            
-            // For any other errors, propagate them
-            throw simulationError;
-          }
-        } else {
-          // First simulate the transaction
-          const simulation = await simulateContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-            abi: GTXRouterABI,
-            functionName: 'placeMarketOrder',
-            args: [
-              {
-                baseCurrency,
-                quoteCurrency,
-                orderBook
-              },
-              BigInt(quantity),
-              side === OrderSideEnum.BUY ? 0 : 1,
-              address as `0x${string}`
-            ] as const,
-          });
-          
-          console.log("Simulation result:", simulation.result);
-          
-          // If simulation succeeds, execute the transaction
-          hash = await writeContract(wagmiConfig, {
-            address: getContractAddress(chainId, ContractName.clobRouter) as `0x${string}`,
-            abi: GTXRouterABI,
-            functionName: 'placeMarketOrder',
-            args: [
-              {
-                baseCurrency,
-                quoteCurrency,
-                orderBook
-              },
-              BigInt(quantity),
-              side === OrderSideEnum.BUY ? 0 : 1,
-              address as `0x${string}`
-            ] as const,
-          });
-        }
-
-
-        setMarketOrderHash(hash);
-        toast.success('Market order submitted. Waiting for confirmation...');
-        
-        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
-        
-        if (receipt.status === 'success') {
-          toast.success('Market order confirmed successfully!');
-        } else {
-          toast.error('Transaction failed on-chain');
-          throw new Error('Transaction failed on-chain');
-        }
-        
-        return receipt;
-      } catch (error) {
-        console.error('Market order error:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to place market order');
-        throw error;
-      }
-    },
-  });
+  // Limit Order Hook
+  const {
+    mutateAsync: placeLimitOrder,
+    isPending: isLimitOrderPending,
+    error: limitSimulateError,
+  } = CreateOrderMutation('limit', setLimitOrderHash);
 
   // Transaction confirmation states
-const {
-    data: limitOrderReceipt,
+  const {
     isLoading: isLimitOrderConfirming,
     isSuccess: isLimitOrderConfirmed,
   } = useWaitForTransactionReceipt({
     hash: limitOrderHash, // Only pass the hash, no enabled option
   });
-  
+
   const {
-    data: marketOrderReceipt,
     isLoading: isMarketOrderConfirming,
     isSuccess: isMarketOrderConfirmed,
   } = useWaitForTransactionReceipt({
@@ -590,7 +702,7 @@ const {
     price: bigint,
     quantity: bigint,
     side: OrderSideEnum,
-    withDeposit: boolean = false
+    timeInForce: TimeInForceEnum = TimeInForceEnum.GTC
   ) => {
     if (!address) {
       toast.error('Wallet not connected');
@@ -607,50 +719,133 @@ const {
       return;
     }
 
-    return placeLimitOrder({ 
+    return placeLimitOrder({
       pool,
       baseCurrency: pool.baseCurrency,
       quoteCurrency: pool.quoteCurrency,
       orderBook: pool.orderBook,
-      price, 
-      quantity, 
-      side, 
-      withDeposit 
+      price,
+      quantity,
+      side,
+      timeInForce
     });
   };
 
   const handlePlaceMarketOrder = async (
     pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
-    quantity: bigint,
+    inputQuantity: bigint, // This is either quote currency (for BUY) or base currency (for SELL)
     side: OrderSideEnum,
-    price?: bigint,
-    withDeposit: boolean = false
+    slippageBps: number = 500
   ) => {
     if (!address) {
       toast.error('Wallet not connected');
       return;
     }
 
-    if (quantity <= 0n) {
+    if (inputQuantity <= 0n) {
       toast.error('Quantity must be greater than zero');
       return;
     }
 
-    return placeMarketOrder({ 
+    const effectiveChainId = getEffectiveChainId(chainId);
+
+    let baseCurrencyQuantity: bigint; 
+    
+    if (side === OrderSideEnum.BUY) {
+      const quoteCurrencyToSpend = inputQuantity;
+      
+      try {
+        // Get best sell price to convert quote currency to base currency quantity
+        const bestSellPrice = await readContract(wagmiConfig, {
+          address: getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress,
+          abi: GTXRouterABI,
+          functionName: 'getBestPrice',
+          args: [pool.baseCurrency, pool.quoteCurrency, 1], // Get SELL prices for BUY order
+          chainId: effectiveChainId,
+        }) as BestSellPrice;
+        
+        if (bestSellPrice.price === 0n) {
+          throw new Error('No sell orders available for market buy order');
+        }
+        
+        // Calculate base currency quantity: quoteCurrencyAmount * 10^baseDecimals / price
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
+        const quoteDecimals = await getTokenDecimals(pool.quoteCurrency, effectiveChainId);
+
+        baseCurrencyQuantity = quoteCurrencyToSpend * BigInt(10 ** baseDecimals) / bestSellPrice.price;
+      } catch (error) {
+        console.error('Failed to convert quote currency to base currency quantity:', error);
+        throw new Error('Failed to get current market price for conversion');
+      }
+      
+    } else {
+      baseCurrencyQuantity = inputQuantity;
+    }
+
+    return placeMarketOrder({
       pool,
       baseCurrency: pool.baseCurrency,
       quoteCurrency: pool.quoteCurrency,
       orderBook: pool.orderBook,
-      quantity, 
-      side, 
-      price, 
-      withDeposit 
+      quantity: baseCurrencyQuantity, 
+      originalUsdcAmount: side === OrderSideEnum.BUY ? inputQuantity : undefined, 
+      side,
+      slippageBps
     });
+  };
+
+  // Helper function to get slippage info for display
+  const getMarketOrderSlippageInfo = async (
+    pool: { baseCurrency: HexAddress; quoteCurrency: HexAddress; orderBook: HexAddress },
+    inputQuantity: bigint,
+    side: OrderSideEnum,
+    slippageBps: number = 500
+  ): Promise<SlippageInfo | null> => {
+    try {
+      if (inputQuantity <= 0n || !address) return null;
+      
+      const effectiveChainId = getEffectiveChainId(chainId);
+      
+      // For display purposes, we need to convert to base currency quantity for the contract
+      let baseCurrencyQuantity: bigint;
+      let userDepositAmount: bigint | undefined;
+      
+      if (side === OrderSideEnum.BUY) {
+        // Convert quote currency input to base currency quantity
+        const bestSellPrice = await readContract(wagmiConfig, {
+          address: getContractAddress(effectiveChainId, ContractName.clobRouter) as HexAddress,
+          abi: GTXRouterABI,
+          functionName: 'getBestPrice',
+          args: [pool.baseCurrency, pool.quoteCurrency, 1],
+          chainId: effectiveChainId,
+        }) as BestSellPrice;
+        
+        const baseDecimals = await getTokenDecimals(pool.baseCurrency, effectiveChainId);
+        baseCurrencyQuantity = inputQuantity * BigInt(10 ** baseDecimals) / bestSellPrice.price;
+        userDepositAmount = inputQuantity; 
+      } else {
+        baseCurrencyQuantity = inputQuantity; 
+        userDepositAmount = undefined; 
+      }
+      
+      return await calculateSlippageForMarket(
+        pool,
+        baseCurrencyQuantity,
+        side,
+        slippageBps,
+        chainId,
+        userDepositAmount
+      );
+    } catch (error) {
+      console.error('Failed to calculate slippage info:', error);
+      return null;
+    }
   };
 
   return {
     handlePlaceLimitOrder,
     handlePlaceMarketOrder,
+    getMarketOrderSlippageInfo,
     isLimitOrderPending,
     isLimitOrderConfirming,
     isLimitOrderConfirmed,

@@ -6,9 +6,7 @@ import { wagmiConfig } from "@/configs/wagmi";
 import GTXOracleServiceManagerABI from "@/abis/gtx/perpetual/GTXOracleServiceManagerABI";
 import { toast } from "sonner";
 import { ORACLE_ADDRESS } from "@/constants/contract/contract-address";
-
-// Define types
-export type HexAddress = `0x${string}`;
+import { HexAddress } from "@/types/general/address";
 export type OracleSource = {
   name: string;
   identifier: string;
@@ -225,8 +223,8 @@ export const useOracleService = () => {
         expiry
       }: {
         operator: HexAddress;
-        signature: `0x${string}`;
-        salt: `0x${string}`;
+        signature: HexAddress;
+        salt: HexAddress;
         expiry: bigint;
       }) => {
         if (!address) {

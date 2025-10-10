@@ -35,18 +35,21 @@ export function requestTokenColumns(): ColumnDef<TransactionHistoryRow>[] {
           title="ID"
         />
       ),
-      cell: ({ row }) => (
-        <div className="flex items-center truncate w-fit justify-between">
-          <span className="mr-2">{row.original.id}</span>
-          <button
-            onClick={() => copyToClipboard(row.original.id)}
-            aria-label="Copy to clipboard"
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
-          >
-            <Copy size={16} />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const cleanId = row.original.id.replace(/-undefined$/, '');
+        return (
+          <div className="flex items-center truncate w-fit justify-between">
+            <span className="mr-2">{cleanId}</span>
+            <button
+              onClick={() => copyToClipboard(cleanId)}
+              aria-label="Copy to clipboard"
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              <Copy size={16} />
+            </button>
+          </div>
+        );
+      },
     },
     {
       accessorKey: "blockNumber",
@@ -66,10 +69,13 @@ export function requestTokenColumns(): ColumnDef<TransactionHistoryRow>[] {
           title="Timestamp"
         />
       ),
-      cell: ({ row }) => <div>{row.original.blockTimestamp}</div>,
+      cell: ({ row }) => {
+        const date = new Date(Number(row.original.timestamp) * 1000);
+        return <div>{date.toLocaleString()}</div>;
+      },
     },
     {
-      accessorKey: "transactionHash",
+      accessorKey: "transactionId",
       header: ({ column }) => (
         <DataTableColumnHeader
           column={column}
@@ -78,9 +84,9 @@ export function requestTokenColumns(): ColumnDef<TransactionHistoryRow>[] {
       ),
       cell: ({ row }) => (
         <div className="flex items-center truncate w-fit justify-between">
-          <span className="mr-2">{row.original.transactionHash}</span>
+          <span className="mr-2">{row.original.transactionId}</span>
           <button
-            onClick={() => copyToClipboard(String(row.original.transactionHash))}
+            onClick={() => copyToClipboard(String(row.original.transactionId))}
             aria-label="Copy to clipboard"
             className="text-gray-500 hover:text-gray-700 focus:outline-none"
           >
