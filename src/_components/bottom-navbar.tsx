@@ -20,7 +20,7 @@ export default function BottomNavbar() {
   const pathname = usePathname();
 
   return (
-    <div className="flex justify-around p-2 w-full fixed bottom-0 z-50 bg-black/80 backdrop-blur border-t border-white/10">
+    <div className="flex md:hidden justify-around p-2 w-full fixed bottom-0 z-50 bg-black/80 backdrop-blur border-t border-white/10">
       {bottomNavigation.map(item => {
         const Icon = item.icon;
         const href = `/${item.label.toLowerCase()}`;

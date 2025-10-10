@@ -9,7 +9,8 @@ const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
     const [percentage, setPercentage] = useState(0);
     const [inputValue, setInputValue] = useState('');
 
-    const presetValues: number[] = [0, 25, 50, 75, 100];
+    // const presetValues: number[] = [0, 25, 50, 75, 100];
+    const presetValues: number[] = [0, 50, 100];
 
     useEffect(() => {
         setInputValue(percentage.toString());
@@ -56,19 +57,6 @@ const GTXSlider = ({quantity, setQuantity}: GTXSliderProps)  => {
                     background: `linear-gradient(to right, #06b6d4 0%, #06b6d4 ${percentage}%, #475569 ${percentage}%, #475569 100%)`
                   }}
                 />
-                
-                {/* Preset Dots */}
-                {/* <div className="absolute top-[9px] left-0 w-full h-2 pointer-events-none">
-                  {presetValues.map((value, index) => (
-                    <div
-                      key={value}
-                      className={`absolute w-3 h-3 rounded-full border-2 transform -translate-x-1/2 -translate-y-1/2 top-1/2 ${
-                        percentage >= value ? 'bg-cyan-400 border-cyan-400' : 'bg-slate-700 border-slate-600'
-                      }`}
-                      style={{ left: `${value}%` }}
-                    />
-                  ))}
-                </div> */}
               </div>
 
               {/* Preset Buttons */}

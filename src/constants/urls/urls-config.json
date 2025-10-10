@@ -4,7 +4,7 @@
       "31338": "https://side-indexer-devnet.gtxdex.xyz"
     },
     "WEBSOCKET_URLS": {
-      "31337": "wss://core-indexer-devnet.gtxdex.xyz/ws"
+      "31337": "wss://core-indexer-devnet.gtxdex.xyz"
     },
     "EXPLORER_URLS": {
       "31337": "http://localhost:8545/tx/",
