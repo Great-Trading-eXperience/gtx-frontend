@@ -63,7 +63,7 @@ export function useMarketWebSocket(chainId: number, stream: string, symbol?: str
       }
       ws.removeMessageHandler(handleMessage);
     };
-  }, [symbol, stream, chainId]);
+  }, [symbol, stream, chainId, handleMessage]);
 
   return {
     lastMessage,

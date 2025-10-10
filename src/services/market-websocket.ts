@@ -158,7 +158,7 @@ export const clearWebSocketLogs = () => {
  */
 export class MarketWebSocket {
   private socket: WebSocket | null = null;
-  private subscriptions: Set<string> = new Set();
+  private subscriptions: Map<string, number> = new Map(); // Track subscription count
   private reconnectTimer: NodeJS.Timeout | null = null;
   private pingTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
@@ -242,14 +242,16 @@ export class MarketWebSocket {
 
     this.chainId = chainId;
     
-    if (this.subscriptions.has(stream)) {
-      console.log(`[MARKET-WS] Already subscribed to ${stream}`);
+    const currentCount = this.subscriptions.get(stream) || 0;
+    this.subscriptions.set(stream, currentCount + 1);
+    
+    if (currentCount > 0) {
+      console.log(`[MARKET-WS] Already subscribed to ${stream} (count: ${currentCount + 1})`);
       return;
     }
 
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       console.log('[MARKET-WS] Not connected, connecting first...');
-      this.subscriptions.add(stream);
       this.connect(chainId);
       return;
     }
@@ -261,7 +263,6 @@ export class MarketWebSocket {
     };
 
     this.socket.send(JSON.stringify(message));
-    this.subscriptions.add(stream);
     console.log(`[MARKET-WS] Subscribed to ${stream}`);
   }
 
@@ -273,14 +274,23 @@ export class MarketWebSocket {
   public unsubscribe(symbol: string, streamType: string): void {
     const stream = `${symbol.toLowerCase()}@${streamType}`;
     
-    if (!this.subscriptions.has(stream)) {
+    const currentCount = this.subscriptions.get(stream) || 0;
+    if (currentCount === 0) {
       console.log(`[MARKET-WS] Not subscribed to ${stream}`);
       return;
     }
 
+    const newCount = currentCount - 1;
+    if (newCount > 0) {
+      this.subscriptions.set(stream, newCount);
+      console.log(`[MARKET-WS] Reduced subscription count for ${stream} (count: ${newCount})`);
+      return;
+    }
+
+    this.subscriptions.delete(stream);
+
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       console.log('[MARKET-WS] Not connected');
-      this.subscriptions.delete(stream);
       return;
     }
 
@@ -291,7 +301,6 @@ export class MarketWebSocket {
     };
 
     this.socket.send(JSON.stringify(message));
-    this.subscriptions.delete(stream);
     console.log(`[MARKET-WS] Unsubscribed from ${stream}`);
   }
 
@@ -352,7 +361,7 @@ export class MarketWebSocket {
 
     // Resubscribe to all streams
     if (this.subscriptions.size > 0) {
-      const streams = Array.from(this.subscriptions);
+      const streams = Array.from(this.subscriptions.keys());
       const message: WebSocketSubscribeMessage = {
         method: 'SUBSCRIBE',
         params: streams,
@@ -697,7 +706,7 @@ export const getUserWebSocket = (walletAddress: string, chainId: number): UserWe
  */
 export const disconnectAllUserWebSockets = (): void => {
   console.log('[USER-WS] Disconnecting all user WebSocket instances');
-  for (const [address, ws] of userWsInstances) {
+  for (const ws of userWsInstances.values()) {
     ws.disconnect();
   }
   userWsInstances.clear();
