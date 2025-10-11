@@ -7,10 +7,8 @@ import { usePrivyAuth } from '@/hooks/use-privy-auth';
 
 import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 
-// import ChartComponent from './chart_/chart';
 import MarketDataTabs from './market-data-tabs/market-data-tabs';
-import MarketDataWidget from './market-widget/market-widget';
-import PlaceOrder from './place-order/place-order';
+import PlaceOrder from './place-order/placeOrder';
 import ChartComponent from './chart';
 import TradingHistory from './trading-history/trading-history';
 
@@ -53,8 +51,8 @@ export type ClobDexComponentProps = {
 
 export default function ClobDex() {
   // Auth and wallet setup
-  const { address, isConnected } = useAccount();
-  const { walletAddress, isFullyAuthenticated } = usePrivyAuth();
+  const { isConnected } = useAccount();
+  const { isFullyAuthenticated } = usePrivyAuth();
   const { wallets } = useWallets();
   const chainId = useChainId();
   const defaultChainId = Number(DEFAULT_CHAIN);
@@ -152,8 +150,6 @@ export default function ClobDex() {
             chainId={chainId}
             defaultChainId={defaultChainId}
             selectedPool={selectedPool}
-            tradesData={combinedTrades}
-            tradesLoading={tradesLoading}
             depthData={combinedDepth}
             ticker24hr={ticker24hr}
             refetchAccount={refetchAccount}

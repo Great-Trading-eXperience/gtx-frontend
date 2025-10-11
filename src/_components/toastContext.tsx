@@ -57,23 +57,22 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
-  const updateToast = useCallback((id: string, updates: Partial<Omit<Toast, 'id'>>) => {
-    setToasts(prev =>
-      prev.map(toast =>
-        toast.id === id
-          ? { ...toast, ...updates }
-          : toast
-      )
-    );
+  const updateToast = useCallback(
+    (id: string, updates: Partial<Omit<Toast, 'id'>>) => {
+      setToasts(prev =>
+        prev.map(toast => (toast.id === id ? { ...toast, ...updates } : toast))
+      );
 
-    // If updating to non-loading toast, set auto-remove timer
-    if (updates.type && updates.type !== 'loading') {
-      const duration = updates.duration ?? 4000;
-      setTimeout(() => {
-        hideToast(id);
-      }, duration);
-    }
-  }, [hideToast]);
+      // If updating to non-loading toast, set auto-remove timer
+      if (updates.type && updates.type !== 'loading') {
+        const duration = updates.duration ?? 4000;
+        setTimeout(() => {
+          hideToast(id);
+        }, duration);
+      }
+    },
+    [hideToast]
+  );
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, hideToast, updateToast }}>

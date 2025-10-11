@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
 interface GTXTooltipProps {
-    children: React.ReactNode;
-    text: string;
-    width?: number;
-    position?: "left" | "center" | "right";
+  children: React.ReactNode;
+  text: string;
+  width?: number;
+  position?: 'left' | 'center' | 'right';
 }
 
-const GTXTooltip = ({ children, text, width, position } : GTXTooltipProps) => {
+const GTXTooltip = ({ children, text, width, position }: GTXTooltipProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
   const getWidthStyle = () => {
@@ -34,12 +34,14 @@ const GTXTooltip = ({ children, text, width, position } : GTXTooltipProps) => {
         {children}
       </div>
       {isVisible && (
-        <div 
-            className={`absolute bottom-full ${positionClass} mb-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-9`}
-            style={getWidthStyle()}
+        <div
+          className={`absolute bottom-full ${positionClass} mb-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-9`}
+          style={getWidthStyle()}
         >
           <span className="text-wrap">{text}</span>
-          <div className={`absolute transform ${positionArrow} bottom-[-4px] w-2 h-2 bg-gray-700 rotate-45`}></div>
+          <div
+            className={`absolute transform ${positionArrow} bottom-[-4px] w-2 h-2 bg-gray-700 rotate-45`}
+          ></div>
         </div>
       )}
     </div>

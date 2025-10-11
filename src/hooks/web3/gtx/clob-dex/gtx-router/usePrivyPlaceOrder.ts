@@ -1,6 +1,6 @@
 import BalanceManagerABI from "@/abis/gtx/clob/BalanceManagerABI";
 import GTXRouterABI from "@/abis/gtx/clob/GTXRouterABI";
-import { useToast } from "@/features/trading/components/place-order/toastContext";
+import { useToast } from "@/_components/toastContext";
 import { wagmiConfig } from "@/configs/wagmi";
 import { ContractName, getContractAddress } from "@/constants/contract/contract-address";
 import { getCoreChain, isFeatureEnabled } from "@/constants/features/features-config";

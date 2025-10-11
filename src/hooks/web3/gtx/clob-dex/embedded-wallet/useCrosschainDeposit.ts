@@ -3,7 +3,7 @@ import { encodeFunctionData, formatUnits } from 'viem';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import { ChainBalanceManagerABI } from '@/abis/gtx/clob/ChainBalanceManagerABI';
 import { useState } from 'react';
-import { useToast } from '@/features/trading/components/place-order/toastContext';
+// import { useToast } from '@/_components/toastContext';
 import { getContractAddress, ContractName } from '@/constants/contract/contract-address';
 import { isCrosschainSupportedChain, getSupportedCrosschainDepositChainNames } from '@/constants/features/features-config';
 
@@ -12,7 +12,7 @@ export function useCrosschainDeposit() {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const { showToast, updateToast } = useToast();
+  // const { showToast, updateToast } = useToast();
 
   // Helper function to get token decimals
   const getTokenDecimals = async (provider: any, tokenAddress: string): Promise<number> => {
@@ -151,10 +151,10 @@ export function useCrosschainDeposit() {
     
     // Note: recipientAddress should be the embedded (privy) wallet address
     // The external wallet will be the sender of the transaction
-    const toastId = showToast({
-      type: 'loading',
-      message: 'Processing crosschain deposit...',
-    });
+    // const toastId = showToast({
+    //   type: 'loading',
+    //   message: 'Processing crosschain deposit...',
+    // });
 
     try {
       setLoading(true);
@@ -369,10 +369,10 @@ export function useCrosschainDeposit() {
       });
 
       setCurrentStep('Crosschain deposit submitted successfully!');
-      updateToast(toastId, {
-        type: 'success',
-        message: 'Crosschain deposit successful! Tokens will arrive shortly.',
-      });
+      // updateToast(toastId, {
+      //   type: 'success',
+      //   message: 'Crosschain deposit successful! Tokens will arrive shortly.',
+      // });
       console.log('[CROSSCHAIN-DEPOSIT] 🟠 useCrosschainDeposit: Crosschain deposit transaction sent:', depositTxHash);
       console.log('[CROSSCHAIN-DEPOSIT] 🟠 useCrosschainDeposit: Crosschain deposit completed successfully');
 
@@ -405,21 +405,21 @@ export function useCrosschainDeposit() {
       if (error instanceof Error) {
         const errorStr = error.toString();
         if (errorStr.includes('insufficient funds for gas') || errorStr.includes('insufficient funds') || errorStr.includes('InsufficientFunds') || errorStr.includes('gas required exceeds allowance')) {
-          updateToast(toastId, {
-            type: 'error',
-            message: 'Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.',
-          });
+          // updateToast(toastId, {
+          //   type: 'error',
+          //   message: 'Insufficient gas funds. Please add more native tokens to your wallet to pay for transaction fees.',
+          // });
         } else {
-          updateToast(toastId, {
-            type: 'error',
-            message: 'Crosschain deposit failed. Please try again.',
-          });
+          // updateToast(toastId, {
+          //   type: 'error',
+          //   message: 'Crosschain deposit failed. Please try again.',
+          // });
         }
       } else {
-        updateToast(toastId, {
-          type: 'error',
-          message: 'Crosschain deposit failed. Please try again.',
-        });
+        // updateToast(toastId, {
+        //   type: 'error',
+        //   message: 'Crosschain deposit failed. Please try again.',
+        // });
       }
       
       setCurrentStep('');

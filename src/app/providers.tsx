@@ -3,8 +3,8 @@
 import { ReactNode } from 'react';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
-import { ToastProvider } from '@/features/trading/components/place-order/toastContext';
-import ToastContainer from '@/features/trading/components/place-order/toastContainer';
+import { ToastProvider } from '@/_components/toastContext';
+import ToastContainer from '@/_components/toastContainer';
 import PrivyProviders from '@/providers/privy-provider';
 import { WebSocketProvider } from '@/contexts/websocket-context';
 import { ThemeProvider } from 'next-themes';

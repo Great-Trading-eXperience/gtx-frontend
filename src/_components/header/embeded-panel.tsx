@@ -50,7 +50,7 @@ import {
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { useChainId } from 'wagmi';
-import GTXTooltip from '../tooltip';
+import GTXTooltip from '@/_components/tooltip';
 
 // GraphQL query for crosschain transfer history filtered by sender
 const getCrossChainTransfersQuery = `

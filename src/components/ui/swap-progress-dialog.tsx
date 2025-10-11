@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/_components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { ArrowRight, CheckCircle2, ExternalLink, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"

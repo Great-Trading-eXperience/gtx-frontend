@@ -1,4 +1,7 @@
-import { OrderSideEnum } from '@/lib/enums/clob.enum';
+enum OrderSideEnum {
+    BUY = 0,
+    SELL = 1,
+}
 
 // Enum for asset type (base/quote)
 export enum AssetType {
@@ -55,6 +58,6 @@ export interface ProcessedPoolItem {
   quoteTokenAddress: string;
   baseSymbol: string;
   quoteSymbol: string;
-  baseDecimals: number | undefined;
-  quoteDecimals: number | undefined;
+  baseDecimals: number;
+  quoteDecimals: number;
 }

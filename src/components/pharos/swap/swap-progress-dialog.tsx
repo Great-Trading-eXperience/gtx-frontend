@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { CheckCircle2, Loader2, ArrowRight, ExternalLink } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/_components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { OrderAction } from "@/hooks/web3/pharos/useCrossChainOrder"

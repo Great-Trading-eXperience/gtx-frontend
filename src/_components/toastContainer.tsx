@@ -12,21 +12,15 @@ const ToastContainer: React.FC = () => {
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return (
-          <CheckCircle className={`w-4 h-4 text-green-500`} />
-        );
+        return <CheckCircle className={`w-4 h-4 text-green-500`} />;
       case 'error':
-        return (
-          <XCircle className={`w-4 h-4 text-red-500`} />
-        );
+        return <XCircle className={`w-4 h-4 text-red-500`} />;
       case 'loading':
         return (
           <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
         );
       default:
-        return (
-          <AlertCircle className={`w-4 h-4 text-gray-500`} />
-        );
+        return <AlertCircle className={`w-4 h-4 text-gray-500`} />;
     }
   };
 
