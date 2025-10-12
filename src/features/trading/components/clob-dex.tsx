@@ -133,7 +133,7 @@ export default function ClobDex() {
 
   return (
     <>
-      <div className="grid md:grid-cols-[minmax(0,1fr)_320px_320px] gap-[4px] px-[2px] pt-[4px] h-fit">
+      <div className="grid md:grid-cols-[minmax(0,1fr)_282px_282px] gap-[4px] px-[2px] pt-[4px] h-fit">
         {/* Chart and Market Widget */}
         <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
           <ChartComponent
@@ -144,7 +144,18 @@ export default function ClobDex() {
           />
         </div>
 
-        <div className="flex flex-row w-full gap-1">
+        <MarketDataTabs
+          address={effectiveAddress}
+          chainId={chainId}
+          defaultChainId={defaultChainId}
+          selectedPool={selectedPool}
+          poolsLoading={poolsLoading}
+          poolsError={poolsError}
+          depthData={combinedDepth}
+          trades={combinedTrades}
+          tradesLoading={tradesLoading}
+        />
+        <div className="hidden md:flex flex-row w-full">
           <PlaceOrder
             address={effectiveAddress}
             chainId={chainId}
@@ -154,17 +165,6 @@ export default function ClobDex() {
             ticker24hr={ticker24hr}
             refetchAccount={refetchAccount}
             isLoading={isLoading}
-          />
-          <MarketDataTabs
-            address={effectiveAddress}
-            chainId={chainId}
-            defaultChainId={defaultChainId}
-            selectedPool={selectedPool}
-            poolsLoading={poolsLoading}
-            poolsError={poolsError}
-            depthData={combinedDepth}
-            trades={combinedTrades}
-            tradesLoading={tradesLoading}
           />
         </div>
       </div>
