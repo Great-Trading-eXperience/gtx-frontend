@@ -14,9 +14,9 @@ import { BookOpen, History, Wallet } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { ClobDexComponentProps } from '../../types/chart.types';
 import BalancesHistoryTable from './balances';
-import OrderHistoryTable from './orders';
-import TradeHistoryTable from './trades';
 import TradingHistorySkeleton from './trading-history-skeleton';
+import OrderHistoryTable from './order-history/orderHistoryTable';
+import TradeHistoryTable from './trade-history/trades';
 
 export interface TradingHistoryProps extends ClobDexComponentProps {
   balanceData: BalanceItem[];
@@ -62,17 +62,9 @@ export default function TradingHistory({
 }: TradingHistoryProps) {
   const { isConnected } = useAccount();
 
-  // Show skeleton when component is loading or when major data is loading
   if (isLoading || (!address && (balancesLoading || ordersLoading || tradesLoading))) {
     return <TradingHistorySkeleton />;
   }
-
-  const solidColorConfig = {
-    backgroundColor: 'bg-transparent',
-    hoverBackgroundColor: 'hover:bg-slate-800/50',
-    textColor: 'text-white',
-    mode: 'solid' as const,
-  };
 
   return (
     <div className="relative mt-1 mb-20 md:mb-0">
@@ -112,64 +104,34 @@ export default function TradingHistory({
               value="open-orders"
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
-              {isConnected ? (
-                <OrderHistoryTable
-                  address={address}
-                  chainId={chainId}
-                  defaultChainId={defaultChainId}
-                  ordersData={ordersData}
-                  ordersLoading={ordersLoading}
-                  ordersError={ordersError}
-                  selectedPool={selectedPool}
-                  marketOpenOrdersData={marketOpenOrdersData}
-                  marketOpenOrdersLoading={marketOpenOrdersLoading}
-                  marketAllOrdersData={marketAllOrdersData}
-                  marketAllOrdersLoading={marketAllOrdersLoading}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
-                    <BookOpen className="h-12 w-12 text-gray-400" />
-                    <p className="text-lg text-gray-200">
-                      Connect your wallet to see your open orders
-                    </p>
-                    <PrivyAuthButton
-                      className="border border-slate-500"
-                      showFullProfile={false}
-                    />
-                  </div>
-                </div>
-              )}
+              <OrderHistoryTable
+                address={address}
+                chainId={chainId}
+                defaultChainId={defaultChainId}
+                ordersData={ordersData}
+                ordersLoading={ordersLoading}
+                ordersError={ordersError}
+                selectedPool={selectedPool}
+                marketOpenOrdersData={marketOpenOrdersData}
+                marketOpenOrdersLoading={marketOpenOrdersLoading}
+                marketAllOrdersData={marketAllOrdersData}
+                marketAllOrdersLoading={marketAllOrdersLoading}
+              />
             </TabsContent>
 
             <TabsContent
               value="trades"
               className="rounded-lg border border-gray-800/30 bg-gray-900/20 p-0 transition-all duration-500 animate-in fade-in-0"
             >
-              {isConnected ? (
-                <TradeHistoryTable
-                  address={address}
-                  chainId={chainId}
-                  defaultChainId={defaultChainId}
-                  userTradesData={userTradesData}
-                  tradesLoading={tradesLoading}
-                  tradesError={tradesError}
-                  selectedPool={selectedPool}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-800/30 bg-gray-900/20 p-8 text-center">
-                    <History className="h-12 w-12 text-gray-400" />
-                    <p className="text-lg text-gray-200">
-                      Connect your wallet to see your trade history
-                    </p>
-                    <PrivyAuthButton
-                      className="border border-slate-500"
-                      showFullProfile={false}
-                    />
-                  </div>
-                </div>
-              )}
+              <TradeHistoryTable
+                address={address}
+                chainId={chainId}
+                defaultChainId={defaultChainId}
+                userTradesData={userTradesData}
+                tradesLoading={tradesLoading}
+                tradesError={tradesError}
+                selectedPool={selectedPool}
+              />
             </TabsContent>
 
             <TabsContent
