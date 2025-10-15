@@ -452,10 +452,10 @@ export default function MarketsDataTable({
                         <div className="flex items-center gap-1.5">
                           <div className="relative group">
                             <button
-                              className="w-3 h-3flex items-center justify-center border border-white/20 rounded-md hover:bg-white/20 transition-colors"
+                              className="w-6 h-6 flex items-center justify-center border border-white/20 rounded-md hover:bg-white/20 transition-colors"
                               onClick={e => copyToClipboard(market.id, 'market', e)}
                             >
-                              <Copy className="h-1.5 w-1.5 text-white/70" />
+                              <Copy className="h-3 w-3 text-white/70" />
                             </button>
                             <div className="absolute left-0 top-0 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-white/20 text-white text-xs rounded-md py-1.5 px-2.5 whitespace-nowrap z-10">
                               Copy token {market.name}
@@ -471,7 +471,7 @@ export default function MarketsDataTable({
                             }
                           >
                             <Star
-                              className={`w-2.5 h-2.5 ${
+                              className={`w-5 h-5 ${
                                 market.starred
                                   ? 'fill-yellow-400 text-yellow-400'
                                   : 'text-white/40'
@@ -479,7 +479,7 @@ export default function MarketsDataTable({
                             />
                           </button>
                           <div
-                            className="w-4 h-4 rounded-full flex items-center justify-center overflow-hidden border border-white/30"
+                            className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-white/30"
                             style={{ backgroundColor: market.iconInfo.bg }}
                           >
                             {market.iconInfo.hasImage && market.iconInfo.imagePath ? (
@@ -511,21 +511,30 @@ export default function MarketsDataTable({
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-white">{market.name}</span>
-                            <span className="text-white/60">/ {market.pair}</span>
+                          <div className="flex flex-col items-start gap-1.5">
+                            <span className="font-medium text-white text-sm">
+                              {market.name}
+                            </span>
+                            <span className="text-white/60 text-xs">{market.pair}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-white font-mono">${market.price}</td>
-                      <td className="px-3 py-2 text-white/90 font-mono">
+                      <td className="px-3 py-2 text-white font-mono text-sm">
+                        ${market.price}
+                      </td>
+                      <td className="px-3 py-2 text-white/90 font-mono text-sm">
                         ${market.volume}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} className="text-center py-8 text-white/50">
+                    <td
+                      colSpan={3}
+                      className={`text-center py-8 text-white/50 ${
+                        isMobile && 'text-sm'
+                      }`}
+                    >
                       {showWatchlist
                         ? 'Your watchlist is empty. Star some markets to add them here.'
                         : searchTerm
@@ -569,8 +578,10 @@ export default function MarketsDataTable({
 
       {/* Copy notification */}
       {copiedItem && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          Copied to clipboard!
+        <div className="w-full flex items-center justify-center fixed bottom-24 left-0 z-50">
+          <div className={`bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg w-fit ${isMobile && 'text-sm'}`}>
+            Copied to clipboard!
+          </div>
         </div>
       )}
     </div>
