@@ -1,8 +1,7 @@
 export class ChainManager {
   private static CHAIN_CONFIGS: Record<number, { name: string; rpc: string }> = {
-    4661: { name: 'Appchain', rpc: 'https://appchain.caff.testnet.espresso.network' },
-    421614: { name: 'Arbitrum', rpc: 'https://testnet.riselabs.xyz' },
-    1918988905: { name: 'Rari', rpc: 'https://testnet.rpc.rarichain.org/http' },
+    31337: { name: 'Core Devnet', rpc: '/core-devnet' },
+    31338: { name: 'Side Devnet', rpc: '/side-devnet' },
   };
 
   static getChainName(chainId: number): string {

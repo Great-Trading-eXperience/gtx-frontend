@@ -101,7 +101,7 @@ export function PageLayout({ children }: PageLayoutProps) {
     }
   }, [ready]);
 
-  const isConnected = isConnectedEmbeddedWallet && isConnectedExternalWallet;
+  const isConnected = isConnectedEmbeddedWallet; // isConnectedExternalWallet
 
   const togglePanel = () => {
     setIsPanelOpen(!isPanelOpen);

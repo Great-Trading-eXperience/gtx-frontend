@@ -31,8 +31,8 @@ export function WalletHeader({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-gray-300 font-medium">GTX wallet</span>
-          <QrCode size={16} className="text-gray-400" />
-          <Edit3 size={16} className="text-gray-400" />
+          {/* <QrCode size={16} className="text-gray-400" />
+          <Edit3 size={16} className="text-gray-400" /> */}
         </div>
         <div className="text-xs text-gray-400">{currentChainName}</div>
       </div>

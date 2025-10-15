@@ -1,17 +1,17 @@
-import { Asset, BalanceHookResult, Token } from '../types/wallet.types';
+import { Asset, BalanceHookResult, PoolItem, Token } from '../types/wallet.types';
 
 export class TokenManager {
-  static getUniqueTokens(pools: any[]): Token[] {
+  static getUniqueTokens(pools: PoolItem[]): Token[] {
     const tokenMap = new Map<string, Token>();
 
     pools.forEach(pool => {
-      [pool.quoteToken, pool.baseToken].forEach(token => {
+      [pool.quoteCurrency, pool.baseCurrency].forEach(token => {
         if (token && !tokenMap.has(token.address)) {
           tokenMap.set(token.address, {
             address: token.address,
             symbol: token.symbol,
             decimals: token.decimals,
-            name: token.name
+            name: token.name,
           });
         }
       });
@@ -26,14 +26,14 @@ export class TokenManager {
         address: balance.token.address,
         symbol: balance.token.symbol,
         decimals: balance.token.decimals,
-        name: balance.token.name
+        name: balance.token.name,
       },
       balance: balance.tokenBalance ?? '0',
       displayBalance: balance.displayBalance ?? '0',
       symbol: balance.symbol,
       managerBalance: balance.managerBalance ?? '0',
       externalBalance: balance.externalBalance ?? '0',
-      externalManagerBalance: balance.externalManagerBalance ?? '0'
+      externalManagerBalance: balance.externalManagerBalance ?? '0',
     }));
   }
 

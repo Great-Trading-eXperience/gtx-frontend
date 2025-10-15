@@ -1,9 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
-import { useQuery } from '@tanstack/react-query';
-import request from 'graphql-request';
 import { useWalletState } from '../hooks/useWalletState';
 import { useMultiTokenBalances } from '../hooks/useMultiTokenBalance';
 import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
@@ -19,85 +16,24 @@ import { HistoryTab } from './historyTab';
 import { ChainManager } from '../lib/balanceManager';
 import { TokenManager } from '../lib/tokenManager';
 import { FEATURE_FLAGS, getCoreChain } from '@/constants/features/features-config';
-import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { poolsQuery, poolsPonderQuery } from '@/graphql/gtx/clob';
-import { getUseSubgraph } from '@/utils/env';
-import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
-import { Asset, Balance, CrossChainTransfersResponse, PoolsResponse, Transaction } from '../types/wallet.types';
-
-// GraphQL query for crosschain history
-const getCrossChainTransfersQuery = `
-  query GetCrossChainTransferss($sender: String!) {
-    crossChainTransferss(
-      where: {
-        amount_gt: "0"
-        sender: $sender
-      }
-      orderBy: "timestamp"
-      orderDirection: "desc"
-    ) {
-      items {
-        direction
-        amount
-        recipient
-        sender
-        sourceChainId
-        sourceToken
-        dispatchMessage {
-          chainId
-          blockNumber
-          messageId
-          sender
-          timestamp
-          transactionHash
-          type
-          pairedMessages {
-            items {
-              blockNumber
-              chainId
-              type
-              transactionHash
-              timestamp
-              id
-              sender
-            }
-          }
-        }
-      }
-    }
-  }
-`;
+import { Asset, WalletTabs } from '../types/wallet.types';
+import { useHistoryData } from '../hooks/useHistoryData';
+import { usePoolsData } from '../hooks/usePoolsData';
 
 export default function WalletPage() {
-  const { logout, exportWallet } = usePrivy();
   const walletState = useWalletState();
-  const [activeTab, setActiveTab] = useState<
-    'Asset' | 'Deposit' | 'Withdraw' | 'History'
-  >('Deposit');
+  const [activeTab, setActiveTab] = useState<WalletTabs>('Deposit');
 
-  const defaultChainId = Number(DEFAULT_CHAIN);
   const displayChainId =
     walletState.embeddedChainId || walletState.connectedChainId || getCoreChain();
 
   // Fetch pools data
-  const { data: poolsData } = useQuery<PoolsResponse>({
-    queryKey: ['pools', displayChainId],
-    queryFn: async () => {
-      const url = GTX_GRAPHQL_URL(displayChainId);
-      if (!url) throw new Error('GraphQL URL not found');
-
-      const useSubgraph = getUseSubgraph();
-      const query = useSubgraph ? poolsQuery : poolsPonderQuery;
-
-      return await request(url, query);
-    },
-    enabled: !!displayChainId,
-  });
+  const { pools } = usePoolsData(displayChainId);
 
   // Get unique tokens from pools
-  const pools = poolsData?.pools || [];
   const tokens = TokenManager.getUniqueTokens(pools);
 
+  console.log(walletState);
   // Get all balances dynamically
   const balances = useMultiTokenBalances(
     tokens,
@@ -108,114 +44,22 @@ export default function WalletPage() {
     FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED
   );
 
+  console.log(balances)
+
+  return;
+
   // Create assets for display
   const assets: Asset[] = TokenManager.createAssets(balances);
 
   // Deposit/Withdraw operations
-  const {
-    deposit: privyDeposit,
-    loading: depositLoading,
-    currentStep: depositCurrentStep,
-    error: depositError,
-    resetState: depositResetState,
-  } = usePrivyDeposit();
+  const { deposit: privyDeposit, loading: depositLoading } = usePrivyDeposit();
 
-  const {
-    deposit: crosschainDeposit,
-    loading: crosschainDepositLoading,
-    currentStep: crosschainDepositCurrentStep,
-    error: crosschainDepositError,
-    resetState: crosschainDepositResetState,
-  } = useCrosschainDeposit();
+  const { deposit: crosschainDeposit, loading: crosschainDepositLoading } =
+    useCrosschainDeposit();
 
-  const {
-    withdraw: privyWithdraw,
-    loading: withdrawLoading,
-    currentStep: withdrawCurrentStep,
-    error: withdrawError,
-    resetState: withdrawResetState,
-  } = usePrivyWithdraw();
+  const { withdraw: privyWithdraw, loading: withdrawLoading } = usePrivyWithdraw();
 
-  // Fetch crosschain history
-  const {
-    data: historyData,
-    isLoading: historyLoading,
-    error: historyError,
-    refetch: refetchHistory,
-  } = useQuery<CrossChainTransfersResponse>({
-    queryKey: ['crosschain-history', walletState.externalAddress],
-    queryFn: async () => {
-      if (
-        !walletState.externalAddress ||
-        walletState.externalAddress === 'Not Connected'
-      ) {
-        throw new Error('External wallet address not available');
-      }
-      const currentChainId = walletState.connectedChainId || defaultChainId;
-      const url = GTX_GRAPHQL_URL(currentChainId);
-      if (!url) throw new Error('GraphQL URL not found');
-
-      return await request(url, getCrossChainTransfersQuery, {
-        sender: walletState.externalAddress,
-      });
-    },
-    enabled:
-      !!walletState.externalAddress && walletState.externalAddress !== 'Not Connected',
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 20000,
-  });
-
-  // Transform history data for HistoryTab component
-  const transactions: Transaction[] = (historyData?.crossChainTransferss?.items || []).map(
-    (transfer: any) => {
-      const getTokenInfo = (address: string) => {
-        const addr = address.toLowerCase();
-        if (
-          addr === '0x1362dd75d8f1579a0ebd62df92d8f3852c3a7516' ||
-          addr === '0x5eafc52d170ff391d41fba99a7e91b9c4d49929a'
-        ) {
-          return { symbol: 'USDT', decimals: 6 };
-        } else if (
-          addr === '0xb2e9eabb827b78e2ac66be17327603778d117d18' ||
-          addr === '0x6b4c6c7521b3ed61a9fa02e926b73d278b2a6ca7'
-        ) {
-          return { symbol: 'WETH', decimals: 18 };
-        } else if (addr === '0x02950119c4ccd1993f7938a55b8ab8384c3cce4f') {
-          return { symbol: 'USDC', decimals: 18 };
-        } else if (addr === '0x24e55f604ff98a03b9493b53ba3ddebd7d02733a') {
-          return { symbol: 'WBTC', decimals: 8 };
-        }
-        return { symbol: 'Token', decimals: 18 };
-      };
-
-      const tokenInfo = getTokenInfo(transfer.sourceToken);
-      const amount = parseFloat(transfer.amount) / Math.pow(10, tokenInfo.decimals);
-      const processMessage = transfer.dispatchMessage.pairedMessages?.items?.find(
-        (msg: any) => msg.type === 'PROCESS'
-      );
-
-      return {
-        id: transfer.dispatchMessage.transactionHash,
-        type: transfer.direction === 'DEPOSIT' ? 'deposit' : 'withdrawal',
-        amount: amount.toFixed(4),
-        token: tokenInfo.symbol,
-        sourceChain: ChainManager.getChainName(parseInt(transfer.sourceChainId)),
-        destChain:
-          transfer.direction === 'DEPOSIT'
-            ? 'Rari'
-            : ChainManager.getChainName(parseInt(transfer.dispatchMessage.chainId)),
-        from: transfer.sender,
-        to: transfer.recipient,
-        timestamp: parseInt(transfer.dispatchMessage.timestamp),
-        sourceTxHash: transfer.dispatchMessage.transactionHash,
-        destTxHash: processMessage?.transactionHash,
-        messageId: transfer.dispatchMessage.messageId,
-        status: processMessage ? 'completed' : 'processing',
-        sourceChainId: parseInt(transfer.sourceChainId),
-        destChainId: processMessage ? parseInt(processMessage.chainId) : 1918988905,
-      };
-    }
-  );
+  const { transactions, historyLoading, refetchHistory } = useHistoryData();
 
   // Utility functions
   const copyToClipboard = (text: string) => {
@@ -229,7 +73,7 @@ export default function WalletPage() {
   // Handle deposit
   const handleDeposit = async (amount: string, tokenAddress: string) => {
     if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
-      const sourceChainId = walletState.connectedChainId || defaultChainId;
+      const sourceChainId = walletState.connectedChainId;
 
       // Validate chain support
       if (!ChainManager.isCrosschainSupported(sourceChainId)) {
@@ -253,11 +97,11 @@ export default function WalletPage() {
       // Get source token address for crosschain
       const selectedToken = tokens.find(t => t.address === tokenAddress);
       const sourceTokenAddress =
-        (selectedToken as any)?.sourceAddresses?.[sourceChainId] || tokenAddress;
+        selectedToken?.sourceAddresses?.[sourceChainId] || tokenAddress;
 
       crosschainDeposit(
         amount,
-        sourceTokenAddress,
+        sourceTokenAddress as `0x${string}`,
         walletState.embeddedAddress as `0x${string}`,
         sourceChainId
       );
@@ -343,7 +187,7 @@ export default function WalletPage() {
         )}
       </div>
 
-      <WalletFooter onExport={exportWallet} onLogout={logout} />
+      <WalletFooter />
     </div>
   );
 }

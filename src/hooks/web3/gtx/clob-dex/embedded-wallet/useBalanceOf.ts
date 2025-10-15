@@ -13,11 +13,13 @@ interface UseTokenBalanceResult {
 }
 
 export const useTokenBalance = (
-  tokenAddress: `0x${string}` | undefined,
-  walletAddress: `0x${string}` | undefined,
-  chainId?: number,
+  tokenAddress: `0x${string}`,
+  walletAddress: `0x${string}`,
+  chainId: number,
   enabled: boolean = true
 ): UseTokenBalanceResult => {
+  const shouldEnable = enabled && !!(tokenAddress && walletAddress);
+
   const {
     data: decimals,
     isLoading: isLoadingDecimals,
@@ -29,7 +31,7 @@ export const useTokenBalance = (
     functionName: 'decimals',
     chainId,
     query: {
-      enabled: enabled && !!(tokenAddress && walletAddress),
+      enabled: shouldEnable,
     }
   });
 
@@ -43,11 +45,11 @@ export const useTokenBalance = (
     address: tokenAddress,
     abi: ERC20ABI,
     functionName: 'balanceOf',
-    args: walletAddress ? [walletAddress] : undefined,
+    args: [walletAddress],
     chainId,
     query: {
-      enabled: enabled && !!(tokenAddress && walletAddress),
-    }
+      enabled: shouldEnable,
+    },
   });
 
   const { data: tokenNameData } = useReadContract({
@@ -56,8 +58,8 @@ export const useTokenBalance = (
     functionName: 'name',
     chainId,
     query: {
-      enabled: enabled && !!(tokenAddress && walletAddress),
-    }
+      enabled: shouldEnable,
+    },
   });
 
   const { data: tokenSymbolData } = useReadContract({
@@ -66,8 +68,8 @@ export const useTokenBalance = (
     functionName: 'symbol',
     chainId,
     query: {
-      enabled: enabled && !!(tokenAddress && walletAddress),
-    }
+      enabled: shouldEnable,
+    },
   });
 
   const isLoading = isLoadingDecimals || isLoadingBalance;
@@ -82,14 +84,20 @@ export const useTokenBalance = (
   const isError = isErrorDecimals || isErrorBalance;
 
   let formattedBalance: string | null = null;
-  if (!isLoading && !isError && rawBalance !== null && rawBalance !== undefined && typeof decimals === 'number') {
+  if (
+    !isLoading &&
+    !isError &&
+    rawBalance !== null &&
+    rawBalance !== undefined &&
+    typeof decimals === 'number'
+  ) {
     try {
       formattedBalance = formatUnits(rawBalance as bigint, decimals);
     } catch (e) {
-      console.error("Error formatting balance:", e);
+      console.error('Error formatting balance:', e);
       formattedBalance = 'Formatting Error';
       if (!combinedError) {
-        combinedError = e instanceof Error ? e : new Error("Failed to format balance.");
+        combinedError = e instanceof Error ? e : new Error('Failed to format balance.');
       }
     }
   }

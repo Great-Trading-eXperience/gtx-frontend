@@ -53,13 +53,6 @@ export const poolsPonderQuery = gql`
         baseDecimals
         quoteDecimals
       }
-      totalCount
-      pageInfo {
-        endCursor
-        hasNextPage
-        hasPreviousPage
-        startCursor
-      }
     }
   }
 `;

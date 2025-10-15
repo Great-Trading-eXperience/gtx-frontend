@@ -1,3 +1,5 @@
+export type WalletTabs = 'Asset' | 'Deposit' | 'Withdraw' | 'History';
+
 export interface Asset {
   token: {
     address: string;
@@ -83,10 +85,6 @@ export type PoolItem = {
   quoteSymbol?: string;
   baseDecimals?: number;
   quoteDecimals?: number;
-};
-
-export type PoolsResponse = {
-  pools: PoolItem[];
 };
 
 export interface PairedMessageItem {
