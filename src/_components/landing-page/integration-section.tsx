@@ -1,6 +1,7 @@
 'use client';
 
 import { ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 interface Integration {
   name: string;
@@ -64,10 +65,12 @@ const IntegrationColumn = React.memo(
             <div className="flex flex-col items-center text-center relative z-10">
               <div className="flex items-center justify-center mb-4">
                 {integration.icon ? (
-                  <img
+                  <Image
                     src={integration.icon}
                     alt={integration.name}
-                    className="h-20 w-20 rounded-xl"
+                    width={80}
+                    height={80}
+                    className="rounded-xl"
                     loading="lazy"
                   />
                 ) : (

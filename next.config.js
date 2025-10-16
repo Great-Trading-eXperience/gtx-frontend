@@ -5,15 +5,21 @@ const nextConfig = {
     reactStrictMode: false, // Temporarily disabled for WebSocket testing
     // Force dynamic rendering to avoid Privy SSG issues
     experimental: {
-        appDir: true,
-        // Force all pages to be dynamic
-        runtime: 'nodejs',
         outputFileTracingIncludes: {
             '/_not-found': ['./src/**/*'],
         },
     },
-    webpack: (config) => {
+    webpack: (config, { isServer }) => {
         config.resolve.fallback = { fs: false, net: false, tls: false };
+
+        // Mark farcaster SDK as external for server-side rendering
+        if (isServer) {
+            config.externals = config.externals || [];
+            if (Array.isArray(config.externals)) {
+                config.externals.push('@farcaster/miniapp-sdk');
+            }
+        }
+
         return config;
     },
     publicRuntimeConfig: {

@@ -1,31 +1,19 @@
 'use client';
 
 import { Button } from '@/_components/ui/button';
-import { motion } from 'framer-motion';
 import {
   ArrowRightCircle,
-  BarChart4,
   ExternalLink,
   Globe,
   Shield,
-  Users,
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 export function HeroSection() {
-  const [priceValue, setPriceValue] = useState(89324.5);
-  const [priceChange, setPriceChange] = useState(2.4);
-  const chartRef = useRef<SVGPathElement>(null);
-  const chartAreaRef = useRef<HTMLDivElement>(null);
-  const indicatorRef = useRef<HTMLDivElement>(null);
-
-  const stats = [
-    { icon: Users, value: '50K+', label: 'Active Traders' },
-    { icon: BarChart4, value: '$2.5B', label: 'Monthly Volume' },
-    { icon: Zap, value: '0.01s', label: 'Execution Time' },
-  ];
+  const [priceValue] = useState(89324.5);
+  const [priceChange] = useState(2.4);
 
   const features = [
     { icon: Zap, text: 'Crosschain Trading' },
@@ -48,13 +36,7 @@ export function HeroSection() {
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left side - CTA content */}
           <div className="md:order-1">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              className="space-y-4 sm:space-y-6"
-            >
+            <div className="space-y-4 sm:space-y-6 animate-fade-in-up">
               <div className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full border border-blue-500/30 bg-blue-900/20 text-blue-400 text-xs sm:text-sm font-medium">
                 <span className="mr-2 size-2 rounded-full bg-blue-400"></span>
                 Crosschain Decentralized CLOB
@@ -85,12 +67,7 @@ export function HeroSection() {
               </div>
 
               {/* Feature badges */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1.2 }}
-                className="flex flex-wrap gap-2 sm:gap-3 pt-3 sm:pt-4"
-              >
+              <div className="flex flex-wrap gap-2 sm:gap-3 pt-3 sm:pt-4">
                 {features.map((feature, index) => (
                   <div
                     key={index}
@@ -102,17 +79,12 @@ export function HeroSection() {
                     </span>
                   </div>
                 ))}
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           </div>
 
           {/* Right column - Trading dashboard (hidden on mobile) */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="relative order-1 md:order-2 -mx-4 sm:mx-0 hidden md:block"
-          >
+          <div className="relative order-1 md:order-2 -mx-4 sm:mx-0 hidden md:block animate-fade-in">
             {/* Glow effect */}
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur opacity-20"></div>
 
@@ -154,7 +126,7 @@ export function HeroSection() {
               </div>
 
               {/* Chart area */}
-              <div className="px-6 py-8 bg-[#0a0a0a]" ref={chartAreaRef}>
+              <div className="px-6 py-8 bg-[#0a0a0a]">
                 <div className="h-60 w-full relative">
                   {/* Price grid lines */}
                   {[...Array(5)].map((_, i) => (
@@ -175,7 +147,6 @@ export function HeroSection() {
                     preserveAspectRatio="none"
                   >
                     <path
-                      ref={chartRef}
                       d="M0,120 C40,100 80,140 120,80 C160,20 200,60 240,40 C280,20 320,50 360,30"
                       fill="none"
                       stroke="url(#lineGradient)"
@@ -198,10 +169,7 @@ export function HeroSection() {
                   </svg>
 
                   {/* Price indicator dot */}
-                  <div
-                    ref={indicatorRef}
-                    className="absolute top-[30px] right-[40px] w-4 h-4 rounded-full bg-blue-500 border-2 border-[#0a0a0a] shadow-lg shadow-blue-500/50"
-                  />
+                  <div className="absolute top-[30px] right-[40px] w-4 h-4 rounded-full bg-blue-500 border-2 border-[#0a0a0a] shadow-lg shadow-blue-500/50" />
                 </div>
               </div>
 
@@ -219,12 +187,7 @@ export function HeroSection() {
             </div>
 
             {/* Stats floating card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="absolute -right-4 -bottom-16 p-4 bg-[#0a0a0a] border border-blue-900/30 rounded-xl shadow-md shadow-blue-900/20 w-64"
-            >
+            <div className="absolute -right-4 -bottom-16 p-4 bg-[#0a0a0a] border border-blue-900/30 rounded-xl shadow-md shadow-blue-900/20 w-64 animate-fade-in-up">
               {/* Glowing border effect */}
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
 
@@ -250,16 +213,11 @@ export function HeroSection() {
                   <span className="text-xs font-medium text-blue-400">$3.5B</span>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
           {/* Mobile Trading Preview (visible only on small screens) */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="md:hidden order-1 mb-6 relative"
-          >
+          <div className="md:hidden order-1 mb-6 relative animate-fade-in">
             <div className="bg-[#0a0a0a] border border-blue-900/30 rounded-xl p-4 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -329,16 +287,11 @@ export function HeroSection() {
                 </button>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Mobile stats section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="md:hidden mt-8 p-4 bg-[#0a0a0a] border border-blue-900/30 rounded-xl shadow-md shadow-blue-900/20"
-        >
+        <div className="md:hidden mt-8 p-4 bg-[#0a0a0a] border border-blue-900/30 rounded-xl shadow-md shadow-blue-900/20 animate-fade-in-up">
           <div className="relative z-10">
             {/* Glowing border effect */}
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
@@ -366,8 +319,38 @@ export function HeroSection() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.8s ease-out forwards;
+        }
+
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out forwards;
+        }
+      `}</style>
     </section>
   );
 }
