@@ -34,8 +34,8 @@ const TechnologySection = dynamic(() => import('./technology-section').then(mod 
 
 export function LandingEspresso() {
   return (
-    <main className="text-white min-h-screen overflow-hidden bg-black">
-      {/* Hero Section - Load immediately */}
+    <main className="text-white min-h-screen overflow-x-hidden bg-black !p-0 !flex-none !justify-start !items-stretch">
+      {/* Hero Section - Load immediately - No margin/padding */}
       <HeroSection />
 
       {/* Below-the-fold sections - Lazy loaded */}
