@@ -246,7 +246,7 @@ const PlaceOrder = ({
   const isConfirmed = isLimitOrderConfirmed || isMarketOrderConfirmed;
 
   return (
-    <div className="bg-black rounded-lg mx-auto border border-white/20 backdrop-blur-sm">
+    <div className="bg-black w-full rounded-lg mx-auto border border-white/20 backdrop-blur-sm">
       <form onSubmit={handleSubmit} className="space-y-3 p-2">
         {/* Order Type & Side Selection */}
         <div className="grid gap-3">
@@ -319,8 +319,8 @@ const PlaceOrder = ({
       </form>
 
       {/* Fees Info */}
-      <div className="w-full border-t-2 border-gray-600 mt-3" />
-      <div className="flex flex-col w-full gap-3 text-xs text-gray-400 mt-3 px-2">
+      <div className="w-full border-t border-gray-600 mt-3" />
+      <div className="flex flex-col w-full gap-3 text-xs text-gray-400 mt-3 mb-3 px-2">
         <div className="flex flex-row justify-between">
           <span>Fees</span>
           <div className="flex flex-row gap-1 text-gray-200 font-medium">

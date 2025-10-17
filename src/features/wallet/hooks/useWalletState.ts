@@ -13,6 +13,8 @@ export function useWalletState() {
     return parseInt(chainId.replace('eip155:', ''));
   };
 
+  // maybe in here need a chain validator, embedded in core, and external on side
+
   return {
     embeddedWallet,
     externalWallet,

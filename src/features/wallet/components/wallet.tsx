@@ -33,7 +33,6 @@ export default function WalletPage() {
   // Get unique tokens from pools
   const tokens = TokenManager.getUniqueTokens(pools);
 
-  console.log(walletState);
   // Get all balances dynamically
   const balances = useMultiTokenBalances(
     tokens,
@@ -43,10 +42,6 @@ export default function WalletPage() {
     walletState.connectedChainId || displayChainId,
     FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED
   );
-
-  console.log(balances)
-
-  return;
 
   // Create assets for display
   const assets: Asset[] = TokenManager.createAssets(balances);
@@ -140,7 +135,7 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-20">
       <WalletHeader
         externalAddress={walletState.externalAddress}
         embeddedAddress={walletState.embeddedAddress}

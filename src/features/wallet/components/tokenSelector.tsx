@@ -1,5 +1,6 @@
 import { ChevronDown, Copy } from 'lucide-react';
 import { Token } from '../types/wallet.types';
+import { TokenSymbol } from './tokenSymbol';
 
 interface TokenSelectorProps {
   tokens: Token[];
@@ -31,7 +32,7 @@ export function TokenSelector({
         <div
           className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium`}
         >
-          {currentToken?.symbol}
+          <TokenSymbol symbol={currentToken?.symbol || ''} />
         </div>
         <div className="flex flex-col">
           <span className="text-white font-medium">{currentToken?.symbol}</span>
@@ -59,7 +60,7 @@ export function TokenSelector({
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-medium`}
               >
-                {token.symbol}
+                <TokenSymbol symbol={token.symbol} />
               </div>
               <div className="flex flex-col flex-1">
                 <div className="flex items-center gap-2">

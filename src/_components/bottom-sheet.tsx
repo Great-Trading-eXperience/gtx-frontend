@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 interface BottomSheetProps {
@@ -42,6 +43,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
+        <div className="flex justify-end px-6 pt-2 pb-0">
+          <button onClick={onClose}><X/></button>
+        </div>
         <div className="p-6 overflow-y-auto">{children}</div>
       </div>
     </>

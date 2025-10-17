@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Copy } from 'lucide-react';
 import { Asset } from '../types/wallet.types';
+import { TokenSymbol } from './tokenSymbol';
 
 interface AssetTabProps {
   assets: Asset[];
@@ -76,6 +77,7 @@ export function AssetTab({ assets }: AssetTabProps) {
               className="flex items-center justify-between py-2"
             >
               <div className="flex items-center gap-3">
+                <TokenSymbol symbol={asset.symbol} />
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{asset.symbol}</span>
