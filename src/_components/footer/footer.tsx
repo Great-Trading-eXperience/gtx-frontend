@@ -36,23 +36,6 @@ const Footer = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-white/10 opacity-30"></div>
       <div className="absolute inset-0 bg-[url('/blockchain-bg.svg')] bg-repeat opacity-5"></div>
 
-      {/* Subtle animated particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute bg-white rounded-full opacity-20"
-            style={{
-              width: Math.random() * 4 + 2 + 'px',
-              height: Math.random() * 4 + 2 + 'px',
-              left: Math.random() * 100 + '%',
-              top: Math.random() * 100 + '%',
-              animation: `float ${Math.random() * 10 + 10}s linear infinite`,
-            }}
-          />
-        ))}
-      </div>
-
       <div className="max-w-screen-xl mx-auto px-6 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-12">
           {/* Logo Section */}
@@ -127,21 +110,6 @@ const Footer = () => {
         {/* Gradient bar at bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-700 via-white/40 to-gray-700"></div>
       </div>
-
-      {/* CSS for floating animation */}
-      <style jsx>{`
-        @keyframes float {
-          0% {
-            transform: translateY(0) translateX(0);
-          }
-          50% {
-            transform: translateY(-20px) translateX(10px);
-          }
-          100% {
-            transform: translateY(0) translateX(0);
-          }
-        }
-      `}</style>
     </footer>
   );
 };

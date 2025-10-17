@@ -49,25 +49,12 @@ export function HeroSection() {
               Trade across any EVM chain without moving your funds. Experience unified liquidity and transparent execution in a decentralized orderbook.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Link href="/markets" target="_blank" className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg font-semibold rounded-xl relative overflow-hidden group shadow-lg shadow-blue-600/30">
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 opacity-0 group-hover:opacity-100 transform group-hover:translate-x-full transition-all duration-1000 ease-out"></span>
-                  <div className="flex items-center gap-2 relative z-10">
-                    Launch App
-                    <ExternalLink className="h-5 w-5" />
-                  </div>
-                </Button>
-              </Link>
-            </div>
-
             {/* Feature badges */}
               <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 pt-3 sm:pt-4">
                 {features.map((feature, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-center gap-1.5 sm:gap-2 bg-[#0a0a0a] border border-blue-500/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full"
+                    className="flex items-center justify-center gap-1.5 sm:gap-2 bg-[#0a0a0a] border border-blue-500/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-opacity-35"
                   >
                     <feature.icon className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400" />
                     <span className="text-xs sm:text-sm text-gray-300">
