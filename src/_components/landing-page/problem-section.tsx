@@ -70,19 +70,6 @@ export function ProblemsSection() {
       <div className="max-w-screen-xl mx-auto px-4 relative z-10">
         {/* Header */}
         <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="inline-block"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-blue-500/30 bg-blue-500/5 mb-6">
-              <Zap className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-blue-400 font-medium">DeFi Evolution</span>
-            </div>
-          </motion.div>
-
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -91,7 +78,7 @@ export function ProblemsSection() {
             className="text-4xl md:text-5xl font-bold mb-4"
           >
             Breaking{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-blue-700">
               Blockchain Barriers
             </span>
           </motion.h2>
@@ -136,9 +123,6 @@ export function ProblemsSection() {
                     {/* Problem Section */}
                     <div className="mb-6">
                       <div className="flex items-start gap-4 mb-3">
-                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/30">
-                          <Icon className="w-5 h-5 text-red-400" />
-                        </div>
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
                             {problem.title}

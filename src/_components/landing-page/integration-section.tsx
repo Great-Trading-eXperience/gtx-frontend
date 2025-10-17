@@ -120,6 +120,38 @@ export function IntegrationsSection() {
       description: 'Powerful charting capabilities powered by TradingView',
     },
   ];
+  const integrationsReverse = [
+    {
+      icon: '/images/ponder.png',
+      name: 'Ponder',
+      description: 'Fast, reliable, and maintainable backend software in crypto',
+    },
+    {
+      icon: '/images/based.webp',
+      name: 'Base',
+      description: 'An open onchain platform built from Coinbase’s internal experiment',
+    },
+    {
+      icon: '/images/hyperlane.png',
+      name: 'Hyperlane',
+      description: 'Cross-chain composability through Hyperlane network',
+    },
+    {
+      icon: '/images/tradingview.png',
+      name: 'TradingView',
+      description: 'Powerful charting capabilities powered by TradingView',
+    },
+    {
+      icon: '/images/privy.jpg',
+      name: 'Privy',
+      description: 'Secure wallet integration for private key management',
+    },
+    {
+      icon: '/images/espresso.png',
+      name: 'Espresso Network',
+      description: 'A confirmation layer built to support cross-chain composability.',
+    },
+  ];
 
   return (
     <section className="py-20 relative z-10 overflow-hidden">
@@ -160,7 +192,7 @@ export function IntegrationsSection() {
             <div className="grid md:grid-cols-2 gap-4 lg:h-[600px] h-[400px] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
               <IntegrationColumn integrations={integrations} />
               <IntegrationColumn
-                integrations={integrations.slice().reverse()}
+                integrations={integrationsReverse.slice().reverse()}
                 className="hidden md:flex"
                 reverse
               />
