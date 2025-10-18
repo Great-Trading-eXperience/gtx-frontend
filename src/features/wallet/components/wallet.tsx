@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useWalletState } from '../hooks/useWalletState';
 import { useMultiTokenBalances } from '../hooks/useMultiTokenBalance';
 import { usePrivyDeposit } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyDeposit';
@@ -15,36 +15,89 @@ import { WithdrawTab } from './withdrawTab';
 import { HistoryTab } from './historyTab';
 import { ChainManager } from '../lib/balanceManager';
 import { TokenManager } from '../lib/tokenManager';
-import { FEATURE_FLAGS, getCoreChain } from '@/constants/features/features-config';
-import { Asset, WalletTabs } from '../types/wallet.types';
+import { Asset, BalanceHookResult, WalletTabs } from '../types/wallet.types';
 import { useHistoryData } from '../hooks/useHistoryData';
 import { usePoolsData } from '../hooks/usePoolsData';
 
 export default function WalletPage() {
   const walletState = useWalletState();
+  console.log(walletState);
   const [activeTab, setActiveTab] = useState<WalletTabs>('Deposit');
 
-  const displayChainId =
-    walletState.embeddedChainId || walletState.connectedChainId || getCoreChain();
+  const { pools } = usePoolsData(walletState.embeddedChainId);
 
-  // Fetch pools data
-  const { pools } = usePoolsData(displayChainId);
+  const realTokens = useMemo(
+    () => [
+      // USDC
+      {
+        address: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933' as `0x${string}`,
+        symbol: 'USDC',
+        decimals: 6,
+        isQuote: true,
+        chainId: walletState.externalChainId || 31338,
+        // sourceAddresses: {
+        //   31338: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933' as `0x${string}`,
+        // },
+      },
+      // WETH
+      {
+        address: '0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E' as `0x${string}`,
+        symbol: 'WETH',
+        decimals: 18,
+        isQuote: false,
+        chainId: walletState.externalChainId || 31338,
+        // sourceAddresses: {
+        //   31338: '0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E' as `0x${string}`,
+        // },
+      },
+      // WBTC
+      {
+        address: '0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690' as `0x${string}`,
+        symbol: 'WBTC',
+        decimals: 8,
+        isQuote: false,
+        chainId: walletState.externalChainId || 31338,
+        // sourceAddresses: {
+        //   31338: '0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690' as `0x${string}`,
+        // },
+      },
+    ],
+    [walletState.externalChainId]
+  );
+
+  const syntheticToken = TokenManager.getUniqueTokens(pools);
+
+  const balances = useMultiTokenBalances(
+    realTokens,
+    syntheticToken,
+    walletState.embeddedAddress,
+    walletState.externalAddress,
+    walletState.embeddedChainId,
+    walletState.externalChainId
+  );
+
+  console.log(balances);
+
+  const { realTokenBalances, syntheticTokenBalances } = balances.reduce<{
+    realTokenBalances: BalanceHookResult[];
+    syntheticTokenBalances: BalanceHookResult[];
+  }>(
+    (acc, token) => {
+      if (token.symbol.startsWith('gs')) {
+        acc.syntheticTokenBalances.push(token);
+      } else {
+        acc.realTokenBalances.push(token);
+      }
+      return acc;
+    },
+    { realTokenBalances: [], syntheticTokenBalances: [] }
+  );
 
   // Get unique tokens from pools
   const tokens = TokenManager.getUniqueTokens(pools);
 
-  // Get all balances dynamically
-  const balances = useMultiTokenBalances(
-    tokens,
-    walletState.embeddedAddress,
-    walletState.externalAddress,
-    walletState.embeddedChainId || displayChainId,
-    walletState.connectedChainId || displayChainId,
-    FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED
-  );
-
   // Create assets for display
-  const assets: Asset[] = TokenManager.createAssets(balances);
+  const assets: Asset[] = TokenManager.createAssets(syntheticTokenBalances);
 
   // Deposit/Withdraw operations
   const { deposit: privyDeposit, loading: depositLoading } = usePrivyDeposit();
@@ -61,48 +114,36 @@ export default function WalletPage() {
     navigator.clipboard.writeText(text);
   };
 
-  const currentChainName = ChainManager.getChainName(
-    walletState.connectedChainId || walletState.embeddedChainId || displayChainId
-  );
+  const currentChainName = ChainManager.getChainName(walletState.externalChainId);
 
   // Handle deposit
-  const handleDeposit = async (amount: string, tokenAddress: string) => {
-    if (FEATURE_FLAGS.CROSSCHAIN_DEPOSIT_ENABLED) {
-      const sourceChainId = walletState.connectedChainId;
+  const handleDeposit = async (
+    amount: string,
+    tokenAddress: string,
+    decimals: number
+  ) => {
+    const sourceChainId = walletState.externalChainId;
 
-      // Validate chain support
-      if (!ChainManager.isCrosschainSupported(sourceChainId)) {
-        alert('Current chain not supported for crosschain deposits');
-        return;
-      }
+    if (!walletState.externalWallet) return;
+    crosschainDeposit({
+      amount,
+      tokenAddress: tokenAddress as `0x${string}`,
+      recipientAddress: walletState.embeddedAddress as `0x${string}`,
+      externalWallet: walletState.externalWallet,
+      sourceChainId,
+      decimals,
+    });
 
-      // Check if chain switch needed
-      if (walletState.externalChainId && walletState.externalChainId !== sourceChainId) {
-        try {
-          await ChainManager.switchChain(walletState.externalWallet, sourceChainId);
-          // Wait for chain switch to reflect
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (error) {
-          console.error('Chain switch failed:', error);
-          alert('Please manually switch your wallet to the correct network');
-          return;
-        }
-      }
-
-      // Get source token address for crosschain
-      const selectedToken = tokens.find(t => t.address === tokenAddress);
-      const sourceTokenAddress =
-        selectedToken?.sourceAddresses?.[sourceChainId] || tokenAddress;
-
-      crosschainDeposit(
-        amount,
-        sourceTokenAddress as `0x${string}`,
-        walletState.embeddedAddress as `0x${string}`,
-        sourceChainId
-      );
-    } else {
-      privyDeposit(amount, tokenAddress as `0x${string}`);
-    }
+    /*
+    privyDeposit({
+      amount,
+      currencyAddress: tokenAddress as `0x${string}`,
+      embeddedAddress: walletState.embeddedAddress,
+      externalWallet: walletState.externalWallet,
+      externalChainId: walletState.externalChainId || 31337,
+      decimals: decimals,
+    });
+    */
 
     // Refetch balances after deposit
     setTimeout(() => {
@@ -151,7 +192,7 @@ export default function WalletPage() {
 
         {activeTab === 'Deposit' && (
           <DepositTab
-            tokens={tokens}
+            tokens={realTokens}
             balances={balances}
             embeddedAddress={walletState.embeddedAddress}
             externalAddress={walletState.externalAddress}
@@ -163,7 +204,7 @@ export default function WalletPage() {
 
         {activeTab === 'Withdraw' && (
           <WithdrawTab
-            tokens={tokens}
+            tokens={realTokens}
             balances={balances}
             embeddedAddress={walletState.embeddedAddress}
             externalAddress={walletState.externalAddress}

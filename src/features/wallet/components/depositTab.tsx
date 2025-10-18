@@ -3,13 +3,14 @@ import { ChevronDown, CreditCard, Copy, RefreshCw } from 'lucide-react';
 import { TokenSelector } from './tokenSelector';
 import { formatNumber } from '@/lib/utils';
 import { BalanceHookResult, Token } from '../types/wallet.types';
+import { TokenSymbol } from './tokenSymbol';
 
 interface DepositTabProps {
   tokens: Token[];
   balances: BalanceHookResult[];
   embeddedAddress: string;
   externalAddress: string;
-  onDeposit: (amount: string, tokenAddress: string) => void;
+  onDeposit: (amount: string, tokenAddress: string, decimals: number) => void;
   loading?: boolean;
   onCopy: (text: string) => void;
 }
@@ -29,10 +30,15 @@ export function DepositTab({
 
   const currentToken = tokens.find(t => t.address === selectedToken);
   const currentBalance = balances.find(b => b.token.address === selectedToken);
+  const syntheticBalance = balances.find(b => b.symbol === `gs${currentToken?.symbol}`);
 
   const handleDeposit = () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) return;
-    onDeposit(depositAmount, selectedToken);
+    if (!depositAmount || parseFloat(depositAmount) <= 0 || !syntheticBalance) return;
+    onDeposit(
+      depositAmount,
+      syntheticBalance.token.address,
+      syntheticBalance.token.decimals
+    );
   };
 
   const setMaxAmount = () => {
@@ -117,25 +123,32 @@ export function DepositTab({
         <div className="mb-4 p-4 border border-gray-600 rounded-lg">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium`}
+              >
+                <TokenSymbol symbol={syntheticBalance?.symbol || ''} />
+              </div>
               <div className="flex flex-col">
                 <span className="text-white font-medium">gs{currentToken?.symbol}</span>
                 <span className="text-gray-400 text-xs font-mono">
-                  {currentToken?.address ? shortenAddress(currentToken.address) : ''}
+                  {syntheticBalance?.token.address
+                    ? shortenAddress(syntheticBalance?.token.address)
+                    : ''}
                 </span>
               </div>
             </div>
-            <span className="text-right font-medium text-gray-300">
-              {formatNumber(Number(currentBalance?.displayBalance || '0'), {
+            {/* <span className="text-right font-medium text-gray-300">
+              {formatNumber(Number(syntheticBalance?.displayBalance || '0'), {
                 decimals: 2,
                 compact: true,
               })}
-            </span>
+            </span> */}
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <CreditCard size={14} />
             <span>
-              {formatNumber(Number(currentBalance?.displayBalance || '0'), {
+              {formatNumber(Number(syntheticBalance?.displayBalance || '0'), {
                 decimals: 2,
                 compact: true,
               })}

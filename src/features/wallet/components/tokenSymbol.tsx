@@ -9,6 +9,9 @@ const TOKEN_CONFIG: Record<string, { icon: LucideIcon; bgColor: string }> = {
   gsUSDC: { icon: DollarSign, bgColor: 'bg-blue-500' },
   gsWETH: { icon: Zap, bgColor: 'bg-purple-500' },
   gsWBTC: { icon: Bitcoin, bgColor: 'bg-orange-500' },
+  USDC: { icon: DollarSign, bgColor: 'bg-blue-500' },
+  WETH: { icon: Zap, bgColor: 'bg-purple-500' },
+  WBTC: { icon: Bitcoin, bgColor: 'bg-orange-500' },
 };
 
 const SIZE_CLASSES = {

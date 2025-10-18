@@ -1,9 +1,7 @@
 import { useWallets } from '@privy-io/react-auth';
-import { useChainId } from 'wagmi';
 
 export function useWalletState() {
   const { wallets } = useWallets();
-  const chainId = useChainId();
 
   const embeddedWallet = wallets.find(w => w.walletClientType === 'privy');
   const externalWallet = wallets.find(w => w.walletClientType !== 'privy');
@@ -20,8 +18,7 @@ export function useWalletState() {
     externalWallet,
     embeddedAddress: embeddedWallet?.address || 'Not Created',
     externalAddress: externalWallet?.address || 'Not Connected',
-    embeddedChainId: parseChainId(embeddedWallet?.chainId),
-    externalChainId: parseChainId(externalWallet?.chainId),
-    connectedChainId: chainId,
+    embeddedChainId: parseChainId(embeddedWallet?.chainId) || 31337,
+    externalChainId: parseChainId(externalWallet?.chainId) || 31338,
   };
 }
