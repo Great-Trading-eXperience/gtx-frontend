@@ -24,7 +24,7 @@ interface NavbarProps {
 }
 
 const ChainDropdown: React.FC = () => {
-  const networks: Chain[] = [coreDevnet, sideAnvil];
+  const networks: Chain[] = [sideAnvil];
 
   const chainId = useChainId();
   const usedNetwork = networks.find(network => network.id === chainId);
