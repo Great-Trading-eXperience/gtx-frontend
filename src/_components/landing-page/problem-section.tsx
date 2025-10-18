@@ -1,177 +1,174 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Clock, DollarSign, Lock, ShieldAlert } from 'lucide-react';
-import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Clock, DollarSign, Lock, ShieldAlert, ArrowRight, Zap } from 'lucide-react';
+import React from 'react';
 
 interface Problem {
   icon: React.ElementType;
   title: string;
   description: string;
   solution: string;
-}
-
-// Safe icon component renderer
-function SafeIcon({
-  icon: IconComponent,
-  className,
-}: {
-  icon: React.ElementType;
-  className: string;
-}) {
-  if (!IconComponent || typeof IconComponent !== 'function') {
-    return <div className={className} />; // Fallback
-  }
-  return <IconComponent className={className} />;
+  gradient: string;
 }
 
 export function ProblemsSection() {
-  const [expandedCard, setExpandedCard] = useState<number | null>(null);
-
   const problems: Problem[] = [
     {
       icon: Lock,
       title: 'Fragmented Liquidity',
       description:
-        'Liquidity is scattered across multiple chains, leading to poor price discovery and increased slippage for traders.',
+        'Liquidity scattered across chains causing poor price discovery',
       solution:
-        'Our crosschain orderbook unifies liquidity across all EVM chains, ensuring better prices and reduced slippage for every trade.',
+        'Unified crosschain orderbook across all EVM chains',
+      gradient: 'from-red-500/20 via-orange-500/10 to-transparent',
     },
     {
       icon: Clock,
       title: 'Lack of Transparency',
       description:
-        'Centralized exchanges operate as black boxes with opaque order matching, hidden market manipulation, and unclear fee structures that disadvantage traders.',
+        'Opaque order matching and hidden market manipulation',
       solution:
-        'Our decentralized exchange ensures complete transparency with on-chain order matching, open-source smart contracts, and clear fee structures.',
+        'On-chain matching with complete visibility',
+      gradient: 'from-purple-500/20 via-pink-500/10 to-transparent',
     },
     {
       icon: ShieldAlert,
       title: 'AMM Slippage',
       description:
-        'AMMs suffer from significant slippage on large trades due to bonding curve mechanics, causing traders to lose substantial value especially during volatile markets.',
+        'Significant value loss on large trades',
       solution:
-        'Our Central Limit Order Book (CLOB) provides traditional limit orders with zero slippage, ensuring you get exactly the price you expect.',
+        'CLOB with zero slippage guarantee',
+      gradient: 'from-blue-500/20 via-cyan-500/10 to-transparent',
     },
     {
       icon: DollarSign,
       title: 'Capital Inefficiency',
       description:
-        'Traders need to maintain separate balances on multiple chains, locking up capital and preventing optimal portfolio management across different networks.',
+        'Locked capital across multiple chains',
       solution:
-        'Trade across any EVM chain without moving funds. Keep all your capital on your preferred chain while accessing liquidity from all supported networks.',
+        'Trade without moving funds between chains',
+      gradient: 'from-green-500/20 via-emerald-500/10 to-transparent',
     },
   ];
 
-  const toggleCard = (index: number) => {
-    setExpandedCard(expandedCard === index ? null : index);
-  };
-
   return (
-    <section className="py-20 relative z-10 overflow-hidden bg-gradient-to-b from-black to-[#050510]">
-      {/* Background decorative elements */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px]" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[100px]" />
+    <section className="py-20 relative z-10 overflow-hidden">
+      {/* Blockchain Grid Background */}
+      <div className="absolute inset-0 opacity-[0.03]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `linear-gradient(rgba(59, 130, 246, 0.5) 1px, transparent 1px),
+                           linear-gradient(90deg, rgba(59, 130, 246, 0.5) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }}></div>
+      </div>
 
-      <div className="max-w-screen-xl mx-auto px-4">
+      {/* Floating Orbs */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-[100px]"></div>
+      <div className="absolute bottom-20 right-10 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px]"></div>
+
+      <div className="max-w-screen-xl mx-auto px-4 relative z-10">
+        {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
-            Solving{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-              Real Problems
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-4xl md:text-5xl font-bold mb-4"
+          >
+            Breaking{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-blue-700">
+              Blockchain Barriers
             </span>
-          </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            We&apos;ve addressed the common issues that plague traditional trading
-            platforms
-          </p>
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-gray-400 text-lg max-w-3xl mx-auto"
+          >
+            Traditional DEXs are broken. We&apos;re building the future of decentralized trading.
+          </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {problems.map((problem, index) => (
-            <motion.div
-              key={index}
-              className={`
-                relative overflow-hidden rounded-xl backdrop-blur-sm
-                ${
-                  expandedCard === index
-                    ? 'bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/30'
-                    : 'bg-[#0a0a0a]/80 border border-blue-900/20 hover:border-blue-900/40'
-                }
-                transition-all duration-300 h-full
-              `}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-            >
-              {/* Card content */}
-              <div
-                className={`p-6 cursor-pointer h-full flex flex-col ${
-                  expandedCard === index ? '' : 'hover:bg-blue-900/5'
-                }`}
-                onClick={() => toggleCard(index)}
+        {/* Problems Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {problems.map((problem, index) => {
+            const Icon = problem.icon;
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="group relative"
               >
-                {/* Card header */}
-                <div className="flex items-center mb-4">
-                  <div
-                    className={`p-3 rounded-lg ${
-                      expandedCard === index ? 'bg-blue-900/40' : 'bg-blue-900/20'
-                    } mr-4`}
-                  >
-                    <SafeIcon
-                      icon={problem.icon}
-                      className={`h-6 w-6 ${
-                        expandedCard === index ? 'text-blue-400' : 'text-blue-300/70'
-                      }`}
-                    />
+                {/* Card */}
+                <div className="relative bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 overflow-hidden transition-all duration-500 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+                  {/* Gradient Background */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${problem.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+
+                  {/* Hexagon Pattern */}
+                  <div className="absolute top-0 right-0 w-32 h-32 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
+                    <svg viewBox="0 0 100 100" className="w-full h-full">
+                      <polygon points="50,1 95,25 95,75 50,99 5,75 5,25" fill="currentColor" className="text-blue-400"/>
+                    </svg>
                   </div>
-                  <h3
-                    className={`font-bold text-lg ${
-                      expandedCard === index ? 'text-white' : 'text-gray-200'
-                    }`}
-                  >
-                    {problem.title}
-                  </h3>
-                  <ChevronDown
-                    className={`ml-auto h-5 w-5 text-blue-400 transition-transform duration-300 ${
-                      expandedCard === index ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
 
-                {/* Problem description */}
-                <p className="text-gray-400 mb-4">{problem.description}</p>
-
-                {/* Solution section - only visible when expanded */}
-                <AnimatePresence>
-                  {expandedCard === index && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="mt-4"
-                    >
-                      <div className="border-t border-blue-900/30 pt-4 mt-auto">
-                        <div className="flex items-center mb-2">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
-                          <p className="text-blue-400 font-medium">Our solution:</p>
+                  <div className="relative z-10">
+                    {/* Problem Section */}
+                    <div className="mb-6">
+                      <div className="flex items-start gap-4 mb-3">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                            {problem.title}
+                            <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
+                              PROBLEM
+                            </span>
+                          </h3>
+                          <p className="text-gray-400 text-sm leading-relaxed">
+                            {problem.description}
+                          </p>
                         </div>
-                        <p className="text-white">{problem.solution}</p>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    </div>
 
-              {/* Decorative corner accent */}
-              {expandedCard === index && (
-                <div className="absolute top-0 right-0 w-8 h-8 overflow-hidden">
-                  <div className="absolute transform rotate-45 bg-blue-500/20 w-8 h-32 -right-4 -top-16"></div>
+                    {/* Arrow Divider */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30">
+                        <ArrowRight className="w-3 h-3 text-blue-400" />
+                        <span className="text-[10px] text-blue-400 font-semibold">SOLUTION</span>
+                      </div>
+                      <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
+                    </div>
+
+                    {/* Solution Section */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-purple-500/5 border border-blue-500/20">
+                      <div className="flex items-start gap-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
+                        <p className="text-gray-200 text-sm font-medium leading-relaxed">
+                          {problem.solution}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Glow Effect on Hover */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/5 to-purple-500/0"></div>
+                  </div>
                 </div>
-              )}
-            </motion.div>
-          ))}
+
+                {/* Bottom Accent Line */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent group-hover:w-full transition-all duration-500"></div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

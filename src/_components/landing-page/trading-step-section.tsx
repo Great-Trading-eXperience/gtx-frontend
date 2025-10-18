@@ -2,8 +2,7 @@
 
 import type React from "react"
 
-import { useRef } from "react"
-import { motion, useInView } from "framer-motion"
+import { motion } from "motion/react"
 import { Wallet, ArrowUpRight, LineChart, BarChart2, Database } from "lucide-react"
 
 interface TradingStep {
@@ -15,9 +14,6 @@ interface TradingStep {
 }
 
 export function TradingStepsSection() {
-    const ref = useRef(null)
-    const isInView = useInView(ref, { once: true, amount: 0.2 })
-
     const steps: TradingStep[] = [
         {
             number: 1,
@@ -64,7 +60,7 @@ export function TradingStepsSection() {
                     </p>
                 </div>
 
-                <div ref={ref} className="relative">
+                <div className="relative">
                     {/* Connecting line */}
                     <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-900/0 via-blue-900/50 to-blue-900/0 transform -translate-x-1/2 hidden md:block"></div>
 
@@ -73,8 +69,9 @@ export function TradingStepsSection() {
                             <div key={index} className="relative">
                                 <motion.div
                                     initial={{ opacity: 0, y: 50 }}
-                                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.6, delay: index * 0.2 }}
+                                    viewport={{ once: true, amount: 0.2 }}
                                     className={`flex flex-col md:flex-row items-center ${index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"}`}
                                 >
                                     {/* Step number with icon */}

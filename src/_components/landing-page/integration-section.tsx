@@ -1,6 +1,7 @@
 'use client';
 
 import { ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 interface Integration {
   name: string;
@@ -59,15 +60,15 @@ const IntegrationColumn = React.memo(
             key={`${integration.name}-${index}`}
             className="bg-[#0a0a0a] border border-blue-900/30 rounded-lg p-6 shadow-lg shadow-blue-900/10 hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden group"
           >
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 opacity-50" />
-
             <div className="flex flex-col items-center text-center relative z-10">
               <div className="flex items-center justify-center mb-4">
                 {integration.icon ? (
-                  <img
+                  <Image
                     src={integration.icon}
                     alt={integration.name}
-                    className="h-20 w-20 rounded-xl"
+                    width={80}
+                    height={80}
+                    className="rounded-xl"
                     loading="lazy"
                   />
                 ) : (
@@ -87,12 +88,16 @@ const IntegrationColumn = React.memo(
 IntegrationColumn.displayName = 'IntegrationColumn';
 
 export function IntegrationsSection() {
-  // Mock integrations data
   const integrations = [
     {
       icon: '/images/espresso.png',
       name: 'Espresso Network',
       description: 'A confirmation layer built to support cross-chain composability.',
+    },
+    {
+      icon: '/images/based.webp',
+      name: 'Base',
+      description: 'An open onchain platform built from Coinbase’s internal experiment',
     },
     {
       icon: '/images/hyperlane.png',
@@ -113,6 +118,38 @@ export function IntegrationsSection() {
       icon: '/images/tradingview.png',
       name: 'TradingView',
       description: 'Powerful charting capabilities powered by TradingView',
+    },
+  ];
+  const integrationsReverse = [
+    {
+      icon: '/images/ponder.png',
+      name: 'Ponder',
+      description: 'Fast, reliable, and maintainable backend software in crypto',
+    },
+    {
+      icon: '/images/based.webp',
+      name: 'Base',
+      description: 'An open onchain platform built from Coinbase’s internal experiment',
+    },
+    {
+      icon: '/images/hyperlane.png',
+      name: 'Hyperlane',
+      description: 'Cross-chain composability through Hyperlane network',
+    },
+    {
+      icon: '/images/tradingview.png',
+      name: 'TradingView',
+      description: 'Powerful charting capabilities powered by TradingView',
+    },
+    {
+      icon: '/images/privy.jpg',
+      name: 'Privy',
+      description: 'Secure wallet integration for private key management',
+    },
+    {
+      icon: '/images/espresso.png',
+      name: 'Espresso Network',
+      description: 'A confirmation layer built to support cross-chain composability.',
     },
   ];
 
@@ -155,7 +192,7 @@ export function IntegrationsSection() {
             <div className="grid md:grid-cols-2 gap-4 lg:h-[600px] h-[400px] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
               <IntegrationColumn integrations={integrations} />
               <IntegrationColumn
-                integrations={integrations.slice().reverse()}
+                integrations={integrationsReverse.slice().reverse()}
                 className="hidden md:flex"
                 reverse
               />

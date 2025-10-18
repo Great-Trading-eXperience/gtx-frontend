@@ -3,32 +3,50 @@
 import { Button } from '@/_components/ui/button';
 import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { FeaturesSection } from './feature-section';
+import dynamic from 'next/dynamic';
 import { HeroSection } from './hero-section';
-import { IntegrationsSection } from './integration-section';
-import { ProblemsSection } from './problem-section';
-import { TechnologySection } from './technology-section';
-import { TradingStepsSection } from './trading-step-section';
+
+// Lazy load below-the-fold sections
+const ProblemsSection = dynamic(() => import('./problem-section').then(mod => ({ default: mod.ProblemsSection })), {
+  loading: () => <div className="py-20" />,
+  ssr: false
+});
+
+const FeaturesSection = dynamic(() => import('./feature-section').then(mod => ({ default: mod.FeaturesSection })), {
+  loading: () => <div className="py-20" />,
+  ssr: false
+});
+
+const TradingStepsSection = dynamic(() => import('./trading-step-section').then(mod => ({ default: mod.TradingStepsSection })), {
+  loading: () => <div className="py-20" />,
+  ssr: false
+});
+
+const IntegrationsSection = dynamic(() => import('./integration-section').then(mod => ({ default: mod.IntegrationsSection })), {
+  loading: () => <div className="py-20" />,
+  ssr: false
+});
+
+const TechnologySection = dynamic(() => import('./technology-section').then(mod => ({ default: mod.TechnologySection })), {
+  loading: () => <div className="py-20" />,
+  ssr: false
+});
 
 export function LandingEspresso() {
   return (
-    <main className="text-white min-h-screen overflow-hidden bg-black">
-      {/* Hero Section */}
+    <main className="text-white min-h-screen overflow-x-hidden bg-black !p-0 !flex-none !justify-start !items-stretch">
+      {/* Hero Section - Load immediately - No margin/padding */}
       <HeroSection />
 
-      {/* Problems Section */}
+      {/* Below-the-fold sections - Lazy loaded */}
       <ProblemsSection />
 
-      {/* Features Section - New Component */}
       <FeaturesSection />
 
-      {/* Trading Steps Section */}
       <TradingStepsSection />
 
-      {/* Integrations Section */}
       <IntegrationsSection />
 
-      {/* Technology Section */}
       <TechnologySection />
 
       {/* CTA Section */}
