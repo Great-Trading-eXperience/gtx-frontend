@@ -124,6 +124,12 @@ export default function WalletPage() {
   ) => {
     const sourceChainId = walletState.externalChainId;
 
+    console.log('amount ', amount);
+    console.log('tokenAddress ', tokenAddress);
+    console.log('embedded Wallet Address', walletState.embeddedAddress);
+    console.log('external Wallet ', walletState.externalWallet);
+    console.log('source chain id ', sourceChainId);
+    console.log('decimals ', decimals);
     if (!walletState.externalWallet) return;
     crosschainDeposit({
       amount,

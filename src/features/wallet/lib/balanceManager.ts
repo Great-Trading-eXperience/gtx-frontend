@@ -43,6 +43,6 @@ export class ChainManager {
   }
 
   static isCrosschainSupported(chainId: number): boolean {
-    return [4661, 421614].includes(chainId);
+    return [31337, 31338].includes(chainId);
   }
 }
