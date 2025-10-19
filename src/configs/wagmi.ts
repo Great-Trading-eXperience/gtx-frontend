@@ -158,29 +158,29 @@ export const coreDevnet: Chain = {
   testnet: true,
 };
 
-export const sideAnvil: Chain = {
-  id: 31338,
-  name: 'Side Devnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Ether',
-    symbol: 'ETH',
-  },
-  rpcUrls: {
-    default: {
-      http: ['/side-devnet'],
-    },
-    public: {
-      http: ['/side-devnet'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Side Devnet Explorer',
-      url: 'http://localhost:8546',
-    },
-  },
-  testnet: true,
+export const sideDevnet: Chain = {
+	id: 31338,
+	name: 'Side Devnet',
+	nativeCurrency: {
+		decimals: 18,
+		name: 'Ether',
+		symbol: 'ETH',
+	},
+	rpcUrls: {
+		default: {
+			http: ['/side-devnet'],
+		},
+		public: {
+			http: ['/side-devnet'],
+		},
+	},
+	blockExplorers: {
+		default: {
+			name: 'Side Devnet Explorer',
+			url: 'http://localhost:8546',
+		},
+	},
+	testnet: true,
 };
 
 export const wagmiConfig = createConfig({

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { coreDevnet, sideAnvil, wagmiConfig } from '@/configs/wagmi';
+import { coreDevnet, sideDevnet, wagmiConfig } from '@/configs/wagmi';
 import { FEATURE_FLAGS } from '@/constants/features/features-config';
 import { useChainValidator } from '@/hooks/use-chain-validator';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
@@ -59,27 +59,27 @@ const createPrivyConfig = (): PrivyClientConfig => {
   };
 
   if (isCrosschainEnabled) {
-    // When crosschain is enabled, include anvil chains (Core for main, Side for faucet)
-    console.log(`[PRIVY_CONFIG] Including anvil chains - Core Devnet for main operations, Side Devnet for faucet`);
+    // When crosschain is enabled, include devnet chains (Core for main, Side for faucet)
+    console.log(`[PRIVY_CONFIG] Including devnet chains - Core Devnet for main operations, Side Devnet for faucet`);
     
     return {
       ...baseConfig,
       defaultChain: defineChain(coreDevnet), // Default to Core Devnet for main operations
       supportedChains: [
         defineChain(coreDevnet),        // For main operations
-        defineChain(sideAnvil),        // For faucet operations
+        defineChain(sideDevnet),        // For faucet operations
       ],
     };
   } else {
-    // When crosschain is disabled, use default configuration with anvil chains
-    console.log(`[PRIVY_CONFIG] Using default configuration with anvil chains`);
+    // When crosschain is disabled, use default configuration with devnet chains
+    console.log(`[PRIVY_CONFIG] Using default configuration with devnet chains`);
     
     return {
       ...baseConfig,
       defaultChain: defineChain(coreDevnet),
       supportedChains: [
         defineChain(coreDevnet),
-        defineChain(sideAnvil),
+        defineChain(sideDevnet),
       ],
     };
   }

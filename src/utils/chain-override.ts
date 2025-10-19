@@ -5,13 +5,13 @@
  * via environment variables, without needing to modify individual hooks.
  */
 
-import { coreDevnet, sideAnvil } from '@/configs/wagmi';
+import { coreDevnet, sideDevnet } from '@/configs/wagmi';
 import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
 
 // Available chains for override
 const AVAILABLE_CHAINS = {
   CORE_ANVIL: coreDevnet.id,      // 31337
-  SIDE_ANVIL: sideAnvil.id,      // 31338
+  SIDE_ANVIL: sideDevnet.id,      // 31338
 } as const;
 
 /**

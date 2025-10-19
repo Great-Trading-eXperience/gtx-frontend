@@ -23,7 +23,7 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://anvil.gtxdex.xyz';
+  const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://devnet.gtxdex.xyz';
 
   return (
     <html lang="en" suppressHydrationWarning>

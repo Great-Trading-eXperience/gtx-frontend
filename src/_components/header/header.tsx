@@ -3,28 +3,26 @@
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { cn } from '@/lib/utils';
 import { useWallets } from '@privy-io/react-auth';
-import { Check, ChevronDown, Menu, Moon, Sun, Wallet } from 'lucide-react';
+import { Check, ChevronDown, Wallet } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { PrivyAuthButton } from '../auth/privy-auth-button';
-import { Button } from '../ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 
-import { coreDevnet, sideAnvil } from '@/configs/wagmi';
+import { coreDevnet, sideDevnet } from '@/configs/wagmi';
 import { isTabEnabled } from '@/constants/features/features-config';
 import { useSwitchAndAddChain } from '@/hooks/useSwitchAndAddChain';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Chain } from 'viem/chains';
 import { useChainId } from 'wagmi';
-import { usePathname } from 'next/navigation';
 
 interface NavbarProps {
   onTogglePanel: () => void;
 }
 
 const ChainDropdown: React.FC = () => {
-  const networks: Chain[] = [sideAnvil];
+  const networks: Chain[] = [coreDevnet, sideDevnet];
 
   const chainId = useChainId();
   const usedNetwork = networks.find(network => network.id === chainId);
@@ -211,6 +209,16 @@ const Header = ({ onTogglePanel }: NavbarProps) => {
       destination: '/perpetual',
       label: 'Perpetual',
       enabled: isTabEnabled('PERPETUAL'),
+    },
+    {
+      destination: '/stats',
+      label: 'Stats',
+      enabled: true, 
+    },
+    {
+      destination: '/leaderboard',
+      label: 'Leaderboard',
+      enabled: true,
     },
     {
       destination: '/pool-creation',

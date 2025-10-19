@@ -19,7 +19,7 @@ export const useOrderBookAddress = () => {
   const addresses: NetworkAddresses = {
     // Rise Sepolia
     11155931: '0x0000000000000000000000000000000000000000', // Replace with actual Rise Sepolia address
-    // Local Anvil Chain
+    // Local Devnet Chain
     31337: '0x0000000000000000000000000000000000000000', // Replace with local deployment
     // Conduit Chain
     911867: '0x0000000000000000000000000000000000000000', // Replace with Conduit deployment
