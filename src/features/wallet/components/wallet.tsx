@@ -21,7 +21,6 @@ import { usePoolsData } from '../hooks/usePoolsData';
 
 export default function WalletPage() {
   const walletState = useWalletState();
-  console.log(walletState);
   const [activeTab, setActiveTab] = useState<WalletTabs>('Deposit');
 
   const { pools } = usePoolsData(walletState.embeddedChainId);

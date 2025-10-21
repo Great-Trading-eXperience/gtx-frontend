@@ -33,10 +33,10 @@ export function DepositTab({
   const syntheticBalance = balances.find(b => b.symbol === `gs${currentToken?.symbol}`);
 
   const handleDeposit = () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0 || !syntheticBalance) return;
+    if (!depositAmount || parseFloat(depositAmount) <= 0 || !syntheticBalance || !currentToken) return;
     onDeposit(
       depositAmount,
-      syntheticBalance.token.address,
+      currentToken.address,
       syntheticBalance.token.decimals
     );
   };
