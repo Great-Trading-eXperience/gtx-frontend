@@ -51,14 +51,16 @@ export function HistoryTab({
           {transactions.map(tx => (
             <div key={tx.id} className="border border-gray-600 rounded-lg p-3">
               {/* Header */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      tx.type === 'deposit' ? 'bg-green-500' : 'bg-blue-500'
-                    }`}
-                  />
-                  <span className="font-medium capitalize">{tx.type}</span>
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        tx.type === 'deposit' ? 'bg-green-500' : 'bg-blue-500'
+                      }`}
+                    />
+                    <span className="font-medium capitalize">{tx.type}</span>
+                  </div>
                   <span className="text-xs bg-gray-700 px-2 py-1 rounded">
                     {tx.sourceChain} → {tx.destChain}
                   </span>
