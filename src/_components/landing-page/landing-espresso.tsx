@@ -58,13 +58,12 @@ export function LandingEspresso() {
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
                 Ready to{' '}
                 <span className="text-transparent bg-clip-text bg-gray-200">
-                  Start Trading
+                  Earn While Trading
                 </span>
                 ?
               </h2>
               <p className="text-xl text-gray-200 mb-8">
-                Join our platform today and see how easy trading can be. Start small and
-                grow at your own pace.
+                Start generating yield from your trading capital today. Deposit once, earn staking rewards continuously, and trade freely with zero slippage.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Link href="/markets" target="_blank">

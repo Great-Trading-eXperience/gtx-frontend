@@ -23,15 +23,15 @@ export function ProblemsSection() {
 
   const problems: Problem[] = [
     {
-      title: 'Fragmented Liquidity',
+      title: 'Idle Capital Problem',
       description:
-        'Liquidity is scattered across multiple chains, leading to poor price discovery and increased slippage for traders.',
+        'Your trading capital sits idle in wallets or DEXs, earning zero yield while waiting to execute trades or manage positions.',
       solution:
-        'Our crosschain orderbook unifies liquidity across all EVM chains, ensuring better prices and reduced slippage for every trade.',
+        'Your deposited assets automatically earn staking rewards while synthetic tokens enable seamless trading, maximizing capital efficiency.',
       detailedContent: {
         paragraphs: [
-          'Liquidity fragmentation creates significant inefficiencies, forcing traders to choose between limited liquidity on their preferred chain or the hassle of bridging assets.',
-          'Our cross-chain orderbook unifies liquidity across all EVM chains, ensuring better prices and dramatically reduced slippage for every trade.',
+          'Traditional trading platforms force you to choose: either lock your assets in staking/yield protocols or keep them liquid for trading opportunities. This creates massive capital inefficiency.',
+          'GTX solves this by managing your deposited assets for staking while minting synthetic tokens for trading. Your capital earns yield 24/7 while you maintain full trading flexibility.',
         ],
       },
       illustration: (
@@ -90,22 +90,22 @@ export function ProblemsSection() {
       ),
     },
     {
-      title: 'Capital Inefficiency',
+      title: 'Crosschain Complexity',
       description:
-        'Traders need to maintain separate balances on multiple chains, locking up capital and preventing optimal portfolio management across different networks.',
+        'Managing assets across multiple chains requires constant bridging, separate balances, and high fees—making crosschain trading impractical and expensive.',
       solution:
-        'Trade across any EVM chain without moving funds. Keep all your capital on your preferred chain while accessing liquidity from all supported networks.',
+        'Deposit from any EVM chain once and trade immediately. Your assets stay on your preferred chain while GTX handles crosschain settlement automatically.',
       detailedContent: {
         paragraphs: [
-          'Traditional cross-chain trading requires maintaining separate balances on each network, locking up capital in bridging fees and creating operational complexity.',
-          'Our architecture lets you keep all capital on a single chain while trading against liquidity from any supported network. Our protocol handles cross-chain settlement automatically, maximizing capital efficiency.',
+          'Traditional crosschain trading forces you to bridge assets repeatedly, pay multiple fees, and manage separate balances across networks—creating friction and locked capital.',
+          'GTX eliminates this complexity. Deposit once from your preferred chain, and your assets are automatically managed while synthetic tokens enable instant crosschain trading with zero bridging overhead.',
         ],
       },
       illustration: (
         <div className="relative w-full h-48">
           <Image
             src="/gif/WaveLoop.gif"
-            alt="Capital Inefficiency illustration"
+            alt="Crosschain Complexity illustration"
             fill
             className="object-cover"
           />

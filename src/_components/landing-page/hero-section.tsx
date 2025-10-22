@@ -9,9 +9,9 @@ import HeroShaderBackground from '../hero-shader-background';
 
 export function HeroSection() {
   const features = [
-    { icon: Zap, text: 'Crosschain Trading' },
-    { icon: Shield, text: 'Transparent Matching' },
-    { icon: Globe, text: 'Unified Liquidity' },
+    { icon: Zap, text: 'Earn While Trading' },
+    { icon: Shield, text: 'Zero Slippage CLOB' },
+    { icon: Globe, text: 'Crosschain Deposits' },
   ];
 
   return (
@@ -29,7 +29,7 @@ export function HeroSection() {
           <div className="space-y-6 sm:space-y-8 animate-fade-in-up">
             {/* Badge */}
             <div className="inline-flex items-center px-4 py-2 rounded-full border border-blue-500/30 bg-blue-900/20 text-blue-400 text-sm font-medium backdrop-blur-sm">
-              Crosschain Decentralized CLOB
+              Earn Yield While You Trade
             </div>
 
             {/* Main Heading */}
@@ -42,7 +42,7 @@ export function HeroSection() {
 
             {/* Subheading */}
             <p className="text-lg sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Trade across any EVM chain without moving your funds. Experience unified liquidity and transparent execution in a decentralized orderbook.
+              Your deposited assets earn staking rewards while you trade with synthetic tokens. Experience zero-slippage CLOB trading across any EVM chain without sacrificing yield.
             </p>
 
             {/* Feature badges */}

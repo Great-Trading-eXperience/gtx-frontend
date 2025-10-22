@@ -17,29 +17,29 @@ export function TradingStepsSection() {
     const steps: TradingStep[] = [
         {
             number: 1,
-            title: "Create Account",
-            description: "Connect your wallet using Privy and access all GTX features instantly for crosschain trading",
+            title: "Connect Wallet",
+            description: "Connect your wallet using Privy to create your trading account and access earn-while-trade features",
             icon: Wallet,
             color: "from-blue-500 to-blue-600",
         },
         {
             number: 2,
-            title: "Deposit Funds",
-            description: "Deposit your assets from any EVM chain - no need to bridge or move funds between networks",
+            title: "Deposit & Earn",
+            description: "Deposit assets from any EVM chain—your funds automatically start earning staking rewards while synthetic tokens are minted for trading",
             icon: Database,
             color: "from-blue-600 to-blue-700",
         },
         {
             number: 3,
-            title: "Start Trading",
-            description: "Access crosschain spot markets with unified liquidity across all supported EVM chains",
+            title: "Trade Instantly",
+            description: "Use synthetic tokens to trade on our zero-slippage CLOB while your original assets continue generating yield",
             icon: LineChart,
             color: "from-blue-700 to-blue-800",
         },
         {
             number: 4,
-            title: "Manage Positions",
-            description: "Monitor your portfolio and manage risk with advanced trading tools",
+            title: "Maximize Returns",
+            description: "Monitor your trading profits and staking rewards simultaneously—earn from both market opportunities and passive yield",
             icon: BarChart2,
             color: "from-blue-800 to-blue-900",
         },
@@ -50,13 +50,13 @@ export function TradingStepsSection() {
             <div className="max-w-screen-xl mx-auto px-4">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
-                        Trade with{" "}
+                        Start earning in{" "}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-                            Confidence
+                            4 simple steps
                         </span>
                     </h2>
                     <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                        A simple, powerful process to maximize your trading potential
+                        Deposit once, earn yield continuously, and trade freely with synthetic tokens
                     </p>
                 </div>
 

@@ -159,20 +159,19 @@ export function IntegrationsSection() {
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold text-center mb-2">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-              Seamless
+              Powered by
             </span>{' '}
-            Ecosystem
+            Leading Protocols
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Our platform integrates with your favorite tools and services for a complete
-            trading experience
+            Built on battle-tested infrastructure to deliver secure yield generation and seamless crosschain trading
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 items-center lg:gap-16">
           <div>
             <h3 className="text-2xl md:text-3xl font-bold mb-6">
-              Play well with <span className="text-blue-500">others</span>
+              Enterprise-grade <span className="text-blue-500">infrastructure</span>
             </h3>
             <ul className="space-y-4">
               {integrations.slice(0, 5).map((integration, index) => (

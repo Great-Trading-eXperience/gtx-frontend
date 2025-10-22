@@ -46,12 +46,12 @@ const Key = ({ className = '', children }: KeyProps) => {
 };
 
 const features = [
-  'Spot Trading',
-  'Order Books',
-  'Smart Contracts',
+  'Earn Yield',
+  'Synthetic Tokens',
+  'Zero Slippage',
   'Cross-Chain',
-  'Unified Liquidity',
-  'Transparent Fees',
+  'CLOB Trading',
+  'Staking Rewards',
 ];
 
 const parentVariants = {
@@ -78,8 +78,8 @@ export function FeaturesSection() {
     <section className="py-20 relative z-10">
       <div className="max-w-screen-xl mx-auto px-4">
         <h2 className="text-4xl md:text-5xl font-bold text-center mt-6 max-w-5xl m-auto">
-          Trade across chains with{' '}
-          <span className="text-blue-400">unified liquidity</span>
+          Maximize capital efficiency with{' '}
+          <span className="text-blue-400">yield-earning trading</span>
         </h2>
         <motion.div variants={parentVariants} initial="hidden" animate="visible">
           <div className="mt-12 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-3 gap-8">
@@ -90,8 +90,8 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.2 }}
             >
               <FeatureCard
-                title="Crosschain Orderbook"
-                description="Unified liquidity across all EVM chains without moving your funds"
+                title="Earn While Trading"
+                description="Your deposited assets generate staking rewards while synthetic tokens enable seamless trading"
                 className="md:col-span-2 lg:col-span-1"
               >
                 <div className="aspect-video flex items-center justify-center">
@@ -118,8 +118,8 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.2 }}
             >
               <FeatureCard
-                title="Transparent Matching"
-                description="On-chain order matching with complete visibility and no hidden fees"
+                title="Zero Slippage CLOB"
+                description="Central Limit Order Book ensures precise execution at your desired price with transparent on-chain matching"
                 className="md:col-span-2 lg:col-span-1 group transition duration-500"
               >
                 <div className="aspect-video flex items-center justify-center">
@@ -149,8 +149,8 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.2 }}
             >
               <FeatureCard
-                title="Any EVM Chain"
-                description="Deposit and trade from Ethereum, Arbitrum, Base, or any supported network"
+                title="Crosschain Deposits"
+                description="Deposit from Ethereum, Arbitrum, Base, or any EVM chain—your assets earn yield while you trade instantly"
                 className="group md:col-span-2 md:col-start-2 lg:col-span-1 lg:col-start-auto"
               >
                 <div className="aspect-video flex justify-center items-center gap-2">

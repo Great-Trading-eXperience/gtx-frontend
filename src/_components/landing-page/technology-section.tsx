@@ -17,22 +17,22 @@ export function TechnologySection() {
 
   const techFeatures: TechFeature[] = [
     {
-      title: 'Fully On-Chain',
+      title: 'Synthetic Token System',
       description:
-        'Complete transparency with 100% on-chain order matching and settlement. Every trade is verifiable and auditable on the blockchain with zero off-chain components.',
+        'Deposit real assets to earn staking rewards while synthetic tokens (gsUSDC, gsWETH) enable seamless trading without sacrificing yield generation.',
       icon: Code2,
       details:
-        'Unlike hybrid solutions that rely on off-chain matching engines, our platform operates entirely on-chain. All orders, matching logic, and settlements are transparent and verifiable on the blockchain. This ensures complete decentralization, eliminates counterparty risk, and provides unprecedented transparency in trade execution.',
-      stats: ['100% On-Chain', 'Verifiable'],
+        'When you deposit assets into GTX, your real tokens are managed for staking to generate yield. Simultaneously, synthetic tokens are minted 1:1, allowing you to trade freely while your original assets continue earning rewards. This dual-layer architecture maximizes capital efficiency—your money works harder by earning and trading simultaneously.',
+      stats: ['Dual-Layer', 'Yield-Earning'],
     },
     {
-      title: 'Crosschain Orderbook',
+      title: 'Zero Slippage CLOB',
       description:
-        'Eliminate fragmented liquidity across any EVM chains. Trade without moving funds from your favourite chain.',
+        'Central Limit Order Book architecture ensures you get exactly the price you specify, eliminating AMM-style slippage losses.',
       icon: Puzzle,
       details:
-        'Our crosschain orderbook eliminates fragmented liquidity across any EVM chains with a transparent matching engine. Trade without moving any funds on your favourite chain while feeling the high performance of our core deployed blockchain. Experience optimal execution across all supported networks without compromising on speed or security.',
-      stats: ['Crosschain', 'Transparent'],
+        'Unlike AMMs that suffer from exponential slippage on large trades, our CLOB provides traditional limit orders with precise execution. Set your desired price and quantity—your order executes exactly as specified or not at all. Combined with transparent on-chain matching and crosschain deposits, GTX delivers professional-grade trading while your assets earn staking rewards.',
+      stats: ['Price Precision', 'On-Chain Matching'],
     },
   ];
 
@@ -52,12 +52,12 @@ export function TechnologySection() {
           <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
             Built for{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-              Transparency
+              Capital Efficiency
             </span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Powered by fully decentralized technologies that ensure complete transparency
-            and verifiability
+            Innovative dual-layer architecture that enables simultaneous yield generation
+            and seamless trading
           </p>
         </motion.div>
 
