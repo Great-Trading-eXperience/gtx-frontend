@@ -2,15 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ExternalLink, Monitor } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-// Custom event type to communicate with App component
-const triggerMobileWarning = () => {
-  // Create and dispatch a custom event that the App component can listen for
-  const event = new CustomEvent('gtx:mobileTrigger');
-  window.dispatchEvent(event);
-};
+import { ExternalLink } from 'lucide-react';
+import { motion } from 'motion/react';
 
 const LandingHeader = () => {
   const pathname = usePathname();
@@ -18,45 +11,18 @@ const LandingHeader = () => {
   const links = [{ destination: '/markets', label: 'Launch App' }];
 
   return (
-    <motion.header
-      initial={{ y: -100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{
-        duration: 0.5,
-        ease: 'easeOut',
-      }}
-      className="fixed top-0 left-0 right-0 z-30 pt-3 sm:pt-4 md:pt-5 px-4 sm:px-6 md:px-8 lg:px-12"
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{
-          duration: 0.5,
-          delay: 0.2,
-          ease: 'easeOut',
-        }}
-        className="mx-auto max-w-7xl"
-      >
+    <header className="fixed top-0 left-0 right-0 z-30 pt-3 sm:pt-4 md:pt-5 px-4 sm:px-6 md:px-8 lg:px-12">
+      <div className="mx-auto max-w-7xl">
         <div className="relative flex items-center justify-between rounded-[27px] lg:rounded-full border border-white/15 bg-neutral-950/70 backdrop-blur px-3 sm:px-4 md:px-6 py-2 shadow-[0_4px_30px_rgba(0,0,0,0.3)] overflow-hidden">
           {/* Background elements */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="absolute inset-0 overflow-hidden pointer-events-none"
-          >
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-10 -right-10 w-32 sm:w-40 md:w-48 h-32 sm:h-40 md:h-48 bg-gradient-to-br from-blue-500/10 to-purple-500/5 rounded-[27px] lg:rounded-full blur-3xl" />
             <div className="absolute -bottom-20 -left-20 w-48 sm:w-60 md:w-72 h-48 sm:h-60 md:h-72 bg-gradient-to-tr from-blue-500/10 to-purple-500/5 rounded-[27px] lg:rounded-full blur-3xl" />
             <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern opacity-5"></div>
-          </motion.div>
+          </div>
 
           {/* Logo */}
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex-shrink-0 relative z-10"
-          >
+          <div className="flex-shrink-0 relative z-10">
             <Link href="/" className="flex items-center group">
               <div className="relative">
                 <div className="absolute inset-0 bg-blue-500/20 rounded-[27px] lg:rounded-full blur-md" />
@@ -72,15 +38,10 @@ const LandingHeader = () => {
                 </span>
               </div>
             </Link>
-          </motion.div>
+          </div>
 
           {/* Desktop Navigation */}
-          <motion.div
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex items-center justify-center space-x-4 sm:space-x-6 md:space-x-8 lg:space-x-10 relative z-10"
-          >
+          <div className="flex items-center justify-center space-x-4 sm:space-x-6 md:space-x-8 lg:space-x-10 relative z-10">
             {links.map(link => (
               <Link
                 key={link.label}
@@ -123,10 +84,10 @@ const LandingHeader = () => {
                 )}
               </Link>
             ))}
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
-    </motion.header>
+      </div>
+    </header>
   );
 };
 
