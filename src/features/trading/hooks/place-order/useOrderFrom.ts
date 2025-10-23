@@ -85,9 +85,10 @@ export function useOrderForm({
         try {
           const priceValue = parseFloat(state.price);
           const quantityValue = parseFloat(state.quantity);
+          const newTotal = (priceValue * quantityValue).toFixed(6);
           setState(prev => ({
             ...prev,
-            total: (priceValue * quantityValue).toFixed(6),
+            total: newTotal,
           }));
         } catch {
           setState(prev => ({ ...prev, total: '0' }));
@@ -95,16 +96,25 @@ export function useOrderForm({
       } else {
         setState(prev => ({ ...prev, total: '0' }));
       }
-    } else if (state.orderType === 'market' && state.quantity && slippageInfo) {
-      try {
-        const decimals = state.side === OrderSideEnum.BUY ? 18 : 6;
-        const conservativeMinOut = formatUnits(slippageInfo.conservativeMinOut, decimals);
-        setState(prev => ({
-          ...prev,
-          total: parseFloat(conservativeMinOut).toFixed(decimals === 18 ? 6 : 2),
-        }));
-      } catch {
-        setState(prev => ({ ...prev, total: '0' }));
+    } else if (state.orderType === 'market') {
+      if (state.quantity && slippageInfo?.conservativeMinOut) {
+        try {
+          const decimals = state.side === OrderSideEnum.BUY ? 18 : 6;
+          const conservativeMinOut = formatUnits(slippageInfo.conservativeMinOut, decimals);
+          setState(prev => ({
+            ...prev,
+            total: parseFloat(conservativeMinOut).toFixed(decimals === 18 ? 6 : 2),
+          }));
+        } catch {
+          setState(prev => ({ ...prev, total: '0' }));
+        }
+      } else {
+        setState(prev => {
+          if (prev.total !== '0') {
+            return { ...prev, total: '0' };
+          }
+          return prev;
+        });
       }
     }
   }, [state.price, state.quantity, state.orderType, state.side, slippageInfo]);

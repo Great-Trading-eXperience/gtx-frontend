@@ -28,7 +28,10 @@ export const useCombinedTrades = (
   }, [apiTrades, wsTrades]);
 };
 
-export const useCombinedDepth = (apiDepth: DepthData | null | undefined, wsDepthUpdates: any) => {
+export const useCombinedDepth = (
+  apiDepth: DepthData | null | undefined,
+  wsDepthUpdates: any
+) => {
   return useMemo(() => {
     if (!apiDepth) return null;
     if (!wsDepthUpdates) return apiDepth;
@@ -79,8 +82,7 @@ export const useCombinedDepth = (apiDepth: DepthData | null | undefined, wsDepth
 export const useCombinedOrders = (
   apiOrders: OrderData[] = [],
   wsOrders: OrderData[] = [],
-  chainId: number,
-  defaultChainId: number
+  chainId: number
 ) => {
   return useMemo(() => {
     const orderMap = new Map();
@@ -92,7 +94,7 @@ export const useCombinedOrders = (
 
     return [...apiOrders, ...wsOrdersToAdd].map(order => ({
       id: order.orderId,
-      chainId: Number(chainId || defaultChainId),
+      chainId: Number(chainId),
       poolId: order.symbol || '',
       orderId: BigInt(order.orderId),
       price: order.price,
@@ -105,5 +107,5 @@ export const useCombinedOrders = (
       filled: order.executedQty || '0',
       expiry: 0,
     }));
-  }, [apiOrders, wsOrders, chainId, defaultChainId]);
+  }, [apiOrders, wsOrders, chainId]);
 };

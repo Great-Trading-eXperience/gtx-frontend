@@ -39,6 +39,10 @@ export function useSlippageCalculation({
   const [slippageInfo, setSlippageInfo] = useState<any>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  useEffect(() => {
+    setSlippageInfo(null);
+  }, [side, orderType]);
+
   const calculateSlippage = useCallback(async () => {
     if (
       !enabled ||

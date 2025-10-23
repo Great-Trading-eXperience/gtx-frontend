@@ -1,14 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import request from 'graphql-request';
 import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
-import { poolsQuery, poolsPonderQuery, PoolsResponse, PoolsPonderResponse } from '@/graphql/gtx/clob';
+import {
+  poolsQuery,
+  poolsPonderQuery,
+  PoolsResponse,
+  PoolsPonderResponse,
+} from '@/graphql/gtx/clob';
 import { getUseSubgraph } from '@/utils/env';
 
-export const usePools = (chainId: number, defaultChainId: number) => {
+export const usePools = (chainId: number) => {
   return useQuery<PoolsResponse | PoolsPonderResponse>({
-    queryKey: ['pools', String(chainId ?? defaultChainId)],
+    queryKey: ['pools', String(chainId)],
     queryFn: async () => {
-      const currentChainId = Number(chainId ?? defaultChainId);
+      const currentChainId = Number(chainId);
       const url = GTX_GRAPHQL_URL(currentChainId);
       if (!url) throw new Error('GraphQL URL not found');
       return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);
