@@ -1,147 +1,123 @@
 'use client';
 
-import useCurrentTheme from '@/hooks/styles/theme';
 import { Twitter } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import Image from 'next/image';
 import Link from 'next/link';
 
-const resources = [
-  {
-    label: 'Privacy Policy',
-    destination: '/privacy-policy',
-  },
+// Types
+interface FooterLink {
+  label: string;
+  destination: string;
+}
+
+interface SocialLink {
+  label: string;
+  url: string;
+  icon: React.ElementType;
+}
+
+// Constants
+const LOGO_CONFIG = {
+  src: '/logo/gtx.png',
+  alt: 'GTX Logo',
+  text: 'GTX',
+  tagline: 'Trade across any EVM chain without moving your funds.',
+};
+
+const RESOURCES_LINKS: FooterLink[] = [
+  { label: 'Privacy Policy', destination: '/privacy-policy' },
 ];
 
-const support = [
-  {
-    label: 'GTX Docs',
-    destination: '/docs',
-  },
-  {
-    label: 'API Documentation',
-    destination: '/api-docs',
-  },
-  {
-    label: 'Terms & Conditions',
-    destination: '/terms',
-  },
+const SUPPORT_LINKS: FooterLink[] = [
+  { label: 'GTX Docs', destination: '/docs' },
+  { label: 'API Documentation', destination: '/api-docs' },
+  { label: 'Terms & Conditions', destination: '/terms' },
 ];
+
+const SOCIAL_LINKS: SocialLink[] = [
+  { label: 'Twitter', url: 'https://x.com/gtx_dex', icon: Twitter },
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+// Subcomponents
+const FooterLogo = () => (
+  <div className="col-span-1 md:col-span-2">
+    <Link href="/" className="flex items-center gap-2">
+      <Image src={LOGO_CONFIG.src} alt={LOGO_CONFIG.alt} width={40} height={40} className="h-10 w-10" />
+      <span className="text-3xl font-bold text-white">{LOGO_CONFIG.text}</span>
+    </Link>
+    <p className="mt-4 text-gray-400 text-sm leading-relaxed">{LOGO_CONFIG.tagline}</p>
+    <div className="mt-5">
+      <p className="text-gray-400 text-sm">© {CURRENT_YEAR} Great Trading eXperience</p>
+    </div>
+  </div>
+);
+
+interface FooterLinksSectionProps {
+  title: string;
+  links: FooterLink[];
+}
+
+const FooterLinksSection = ({ title, links }: FooterLinksSectionProps) => (
+  <div className="col-span-1">
+    <h2 className="text-white font-semibold mb-4 text-lg">{title}</h2>
+    <ul className="space-y-3">
+      {links.map((link) => (
+        <li key={link.destination}>
+          <Link
+            href={link.destination}
+            className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
+          >
+            <div className="w-1 h-1 rounded-full bg-white/60" />
+            {link.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const SocialLinksSection = () => (
+  <div className="col-span-1">
+    <h2 className="text-white font-semibold mb-4 text-lg">Community</h2>
+    <div className="flex flex-col space-y-4">
+      {SOCIAL_LINKS.map((social) => {
+        const Icon = social.icon;
+        return (
+          <a
+            key={social.url}
+            href={social.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+          >
+            <div className="bg-white/10 p-2 rounded-md">
+              <Icon size={18} />
+            </div>
+            <span>{social.label}</span>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+);
 
 const Footer = () => {
-  const { theme, setTheme } = useTheme();
-  const currentTheme = useCurrentTheme();
-
   return (
     <footer className="text-gray-300 relative overflow-hidden bg-[#0A0A0A]">
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-white/10 opacity-30"></div>
-      <div className="absolute inset-0 bg-[url('/blockchain-bg.svg')] bg-repeat opacity-5"></div>
-
-      {/* Subtle animated particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute bg-white rounded-full opacity-20"
-            style={{
-              width: Math.random() * 4 + 2 + 'px',
-              height: Math.random() * 4 + 2 + 'px',
-              left: Math.random() * 100 + '%',
-              top: Math.random() * 100 + '%',
-              animation: `float ${Math.random() * 10 + 10}s linear infinite`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Background overlays */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-white/10 opacity-30" />
+      <div className="absolute inset-0 bg-[url('/blockchain-bg.svg')] bg-repeat opacity-5" />
 
       <div className="max-w-screen-xl mx-auto px-6 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-12">
-          {/* Logo Section */}
-          <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2">
-              <img src={'/logo/gtx.png'} className="h-10" alt="GTX Logo" />
-              <span className="text-3xl font-bold text-white">GTX</span>
-            </Link>
-            <p className="mt-4 text-gray-400 text-sm leading-relaxed">
-              Trade across any EVM chain without moving your funds.
-            </p>
-            <div className="py-5">
-              <p className="text-gray-400 text-sm">© 2025 Great Trading eXperience</p>
-            </div>
-          </div>
-
-          {/* Resources Section */}
-          <div className="col-span-1">
-            <h2 className="text-white font-semibold mb-4 text-lg">Resources</h2>
-            <ul className="space-y-3">
-              {resources.map((item, index) => (
-                <li key={index}>
-                  <Link
-                    href={item.destination}
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
-                  >
-                    <div className="w-1 h-1 rounded-full bg-white/60"></div>
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support Section */}
-          <div className="col-span-1">
-            <h2 className="text-white font-semibold mb-4 text-lg">Support</h2>
-            <ul className="space-y-3">
-              {support.map((item, index) => (
-                <li key={index}>
-                  <Link
-                    href={item.destination}
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
-                  >
-                    <div className="w-1 h-1 rounded-full bg-white/60"></div>
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Community Section */}
-          <div className="col-span-1">
-            <h2 className="text-white font-semibold mb-4 text-lg">Community</h2>
-            <div className="flex flex-col space-y-4">
-              <a
-                href="https://x.com/gtx_dex"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
-              >
-                <div className="bg-white/10 p-2 rounded-md">
-                  <Twitter size={18} />
-                </div>
-                <span>Twitter</span>
-              </a>
-            </div>
-          </div>
+          <FooterLogo />
+          <FooterLinksSection title="Resources" links={RESOURCES_LINKS} />
+          <FooterLinksSection title="Support" links={SUPPORT_LINKS} />
+          <SocialLinksSection />
         </div>
-
-        {/* Gradient bar at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-700 via-white/40 to-gray-700"></div>
       </div>
-
-      {/* CSS for floating animation */}
-      <style jsx>{`
-        @keyframes float {
-          0% {
-            transform: translateY(0) translateX(0);
-          }
-          50% {
-            transform: translateY(-20px) translateX(10px);
-          }
-          100% {
-            transform: translateY(0) translateX(0);
-          }
-        }
-      `}</style>
     </footer>
   );
 };
