@@ -284,11 +284,11 @@ const PlaceOrder = ({
         />
 
         {/* Order Summary */}
-        <OrderSummary
+        {/* <OrderSummary
           orderType={orderForm.orderType}
           slippageInfo={currentSlippageInfo}
           calculatingSlippage={slippageCalc.isCalculating}
-        />
+        /> */}
 
         {/* Submit Button */}
         <button
