@@ -2,26 +2,14 @@ import React from 'react';
 
 interface OrderSummaryProps {
   orderType: 'limit' | 'market';
-  side: number;
-  total: string;
   slippageInfo: any;
   calculatingSlippage: boolean;
-  takerFeePercent: number;
-  makerFeePercent: number;
-  selectedPool: any;
-  OrderSideEnum: any;
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
   orderType,
-  side,
-  total,
   slippageInfo,
   calculatingSlippage,
-  takerFeePercent,
-  makerFeePercent,
-  selectedPool,
-  OrderSideEnum,
 }) => {
   return (
     <>

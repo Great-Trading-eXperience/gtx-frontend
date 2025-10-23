@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { getCoreChain, isFeatureEnabled } from '@/constants/features/features-config';
@@ -25,6 +25,7 @@ import PlaceOrderSkeleton from './placeOrderSkeleton';
 import { Wallet } from 'lucide-react';
 
 import { OrderValidationService } from '../../services/place-order/orderValidation';
+import { mockGetMarketOrderSlippageInfo } from '../../hooks/place-order/mockSlippage';
 
 export interface PlaceOrderProps {
   address?: HexAddress;
@@ -85,12 +86,14 @@ const PlaceOrder = ({
     return depthData?.asks?.find(ask => ask[0] !== '0')?.[0];
   }, [depthData]);
 
+  const [currentSlippageInfo, setCurrentSlippageInfo] = useState<any>(null);
+
   const orderForm = useOrderForm({
     selectedPool,
     bestBidPrice,
     bestAskPrice,
     lastPrice: ticker24hr?.lastPrice,
-    slippageInfo: null, // Will be set by slippage calculation hook
+    slippageInfo: currentSlippageInfo, // Will be set by slippage calculation hook
   });
 
   const relevantCurrency = useMemo(() => {
@@ -127,12 +130,6 @@ const PlaceOrder = ({
     isMarketOrderPending,
     isMarketOrderConfirming,
     isMarketOrderConfirmed,
-    limitSimulateError,
-    marketSimulateError,
-    limitOrderHash,
-    marketOrderHash,
-    resetLimitOrderState,
-    resetMarketOrderState,
   } = placeOrderHook;
 
   const slippageCalc = useSlippageCalculation({
@@ -142,14 +139,13 @@ const PlaceOrder = ({
     slippageValue: orderForm.slippageValue,
     selectedPool,
     pool,
-    getMarketOrderSlippageInfo,
+    getMarketOrderSlippageInfo: mockGetMarketOrderSlippageInfo,
     enabled: orderForm.orderType === 'market' && !!orderForm.quantity,
   });
 
-  // Update order form with slippage info
-  useMemo(() => {
-    // This will trigger recalculation of total in useOrderForm
-    return slippageCalc.slippageInfo;
+  useEffect(() => {
+    setCurrentSlippageInfo(slippageCalc.slippageInfo);
+    console.log(currentSlippageInfo);
   }, [slippageCalc.slippageInfo]);
 
   const { takerFeePercent, makerFeePercent } = useFeePercentages(balanceManagerAddress);
@@ -165,9 +161,11 @@ const PlaceOrder = ({
 
   const handlePlaceMarketOrder = useCallback(
     (pool: any, quantity: bigint, side: number, slippageBps: number): Promise<void> => {
-      return originalHandlePlaceMarketOrder(pool, quantity, side, slippageBps).then(() => {
-        return undefined;
-      });
+      return originalHandlePlaceMarketOrder(pool, quantity, side, slippageBps).then(
+        () => {
+          return undefined;
+        }
+      );
     },
     [originalHandlePlaceMarketOrder]
   );
@@ -212,7 +210,9 @@ const PlaceOrder = ({
         balance.balance || ''
       );
       if (!balanceValidation.valid) {
-        toast.error(balanceValidation.error);
+        toast.error(
+          `Insufficient balance: You have ${balance.balance} but need ${orderForm.quantity}`
+        );
         return;
       }
 
@@ -229,7 +229,14 @@ const PlaceOrder = ({
         console.error('Order submission failed:', error);
       }
     },
-    [wallet.address, wallet.isConnected, orderForm, balance.balance, orderSubmission]
+    [
+      wallet.address,
+      wallet.isConnected,
+      orderForm,
+      balance.balance,
+      orderSubmission,
+      relevantCurrency,
+    ]
   );
 
   // ============================================
@@ -270,10 +277,7 @@ const PlaceOrder = ({
           quantity={orderForm.quantity}
           total={orderForm.total}
           balance={balance.balance || ''}
-          balanceIsLoading={balance.isLoading}
           selectedPool={selectedPool}
-          slippageInfo={slippageCalc.slippageInfo}
-          isCalculatingSlippage={slippageCalc.isCalculating}
           onPriceChange={orderForm.setPrice}
           onQuantityChange={orderForm.setQuantity}
           OrderSideEnum={orderForm.OrderSideEnum}
@@ -282,14 +286,8 @@ const PlaceOrder = ({
         {/* Order Summary */}
         <OrderSummary
           orderType={orderForm.orderType}
-          side={orderForm.side}
-          total={orderForm.total}
-          slippageInfo={slippageCalc.slippageInfo}
+          slippageInfo={currentSlippageInfo}
           calculatingSlippage={slippageCalc.isCalculating}
-          takerFeePercent={takerFeePercent}
-          makerFeePercent={makerFeePercent}
-          selectedPool={selectedPool}
-          OrderSideEnum={orderForm.OrderSideEnum}
         />
 
         {/* Submit Button */}

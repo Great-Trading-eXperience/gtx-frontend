@@ -8,10 +8,7 @@ interface OrderFormProps {
   quantity: string;
   total: string;
   balance: string;
-  balanceIsLoading: boolean;
   selectedPool: any;
-  slippageInfo: any;
-  isCalculatingSlippage: boolean;
   onPriceChange: (price: string) => void;
   onQuantityChange: (quantity: string) => void;
   OrderSideEnum: any;
@@ -24,10 +21,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
   quantity,
   total,
   balance,
-  balanceIsLoading,
   selectedPool,
-  slippageInfo,
-  isCalculatingSlippage,
   onPriceChange,
   onQuantityChange,
   OrderSideEnum,
@@ -58,7 +52,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
               value={price}
               onChange={e => onPriceChange(e.target.value)}
               placeholder="Enter price"
-              step={`0.${'0'.repeat(Number(selectedPool?.quoteDecimals) - 1)}1`}
+              // step={`0.${'0'.repeat(Number(selectedPool?.quoteDecimals) - 1)}1`}
               min="0"
               required
             />
@@ -78,14 +72,14 @@ const OrderForm: React.FC<OrderFormProps> = ({
           <input
             type="number"
             className="w-full bg-black text-white text-sm rounded-lg py-2 px-3 pr-16 border border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+            placeholder="0.00"
             value={quantity}
             onChange={e => onQuantityChange(e.target.value)}
-            placeholder="Enter amount"
-            step={
-              side === OrderSideEnum.BUY && orderType === 'market'
-                ? '0.000001'
-                : '0.000000000000000001'
-            }
+            // step={
+            //   side === OrderSideEnum.BUY && orderType === 'market'
+            //     ? '0.000001'
+            //     : '0.000000000000000001'
+            // }
             required
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white bg-white/10 px-2 py-0.5 rounded border border-white/20">
