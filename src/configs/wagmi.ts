@@ -184,9 +184,9 @@ export const sideDevnet: Chain = {
 };
 
 export const wagmiConfig = createConfig({
-  chains: [coreDevnet, sideAnvil],
+  chains: [coreDevnet, sideDevnet],
   transports: {
     [coreDevnet.id]: http(coreDevnet.rpcUrls.default.http[0]),
-    [sideAnvil.id]: http(sideAnvil.rpcUrls.default.http[0]),
+    [sideDevnet.id]: http(sideDevnet.rpcUrls.default.http[0]),
   },
 });

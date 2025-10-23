@@ -2,7 +2,7 @@
 
 import { CustomAvatar } from '@/_components/button-connect-wallet/button-connect-wallet';
 import { Button } from '@/_components/ui/button';
-import { wagmiConfig, sideAnvil } from '@/configs/wagmi';
+import { wagmiConfig, sideDevnet } from '@/configs/wagmi';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { Check, Copy, Globe, LogOut, Mail, User, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -52,7 +52,7 @@ export function PrivyAuthButton({
 
   // handle login with add app chain in external wallet
   const chainId = useChainId();
-  const isSideAnvil = chainId === sideAnvil.id;
+  const isSideAnvil = chainId === sideDevnet.id;
 
   const checkAndSwitchToAppchain = async () => {
     if (isSideAnvil) {
@@ -61,7 +61,7 @@ export function PrivyAuthButton({
 
     try {
       if (switchChain) {
-        await switchChain(wagmiConfig, { chainId: sideAnvil.id });
+        await switchChain(wagmiConfig, { chainId: sideDevnet.id });
         return { success: true, message: 'Switched to Appchain successfully' };
       }
     } catch (error: any) {
@@ -81,11 +81,11 @@ export function PrivyAuthButton({
         method: 'wallet_addEthereumChain',
         params: [
           {
-            chainId: `0x${sideAnvil.id.toString(16)}`, // Convert to hex
-            chainName: sideAnvil.name,
-            nativeCurrency: sideAnvil.nativeCurrency,
-            rpcUrls: sideAnvil.rpcUrls.default.http,
-            blockExplorerUrls: [sideAnvil.blockExplorers?.default.url],
+            chainId: `0x${sideDevnet.id.toString(16)}`, // Convert to hex
+            chainName: sideDevnet.name,
+            nativeCurrency: sideDevnet.nativeCurrency,
+            rpcUrls: sideDevnet.rpcUrls.default.http,
+            blockExplorerUrls: [sideDevnet.blockExplorers?.default.url],
           },
         ],
       });
