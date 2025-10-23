@@ -12,15 +12,13 @@ import { usePathname } from 'next/navigation';
 import BottomSheet from './bottom-sheet';
 import { useEffect, useState } from 'react';
 import PlaceOrder from '@/features/trading/components/place-order/placeOrder';
-import { useChainId } from 'wagmi';
-import { useWallets } from '@privy-io/react-auth';
-import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
 import { usePools } from '@/features/trading/hooks/usePools';
 import { useSelectedPool } from '@/features/trading/hooks/useSelectedPool';
 import { useDepthData, useTicker24hr } from '@/features/trading/hooks/useMarketData';
 import { useAccountData } from '@/features/trading/hooks/useAccountData';
 import { useWebSocketData } from '@/features/trading/hooks/useWebsocketData';
 import { useCombinedDepth } from '@/features/trading/hooks/useCombineData';
+import { useWalletState } from '@/features/trading/hooks/useWalletState';
 
 const useIsClient = () => {
   const [isClient, setIsClient] = useState(false);
@@ -47,20 +45,15 @@ export default function BottomNavbar() {
 
   const [isOpenBottomSheet, setIsOpenBottomSheet] = useState(false);
 
-  const { wallets } = useWallets();
-  const chainId = useChainId();
-  const defaultChainId = Number(DEFAULT_CHAIN);
+  const walletState = useWalletState();
   const isClient = useIsClient();
-
-  const embedded = wallets.find(wallet => wallet.walletClientType === 'privy');
-  const effectiveAddress = embedded?.address as `0x${string}`;
 
   // Fetch pools data
   const {
     data: poolsData,
     isLoading: poolsLoading,
     error: poolsError,
-  } = usePools(chainId, defaultChainId);
+  } = usePools(walletState.embeddedChainId);
 
   // Get selected pool
   const { selectedPool, symbol } = useSelectedPool(poolsData);
@@ -75,11 +68,16 @@ export default function BottomNavbar() {
     isLoading: accountLoading,
     error: accountError,
     refetch: refetchAccount,
-  } = useAccountData(effectiveAddress);
+  } = useAccountData(walletState.embeddedAddress as `0x${string}`);
 
   // WebSocket data
   const { wsDepthUpdates, wsTradeUpdates, wsTickerUpdates, wsOpenOrders, wsUserTrades } =
-    useWebSocketData(chainId, symbol, selectedPool, effectiveAddress);
+    useWebSocketData(
+      walletState.embeddedChainId,
+      symbol,
+      selectedPool,
+      walletState.embeddedAddress as `0x${string}`
+    );
 
   // Combined data using custom hooks
   const combinedDepth = useCombinedDepth(depthData, wsDepthUpdates);
@@ -153,9 +151,9 @@ export default function BottomNavbar() {
         title="Bottom sheet place order"
       >
         <PlaceOrder
-          address={effectiveAddress}
-          chainId={chainId}
-          defaultChainId={defaultChainId}
+          address={walletState.embeddedAddress as `0x${string}`}
+          chainId={walletState.embeddedChainId}
+          defaultChainId={walletState.embeddedChainId}
           selectedPool={selectedPool}
           depthData={combinedDepth}
           ticker24hr={ticker24hr}

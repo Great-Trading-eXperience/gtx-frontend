@@ -31,6 +31,7 @@ import {
   useCombinedTrades,
 } from '../hooks/useCombineData';
 import { useTransformedBalances } from '../hooks/useTransformedBalance';
+import { useWalletState } from '../hooks/useWalletState';
 
 const useIsClient = () => {
   const [isClient, setIsClient] = useState(false);
@@ -50,24 +51,15 @@ export type ClobDexComponentProps = {
 };
 
 export default function ClobDex() {
-  // Auth and wallet setup
-  const { isConnected } = useAccount();
-  const { isFullyAuthenticated } = usePrivyAuth();
-  const { wallets } = useWallets();
-  const chainId = useChainId();
-  const defaultChainId = Number(DEFAULT_CHAIN);
+  const walletState = useWalletState();
   const isClient = useIsClient();
-
-  const embedded = wallets.find(wallet => wallet.walletClientType === 'privy');
-  const effectiveAddress = embedded?.address as HexAddress;
-  const effectiveIsConnected = isConnected || isFullyAuthenticated;
 
   // Fetch pools data
   const {
     data: poolsData,
     isLoading: poolsLoading,
     error: poolsError,
-  } = usePools(chainId, defaultChainId);
+  } = usePools(walletState.embeddedChainId);
 
   // Get selected pool
   const { selectedPool, symbol } = useSelectedPool(poolsData);
@@ -77,7 +69,7 @@ export default function ClobDex() {
   const { data: tickerPrice, isLoading: isLoadingTickerPrice } = useTickerPrice(symbol);
   const { data: ticker24hr, isLoading: isLoadingTicker24hr } = useTicker24hr(symbol);
   const { data: tradesData, isLoading: isLoadingApiTrades } = useTradesData(selectedPool);
-  const { data: userTradesData } = useUserTrades(selectedPool, effectiveAddress);
+  const { data: userTradesData } = useUserTrades(selectedPool, walletState.embeddedAddress);
 
   // Fetch account data
   const {
@@ -85,23 +77,23 @@ export default function ClobDex() {
     isLoading: accountLoading,
     error: accountError,
     refetch: refetchAccount,
-  } = useAccountData(effectiveAddress);
+  } = useAccountData(walletState.embeddedAddress);
 
   const {
     data: allOrdersData,
     isLoading: allOrdersLoading,
     refetch: refetchAllOrders,
-  } = useAllOrders(effectiveAddress);
+  } = useAllOrders(walletState.embeddedAddress);
 
   const {
     data: openOrdersData,
     isLoading: openOrdersLoading,
     refetch: refetchOpenOrders,
-  } = useOpenOrders(effectiveAddress);
+  } = useOpenOrders(walletState.embeddedAddress);
 
   // WebSocket data
   const { wsDepthUpdates, wsTradeUpdates, wsTickerUpdates, wsOpenOrders, wsUserTrades } =
-    useWebSocketData(chainId, symbol, selectedPool, effectiveAddress);
+    useWebSocketData(walletState.embeddedChainId, symbol, selectedPool, walletState.embeddedAddress);
 
   // Combined data using custom hooks
   const combinedTrades = useCombinedTrades(tradesData, wsTradeUpdates);
@@ -109,19 +101,18 @@ export default function ClobDex() {
   const combinedOrders = useCombinedOrders(
     openOrdersData,
     wsOpenOrders,
-    chainId,
-    defaultChainId
+    walletState.embeddedChainId
   );
   const transformedBalances = useTransformedBalances(accountData, poolsData);
 
   // Handle connection state changes
   useEffect(() => {
-    if (effectiveIsConnected && effectiveAddress) {
+    if (walletState.embeddedAddress) {
       refetchAllOrders();
       refetchOpenOrders();
       refetchAccount();
     }
-  }, [effectiveIsConnected, effectiveAddress]);
+  }, [walletState.embeddedAddress]);
 
   // Loading states
   const tradesLoading = isLoadingApiTrades || isLoadingTickerPrice;
@@ -137,17 +128,17 @@ export default function ClobDex() {
         {/* Chart and Market Widget */}
         <div className="shadow-lg rounded-lg border border-gray-700/20 h-full flex flex-col">
           <ChartComponent
-            address={effectiveAddress}
-            chainId={chainId}
-            defaultChainId={defaultChainId}
+            address={walletState.embeddedAddress as `0x${string}`}
+            chainId={walletState.embeddedChainId}
+            defaultChainId={walletState.embeddedChainId}
             selectedPool={selectedPool}
           />
         </div>
 
         <MarketDataTabs
-          address={effectiveAddress}
-          chainId={chainId}
-          defaultChainId={defaultChainId}
+          address={walletState.embeddedAddress as `0x${string}`}
+          chainId={walletState.embeddedChainId}
+          defaultChainId={walletState.embeddedChainId}
           selectedPool={selectedPool}
           poolsLoading={poolsLoading}
           poolsError={poolsError}
@@ -157,9 +148,9 @@ export default function ClobDex() {
         />
         <div className="hidden md:flex flex-row w-full">
           <PlaceOrder
-            address={effectiveAddress}
-            chainId={chainId}
-            defaultChainId={defaultChainId}
+            address={walletState.embeddedAddress as `0x${string}`}
+            chainId={walletState.embeddedChainId}
+            defaultChainId={walletState.embeddedChainId}
             selectedPool={selectedPool}
             depthData={combinedDepth}
             ticker24hr={ticker24hr}
@@ -170,9 +161,9 @@ export default function ClobDex() {
       </div>
 
       <TradingHistory
-        address={effectiveAddress}
-        chainId={chainId}
-        defaultChainId={defaultChainId}
+        address={walletState.embeddedAddress as `0x${string}`}
+        chainId={walletState.embeddedChainId}
+        defaultChainId={walletState.embeddedChainId}
         balanceData={transformedBalances}
         balancesLoading={accountLoading}
         balancesError={accountError}
