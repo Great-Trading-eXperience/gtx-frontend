@@ -406,28 +406,6 @@ export const balancesPonderQuery = gql`
         lockedAmount
         user
       }
-      pageInfo {
-        startCursor
-        hasPreviousPage
-        endCursor
-        hasNextPage
-      }
-      totalCount
-    }
-  }
-`;
-
-export const balancesQuery = gql`
-  ${CurrencyFields}
-  query GetBalances($userAddress: String!) {
-    balances(where: { user: $userAddress }) {
-      id
-      amount
-      lockedAmount
-      user
-      currency {
-        ...CurrencyFields
-      }
     }
   }
 `;
@@ -443,18 +421,7 @@ export type BalanceItem = {
 export type BalancesPonderResponse = {
   balancess: {
     items: BalanceItem[];
-    pageInfo: {
-      endCursor: string;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-      startCursor: string;
-    };
-    totalCount: number;
   };
-};
-
-export type BalancesResponse = {
-  balances: BalanceItem[];
 };
 
 /*

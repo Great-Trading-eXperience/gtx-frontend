@@ -29,35 +29,35 @@ export default function WalletPage() {
     () => [
       // USDC
       {
-        address: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933' as `0x${string}`,
+        address: '0xc0F115A19107322cFBf1cDBC7ea011C19EbDB4F8' as `0x${string}`,
         symbol: 'USDC',
         decimals: 6,
         isQuote: true,
         chainId: walletState.externalChainId || 31338,
         // sourceAddresses: {
-        //   31338: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933' as `0x${string}`,
+        //   31338: '0xc0F115A19107322cFBf1cDBC7ea011C19EbDB4F8' as `0x${string}`,
         // },
       },
       // WETH
       {
-        address: '0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E' as `0x${string}`,
+        address: '0xc96304e3c037f81dA488ed9dEa1D8F2a48278a75' as `0x${string}`,
         symbol: 'WETH',
         decimals: 18,
         isQuote: false,
         chainId: walletState.externalChainId || 31338,
         // sourceAddresses: {
-        //   31338: '0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E' as `0x${string}`,
+        //   31338: '0xc96304e3c037f81dA488ed9dEa1D8F2a48278a75' as `0x${string}`,
         // },
       },
       // WBTC
       {
-        address: '0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690' as `0x${string}`,
+        address: '0x34B40BA116d5Dec75548a9e9A8f15411461E8c70' as `0x${string}`,
         symbol: 'WBTC',
         decimals: 8,
         isQuote: false,
         chainId: walletState.externalChainId || 31338,
         // sourceAddresses: {
-        //   31338: '0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690' as `0x${string}`,
+        //   31338: '0x34B40BA116d5Dec75548a9e9A8f15411461E8c70' as `0x${string}`,
         // },
       },
     ],

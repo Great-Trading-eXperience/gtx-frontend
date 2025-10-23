@@ -60,12 +60,6 @@ export function useHistoryData() {
   } = useQuery<CrossChainTransfersResponse>({
     queryKey: ['crosschain-history', walletState.externalAddress],
     queryFn: async () => {
-      if (
-        !walletState.externalAddress ||
-        walletState.externalAddress === 'Not Connected'
-      ) {
-        throw new Error('External wallet address not available');
-      }
       const currentChainId = walletState.externalChainId;
       const url = GTX_GRAPHQL_URL(currentChainId);
       if (!url) throw new Error('GraphQL URL not found');
@@ -82,23 +76,23 @@ export function useHistoryData() {
 
   // Transform history data for HistoryTab component
   const transactions: Transaction[] = (
-    historyData?.crossChainTransferss?.items || []
+    historyData?.crossChainTransferss.items || []
   ).map((transfer: any) => {
     const getTokenInfo = (address: string) => {
       const addr = address.toLowerCase();
       if (
-        addr === '0x0355B7B8cb128fA5692729Ab3AAa199C1753f726'.toLowerCase() ||
-        addr === '0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E'.toLowerCase()
+        addr === '0xD9d572665156732D1B61f3Bc3cfb08A5c20b2b2E'.toLowerCase() ||
+        addr === '0xc96304e3c037f81dA488ed9dEa1D8F2a48278a75'.toLowerCase()
       ) {
         return { symbol: 'WETH', decimals: 18 };
       } else if (
-        addr === '0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7'.toLowerCase() ||
-        addr === '0x67d269191c92Caf3cD7723F116c85e6E9bf55933'.toLowerCase()
+        addr === '0x50a2DBf1c98A23f7430baC7abe71A4fD673213c1'.toLowerCase() ||
+        addr === '0xc0F115A19107322cFBf1cDBC7ea011C19EbDB4F8'.toLowerCase()
       ) {
         return { symbol: 'USDC', decimals: 6 };
       } else if (
-        addr === '0x202CCe504e04bEd6fC0521238dDf04Bc9E8E15aB'.toLowerCase() ||
-        addr === '0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690'.toLowerCase()
+        addr === '0xb7779646a29d3510076DFDd7e60C203fa7093a29'.toLowerCase() ||
+        addr === '0x34B40BA116d5Dec75548a9e9A8f15411461E8c70'.toLowerCase()
       ) {
         return { symbol: 'WBTC', decimals: 8 };
       }
