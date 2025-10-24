@@ -9,9 +9,9 @@ import HeroShaderBackground from '../hero-shader-background';
 
 export function HeroSection() {
   const features = [
-    { icon: Zap, text: 'Earn While Trading' },
-    { icon: Shield, text: 'Zero Slippage CLOB' },
-    { icon: Globe, text: 'Crosschain Deposits' },
+    { icon: Zap, text: 'Always Earning' },
+    { icon: Shield, text: 'Minimal Slippage CLOB' },
+    { icon: Globe, text: 'Never Idle' },
   ];
 
   return (
@@ -29,7 +29,7 @@ export function HeroSection() {
           <div className="space-y-6 sm:space-y-8 animate-fade-in-up">
             {/* Badge */}
             <div className="inline-flex items-center px-4 py-2 rounded-full border border-blue-500/30 bg-blue-900/20 text-blue-400 text-sm font-medium backdrop-blur-sm">
-              Earn Yield While You Trade
+Where Your Assets Work Harder
             </div>
 
             {/* Main Heading */}
@@ -42,7 +42,7 @@ export function HeroSection() {
 
             {/* Subheading */}
             <p className="text-lg sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Your deposited assets earn staking rewards while you trade with synthetic tokens. Experience zero-slippage CLOB trading across any EVM chain without sacrificing yield.
+Supercharge your capital efficiency. Your assets continuously generate returns while you capture market opportunities.
             </p>
 
             {/* Feature badges */}

@@ -97,7 +97,7 @@ export function IntegrationsSection() {
     {
       icon: '/images/based.webp',
       name: 'Base',
-      description: 'An open onchain platform built from Coinbase’s internal experiment',
+      description: 'An open onchain platform built from Coinbase',
     },
     {
       icon: '/images/hyperlane.png',
@@ -129,7 +129,7 @@ export function IntegrationsSection() {
     {
       icon: '/images/based.webp',
       name: 'Base',
-      description: 'An open onchain platform built from Coinbase’s internal experiment',
+      description: 'An open onchain platform built from Coinbase',
     },
     {
       icon: '/images/hyperlane.png',
@@ -164,7 +164,7 @@ export function IntegrationsSection() {
             Leading Protocols
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Built on battle-tested infrastructure to deliver secure yield generation and seamless crosschain trading
+            Built on proven infrastructure to deliver secure yield generation and crosschain trading
           </p>
         </div>
 

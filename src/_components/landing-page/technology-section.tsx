@@ -17,21 +17,21 @@ export function TechnologySection() {
 
   const techFeatures: TechFeature[] = [
     {
-      title: 'Synthetic Token System',
+      title: 'Yield Generation Layer',
       description:
-        'Deposit real assets to earn staking rewards while synthetic tokens (gsUSDC, gsWETH) enable seamless trading without sacrificing yield generation.',
+        'Your deposited assets remain in high-yield protocols earning returns while synthetic tokens enable market access.',
       icon: Code2,
       details:
-        'When you deposit assets into GTX, your real tokens are managed for staking to generate yield. Simultaneously, synthetic tokens are minted 1:1, allowing you to trade freely while your original assets continue earning rewards. This dual-layer architecture maximizes capital efficiency—your money works harder by earning and trading simultaneously.',
+        'Real assets stay earning returns 24/7. Synthetic tokens represent your earning assets for market participation.',
       stats: ['Dual-Layer', 'Yield-Earning'],
     },
     {
-      title: 'Zero Slippage CLOB',
+      title: 'Market Access Layer',
       description:
-        'Central Limit Order Book architecture ensures you get exactly the price you specify, eliminating AMM-style slippage losses.',
+        'Place, modify, and cancel orders using synthetic tokens while your real assets continue generating returns.',
       icon: Puzzle,
       details:
-        'Unlike AMMs that suffer from exponential slippage on large trades, our CLOB provides traditional limit orders with precise execution. Set your desired price and quantity—your order executes exactly as specified or not at all. Combined with transparent on-chain matching and crosschain deposits, GTX delivers professional-grade trading while your assets earn staking rewards.',
+        'Full orderbook functionality with limit orders, stop losses, and advanced order types - all while generating returns.',
       stats: ['Price Precision', 'On-Chain Matching'],
     },
   ];
@@ -50,14 +50,14 @@ export function TechnologySection() {
           className="text-center mb-20"
         >
           <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
-            Built for{' '}
+            How{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-              Capital Efficiency
+              Dual Returns
             </span>
+            {' '}Work
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Innovative dual-layer architecture that enables simultaneous yield generation
-            and seamless trading
+            Dual-layer architecture that keeps your assets earning while enabling market participation
           </p>
         </motion.div>
 
@@ -114,55 +114,6 @@ export function TechnologySection() {
                       {feature.description}
                     </p>
 
-                    <div className="mt-auto">
-                      <button
-                        onClick={() =>
-                          setActiveFeature(activeFeature === index ? null : index)
-                        }
-                        className={`
-                          flex items-center text-sm font-medium transition-all duration-300
-                          ${
-                            activeFeature === index
-                              ? 'text-blue-400'
-                              : 'text-blue-500 hover:text-blue-400'
-                          }
-                        `}
-                      >
-                        {activeFeature === index ? 'Show less' : 'Show more'}
-                        <ArrowDown
-                          className={`ml-2 h-4 w-4 transition-transform duration-300 ${
-                            activeFeature === index ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </button>
-
-                      {/* Expanded details */}
-                      {activeFeature === index && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="mt-6 pt-6 border-t border-blue-900/30"
-                        >
-                          <p className="text-gray-300 text-sm mb-4">{feature.details}</p>
-
-                          {/* Display stats tags if they exist */}
-                          {feature.stats && feature.stats.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-4">
-                              {feature.stats.map((stat, i) => (
-                                <span
-                                  key={i}
-                                  className="px-3 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs font-medium"
-                                >
-                                  {stat}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </motion.div>

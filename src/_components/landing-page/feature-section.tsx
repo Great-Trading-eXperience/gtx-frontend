@@ -78,8 +78,8 @@ export function FeaturesSection() {
     <section className="py-20 relative z-10">
       <div className="max-w-screen-xl mx-auto px-4">
         <h2 className="text-4xl md:text-5xl font-bold text-center mt-6 max-w-5xl m-auto">
-          Maximize capital efficiency with{' '}
-          <span className="text-blue-400">yield-earning trading</span>
+          Always capture profit{' '}
+          <span className="text-blue-400">opportunities</span>
         </h2>
         <motion.div variants={parentVariants} initial="hidden" animate="visible">
           <div className="mt-12 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-3 gap-8">
@@ -90,8 +90,8 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.2 }}
             >
               <FeatureCard
-                title="Earn While Trading"
-                description="Your deposited assets generate staking rewards while synthetic tokens enable seamless trading"
+                title="Dual Revenue Streams"
+                description="Deposit real assets for yield generation while trading with synthetic tokens. Your USDC earns staking rewards in Yield Manager while gsUSDC enables seamless trading"
                 className="md:col-span-2 lg:col-span-1"
               >
                 <div className="aspect-video flex items-center justify-center">
@@ -118,8 +118,8 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.2 }}
             >
               <FeatureCard
-                title="Zero Slippage CLOB"
-                description="Central Limit Order Book ensures precise execution at your desired price with transparent on-chain matching"
+                title="Minimal Slippage CLOB"
+                description="Central Limit Order Book provides precise limit orders with transparent on-chain matching"
                 className="md:col-span-2 lg:col-span-1 group transition duration-500"
               >
                 <div className="aspect-video flex items-center justify-center">
@@ -149,19 +149,25 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.2 }}
             >
               <FeatureCard
-                title="Crosschain Deposits"
-                description="Deposit from Ethereum, Arbitrum, Base, or any EVM chain—your assets earn yield while you trade instantly"
+                title="Cross-Chain Deposits"
+                description="Deposit from any EVM chain - seamlessly bridge assets from Ethereum, Arbitrum, Base, and more"
                 className="group md:col-span-2 md:col-start-2 lg:col-span-1 lg:col-start-auto"
               >
-                <div className="aspect-video flex justify-center items-center gap-2">
-                  <Key className="w-20 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1">
+                <div className="aspect-video flex justify-center items-center gap-1.5">
+                  <Key className="w-16 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1">
                     ETH
                   </Key>
-                  <Key className="w-20 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-150">
+                  <Key className="w-16 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-75">
                     ARB
                   </Key>
-                  <Key className="w-20 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-300">
+                  <Key className="w-16 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-150">
                     BASE
+                  </Key>
+                  <Key className="w-16 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-225">
+                    OP
+                  </Key>
+                  <Key className="w-16 text-xs outline outline-2 outline-transparent group-hover:outline-blue-400 transition-all duration-500 outline-offset-2 group-hover:translate-y-1 delay-300">
+                    BSC
                   </Key>
                 </div>
               </FeatureCard>
@@ -169,19 +175,6 @@ export function FeaturesSection() {
           </div>
         </motion.div>
 
-        <div className="my-12 flex items-center justify-center flex-wrap gap-3 max-w-3xl m-auto">
-          {features.map(feature => (
-            <div
-              className="bg-[#0a0a0a] border border-blue-900/30 inline-flex px-3 md:px-5 md:py-2 py-1.5 rounded-2xl gap-3 items-center hover:scale-105 transition duration-500 group"
-              key={feature}
-            >
-              <span className="bg-blue-400 text-neutral-900 size-5 rounded-full inline-flex items-center justify-center text-xl group-hover:rotate-45 transition duration-500">
-                &#10038;
-              </span>
-              <span className="font-medium md:text-lg text-white">{feature}</span>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );

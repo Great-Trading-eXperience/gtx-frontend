@@ -18,28 +18,28 @@ export function TradingStepsSection() {
         {
             number: 1,
             title: "Connect Wallet",
-            description: "Connect your wallet using Privy to create your trading account and access earn-while-trade features",
+            description: "Connect your wallet to create your trading account",
             icon: Wallet,
             color: "from-blue-500 to-blue-600",
         },
         {
             number: 2,
             title: "Deposit & Earn",
-            description: "Deposit assets from any EVM chain—your funds automatically start earning staking rewards while synthetic tokens are minted for trading",
+            description: "Deposit assets like USDC to our Balance Manager contract. Your actual tokens are sent to the Yield Manager for staking rewards while you receive synthetic gsUSDC tokens for trading",
             icon: Database,
             color: "from-blue-600 to-blue-700",
         },
         {
             number: 3,
             title: "Trade Instantly",
-            description: "Use synthetic tokens to trade on our zero-slippage CLOB while your original assets continue generating yield",
+            description: "Trade using your synthetic tokens (gsUSDC) on our CLOB while your actual USDC continues earning yield. Auto-redemption occurs when orders are matched",
             icon: LineChart,
             color: "from-blue-700 to-blue-800",
         },
         {
             number: 4,
             title: "Maximize Returns",
-            description: "Monitor your trading profits and staking rewards simultaneously—earn from both market opportunities and passive yield",
+            description: "Monitor both your market performance and accumulated yield in real-time",
             icon: BarChart2,
             color: "from-blue-800 to-blue-900",
         },
@@ -50,13 +50,13 @@ export function TradingStepsSection() {
             <div className="max-w-screen-xl mx-auto px-4">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
-                        Start earning in{" "}
+                        Start making your assets{" "}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-                            4 simple steps
+                            work harder
                         </span>
                     </h2>
                     <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                        Deposit once, earn yield continuously, and trade freely with synthetic tokens
+                        Deposit once, earn continuously, and capture market opportunities without downtime
                     </p>
                 </div>
 

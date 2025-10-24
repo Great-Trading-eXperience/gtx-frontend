@@ -32,6 +32,11 @@ const TechnologySection = dynamic(() => import('./technology-section').then(mod 
   ssr: false
 });
 
+const SyntheticTokenSection = dynamic(() => import('./synthetic-token-section').then(mod => ({ default: mod.SyntheticTokenSection })), {
+  loading: () => <div className="py-20" />,
+  ssr: false
+});
+
 export function LandingEspresso() {
   return (
     <main className="text-white min-h-screen overflow-x-hidden bg-black !p-0 !flex-none !justify-start !items-stretch">
@@ -39,15 +44,17 @@ export function LandingEspresso() {
       <HeroSection />
 
       {/* Below-the-fold sections - Lazy loaded */}
-      <ProblemsSection />
+      {/* <ProblemsSection /> */}
 
       <FeaturesSection />
+
+      <SyntheticTokenSection />
 
       <TradingStepsSection />
 
       <IntegrationsSection />
 
-      <TechnologySection />
+      {/* <TechnologySection /> */}
 
       {/* CTA Section */}
       <section className="py-20 relative z-10">
@@ -58,12 +65,12 @@ export function LandingEspresso() {
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
                 Ready to{' '}
                 <span className="text-transparent bg-clip-text bg-gray-200">
-                  Earn While Trading
+                  Supercharge Your Capital
                 </span>
                 ?
               </h2>
               <p className="text-xl text-gray-200 mb-8">
-                Start generating yield from your trading capital today. Deposit once, earn staking rewards continuously, and trade freely with zero slippage.
+                Make every dollar work harder. Your assets generate returns 24/7 while you capture market opportunities.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Link href="/markets" target="_blank">

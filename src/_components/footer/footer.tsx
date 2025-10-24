@@ -1,6 +1,6 @@
 'use client';
 
-import { Twitter } from 'lucide-react';
+import { Twitter, Copy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -21,7 +21,7 @@ const LOGO_CONFIG = {
   src: '/logo/gtx.png',
   alt: 'GTX Logo',
   text: 'GTX',
-  tagline: 'Trade across any EVM chain without moving your funds.',
+  tagline: 'Trade across major EVM chains without moving your funds.',
 };
 
 const RESOURCES_LINKS: FooterLink[] = [
@@ -40,82 +40,51 @@ const SOCIAL_LINKS: SocialLink[] = [
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-// Subcomponents
-const FooterLogo = () => (
-  <div className="col-span-1 md:col-span-2">
-    <Link href="/" className="flex items-center gap-2">
-      <Image src={LOGO_CONFIG.src} alt={LOGO_CONFIG.alt} width={40} height={40} className="h-10 w-10" />
-      <span className="text-3xl font-bold text-white">{LOGO_CONFIG.text}</span>
-    </Link>
-    <p className="mt-4 text-gray-400 text-sm leading-relaxed">{LOGO_CONFIG.tagline}</p>
-    <div className="mt-5">
-      <p className="text-gray-400 text-sm">© {CURRENT_YEAR} Great Trading eXperience</p>
-    </div>
-  </div>
-);
-
-interface FooterLinksSectionProps {
-  title: string;
-  links: FooterLink[];
-}
-
-const FooterLinksSection = ({ title, links }: FooterLinksSectionProps) => (
-  <div className="col-span-1">
-    <h2 className="text-white font-semibold mb-4 text-lg">{title}</h2>
-    <ul className="space-y-3">
-      {links.map((link) => (
-        <li key={link.destination}>
-          <Link
-            href={link.destination}
-            className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
-          >
-            <div className="w-1 h-1 rounded-full bg-white/60" />
-            {link.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
-
-const SocialLinksSection = () => (
-  <div className="col-span-1">
-    <h2 className="text-white font-semibold mb-4 text-lg">Community</h2>
-    <div className="flex flex-col space-y-4">
-      {SOCIAL_LINKS.map((social) => {
-        const Icon = social.icon;
-        return (
-          <a
-            key={social.url}
-            href={social.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
-          >
-            <div className="bg-white/10 p-2 rounded-md">
-              <Icon size={18} />
-            </div>
-            <span>{social.label}</span>
-          </a>
-        );
-      })}
-    </div>
-  </div>
-);
-
 const Footer = () => {
   return (
-    <footer className="text-gray-300 relative overflow-hidden bg-[#0A0A0A]">
-      {/* Background overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-white/10 opacity-30" />
-      <div className="absolute inset-0 bg-[url('/blockchain-bg.svg')] bg-repeat opacity-5" />
+    <footer className="relative overflow-hidden bg-black text-white">
+      {/* Main content */}
+      <div className="relative z-10 max-w-screen-xl mx-auto px-6 py-16">
+        {/* Top section - minimal like Flying Tulip */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-20">
+          {/* Contact */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Contact</h3>
+            <div className="space-y-2">
+              <a 
+                href="mailto:contact@gtx.com" 
+                className="text-gray-400 hover:text-white transition-colors block"
+              >
+                info@gtxdex.xyz
+              </a>
+            </div>
+          </div>
 
-      <div className="max-w-screen-xl mx-auto px-6 py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-12">
-          <FooterLogo />
-          <FooterLinksSection title="Resources" links={RESOURCES_LINKS} />
-          <FooterLinksSection title="Support" links={SUPPORT_LINKS} />
-          <SocialLinksSection />
+          {/* Social icons */}
+          <div className="flex items-center gap-4">
+            <a
+              href="https://x.com/gtx_dex"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <Twitter size={24} />
+            </a>
+          </div>
+        </div>
+
+        {/* Bottom section - copyright only */}
+        <div className="border-t border-gray-800 pt-8 mb-8">
+          <p className="text-gray-400 text-sm">
+            © {CURRENT_YEAR} Great Trading Xperience. All rights reserved.
+          </p>
+        </div>
+
+        {/* Large GTX text - positioned at the bottom */}
+        <div className="flex justify-center -mb-8">
+          <div className="text-[8rem] md:text-[12rem] lg:text-[16rem] xl:text-[20rem] font-bold text-gray-400/40 leading-none select-none tracking-wider">
+            GTX
+          </div>
         </div>
       </div>
     </footer>

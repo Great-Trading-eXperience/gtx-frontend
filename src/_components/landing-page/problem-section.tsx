@@ -30,8 +30,7 @@ export function ProblemsSection() {
         'Your deposited assets automatically earn staking rewards while synthetic tokens enable seamless trading, maximizing capital efficiency.',
       detailedContent: {
         paragraphs: [
-          'Traditional trading platforms force you to choose: either lock your assets in staking/yield protocols or keep them liquid for trading opportunities. This creates massive capital inefficiency.',
-          'GTX solves this by managing your deposited assets for staking while minting synthetic tokens for trading. Your capital earns yield 24/7 while you maintain full trading flexibility.',
+          'GTX solves this by managing your deposited assets for staking while minting synthetic tokens for trading.',
         ],
       },
       illustration: (
@@ -50,8 +49,7 @@ export function ProblemsSection() {
         'Our decentralized exchange ensures complete transparency with on-chain order matching, open-source smart contracts, and clear fee structures.',
       detailedContent: {
         paragraphs: [
-          'Centralized exchanges operate with minimal transparency, creating information asymmetry through hidden order types, preferential treatment for high-frequency traders, and opaque fee structures.',
-          'Our decentralized architecture ensures complete transparency with on-chain order matching, open-source smart contracts, and clear fee structures that create a level playing field for all participants.',
+          'Our decentralized architecture ensures transparency with on-chain order matching and open-source smart contracts.',
         ],
       },
       illustration: (
@@ -71,11 +69,10 @@ export function ProblemsSection() {
       description:
         'AMMs suffer from significant slippage on large trades due to bonding curve mechanics, causing traders to lose substantial value especially during volatile markets.',
       solution:
-        'Our Central Limit Order Book (CLOB) provides traditional limit orders with zero slippage, ensuring you get exactly the price you expect.',
+        'Our Central Limit Order Book (CLOB) provides traditional limit orders with minimal slippage for better execution.',
       detailedContent: {
         paragraphs: [
-          'Automated Market Makers suffer from exponential slippage on large trades due to bonding curve mechanics, resulting in poor execution especially during volatile markets.',
-          'Our Central Limit Order Book provides traditional limit orders with zero slippage. You specify exactly the price you want, maintaining complete control over execution even in turbulent markets.',
+          'Our Central Limit Order Book provides traditional limit orders with minimal slippage and better price control.',
         ],
       },
       illustration: (
@@ -94,11 +91,10 @@ export function ProblemsSection() {
       description:
         'Managing assets across multiple chains requires constant bridging, separate balances, and high fees—making crosschain trading impractical and expensive.',
       solution:
-        'Deposit from any EVM chain once and trade immediately. Your assets stay on your preferred chain while GTX handles crosschain settlement automatically.',
+        'Deposit from major EVM chains and trade with synthetic tokens while your assets stay on your preferred chain.',
       detailedContent: {
         paragraphs: [
-          'Traditional crosschain trading forces you to bridge assets repeatedly, pay multiple fees, and manage separate balances across networks—creating friction and locked capital.',
-          'GTX eliminates this complexity. Deposit once from your preferred chain, and your assets are automatically managed while synthetic tokens enable instant crosschain trading with zero bridging overhead.',
+          'GTX eliminates this complexity. Deposit once from your preferred chain and trade with synthetic tokens.',
         ],
       },
       illustration: (
