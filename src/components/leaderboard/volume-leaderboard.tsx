@@ -32,7 +32,7 @@ const VolumeLeaderboard = ({}: VolumeLeaderboardProps) => {
         setError(null)
       } catch (error) {
         console.error('Error fetching volume leaderboard:', error)
-        setError('Failed to load volume leaderboard. Please check if the analytics service is running at http://localhost:42090')
+        setError('Failed to load volume leaderboard. Please check if the analytics service is running at https://stats.gtxdex.xyz')
       } finally {
         setLoading(false)
       }

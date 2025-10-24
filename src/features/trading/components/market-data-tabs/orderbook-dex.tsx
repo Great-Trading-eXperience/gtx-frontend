@@ -25,28 +25,28 @@ enum OrderSideEnum {
 }
 
 interface Order {
-price: number;
-size: number;
-total?: number;
-key?: string;
-isMatched?: boolean;
-lastUpdated?: number;
+  price: number;
+  size: number;
+  total?: number;
+  key?: string;
+  isMatched?: boolean;
+  lastUpdated?: number;
 }
 
 interface ScaledOrderbook {
-asks: Order[];
-bids: Order[];
+  asks: Order[];
+  bids: Order[];
 }
 
 interface OrderBook {
-asks: Order[];
-bids: Order[];
-lastPrice: bigint;
-spread: string;
-spreadPercentage: string;
-lastUpdate?: number;
-previousAsks?: Order[];
-previousBids?: Order[];
+  asks: Order[];
+  bids: Order[];
+  lastPrice: bigint;
+  spread: string;
+  spreadPercentage: string;
+  lastUpdate?: number;
+  previousAsks?: Order[];
+  previousBids?: Order[];
 }
 
 type ViewType = 'both' | 'bids' | 'asks';
@@ -57,19 +57,19 @@ const PRICE_MATCH_THRESHOLD = 0.1;
 const TOTAL_MATCH_THRESHOLD = 10;
 
 export type OrderBookDexProps = ClobDexComponentProps & {
-selectedPool: ProcessedPoolItem;
-poolsData?: PoolsResponse;
-poolsLoading?: boolean;
-poolsError?: Error | null;
+  selectedPool: ProcessedPoolItem;
+  poolsData?: PoolsResponse;
+  poolsLoading?: boolean;
+  poolsError?: Error | null;
 };
 
 interface EnhancedOrderBookDexProps {
-selectedPool?: ProcessedPoolItem;
-chainId: number | undefined;
-defaultChainId: number;
-poolsLoading: boolean;
-poolsError: Error | null;
-depthData: DepthData | null;
+  selectedPool?: ProcessedPoolItem;
+  chainId: number | undefined;
+  defaultChainId: number;
+  poolsLoading: boolean;
+  poolsError: Error | null;
+  depthData: DepthData | null;
 }
 
 function scaleOrderbook(asks: Order[], bids: Order[], scale: number): ScaledOrderbook {
@@ -77,10 +77,10 @@ function scaleOrderbook(asks: Order[], bids: Order[], scale: number): ScaledOrde
   asks.sort((a, b) => a.price - b.price);
   bids.sort((a, b) => b.price - a.price);
 
-// Function to round price to nearest scale interval
-function roundToScale(price: number, scale: number): number {
-  return Math.round(price / scale) * scale;
-}
+  // Function to round price to nearest scale interval
+  function roundToScale(price: number, scale: number): number {
+    return Math.round(price / scale) * scale;
+  }
 
   // Function to aggregate orders by scaled price
   function aggregateOrders(orders: Order[], scale: number): Order[] {
@@ -105,13 +105,13 @@ function roundToScale(price: number, scale: number): number {
     return Array.from(aggregated.values());
   }
 
-// Aggregate both asks and bids
-const scaledAsks = aggregateOrders(asks, scale);
-const scaledBids = aggregateOrders(bids, scale);
+  // Aggregate both asks and bids
+  const scaledAsks = aggregateOrders(asks, scale);
+  const scaledBids = aggregateOrders(bids, scale);
 
-// Sort again after aggregation
-scaledAsks.sort((a, b) => a.price - b.price);
-scaledBids.sort((a, b) => b.price - a.price);
+  // Sort again after aggregation
+  scaledAsks.sort((a, b) => a.price - b.price);
+  scaledBids.sort((a, b) => b.price - a.price);
 
   return {
     asks: scaledAsks,
@@ -120,22 +120,22 @@ scaledBids.sort((a, b) => b.price - a.price);
 }
 
 const EnhancedOrderBookDex = ({
-chainId,
-defaultChainId,
-depthData,
-selectedPool,
-poolsLoading,
-poolsError,
+  chainId,
+  defaultChainId,
+  depthData,
+  selectedPool,
+  poolsLoading,
+  poolsError,
 }: EnhancedOrderBookDexProps) => {
-const [mounted, setMounted] = useState(false);
-const [viewType, setViewType] = useState<ViewType>('both');
-const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.01');
-const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-const priceOptions = ['0.05', '0.02', '0.01', '0.1', '1'];
-const previousOrderBook = useRef<OrderBook | null>(null);
-const previousPrice = useRef<number | null>(null);
-const priceDirection = useRef<'up' | 'down' | null>(null);
-const dropdownRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [viewType, setViewType] = useState<ViewType>('both');
+  const [selectedDecimal, setSelectedDecimal] = useState<DecimalPrecision>('0.01');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const priceOptions = ['0.05', '0.02', '0.01', '0.1', '1'];
+  const previousOrderBook = useRef<OrderBook | null>(null);
+  const previousPrice = useRef<number | null>(null);
+  const priceDirection = useRef<'up' | 'down' | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: Event) => {
@@ -488,133 +488,100 @@ const dropdownRef = useRef<HTMLDivElement>(null);
             <Menu className="h-4 w-4" />
           </button>
         </div>
-        {isDropdownOpen && (
-          <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-gray-700/50 bg-gray-900 shadow-lg">
-            {priceOptions.map(option => (
-              <button
-                key={option}
-                className="w-full px-4 py-2 text-left text-xs text-gray-200 transition-colors duration-200 hover:bg-gray-800 hover:text-white"
-                onClick={() => {
-                  setSelectedDecimal(option as DecimalPrecision);
-                  setIsDropdownOpen(false);
-                }}
-              >
-                {option}
-              </button>
-            ))}
+      </div>
+
+      <div>
+        {/* Loading state */}
+        {isLoading || !selectedPool ? (
+          <div className="flex justify-center py-8">
+            <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
           </div>
-        )}
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-300">
-          {viewType === 'both'
-            ? 'Bid/Ask'
-            : viewType === 'asks'
-            ? 'Asks Only'
-            : 'Bids Only'}
-        </span>
-        <button
-          onClick={toggleView}
-          className="rounded-lg bg-gray-700/40 py-1.5 px-2 text-gray-400 transition-colors hover:bg-gray-800/50 hover:text-gray-300 border border-gray-700/50"
-        >
-          <Menu className="h-4 w-4" />
-        </button>
-      </div>
-    </div> */}
+        ) : (
+          <>
+            {(viewType === 'both' || viewType === 'asks') && (
+              <div>
+                {/* Column Headers for Asks */}
+                <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+                  <div>Price</div>
+                  <div className="text-center">Size</div>
+                  <div className="text-right">Total</div>
+                </div>
 
-    <div>
-      {/* Loading state */}
-      {isLoading || !selectedPool ? (
-        <div className="flex justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-        </div>
-      ) : (
-        <>
-          {(viewType === 'both' || viewType === 'asks') && (
-            <div>
-              {/* Column Headers for Asks */}
-              <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
-                <div>Price</div>
-                {/* <div className="text-center">Size</div> */}
-                <div className="text-right">Total</div>
-              </div>
+                <div className="flex flex-col-reverse space-y-[2px] space-y-reverse">
+                  {orderBook.asks.slice(0, 10).map((ask, i) => {
+                    const maxTotal = orderBook.asks.reduce(
+                      (max, curr) =>
+                        curr.total && max
+                          ? curr.total > max
+                            ? curr.total
+                            : max
+                          : curr.total || max || 1,
+                      0
+                    );
 
-              <div className="flex flex-col-reverse space-y-[2px] space-y-reverse">
-                {orderBook.asks.slice(0, 10).map((ask, i) => {
-                  const maxTotal = orderBook.asks.reduce(
-                    (max, curr) =>
-                      curr.total && max
-                        ? curr.total > max
-                          ? curr.total
-                          : max
-                        : curr.total || max || 1,
-                    0
-                  );
+                    // Determine if this order should be highlighted
+                    const isHighlighted = ask.isMatched;
 
-                  // Determine if this order should be highlighted
-                  const isHighlighted = ask.isMatched;
+                    return (
+                      <div key={ask.key || `ask-${i}`} className="group relative">
+                        {/* Volume bar - not animated */}
+                        <div
+                          className="absolute bottom-0 left-0 top-0 bg-rose-500/20 transition-all group-hover:bg-rose-500/30"
+                          style={{
+                            width: `${((ask.total || 0) * 100) / maxTotal}%`,
+                          }}
+                        />
 
-                  return (
-                    <div key={ask.key || `ask-${i}`} className="group relative">
-                      {/* Volume bar - not animated */}
-                      <div
-                        className="absolute bottom-0 left-0 top-0 bg-rose-500/20 transition-all group-hover:bg-rose-500/30"
-                        style={{
-                          width: `${((ask.total || 0) * 100) / maxTotal}%`,
-                        }}
-                      />
+                        {/* Only add the highlight animation when matched */}
+                        {isHighlighted && (
+                          <div className="absolute inset-0 animate-highlight-ask"></div>
+                        )}
 
-                      {/* Only add the highlight animation when matched */}
-                      {isHighlighted && (
-                        <div className="absolute inset-0 animate-highlight-ask"></div>
-                      )}
-
-                      <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
-                        <div className="font-medium text-rose-400">
-                          {formatPrice(ask.price)}
-                        </div>
-                        {/* <div className="text-center text-gray-200">
-                          {formatSize(ask.size)}
-                        </div> */}
-                        <div className="text-right text-gray-200">
-                          {ask.total ? formatSize(ask.total) : '0.00'}
+                        <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
+                          <div className="font-medium text-rose-400">
+                            {formatPrice(ask.price)}
+                          </div>
+                          <div className="text-center text-gray-200">
+                            {formatSize(ask.size)}
+                          </div>
+                          <div className="text-right text-gray-200">
+                            {ask.total ? formatSize(ask.total) : '0.00'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {viewType === 'both' && (
-            <div className="my-2 border-y border-white/20 bg-gray-900/40 px-4 py-2 text-xs">
-              {/* Single row with price (with arrow) and spread */}
-              <div className="flex justify-between text-gray-200">
-                <div className="flex items-center gap-4">
-                  {/* Price with arrow */}
-                  <div className="flex items-center">
-                    {marketData?.price && (
-                      <span
-                        className={`font-medium flex items-center ${
-                          priceDirection.current === 'down'
-                            ? 'text-rose-400'
-                            : 'text-emerald-400'
-                        }`}
-                      >
-                        {formatPrice(
-                          Number(formatUnits(BigInt(marketData.price), quoteDecimals))
-                        )}
-                        {priceDirection.current &&
-                          (priceDirection.current === 'up' ? (
-                            <ArrowUp className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDown className="h-3 w-3 ml-1" />
-                          ))}
-                      </span>
-                    )}
-                  </div>
+            {viewType === 'both' && (
+              <div className="my-2 border-y border-white/20 bg-gray-900/40 px-4 py-2 text-xs">
+                {/* Single row with price (with arrow) and spread */}
+                <div className="flex justify-between text-gray-200">
+                  <div className="flex items-center gap-4">
+                    {/* Price with arrow */}
+                    <div className="flex items-center">
+                      {marketData?.price && (
+                        <span
+                          className={`font-medium flex items-center ${
+                            priceDirection.current === 'down'
+                              ? 'text-rose-400'
+                              : 'text-emerald-400'
+                          }`}
+                        >
+                          {formatPrice(
+                            Number(formatUnits(BigInt(marketData.price), quoteDecimals))
+                          )}
+                          {priceDirection.current &&
+                            (priceDirection.current === 'up' ? (
+                              <ArrowUp className="h-3 w-3 ml-1" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3 ml-1" />
+                            ))}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Spread */}
                     <div className="flex items-center gap-16 w-full">
@@ -627,105 +594,104 @@ const dropdownRef = useRef<HTMLDivElement>(null);
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {(viewType === 'both' || viewType === 'bids') && (
-            <div>
-              {/* Column Headers for Bids */}
-              <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
-                <div>Price</div>
-                {/* <div className="text-center">Size</div> */}
-                <div className="text-right">Total</div>
-              </div>
+            {(viewType === 'both' || viewType === 'bids') && (
+              <div>
+                {/* Column Headers for Bids */}
+                <div className="grid grid-cols-3 border-y border-white/20 bg-gray-900/20 px-4 py-2 text-xs font-medium text-gray-300">
+                  <div>Price</div>
+                  <div className="text-center">Size</div>
+                  <div className="text-right">Total</div>
+                </div>
 
-              <div className="space-y-[2px]">
-                {orderBook.bids.slice(0, 10).map((bid, i) => {
-                  const maxTotal = orderBook.bids.reduce(
-                    (max, curr) =>
-                      curr.total && max
-                        ? curr.total > max
-                          ? curr.total
-                          : max
-                        : curr.total || max || 1,
-                    0
-                  );
+                <div className="space-y-[2px]">
+                  {orderBook.bids.slice(0, 10).map((bid, i) => {
+                    const maxTotal = orderBook.bids.reduce(
+                      (max, curr) =>
+                        curr.total && max
+                          ? curr.total > max
+                            ? curr.total
+                            : max
+                          : curr.total || max || 1,
+                      0
+                    );
 
-                  // Determine if this order should be highlighted
-                  const isHighlighted = bid.isMatched;
+                    // Determine if this order should be highlighted
+                    const isHighlighted = bid.isMatched;
 
-                  return (
-                    <div key={bid.key || `bid-${i}`} className="group relative">
-                      {/* Volume bar - not animated */}
-                      <div
-                        className="absolute bottom-0 left-0 top-0 bg-emerald-500/20 transition-all group-hover:bg-emerald-500/30"
-                        style={{
-                          width: `${((bid.total || 0) * 100) / maxTotal}%`,
-                        }}
-                      />
+                    return (
+                      <div key={bid.key || `bid-${i}`} className="group relative">
+                        {/* Volume bar - not animated */}
+                        <div
+                          className="absolute bottom-0 left-0 top-0 bg-emerald-500/20 transition-all group-hover:bg-emerald-500/30"
+                          style={{
+                            width: `${((bid.total || 0) * 100) / maxTotal}%`,
+                          }}
+                        />
 
-                      {/* Only add the highlight animation when matched */}
-                      {isHighlighted && (
-                        <div className="absolute inset-0 animate-highlight-bid"></div>
-                      )}
+                        {/* Only add the highlight animation when matched */}
+                        {isHighlighted && (
+                          <div className="absolute inset-0 animate-highlight-bid"></div>
+                        )}
 
-                      <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
-                        <div className="font-medium text-emerald-400">
-                          {formatPrice(bid.price)}
-                        </div>
-                        {/* <div className="text-center text-gray-200">
-                          {formatSize(bid.size)}
-                        </div> */}
-                        <div className="text-right text-gray-200">
-                          {bid.total ? formatSize(bid.total) : '0.00'}
+                        <div className="relative grid grid-cols-3 px-4 py-1 text-xs">
+                          <div className="font-medium text-emerald-400">
+                            {formatPrice(bid.price)}
+                          </div>
+                          <div className="text-center text-gray-200">
+                            {formatSize(bid.size)}
+                          </div>
+                          <div className="text-right text-gray-200">
+                            {bid.total ? formatSize(bid.total) : '0.00'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Add CSS for the blinking animations with more subtle effects */}
+      <style jsx global>{`
+        @keyframes highlight-bid {
+          0% {
+            background-color: rgba(16, 185, 129, 0.1);
+          }
+          50% {
+            background-color: rgba(16, 185, 129, 0.25);
+          }
+          100% {
+            background-color: rgba(16, 185, 129, 0.1);
+          }
+        }
+
+        @keyframes highlight-ask {
+          0% {
+            background-color: rgba(239, 68, 68, 0.1);
+          }
+          50% {
+            background-color: rgba(239, 68, 68, 0.25);
+          }
+          100% {
+            background-color: rgba(239, 68, 68, 0.1);
+          }
+        }
+
+        .animate-highlight-bid {
+          animation: highlight-bid 1.2s ease-in-out;
+        }
+
+        .animate-highlight-ask {
+          animation: highlight-ask 1.2s ease-in-out;
+        }
+      `}</style>
     </div>
-
-    {/* Add CSS for the blinking animations with more subtle effects */}
-    <style jsx global>{`
-      @keyframes highlight-bid {
-        0% {
-          background-color: rgba(16, 185, 129, 0.1);
-        }
-        50% {
-          background-color: rgba(16, 185, 129, 0.25);
-        }
-        100% {
-          background-color: rgba(16, 185, 129, 0.1);
-        }
-      }
-
-      @keyframes highlight-ask {
-        0% {
-          background-color: rgba(239, 68, 68, 0.1);
-        }
-        50% {
-          background-color: rgba(239, 68, 68, 0.25);
-        }
-        100% {
-          background-color: rgba(239, 68, 68, 0.1);
-        }
-      }
-
-      .animate-highlight-bid {
-        animation: highlight-bid 1.2s ease-in-out;
-      }
-
-      .animate-highlight-ask {
-        animation: highlight-ask 1.2s ease-in-out;
-      }
-    `}</style>
-  </div>
-);
+  );
 };
 
 export default EnhancedOrderBookDex;

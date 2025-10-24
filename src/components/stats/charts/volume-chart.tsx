@@ -27,7 +27,7 @@ const VolumeChart = ({}: VolumeChartProps) => {
         setError(null)
       } catch (error) {
         console.error('Error fetching volume data:', error)
-        setError('Failed to load volume data. Please check if the analytics service is running at http://localhost:42090')
+        setError('Failed to load volume data. Please check if the analytics service is running at https://stats.gtxdex.xyz')
       } finally {
         setLoading(false)
       }

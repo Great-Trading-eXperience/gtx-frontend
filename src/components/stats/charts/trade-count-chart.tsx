@@ -22,7 +22,7 @@ const TradeCountChart = ({}: TradeCountChartProps) => {
         setError(null)
       } catch (error) {
         console.error('Error fetching trade count data:', error)
-        setError('Failed to load trade count data. Please check if the analytics service is running at http://localhost:42090')
+        setError('Failed to load trade count data. Please check if the analytics service is running at https://stats.gtxdex.xyz')
       } finally {
         setLoading(false)
       }

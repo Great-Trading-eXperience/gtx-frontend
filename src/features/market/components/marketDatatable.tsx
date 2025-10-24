@@ -131,19 +131,6 @@ export default function MarketsDataTable({
           aVal = a.name;
           bVal = b.name;
           break;
-        case 'age':
-          // Convert age to minutes for sorting
-          const getMinutes = (age: string) => {
-            const num = parseInt(age);
-            if (age.includes('s')) return num / 60;
-            if (age.includes('m')) return num;
-            if (age.includes('h')) return num * 60;
-            if (age.includes('d')) return num * 1440;
-            return 0;
-          };
-          aVal = getMinutes(a.age);
-          bVal = getMinutes(b.age);
-          break;
         default:
           return 0;
       }
@@ -247,15 +234,6 @@ export default function MarketsDataTable({
                 <tr className="border-b border-white/20">
                   <th className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5">
                     Market
-                  </th>
-                  <th
-                    className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
-                    onClick={() => handleSort('age')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Age
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
                   </th>
                   <th
                     className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
@@ -369,24 +347,12 @@ export default function MarketsDataTable({
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <div
-                          className="flex items-center gap-2 text-white/80"
-                          title={new Date(market.timestamp * 1000).toLocaleString()}
-                        >
-                          <Clock className="w-4 h-4 text-white/60" />
-                          {market.age}
-                        </div>
-                      </td>
                       <td className="px-6 py-5 text-white font-mono">${market.price}</td>
                       <td className="px-6 py-5 text-white/90 font-mono">
                         ${market.volume}
                       </td>
                       <td className="px-6 py-5 text-white/90 font-mono">
-                        $
-                        {market.liquidity === '0'
-                          ? '0'
-                          : parseFloat(market.liquidity).toLocaleString()}
+                        ${market.liquidity}
                       </td>
                     </tr>
                   ))

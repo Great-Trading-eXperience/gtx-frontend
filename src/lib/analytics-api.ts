@@ -1,5 +1,5 @@
 // Analytics API configuration and helper functions
-export const ANALYTICS_API_BASE_URL = 'http://localhost:42090';
+export const ANALYTICS_API_BASE_URL = 'https://stats.gtxdex.xyz';
 
 // API endpoints from ETL_ARCHITECTURE.md
 export const ANALYTICS_ENDPOINTS = {

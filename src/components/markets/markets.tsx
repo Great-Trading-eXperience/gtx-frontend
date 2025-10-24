@@ -1,52 +1,29 @@
 "use client";
 
 import { Input } from '@/components/ui/input';
-import { DEFAULT_CHAIN } from '@/constants/contract/contract-address';
-import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import {
-  poolsPonderQuery,
-  PoolsPonderResponse,
-  poolsQuery,
-  PoolsResponse,
-} from '@/graphql/gtx/clob';
-import {
-  MarketData,
-  processPools
+  MarketData
 } from '@/lib/market-data';
-import { getUseSubgraph } from '@/utils/env';
 import { useQuery } from '@tanstack/react-query';
-import request from 'graphql-request';
 import { CheckCircle, Clock, Search } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useChainId } from 'wagmi';
 import { DotPattern } from '../magicui/dot-pattern';
 import { MarketListSkeleton } from './market-list-skeleton';
 import MarketSearchDialog from './market-search-dialog';
 
-interface MarketListProps {
-  initialMarketData?: MarketData[];
-}
-
-export default function MarketList({ initialMarketData = [] }: MarketListProps) {
+export default function MarketList() {
   const router = useRouter();
-  const [markets, setMarkets] = useState<MarketData[]>(initialMarketData);
-  const [isLoading, setIsLoading] = useState(true); // Always start with loading true
-  const [isProcessingPools, setIsProcessingPools] = useState(
-    initialMarketData.length === 0
-  );
+  const [markets, setMarkets] = useState<MarketData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessingPools, setIsProcessingPools] = useState(true);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   const [copiedToken, setCopiedToken] = useState<{
     id: string;
     name: string;
   } | null>(null);
   const [showWatchlist, setShowWatchlist] = useState(false);
-  
-  const POOLS_PER_PAGE = 20;
-
-  const chainId = useChainId();
-  const defaultChain = Number(DEFAULT_CHAIN);
 
   // Use useEffect for timer to prevent running on every render
   useEffect(() => {
@@ -57,31 +34,26 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     return () => clearTimeout(timer);
   }, []); // Run only once on mount
 
-  // If initialMarketData is provided, we can skip the initial loading state
-  const shouldFetchData = initialMarketData.length === 0;
-
-  // Fetch pools data with pagination and better error handling
-  const { data: poolsData, error: poolsError, isLoading: isQueryLoading } = useQuery<
-    PoolsPonderResponse | PoolsResponse
-  >({
-    queryKey: ['pools', String(chainId ?? defaultChain), 'paginated'],
+  // Fetch markets data from REST API
+  const { data: marketsData, error: marketsError, isLoading: isQueryLoading } = useQuery<any[]>({
+    queryKey: ['markets'],
     queryFn: async () => {
-      console.log('[RPC-DEBUG] 📊 Markets - Fetching pools data');
-      const currentChainId = Number(chainId ?? defaultChain);
-      const url = GTX_GRAPHQL_URL(currentChainId);
-      if (!url) throw new Error('GraphQL URL not found');
+      console.log('[RPC-DEBUG] 📊 Markets - Fetching markets data');
+      const response = await fetch('https://core-indexer-devnet.gtxdex.xyz/api/markets', {
+        headers: {
+          'accept': '*/*',
+          'origin': window.location.origin,
+        },
+      });
       
-      // Fetch limited data for initial fast loading
-      if (getUseSubgraph()) {
-        const limitedQuery = poolsPonderQuery.replace('query GetPools', 'query GetPools($limit: Int)').replace('items {', 'limit: $limit\n      items {');
-        return await request(url, limitedQuery, { limit: POOLS_PER_PAGE });
-      } else {
-        return await request(url, poolsQuery);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch markets: ${response.statusText}`);
       }
+      
+      return await response.json();
     },
     refetchInterval: 60000,
     staleTime: 120000,
-    enabled: shouldFetchData,
     retry: (failureCount, error) => {
       console.log(`[RPC-DEBUG] 📊 Markets query retry ${failureCount + 1}:`, error?.message);
       
@@ -96,49 +68,76 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
     retryDelay: 2000, // 2 second delay between retries
   });
 
-  // Process data in useEffect to prevent render loops
+  // Process markets data from REST API
   useEffect(() => {
-    if (poolsData && markets.length === 0) {
-      console.log('[RPC-DEBUG] 📊 Processing pools data in useEffect');
-      processPools(poolsData).then(pools => {
-        const limitedPools = getUseSubgraph() ? pools : pools.slice(0, POOLS_PER_PAGE);
-        
-        if (limitedPools.length > 0) {
-          // Create market data directly
-          const marketData = limitedPools.map(pool => {
-            return {
-              id: pool.id,
-              name: pool.baseSymbol,
-              pair: pool.quoteSymbol,
-              starred: false,
-              iconInfo: { hasImage: false, imagePath: null, bg: '#000000' },
-              age: new Date(pool.timestamp * 1000).toLocaleDateString(),
-              timestamp: pool.timestamp,
-              price: '0.00', // Will be updated with real data
-              volume: pool.volume || '0',
-              liquidity: pool.maxOrderAmount || '0',
-            };
-          });
+    if (marketsData) {
+      console.log('[RPC-DEBUG] 📊 Processing markets data in useEffect');
+      
+      try {
+        const marketData = marketsData.map(market => {
+          // Use the pre-calculated age from API (in seconds)
+          const ageInSeconds = market.age;
+          const ageInDays = Math.floor(ageInSeconds / (24 * 60 * 60));
+          const ageInHours = Math.floor(ageInSeconds / (60 * 60));
+          const ageInMinutes = Math.floor(ageInSeconds / 60);
           
-          setMarkets(marketData);
-        }
+          let ageDisplay;
+          if (ageInDays > 0) {
+            ageDisplay = `${ageInDays}d`;
+          } else if (ageInHours > 0) {
+            ageDisplay = `${ageInHours}h`;
+          } else {
+            ageDisplay = `${ageInMinutes}m`;
+          }
+          
+          // Calculate liquidity safely, handling large negative numbers
+          let liquidityDisplay = '0';
+          if (market.totalLiquidityInQuote && market.totalLiquidityInQuote !== '0') {
+            const liquidityValue = parseFloat(market.totalLiquidityInQuote);
+            if (!isNaN(liquidityValue) && isFinite(liquidityValue)) {
+              const adjustedLiquidity = Math.abs(liquidityValue) / Math.pow(10, market.quoteDecimals);
+              if (adjustedLiquidity > 1000000) {
+                liquidityDisplay = `${(adjustedLiquidity / 1000000).toFixed(1)}M`;
+              } else if (adjustedLiquidity > 1000) {
+                liquidityDisplay = `${(adjustedLiquidity / 1000).toFixed(1)}K`;
+              } else {
+                liquidityDisplay = adjustedLiquidity.toFixed(2);
+              }
+            }
+          }
+          
+          return {
+            id: market.poolId,
+            name: market.baseAsset,
+            pair: market.quoteAsset,
+            starred: false,
+            iconInfo: { hasImage: false, imagePath: null, bg: '#000000' },
+            age: ageDisplay,
+            timestamp: market.createdAt,
+            price: market.latestPrice ? (parseFloat(market.latestPrice) / Math.pow(10, market.quoteDecimals)).toFixed(2) : '0.00',
+            volume: market.volumeInQuote ? (parseFloat(market.volumeInQuote) / Math.pow(10, market.quoteDecimals)).toFixed(2) : '0',
+            liquidity: liquidityDisplay,
+          };
+        });
+        
+        setMarkets(marketData);
         setIsProcessingPools(false);
-      }).catch(error => {
-        console.error('Error processing pools:', error);
+      } catch (error) {
+        console.error('Error processing markets:', error);
         setIsProcessingPools(false);
-      });
+      }
     }
-  }, [poolsData, markets.length, getUseSubgraph, POOLS_PER_PAGE]); // Dependencies
+  }, [marketsData]); // Dependencies
 
   // Handle errors in useEffect
   useEffect(() => {
-    if (poolsError) {
-      console.error('[RPC-DEBUG] ❌ Error fetching pools:', poolsError);
+    if (marketsError) {
+      console.error('[RPC-DEBUG] ❌ Error fetching markets:', marketsError);
       if (isProcessingPools) {
         setIsProcessingPools(false);
       }
     }
-  }, [poolsError, isProcessingPools]); // Only run when poolsError changes
+  }, [marketsError, isProcessingPools]); // Only run when marketsError changes
 
   // Trades data loading removed for performance - focusing on fast pool loading
 
@@ -277,9 +276,6 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                     Market
                   </th>
                   <th className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5">
-                    Age
-                  </th>
-                  <th className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5">
                     Price
                   </th>
                   <th className="text-left px-6 py-4 font-medium uppercase tracking-wider text-xs text-white/70 bg-white/5">
@@ -379,15 +375,6 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <div
-                          className="flex items-center gap-2 text-white/80"
-                          title={new Date(item.timestamp * 1000).toLocaleString()}
-                        >
-                          <Clock className="w-4 h-4 text-white/60" />
-                          {item.age}
-                        </div>
-                      </td>
                       <td className="px-6 py-5 text-white font-mono">${item.price}</td>
                       <td className="px-6 py-5 text-white/90 font-mono">
                         ${item.volume}
@@ -396,7 +383,7 @@ export default function MarketList({ initialMarketData = [] }: MarketListProps) 
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-white/50">
+                    <td colSpan={6} className="text-center py-8 text-white/50">
                       {showWatchlist
                         ? 'Your watchlist is empty. Star some markets to add them here.'
                         : 'No markets found'}
