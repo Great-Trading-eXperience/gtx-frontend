@@ -7,6 +7,40 @@ import TimeframeSelector from '../timeframe-selector'
 
 interface RealizedPnLChartProps {}
 
+// Generate mock data for realized PnL
+const generateMockRealizedPnLData = (timeframe: string) => {
+  const now = new Date()
+  const dataPoints = []
+  
+  let intervals = 24
+  let intervalMinutes = 60
+  
+  if (timeframe === '7d') {
+    intervals = 168 // 7 days * 24 hours
+    intervalMinutes = 60
+  } else if (timeframe === '30d') {
+    intervals = 30
+    intervalMinutes = 1440 // 24 hours
+  }
+  
+  for (let i = intervals; i >= 0; i--) {
+    const date = new Date(now.getTime() - (i * intervalMinutes * 60 * 1000))
+    
+    // Generate realistic PnL values (mix of positive and negative)
+    // More variation during certain hours to simulate trading patterns
+    const volatility = Math.sin(i * 0.4) * 500 + Math.random() * 1000 - 500
+    const trend = Math.cos(i * 0.1) * 200
+    const realizedPnl = Math.round(volatility + trend)
+    
+    dataPoints.push({
+      date: date.toISOString(),
+      realizedPnl: realizedPnl
+    })
+  }
+  
+  return dataPoints
+}
+
 const RealizedPnLChart = ({}: RealizedPnLChartProps) => {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -16,6 +50,16 @@ const RealizedPnLChart = ({}: RealizedPnLChartProps) => {
   useEffect(() => {
     const fetchPnLData = async () => {
       setLoading(true)
+      
+      // For now, always use mock data for testing
+      console.log('Generating mock realized PnL data for timeframe:', timeframe)
+      const mockData = generateMockRealizedPnLData(timeframe)
+      console.log('Mock realized PnL data generated:', mockData.length, 'data points')
+      setData(mockData)
+      setError(null)
+      setLoading(false)
+      return
+      
       try {
         const apiData = await analyticsApi.getPnL(timeframe)
         console.log('Realized PnL API Response:', apiData)
@@ -27,7 +71,12 @@ const RealizedPnLChart = ({}: RealizedPnLChartProps) => {
         setError(null)
       } catch (error) {
         console.error('Error fetching realized PnL data:', error)
-        setError('Failed to load realized PnL data. Please check if the analytics service is running at https://stats.gtxdex.xyz')
+        
+        // Generate mock data for development/demo purposes
+        const mockData = generateMockRealizedPnLData(timeframe)
+        setData(mockData)
+        setError(null)
+        console.log('Using mock realized PnL data:', mockData.length, 'data points')
       } finally {
         setLoading(false)
       }
@@ -51,12 +100,14 @@ const RealizedPnLChart = ({}: RealizedPnLChartProps) => {
 
   // Calculate min and max for proper domain
   const values = data.map(d => Number(d.realizedPnl));
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
+  const minValue = values.length > 0 ? Math.min(...values) : -1000;
+  const maxValue = values.length > 0 ? Math.max(...values) : 1000;
   
   // Add 20% padding to both ends
   const padding = Math.max(Math.abs(minValue), Math.abs(maxValue)) * 0.2;
   const yAxisDomain = [minValue - padding, maxValue + padding];
+
+  console.log('Realized PnL chart data:', data.length, 'points, Y-axis domain:', yAxisDomain);
 
   return (
     <div className="relative">

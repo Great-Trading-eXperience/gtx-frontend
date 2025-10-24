@@ -115,21 +115,7 @@ export const AssetTab: React.FC<AssetTabProps> = ({
           />
         </div>
 
-        <div className="flex items-center justify-end">
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <span>Hide dust</span>
-            <div className="relative">
-              <input
-                type="checkbox"
-                className="sr-only"
-              />
-              <div className="w-6 h-6 border-2 rounded cursor-pointer border-gray-400">
-                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                </div>
-              </div>
-            </div>
-          </label>
-        </div>
+       
       </div>
 
       <div className="space-y-3">
