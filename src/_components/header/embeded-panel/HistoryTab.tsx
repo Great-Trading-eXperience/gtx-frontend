@@ -132,10 +132,12 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
     else if (addr === '0xb2e9eabb827b78e2ac66be17327603778d117d18' || addr === '0x6b4c6c7521b3ed61a9fa02e926b73d278b2a6ca7') {
       return { symbol: 'WETH', decimals: 18 };
     }
-    // USDC - 18 decimals (Appchain) and 6 decimals (Arbitrum)
+    // USDC - 18 decimals (Appchain), 6 decimals (Arbitrum) and 6 decimals (Side Devnet)
     else if (addr === '0x02950119c4ccd1993f7938a55b8ab8384c3cce4f') {
       return { symbol: 'USDC', decimals: 18 };
     } else if (addr === '0x6fcf28b801c7116ca8b6460289e259ac8d9131f3') {
+      return { symbol: 'USDC', decimals: 6 };
+    } else if (addr === '0xc0f115a19107322cfbf1cdbc7ea011c19ebdb4f8') {
       return { symbol: 'USDC', decimals: 6 };
     }
     // WBTC - 8 decimals
