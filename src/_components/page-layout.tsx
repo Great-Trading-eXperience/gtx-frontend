@@ -1,15 +1,14 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
 import Footer from '@/_components/footer/footer';
 import EmbededPanel from '@/_components/header/embeded-panel';
 import Header from '@/_components/header/header';
 import LandingHeader from '@/_components/header/landing-header';
-import MobileWarningModal from '@/_components/header/mobile-warning-modal';
 import VeGTXHeader from '@/_components/header/vegtx-header';
 import ConnectWalletModal from '@/_components/modals/connect-wallet';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
+import { usePathname, useRouter } from 'next/navigation';
+import { ReactNode, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import BottomNavbar from './bottom-navbar';
 

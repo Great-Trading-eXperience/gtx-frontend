@@ -22,7 +22,7 @@ interface NavbarProps {
 }
 
 const ChainDropdown: React.FC = () => {
-  const networks: Chain[] = [coreDevnet, sideDevnet];
+  const networks: Chain[] = [sideDevnet];
 
   const chainId = useChainId();
   const usedNetwork = networks.find(network => network.id === chainId);

@@ -111,7 +111,7 @@ const PlaceOrder = ({
   }, [selectedPool, orderForm.side, orderForm.OrderSideEnum.BUY]);
 
   const balance = useTradingBalance({
-    address: address as HexAddress, // Always use Privy embedded wallet for balance
+    address: address as HexAddress, 
     tokenAddress: relevantCurrency,
     chainId: wallet.chainId,
     decimals: relevantDecimals || 18,
@@ -139,9 +139,11 @@ const PlaceOrder = ({
     slippageValue: orderForm.slippageValue,
     selectedPool,
     pool,
-    getMarketOrderSlippageInfo: mockGetMarketOrderSlippageInfo,
+    getMarketOrderSlippageInfo,
     enabled: orderForm.orderType === 'market' && !!orderForm.quantity,
   });
+
+  console.log('slippageCalc',slippageCalc)
 
   useEffect(() => {
     setCurrentSlippageInfo(slippageCalc.slippageInfo);
@@ -284,11 +286,11 @@ const PlaceOrder = ({
         />
 
         {/* Order Summary */}
-        {/* <OrderSummary
+        <OrderSummary
           orderType={orderForm.orderType}
           slippageInfo={currentSlippageInfo}
           calculatingSlippage={slippageCalc.isCalculating}
-        /> */}
+        />
 
         {/* Submit Button */}
         <button

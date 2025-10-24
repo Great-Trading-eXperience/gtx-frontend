@@ -794,7 +794,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             );
           }
 
-          /*
           let slippageInfo: SlippageInfo | undefined;
           if (orderType === 'market') {
             slippageInfo = await calculateSlippageForMarket(
@@ -806,20 +805,20 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
               side === OrderSideEnum.BUY ? originalUsdcAmount : undefined
             );
           }
-          */
+          
 
           // With this (for testing):
-          let slippageInfo: SlippageInfo | undefined;
-          if (orderType === 'market') {
-            slippageInfo = await mockCalculateSlippageForMarket(
-              pool,
-              quantity,
-              side,
-              slippageBps,
-              effectiveChainId,
-              side === OrderSideEnum.BUY ? originalUsdcAmount : undefined
-            );
-          }
+          // let slippageInfo: SlippageInfo | undefined;
+          // if (orderType === 'market') {
+          //   slippageInfo = await mockCalculateSlippageForMarket(
+          //     pool,
+          //     quantity,
+          //     side,
+          //     slippageBps,
+          //     effectiveChainId,
+          //     side === OrderSideEnum.BUY ? originalUsdcAmount : undefined
+          //   );
+          // }
 
           await handlePreOrderChecks(
             orderType,
@@ -832,8 +831,6 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             effectiveChainId,
             slippageInfo
           );
-
-          return;
 
           // Execute the order
           const hash = await executeOrder(
@@ -1028,7 +1025,7 @@ export const usePlaceOrder = (userAddress?: HexAddress) => {
             chainId: effectiveChainId,
           })) as BestSellPrice;
 
-          console.log(bestSellPrice);
+          console.log('bestSellPrice', bestSellPrice);
           // this is 0n so return null
 
           if (bestSellPrice.price === 0n) return null;

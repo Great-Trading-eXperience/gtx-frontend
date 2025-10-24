@@ -29,7 +29,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
                       : 'text-green-400'
                   }`}
                 >
-                  {slippageInfo.actualSlippage.toFixed(2)}%
+                  {slippageInfo?.actualSlippage?.toFixed(2)}%
                 </span>
               </div>
             </div>
