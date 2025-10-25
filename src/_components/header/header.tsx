@@ -240,6 +240,12 @@ const Header = ({ onTogglePanel }: NavbarProps) => {
       label: 'veGTX',
       enabled: isTabEnabled('VEGTX'),
     },
+    {
+      destination: 'https://docs.gtxdex.xyz',
+      label: 'Docs',
+      enabled: true,
+      external: true,
+    },
   ];
 
   // Filter only enabled links
@@ -280,6 +286,8 @@ const Header = ({ onTogglePanel }: NavbarProps) => {
             <Link
               key={link.label}
               href={link.destination}
+              target={link.external ? '_blank' : undefined}
+              rel={link.external ? 'noopener noreferrer' : undefined}
               className={cn(
                 'text-sm lg:text-md px-4 py-1 rounded-lg transition-all whitespace-nowrap',
                 'hover:bg-[#0064A7]/10 hover:text-[#0064A7]',
