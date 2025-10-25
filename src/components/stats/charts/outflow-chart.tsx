@@ -31,17 +31,9 @@ const generateMockOutflowData = (timeframe: string) => {
     const volatility = Math.sin(i * 0.3) * 15 + Math.random() * 10
     const totalOutflow = Math.max(0, baseOutflow + volatility)
     
-    // Withdrawals are typically 60-80% of total outflow
-    const withdrawals = totalOutflow * (0.6 + Math.random() * 0.2)
-    
-    // Trading outflow is the remainder
-    const tradingOutflow = totalOutflow - withdrawals
-    
     dataPoints.push({
       date: date.toISOString(),
-      totalOutflow: Math.round(totalOutflow),
-      withdrawals: Math.round(withdrawals),
-      tradingOutflow: Math.round(tradingOutflow)
+      totalOutflow: Math.round(totalOutflow)
     })
   }
   
@@ -165,16 +157,11 @@ const OutflowChart = ({}: OutflowChartProps) => {
             tick={{ fontSize: 12, fill: '#9ca3af' }}
             domain={yAxisDomain}
             tickFormatter={(value) => {
-              if (value >= 1e27) return `$${(value / 1e27).toFixed(1)}O`;
-              if (value >= 1e24) return `$${(value / 1e24).toFixed(1)}Y`;
-              if (value >= 1e21) return `$${(value / 1e21).toFixed(1)}Z`;
-              if (value >= 1e18) return `$${(value / 1e18).toFixed(1)}E`;
-              if (value >= 1e15) return `$${(value / 1e15).toFixed(1)}P`;
               if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
               if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
               if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
               if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
-              return `$${value}`;
+              return `$${Math.round(value)}`;
             }}
           />
           <Tooltip 
@@ -185,12 +172,8 @@ const OutflowChart = ({}: OutflowChartProps) => {
               color: '#fff'
             }}
             formatter={(value: any, name: string) => [
-              name === 'totalOutflow' ? `$${Number(value).toFixed(2)}` : 
-              name === 'withdrawals' ? `$${Number(value).toFixed(2)}` :
-              name === 'tradingOutflow' ? `$${Number(value).toFixed(2)}` : value,
-              name === 'totalOutflow' ? 'Total Outflow' : 
-              name === 'withdrawals' ? 'Withdrawals' :
-              name === 'tradingOutflow' ? 'Trading Outflow' : name
+              name === 'totalOutflow' ? `$${Number(value).toFixed(2)}` : value,
+              name === 'totalOutflow' ? 'Total Outflow' : name
             ]}
             labelFormatter={(label) => `Date: ${label}`}
           />
