@@ -5,13 +5,22 @@
  * via environment variables, without needing to modify individual hooks.
  */
 
-import { coreDevnet, sideDevnet } from '@/configs/wagmi';
+import { coreDevnet, sideDevnet, rariTestnet, appchainTestnet, arbitrumSepolia } from '@/configs/wagmi';
 import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
 
 // Available chains for override
 const AVAILABLE_CHAINS = {
   CORE_ANVIL: coreDevnet.id,      // 31337
   SIDE_ANVIL: sideDevnet.id,      // 31338
+} as const;
+
+// All available chains from wagmi config
+const ALL_CHAINS = {
+  [coreDevnet.id]: coreDevnet,
+  [sideDevnet.id]: sideDevnet,
+  [rariTestnet.id]: rariTestnet,
+  [appchainTestnet.id]: appchainTestnet,
+  [arbitrumSepolia.id]: arbitrumSepolia,
 } as const;
 
 /**
@@ -97,6 +106,13 @@ export function needsChainForcing(currentChainId: number): boolean {
  * Get the name of a chain for display purposes
  */
 export function getChainName(chainId: number): string {
+  // First check if it's in our ALL_CHAINS mapping (from wagmi config)
+  const chain = ALL_CHAINS[chainId as keyof typeof ALL_CHAINS];
+  if (chain) {
+    return chain.name;
+  }
+  
+  // Fallback to hardcoded values for chains not in wagmi config
   switch (chainId) {
     case AVAILABLE_CHAINS.CORE_ANVIL:
       return 'Core Devnet';

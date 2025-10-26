@@ -164,6 +164,7 @@ const EmbeddedPanel: React.FC<RightPanelProps> = ({ isOpen, onClose }) => {
               externalWalletAddress={externalWalletAddress}
               isOpen={isOpen}
               activeTab={activeTab}
+              tokenMappings={allUniqueTokens}
             />
           )}
         </div>

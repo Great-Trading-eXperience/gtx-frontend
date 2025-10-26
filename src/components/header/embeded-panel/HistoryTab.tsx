@@ -5,11 +5,14 @@ import { ExternalLink, History, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { formatNumber } from '@/lib/utils';
 import urlsConfig from '@/constants/urls/urls-config.json';
+import { ProcessedTokenMapping } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/useTokenMappings';
+import { getChainName } from '@/utils/chain-override';
 
 interface HistoryTabProps {
   externalWalletAddress: string;
   isOpen: boolean;
   activeTab: string;
+  tokenMappings?: ProcessedTokenMapping[];
 }
 
 interface CrossChainTransfer {
@@ -58,6 +61,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
   externalWalletAddress,
   isOpen,
   activeTab,
+  tokenMappings = [],
 }) => {
 
   const {
@@ -99,22 +103,6 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
     staleTime: 20000,
   });
 
-  const getChainName = (chainId: number) => {
-    switch (chainId) {
-      case 31337:
-        return 'Core Devnet';
-      case 31338:
-        return 'Side Devnet';
-      case 4661:
-        return 'Appchain';
-      case 421614:
-        return 'Arbitrum';
-      case 1918988905:
-        return 'Rari';
-      default:
-        return `Chain ${chainId}`;
-    }
-  };
 
   const getExplorerUrl = (chainId: number, txHash: string) => {
     const id = chainId.toString();
@@ -124,27 +112,16 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 
   const getTokenInfo = (address: string) => {
     const addr = address.toLowerCase();
-    // USDT - 6 decimals
-    if (addr === '0x1362dd75d8f1579a0ebd62df92d8f3852c3a7516' || addr === '0x5eafc52d170ff391d41fba99a7e91b9c4d49929a') {
-      return { symbol: 'USDT', decimals: 6 };
+    
+    // First try to find token info from tokenMappings
+    const tokenMapping = tokenMappings.find(token => 
+      token.address.toLowerCase() === addr ||
+      Object.values(token.sourceAddresses).some(sourceAddr => sourceAddr.toLowerCase() === addr)
+    );
+    
+    if (tokenMapping) {
+      return { symbol: tokenMapping.symbol, decimals: tokenMapping.decimals };
     }
-    // WETH - 18 decimals
-    else if (addr === '0xb2e9eabb827b78e2ac66be17327603778d117d18' || addr === '0x6b4c6c7521b3ed61a9fa02e926b73d278b2a6ca7') {
-      return { symbol: 'WETH', decimals: 18 };
-    }
-    // USDC - 18 decimals (Appchain), 6 decimals (Arbitrum) and 6 decimals (Side Devnet)
-    else if (addr === '0x02950119c4ccd1993f7938a55b8ab8384c3cce4f') {
-      return { symbol: 'USDC', decimals: 18 };
-    } else if (addr === '0x6fcf28b801c7116ca8b6460289e259ac8d9131f3') {
-      return { symbol: 'USDC', decimals: 6 };
-    } else if (addr === '0xc0f115a19107322cfbf1cdbc7ea011c19ebdb4f8') {
-      return { symbol: 'USDC', decimals: 6 };
-    }
-    // WBTC - 8 decimals
-    else if (addr === '0x24e55f604ff98a03b9493b53ba3ddebd7d02733a') {
-      return { symbol: 'WBTC', decimals: 8 };
-    }
-    return { symbol: 'Token', decimals: 18 };
   };
 
   if (!isOpen || activeTab !== 'History') return null;
@@ -207,7 +184,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               const isIncoming = transfer.direction === 'DEPOSIT';
               const timestamp = new Date(transfer.timestamp * 1000);
               const tokenInfo = getTokenInfo(transfer.sourceToken);
-              const amount = parseFloat(transfer.amount) / Math.pow(10, tokenInfo.decimals);
+              const amount = parseFloat(transfer.amount) / Math.pow(10, tokenInfo?.decimals ?? 18);
               const sourceChainName = getChainName(transfer.sourceChainId);
               const destChainName = transfer.direction === 'DEPOSIT' ? getChainName(transfer.destinationChainId) : getChainName(transfer.destinationChainId);
 
@@ -231,7 +208,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                       </span>
                     </div>
                     <span className="font-medium">
-                      {formatNumber(amount, { decimals: 4 })} {tokenInfo.symbol}
+                      {formatNumber(amount, { decimals: 4 })} {tokenInfo?.symbol ?? 'Unknown'}
                     </span>
                   </div>
 
