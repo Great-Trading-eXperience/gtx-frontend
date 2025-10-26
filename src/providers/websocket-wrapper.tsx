@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { WebSocketProvider } from '@/contexts/websocket-context'
+import { WebSocketProvider } from '@/providers/websocket-provider'
 
 interface WebSocketWrapperProps {
   children: ReactNode

@@ -2,7 +2,7 @@ import { usePrivy, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData } from 'viem';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import { useState } from 'react';
-import { useToast } from '@/_components/toastContext';
+import { useToast } from '@/components/_components/toastContext';
 
 export function usePrivyWithdraw() {
   const { user } = usePrivy();

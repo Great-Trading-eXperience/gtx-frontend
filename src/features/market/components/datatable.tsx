@@ -21,7 +21,7 @@ import {
 } from '@/components/table/table';
 import { ChevronLeft, ChevronRight, Star, ArrowUpDown, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/_components/ui/button';
+import { Button } from '@/components/_components/ui/button';
 
 interface MarketData {
   symbol: string;

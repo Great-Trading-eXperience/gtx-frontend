@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '@/_components/ui/dialog';
+} from '@/components/_components/ui/dialog';
 import { getExplorerUrl } from '@/constants/urls/urls-config';
 import { OpenOrderItem } from '@/graphql/gtx/clob';
 import { useCancelOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCancelOrder';

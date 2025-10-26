@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useWebSocket } from '@/contexts/websocket-context';
+import { useWebSocket } from '@/providers/websocket-provider';
 import { useMarketWebSocket } from '@/hooks/use-market-websocket';
 import { useUserWebSocket } from '@/hooks/use-user-websocket';
 import { 

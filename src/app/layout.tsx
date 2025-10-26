@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { Toaster } from '@/_components/ui/toaster';
+import { Toaster } from '@/components/_components/ui/toaster';
 import { ClientProviders } from './providers';
-import { RPCLogger } from '@/_components/rpc-logger';
+import { RPCLogger } from '@/components/_components/rpc-logger';
 import '../../styles/globals.css';
 
 export const metadata: Metadata = {

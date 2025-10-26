@@ -3,10 +3,10 @@
 import { ReactNode } from 'react';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
-import { ToastProvider } from '@/_components/toastContext';
-import ToastContainer from '@/_components/toastContainer';
+import { ToastProvider } from '@/components/_components/toastContext';
+import ToastContainer from '@/components/_components/toastContainer';
 import PrivyProviders from '@/providers/privy-provider';
-import { WebSocketProvider } from '@/contexts/websocket-context';
+import { WebSocketProvider } from '@/providers/websocket-provider';
 import { ThemeProvider } from 'next-themes';
 
 const CORE_ANVIL_CHAIN_ID = 31337;

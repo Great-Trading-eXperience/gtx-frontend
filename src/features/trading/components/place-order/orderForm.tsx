@@ -1,5 +1,5 @@
 import React from 'react';
-import GTXSlider from '@/_components/slider';
+import GTXSlider from '@/components/_components/slider';
 
 interface OrderFormProps {
   orderType: 'limit' | 'market';

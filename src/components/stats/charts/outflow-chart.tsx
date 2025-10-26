@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Legend, Tooltip, CartesianGrid } from 'recharts'
 import { analyticsApi } from '@/lib/analytics-api'
+import { createLogger } from '@/lib/logger'
 import TimeframeSelector from '../timeframe-selector'
+
+const logger = createLogger('outflow-chart')
 
 interface OutflowChartProps {}
 
@@ -51,10 +54,10 @@ const OutflowChart = ({}: OutflowChartProps) => {
       setLoading(true)
       
       // For now, always use mock data for testing
-      console.log('Generating mock outflow data for timeframe:', timeframe)
+      logger.info('Generating mock outflow data for timeframe:', timeframe)
       const mockData = generateMockOutflowData(timeframe)
-      console.log('Mock outflow data generated:', mockData.length, 'data points')
-      console.log('Sample data point:', mockData[0])
+      logger.info('Mock outflow data generated:', { dataPoints: mockData.length })
+      logger.debug('Sample data point:', mockData[0])
       setData(mockData)
       setError(null)
       setLoading(false)
@@ -62,21 +65,21 @@ const OutflowChart = ({}: OutflowChartProps) => {
       
       try {
         const apiData = await analyticsApi.getOutflows(timeframe)
-        console.log('Outflow API Response:', apiData)
+        logger.debug('Outflow API Response:', apiData)
         
         const outflowData = apiData.outflowsOverTime || []
-        console.log('Outflow Data Points:', outflowData.length)
+        logger.info('Outflow Data Points:', { count: outflowData.length })
         
         setData(outflowData)
         setError(null)
       } catch (error) {
-        console.error('Error fetching outflow data:', error)
+        logger.error('Error fetching outflow data:', error)
         
         // Generate mock data for development/demo purposes
         const mockData = generateMockOutflowData(timeframe)
         setData(mockData)
         setError(null)
-        console.log('Using mock outflow data:', mockData.length, 'data points')
+        logger.info('Using mock outflow data:', { dataPoints: mockData.length })
       } finally {
         setLoading(false)
       }
@@ -107,7 +110,7 @@ const OutflowChart = ({}: OutflowChartProps) => {
   const padding = (maxValue - minValue) * 0.1;
   const yAxisDomain = [Math.max(0, minValue - padding), maxValue + padding];
 
-  console.log('Outflow chart data:', data.length, 'points, Y-axis domain:', yAxisDomain);
+  logger.debug('Outflow chart data:', { dataPoints: data.length, yAxisDomain });
 
   // Show empty state if no data
   if (data.length === 0) {

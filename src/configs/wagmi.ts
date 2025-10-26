@@ -1,6 +1,7 @@
 import { createConfig } from '@privy-io/wagmi';
 import { http } from 'viem';
 import { Chain } from 'viem/chains';
+import { API_ENDPOINTS } from '@/constants/endpoints';
 
 export const projectId = 'c8d08053460bfe0752116d730dc6393b';
 
@@ -14,10 +15,10 @@ export const conduitChain: Chain = {
   },
   rpcUrls: {
     default: {
-      http: ['https://odyssey.ithaca.xyz'],
+      http: [API_ENDPOINTS.RPC.ODYSSEY],
     },
     public: {
-      http: ['https://odyssey.ithaca.xyz'],
+      http: [API_ENDPOINTS.RPC.ODYSSEY],
     },
   },
   blockExplorers: {

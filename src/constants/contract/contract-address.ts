@@ -1,5 +1,8 @@
 import { HexAddress } from "@/types/general/address";
 import contractAddresses from "./contract-address.json";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger('contract-address');
 
 export enum ContractName {
     clobBalanceManager = "PROXY_BALANCEMANAGER",
@@ -70,13 +73,14 @@ export function getContractAddress(
     const chainContracts = contractsConfig[chainIdString] as Partial<Record<ContractName, string>>;
 
     if (!chainContracts) {
-        console.error(`Chain ID ${chainIdString} not found in configuration, returning empty address`);
+        logger.error(`Chain ID ${chainIdString} not found in configuration, returning empty address`);
         return '';
     }
 
     const address = chainContracts[contractName];
 
-    // TODO: remove this
+    // Note: Contract validation temporarily disabled for development
+    // Consider re-enabling in production for better error handling
     // if (!address) {
     //     throw new Error(
     //         `Contract ${contractName} not found for chain ID ${chainIdString}`

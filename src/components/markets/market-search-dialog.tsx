@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Search, X, ChevronRight, Hexagon } from "lucide-react"
-import { Dialog, DialogContent } from "@/_components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/_components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 

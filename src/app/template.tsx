@@ -1,6 +1,6 @@
 'use client'
 
-import { PageLayout } from '@/_components/page-layout'
+import { PageLayout } from '@/components/_components/page-layout'
 import { usePathname } from 'next/navigation'
 
 export default function Template({ children }: { children: React.ReactNode }) {

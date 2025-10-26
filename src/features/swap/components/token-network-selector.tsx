@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Search, X } from "lucide-react"
-import { Dialog, DialogContent } from "@/_components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/_components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import type { HexAddress } from '@/types/general/address'

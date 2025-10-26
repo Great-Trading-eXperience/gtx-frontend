@@ -1,31 +1,30 @@
 'use client';
 
-import { useMemo, useCallback, useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
 import { getCoreChain, isFeatureEnabled } from '@/constants/features/features-config';
+import type { DepthData, Ticker24hrData } from '@/lib/market-api';
 import type { HexAddress } from '@/types/general/address';
 import type { ProcessedPoolItem } from '@/types/gtx/clob';
-import type { DepthData, Ticker24hrData } from '@/lib/market-api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
-import { useWalletSelection } from '../../hooks/place-order/useWalletSelection';
-import { useTradingBalance } from '../../hooks/place-order/useTradingBalance';
-import { useOrderForm } from '../../hooks/place-order/useOrderFrom';
-import { useSlippageCalculation } from '../../hooks/place-order/useSlippageCalculation';
-import { useOrderSubmission } from '../../hooks/place-order/useOrderSubmission';
 import { useFeePercentages } from '@/hooks/web3/gtx/clob-dex/balance-manager/useFeePercentages';
 import { usePlaceOrder as usePrivyPlaceOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/usePrivyPlaceOrder';
+import { useOrderForm } from '../../hooks/place-order/useOrderFrom';
+import { useOrderSubmission } from '../../hooks/place-order/useOrderSubmission';
+import { useSlippageCalculation } from '../../hooks/place-order/useSlippageCalculation';
+import { useTradingBalance } from '../../hooks/place-order/useTradingBalance';
+import { useWalletSelection } from '../../hooks/place-order/useWalletSelection';
 
-import OrderTypeSelector from './orderTypeSelector';
+import { Wallet } from 'lucide-react';
 import BuySellToggle from './buySellToggle';
 import OrderForm from './orderForm';
 import OrderSummary from './orderSummary';
-import SlippageSettings from './slippageSetting';
+import OrderTypeSelector from './orderTypeSelector';
 import PlaceOrderSkeleton from './placeOrderSkeleton';
-import { Wallet } from 'lucide-react';
+import SlippageSettings from './slippageSetting';
 
 import { OrderValidationService } from '../../services/place-order/orderValidation';
-import { mockGetMarketOrderSlippageInfo } from '../../hooks/place-order/mockSlippage';
 
 export interface PlaceOrderProps {
   address?: HexAddress;

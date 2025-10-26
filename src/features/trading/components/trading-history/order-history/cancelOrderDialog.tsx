@@ -6,7 +6,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/_components/ui/dialog';
+} from '@/components/_components/ui/dialog';
 import { OpenOrderItem } from '@/graphql/gtx/clob';
 import { formatPrice } from '@/lib/utils';
 import { ProcessedPoolItem } from '@/types/gtx/clob';

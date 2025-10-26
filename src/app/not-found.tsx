@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/_components/ui/button';
+import { Button } from '@/components/_components/ui/button';
 
 // Force dynamic rendering to prevent SSG issues
 export const dynamic = 'force-dynamic';

@@ -1,6 +1,6 @@
 'use client';
 
-import { PrivyAuthButton } from '@/_components/auth/privy-auth-button';
+import { PrivyAuthButton } from '@/components/_components/auth/privy-auth-button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {

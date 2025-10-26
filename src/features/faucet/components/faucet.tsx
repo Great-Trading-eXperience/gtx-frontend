@@ -21,7 +21,7 @@ import {
   shouldFaucetUseStandardHook,
 } from '@/constants/features/features-config';
 import { formatNumber } from '@/lib/utils';
-import { Button } from '@/_components/ui/button';
+import { Button } from '@/components/_components/ui/button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useWallets } from '@privy-io/react-auth';
 import {
