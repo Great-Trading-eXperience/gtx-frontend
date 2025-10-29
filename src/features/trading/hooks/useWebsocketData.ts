@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useWebSocket } from '@/providers/websocket-provider';
 import { useMarketWebSocket } from '@/hooks/use-market-websocket';
 import { useUserWebSocket } from '@/hooks/use-user-websocket';
 import { 
@@ -10,6 +9,7 @@ import { TradeEvent } from '@/services/market-websocket';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { TradeItem } from '@/graphql/gtx/clob'
 import { DepthData, OrderData, Ticker24hrData, TickerPriceData } from '@/lib/market-api';
+import { useWebSocket } from '@/providers/websocket-provider';
 
 export const useWebSocketData = (
   chainId: number,

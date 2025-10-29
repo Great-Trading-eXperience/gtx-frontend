@@ -1,11 +1,11 @@
 import faucetABI from '@/abis/faucet/FaucetABI';
 import { wagmiConfig } from '@/configs/wagmi';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
-import { HexAddress } from '@/types/general/address';
 import { simulateContract } from '@wagmi/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useChainId, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { HexAddress } from '../types/faucet.types';
 
 export const useRequestToken = () => {
     const [isAlertOpen, setIsAlertOpen] = useState(false);

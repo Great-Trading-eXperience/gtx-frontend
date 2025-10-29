@@ -15,14 +15,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/_components/ui/dialog';
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NotificationDialog } from '@/components/notification-dialog/notification-dialog';
 import { getExplorerUrl } from '@/constants/urls/urls-config';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
-import GTXSlider from '@/components/_components/slider';
+import GTXSlider from '@/components/slider';
 
 export interface BalancesHistoryTableProps extends ClobDexComponentProps {
   balancesResponse: BalanceItem[];

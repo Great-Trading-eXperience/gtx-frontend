@@ -4,11 +4,9 @@ import { GTX_GRAPHQL_URL } from '@/constants/subgraph-url';
 import {
   poolsPonderQuery,
   PoolsPonderResponse,
-  poolsQuery,
   PoolsResponse,
 } from '@/graphql/gtx/clob';
 import { processPools } from '@/lib/market-data';
-import { getUseSubgraph } from '@/utils/env';
 import { useQuery } from '@tanstack/react-query';
 import request from 'graphql-request';
 import { useMemo } from 'react';
@@ -70,7 +68,7 @@ export const useAvailableTokens = () => {
     queryFn: async () => {
       const url = GTX_GRAPHQL_URL(effectiveChainId);
       if (!url) throw new Error('GraphQL URL not found');
-      return await request(url, getUseSubgraph() ? poolsQuery : poolsPonderQuery);
+      return await request(url, poolsPonderQuery);
     },
     refetchInterval: 60000, // Refresh every minute
     staleTime: 30000, // Consider stale after 30 seconds

@@ -1,7 +1,6 @@
 import faucetABI from '@/abis/faucet/FaucetABI';
 import { wagmiConfig } from '@/configs/wagmi';
 import { ContractName, getContractAddress } from '@/constants/contract/contract-address';
-import { HexAddress } from '@/types/general/address';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useState, useEffect } from 'react';
@@ -9,6 +8,7 @@ import { toast } from 'sonner';
 import { createWalletClient, custom } from 'viem';
 import { useChainId } from 'wagmi';
 import { simulateContract, waitForTransactionReceipt, writeContract } from 'wagmi/actions';
+import { HexAddress } from '../types/faucet.types';
 
 const getChain = (chainId: number) => {
   const chains = wagmiConfig.chains;

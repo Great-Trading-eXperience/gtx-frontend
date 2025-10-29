@@ -4,7 +4,6 @@ import { useMarketStore } from '@/store/market-store';
 import { ProcessedPoolItem } from '@/types/gtx/clob';
 import { PoolItem as GraphQLPoolItem } from '@/graphql/gtx/clob';
 import { PoolsResponse, PoolsPonderResponse } from '@/graphql/gtx/clob';
-import { getUseSubgraph } from '@/utils/env';
 
 const processPool = (pool: GraphQLPoolItem): ProcessedPoolItem => {
   const { baseCurrency, quoteCurrency, ...other } = pool;

@@ -1,7 +1,7 @@
 import { encodeFunctionData } from 'viem';
 import ERC20ABI from '@/abis/tokens/TokenABI';
 import { useState, useCallback } from 'react';
-import { useToast } from '@/components/_components/toastContext';
+import { useToast } from '@/components/toastContext';
 import { ConnectedWallet, useWallets } from '@privy-io/react-auth';
 
 interface DepositParams {

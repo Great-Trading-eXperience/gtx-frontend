@@ -1,6 +1,6 @@
 export default function PlaceOrderSkeleton() {
   return (
-    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-3 max-w-md mx-auto border border-gray-700/30 backdrop-blur-sm animate-pulse">
+    <div className="bg-gradient-to-br from-gray-950 to-gray-900 rounded-lg p-3 w-full mx-auto border border-gray-700/30 backdrop-blur-sm animate-pulse">
       {/* Order Type and Side Row */}
       <div className="grid gap-3 mb-3">
         {/* Order Type Selection Skeleton */}

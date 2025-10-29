@@ -6,8 +6,9 @@ import { useWallets } from '@privy-io/react-auth';
 import { Check, ChevronDown, Wallet } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import { PrivyAuthButton } from '../auth/privy-auth-button';
 
-import { sideDevnet } from '@/configs/wagmi';
+import { coreDevnet, sideDevnet } from '@/configs/wagmi';
 import { isTabEnabled } from '@/constants/features/features-config';
 import { useSwitchAndAddChain } from '@/hooks/useSwitchAndAddChain';
 import { usePathname } from 'next/navigation';
@@ -15,7 +16,6 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Chain } from 'viem/chains';
 import { useChainId } from 'wagmi';
-import { PrivyAuthButton } from '../connect-button/privy-auth-button';
 
 interface NavbarProps {
   onTogglePanel: () => void;

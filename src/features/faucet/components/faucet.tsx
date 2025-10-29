@@ -10,7 +10,6 @@ import { useRequestToken } from '../hooks/useRequestToken';
 import { useFaucetTokensData } from '../hooks/useFaucetTokensData';
 import { useFaucetRequestData } from '../hooks/useFaucetRequestData';
 import { useUserAndFaucetBalances } from '../hooks/useUserAndFaucetBalance';
-import type { HexAddress } from '@/types/general/address';
 import {
   ContractName,
   DEFAULT_CHAIN,
@@ -21,7 +20,7 @@ import {
   shouldFaucetUseStandardHook,
 } from '@/constants/features/features-config';
 import { formatNumber } from '@/lib/utils';
-import { Button } from '@/components/_components/ui/button';
+import { Button } from '@/components/ui/button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useWallets } from '@privy-io/react-auth';
 import {
@@ -41,16 +40,11 @@ import { formatUnits } from 'viem';
 import { useAccount, useChainId } from 'wagmi';
 import * as z from 'zod';
 import { FaucetSkeleton } from './skeleton-faucet';
+import { FaucetToken, HexAddress } from '../types/faucet.types';
 
 const faucetSchema = z.object({
   token: z.string().min(1),
 });
-
-interface FaucetTokensData {
-  decimals: number;
-  symbol: string;
-  token: string;
-}
 
 const GTXFaucet: NextPage = () => {
   // Transaction status
@@ -91,12 +85,9 @@ const GTXFaucet: NextPage = () => {
     !!faucetAddress && faucetAddress !== '0x0000000000000000000000000000000000000000';
 
   // Get current chain info for explorer URL
-  const currentChain = [coreDevnet, sideDevnet].find(
-    chain => chain.id === actualChainId
-  );
+  const currentChain = [coreDevnet, sideDevnet].find(chain => chain.id === actualChainId);
   const explorerUrl =
-    currentChain?.blockExplorers?.default?.url ||
-    'http://localhost:8545';
+    currentChain?.blockExplorers?.default?.url || 'http://localhost:8545';
 
   const {
     faucetTokensData,
@@ -104,7 +95,7 @@ const GTXFaucet: NextPage = () => {
     error: useFaucetTokensDataError,
   } = useFaucetTokensData(actualChainId);
 
-  const getTokenOptions = (faucetTokensData: FaucetTokensData[]) => {
+  const getTokenOptions = (faucetTokensData: FaucetToken[] | undefined) => {
     if (!faucetTokensData || !Array.isArray(faucetTokensData)) {
       return [];
     }
@@ -116,7 +107,7 @@ const GTXFaucet: NextPage = () => {
     }));
   };
 
-  const tokenOptions = getTokenOptions(faucetTokensData.faucetTokenss.items);
+  const tokenOptions = getTokenOptions(faucetTokensData?.faucetTokenss.items);
 
   const selectedToken = tokenOptions.find(token => token.token === selectedTokenAddress);
 

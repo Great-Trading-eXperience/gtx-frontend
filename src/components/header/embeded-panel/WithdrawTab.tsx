@@ -4,9 +4,6 @@ import React, { useState } from 'react';
 import { ChevronDown, Copy, CreditCard } from 'lucide-react';
 import { usePrivyWithdraw } from '@/hooks/web3/gtx/clob-dex/embedded-wallet/usePrivyWithdraw';
 import { formatNumber } from '@/lib/utils';
-import { createLogger } from '@/lib/logger';
-
-const logger = createLogger('withdraw-tab');
 
 interface WithdrawTabProps {
   allUniqueTokens: any[];
@@ -81,8 +78,9 @@ export const WithdrawTab: React.FC<WithdrawTabProps> = ({
     
     // Reset form
     setWithdrawAmount('');
-    // Note: Balance refresh should be handled by the parent component through proper state management
-    logger.info('Withdrawal initiated', { amount: withdrawAmount, token: selectedWithdrawToken?.symbol });
+    setTimeout(() => {
+      // TODO: Refresh balances after withdrawal
+    }, 1000);
   };
 
   if (!isOpen || activeTab !== 'Withdraw') return null;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
-import { PrivyAuthButton } from '../connect-button/privy-auth-button';
+import { PrivyAuthButton } from '../auth/privy-auth-button';
 
 const VeGTXHeader = () => {
   const { theme, setTheme } = useTheme();

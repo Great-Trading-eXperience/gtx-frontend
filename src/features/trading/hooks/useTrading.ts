@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { useWallets } from '@privy-io/react-auth';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
@@ -79,7 +79,7 @@ export function useTrading(): UseTradingResult {
     data: poolsData,
     isLoading: poolsLoading,
     error: poolsError,
-  } = usePools(chainId, defaultChainId);
+  } = usePools(chainId);
 
   // selected pool
   const { selectedPool, symbol } = useSelectedPool(poolsData);
@@ -118,7 +118,7 @@ export function useTrading(): UseTradingResult {
   // combine
   const combinedTrades = useCombinedTrades(tradesData, wsTradeUpdates);
   const combinedDepth = useCombinedDepth(depthData, wsDepthUpdates);
-  const combinedOrders = useCombinedOrders(openOrdersData, wsOpenOrders, chainId, defaultChainId);
+  const combinedOrders = useCombinedOrders(openOrdersData, wsOpenOrders, chainId);
   const transformedBalances = useTransformedBalances(accountData, poolsData);
 
   // refresh on connection
@@ -130,7 +130,7 @@ export function useTrading(): UseTradingResult {
     }
   }, [effectiveIsConnected, effectiveAddress]);
 
-  const tradesLoading = isLoadingApiTrades || isLoadingTickerPrice;
+  const tradesLoading = isLoadingApiTrades;
   const isLoading = poolsLoading || isLoadingTicker24hr;
 
   return {

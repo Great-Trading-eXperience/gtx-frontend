@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { formatDate } from '@/helper';
 import { OpenOrderItem } from '@/graphql/gtx/clob';
 import { OrderData } from '@/lib/market-api';
 import { formatPrice } from '@/lib/utils';
@@ -12,6 +11,7 @@ import {
   getTimestamp,
   isOrderCancelable,
 } from '../../../utils/trading-history/order-history-helper';
+import { formatDate } from '@/features/trading/utils/trading.helper';
 
 interface OrderRowProps {
   order: OrderData | OpenOrderItem;

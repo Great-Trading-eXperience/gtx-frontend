@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '@/components/_components/ui/dialog';
+} from '@/components/ui/dialog';
 import { getExplorerUrl } from '@/constants/urls/urls-config';
 import { OpenOrderItem } from '@/graphql/gtx/clob';
 import { useCancelOrder } from '@/hooks/web3/gtx/clob-dex/gtx-router/useCancelOrder';
@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
-import { formatDate } from '@/helper';
 import { ClobDexComponentProps } from '../../types/chart.types';
+import { formatDate } from '../../utils/trading.helper';
 
 export interface OrderHistoryTableProps extends ClobDexComponentProps {
   ordersData: OpenOrderItem[];

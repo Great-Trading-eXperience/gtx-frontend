@@ -5,7 +5,7 @@ import {
   Shield,
   Zap,
 } from 'lucide-react';
-import HeroShaderBackground from '../_components/hero-shader-background';
+import HeroShaderBackground from '../hero-shader-background';
 
 export function HeroSection() {
   const features = [

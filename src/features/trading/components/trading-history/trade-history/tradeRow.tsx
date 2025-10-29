@@ -1,10 +1,10 @@
 import { ExternalLink } from 'lucide-react';
 import { formatUnits } from 'viem';
 import { formatPrice, formatQuantity } from '@/lib/utils';
-import { formatDate } from '@/helper';
 import { EXPLORER_URL } from '@/constants/explorer-url';
 import { TradeRowProps } from '@/features/trading/types/trading-history';
 import { formatTransactionId } from '@/features/trading/utils/trading-history/trade-history-helper';
+import { formatDate } from '@/features/trading/utils/trading.helper';
 
 const TradeRow = ({
   trade,

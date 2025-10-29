@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@/components/_components/ui/button';
-import { Skeleton } from '@/components/_components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePrivyAuth } from '@/hooks/use-privy-auth';
 import { useWallets } from '@privy-io/react-auth';
 import { ArrowUpDown, ChevronRight, ExternalLink, RefreshCw, Wallet } from 'lucide-react';

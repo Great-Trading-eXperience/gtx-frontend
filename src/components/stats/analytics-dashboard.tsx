@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import VolumeChart from './charts/volume-chart'
 import TradeCountChart from './charts/trade-count-chart'
 import CumulativeUsersChart from './charts/cumulative-users-chart'

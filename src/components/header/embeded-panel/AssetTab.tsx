@@ -40,14 +40,35 @@ export const AssetTab: React.FC<AssetTabProps> = ({
 
   let assets: Asset[] = [];
 
+  // Create assets from token-mappings endpoint + indexer balances
+  console.log('🏛️ Asset creation debug (Indexer-based):', {
+    allUniqueTokensLength: allUniqueTokens.length,
+    allUniqueTokens: allUniqueTokens.map(t => ({
+      symbol: t.symbol,
+      address: t.address.slice(0, 8) + '...',
+    })),
+    indexedBalancesLength: indexedBalances?.length || 0,
+    indexedBalancesLoading,
+    indexedBalancesError: indexedBalancesError?.message,
+  });
+
   if (allUniqueTokens.length > 0) {
     assets = allUniqueTokens.map((token, index) => {
+      console.log('🏛️ Mapping indexed balance for token:', token.symbol);
+      
       // Find corresponding balance from indexer data
       const indexedBalance = indexedBalances?.find(
         balance => balance.tokenAddress === token.address.toLowerCase()
       );
       
       const displayBalance = indexedBalance?.balance || '0';
+      
+      console.log('🏛️ Indexed balance result:', {
+        tokenSymbol: token.symbol,
+        tokenAddress: token.address.slice(0, 8) + '...',
+        foundBalance: indexedBalance?.balance || 'not found in indexer',
+        finalDisplayBalance: displayBalance,
+      });
 
       const colorMap = [
         'bg-blue-500',

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAccount, useChainId } from 'wagmi';
 import { readContract, writeContract, waitForTransactionReceipt } from '@wagmi/core';
-import { encodeFunctionData, erc20Abi } from 'viem';
+import { erc20Abi } from 'viem';
 import { wagmiConfig } from '@/configs/wagmi';
 
 // Import required ABIs
@@ -10,8 +10,8 @@ import BalanceManagerABI from '@/abis/gtx/clob/BalanceManagerABI';
 
 // Types
 import { HexAddress } from '@/types/general/address';
-import { isFeatureEnabled, getCoreChain, shouldUseCoreChainBalance } from '@/constants/features/features-config';
-import { getTokensForChain } from '@/helper/token-helper';
+import { isFeatureEnabled, getCoreChain } from '@/constants/features/features-config';
+import { getTokensForChain } from '../utils/swap.helper';
 
 /**
  * Simplified hook for trading balances that focuses on wallet balances

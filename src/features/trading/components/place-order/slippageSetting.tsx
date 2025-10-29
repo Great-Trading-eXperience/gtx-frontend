@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/_components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 
 interface SlippageSettingsProps {

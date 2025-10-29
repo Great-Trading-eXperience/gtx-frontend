@@ -1,6 +1,42 @@
 'use client';
 
-import { Twitter } from 'lucide-react';
+import { Twitter, Copy } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+
+// Types
+interface FooterLink {
+  label: string;
+  destination: string;
+}
+
+interface SocialLink {
+  label: string;
+  url: string;
+  icon: React.ElementType;
+}
+
+// Constants
+const LOGO_CONFIG = {
+  src: '/logo/gtx.png',
+  alt: 'GTX Logo',
+  text: 'GTX',
+  tagline: 'Trade across major EVM chains without moving your funds.',
+};
+
+const RESOURCES_LINKS: FooterLink[] = [
+  { label: 'Privacy Policy', destination: '/privacy-policy' },
+];
+
+const SUPPORT_LINKS: FooterLink[] = [
+  { label: 'GTX Docs', destination: '/docs' },
+  { label: 'API Documentation', destination: '/api-docs' },
+  { label: 'Terms & Conditions', destination: '/terms' },
+];
+
+const SOCIAL_LINKS: SocialLink[] = [
+  { label: 'Twitter', url: 'https://x.com/gtx_dex', icon: Twitter },
+];
 
 const CURRENT_YEAR = new Date().getFullYear();
 

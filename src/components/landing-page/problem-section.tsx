@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import Image from 'next/image';
 import AnimeSphereAnimation from './AnimeSphereAnimation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../_components/ui/dialog';
 
 interface Problem {
   title: string;
